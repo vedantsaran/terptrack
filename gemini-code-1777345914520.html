@@ -1,0 +1,2414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terp Track — UMD CE / ML / NLP Degree Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================================
+   THEME — light (default) + dark
+   =========================================================== */
+:root,
+[data-theme="light"] {
+  --maroon: #8B0000;
+  --maroon-deep: #5C0000;
+  --maroon-soft: #B33A3A;
+  --gold: #E8B923;
+  --gold-soft: #F4D77E;
+  --cream: #FAF6EC;
+  --cream-deep: #F2EBD8;
+  --paper: #FFFCF4;
+  --ink: #1A1410;
+  --ink-soft: #4A3E36;
+  --slate: #6B5D52;
+  --line: #D9CFB9;
+  --line-strong: #B8AC8E;
+  --green: #2E6B3F;
+  --green-soft: #DCEBD3;
+  --amber: #B8821B;
+  --amber-soft: #F8E7B8;
+  --red: #A02020;
+  --red-soft: #F2D6D4;
+  --blue: #2E5C8B;
+  --shadow-sm: 0 1px 2px rgba(60,40,20,.08);
+  --shadow-md: 0 4px 16px rgba(60,40,20,.10);
+  --shadow-lg: 0 12px 40px rgba(60,40,20,.14);
+  --bg-grad-1: rgba(232,185,35,.06);
+  --bg-grad-2: rgba(139,0,0,.04);
+}
+
+[data-theme="dark"] {
+  --maroon: #C73E3E;
+  --maroon-deep: #8B0000;
+  --maroon-soft: #FF5F5F;
+  --gold: #F4D77E;
+  --gold-soft: #FFE9A8;
+  --cream: #1A1612;
+  --cream-deep: #221E18;
+  --paper: #26211A;
+  --ink: #F5EFDF;
+  --ink-soft: #C9BFA9;
+  --slate: #8B8170;
+  --line: #3D3528;
+  --line-strong: #5C5240;
+  --green: #6FBA82;
+  --green-soft: #2A4530;
+  --amber: #E8B923;
+  --amber-soft: #4A3A18;
+  --red: #E55A5A;
+  --red-soft: #4A1F1F;
+  --blue: #5FA3D9;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.35);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.5);
+  --bg-grad-1: rgba(232,185,35,.04);
+  --bg-grad-2: rgba(199,62,62,.06);
+}
+
+/* ===========================================================
+   BASE
+   =========================================================== */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  line-height: 1.55;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at 15% 20%, var(--bg-grad-1) 0%, transparent 40%),
+    radial-gradient(circle at 85% 75%, var(--bg-grad-2) 0%, transparent 45%);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .25s, color .25s;
+}
+
+button { font-family: inherit; cursor: pointer; }
+input, select { font-family: inherit; }
+
+/* Scrollbar polish */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 100px; }
+::-webkit-scrollbar-thumb:hover { background: var(--line-strong); }
+
+/* ===========================================================
+   TOPBAR
+   =========================================================== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--maroon);
+  color: #FAF6EC;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-md);
+  border-bottom: 3px solid var(--gold);
+}
+.brand {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand .dot {
+  width: 10px; height: 10px;
+  background: var(--gold);
+  border-radius: 50%;
+}
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.icon-btn {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.2);
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #FAF6EC;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.icon-btn:hover { background: rgba(255,255,255,.22); }
+.icon-btn svg { width: 14px; height: 14px; }
+@media (max-width: 600px) {
+  .icon-btn .label { display: none; }
+}
+
+/* ===========================================================
+   HERO
+   =========================================================== */
+.hero {
+  padding: 44px 24px 28px;
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: center;
+}
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--maroon);
+  margin-bottom: 14px;
+}
+h1.hero-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  margin: 0 0 14px;
+  color: var(--ink);
+}
+h1.hero-title em {
+  font-style: italic;
+  color: var(--maroon);
+  font-weight: 400;
+}
+.hero-sub {
+  font-size: 1rem;
+  color: var(--slate);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ===========================================================
+   TABS
+   =========================================================== */
+.tabs {
+  max-width: 1280px;
+  margin: 28px auto 0;
+  padding: 0 24px;
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.tab {
+  background: transparent;
+  border: none;
+  padding: 10px 18px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--slate);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tab:hover { color: var(--ink); }
+.tab.active {
+  color: var(--maroon);
+  border-bottom-color: var(--maroon);
+  font-weight: 600;
+}
+.tab .count {
+  background: var(--cream-deep);
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  padding: 1px 7px;
+  border-radius: 100px;
+  font-weight: 500;
+}
+.tab.active .count {
+  background: var(--maroon);
+  color: #FAF6EC;
+}
+
+/* ===========================================================
+   CONTAINER
+   =========================================================== */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+.view { display: none; }
+.view.active { display: block; }
+
+/* ===========================================================
+   STAT BAR
+   =========================================================== */
+.stat-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+@media (max-width: 800px) {
+  .stat-bar { grid-template-columns: repeat(2, 1fr); }
+}
+.stat {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.stat::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--maroon);
+}
+.stat.gold::before { background: var(--gold); }
+.stat.green::before { background: var(--green); }
+.stat.slate::before { background: var(--slate); }
+.stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--slate);
+  margin-bottom: 6px;
+}
+.stat-value {
+  font-family: 'Fraunces', serif;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.stat-detail {
+  font-size: 0.78rem;
+  color: var(--slate);
+  margin-top: 4px;
+}
+
+/* ===========================================================
+   PLAN VIEW LAYOUT
+   =========================================================== */
+.plan-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 28px;
+}
+@media (max-width: 1000px) {
+  .plan-grid { grid-template-columns: 1fr; }
+}
+
+/* ===========================================================
+   SECTION HEADERS
+   =========================================================== */
+.section-rule {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 18px;
+}
+.section-rule .line {
+  flex: 1; height: 1px; background: var(--line);
+}
+.section-rule .badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--maroon);
+  font-weight: 500;
+}
+
+/* ===========================================================
+   LEGEND + FILTER ROW
+   =========================================================== */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  align-items: center;
+}
+.search-box {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+.search-box input {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+.search-box input:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: -1px;
+  border-color: var(--gold);
+}
+.search-box::before {
+  content: '';
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B5D52' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+}
+
+.filter-chip {
+  padding: 7px 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  transition: all .15s;
+}
+.filter-chip:hover {
+  border-color: var(--maroon);
+  color: var(--maroon);
+}
+.filter-chip.active {
+  background: var(--maroon);
+  color: #FAF6EC;
+  border-color: var(--maroon);
+}
+
+/* ===========================================================
+   SEMESTER CARD
+   =========================================================== */
+.semester {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  margin-bottom: 18px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.semester:hover { box-shadow: var(--shadow-md); }
+.sem-header {
+  background: linear-gradient(135deg, var(--maroon-deep) 0%, var(--maroon) 100%);
+  color: #FAF6EC;
+  padding: 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sem-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.sem-title .yr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--gold-soft);
+  font-weight: 400;
+}
+.sem-meta {
+  display: flex; gap: 14px; align-items: center;
+  font-size: 0.84rem;
+  color: var(--gold-soft);
+  flex-wrap: wrap;
+}
+.sem-meta strong { color: #FAF6EC; font-weight: 600; }
+.sem-progress {
+  width: 90px;
+  height: 5px;
+  background: rgba(255,255,255,.18);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.sem-progress-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 100px;
+  transition: width .4s ease;
+}
+
+.add-course-btn {
+  background: rgba(255,255,255,.1);
+  border: 1px dashed rgba(255,255,255,.3);
+  color: rgba(255,255,255,.85);
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  transition: all .15s;
+}
+.add-course-btn:hover {
+  background: rgba(255,255,255,.2);
+  color: #FAF6EC;
+}
+
+.courses {
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+/* ===========================================================
+   COURSE ROW
+   =========================================================== */
+.course {
+  display: grid;
+  grid-template-columns: 110px 1fr 56px auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--cream);
+  border: 1px solid transparent;
+  transition: all .15s;
+  position: relative;
+}
+.course:hover {
+  border-color: var(--line);
+  background: var(--paper);
+}
+.course.locked {
+  opacity: 0.55;
+  background: transparent;
+}
+.course.available {
+  background: linear-gradient(90deg, rgba(232,185,35,.12) 0%, var(--cream) 60%);
+  border-color: var(--gold-soft);
+}
+.course.passed {
+  background: linear-gradient(90deg, rgba(46,107,63,.10) 0%, var(--cream) 60%);
+}
+.course.passed .code,
+.course.passed .title { color: var(--slate); }
+.course.failed {
+  background: var(--red-soft);
+  border-color: var(--red);
+}
+.course.in-progress {
+  background: linear-gradient(90deg, rgba(139,0,0,.08) 0%, var(--cream) 60%);
+  border-color: var(--maroon-soft);
+}
+.course.transfer {
+  background: linear-gradient(90deg, rgba(46,92,139,.08) 0%, var(--cream) 60%);
+  border-color: var(--blue);
+}
+.course.goal {
+  box-shadow: 0 0 0 2px var(--gold) inset;
+}
+.course.goal::before {
+  content: '★';
+  position: absolute;
+  top: -7px;
+  left: 95px;
+  background: var(--gold);
+  color: var(--maroon-deep);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  box-shadow: var(--shadow-sm);
+}
+
+.code {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 0.86rem;
+  color: var(--maroon);
+  letter-spacing: -0.01em;
+}
+.title-block { min-width: 0; }
+.title {
+  font-weight: 500;
+  font-size: 0.93rem;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.meta {
+  font-size: 0.76rem;
+  color: var(--slate);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+}
+.tag {
+  display: inline-block;
+  padding: 1px 7px;
+  background: var(--cream-deep);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+.tag.crit { background: var(--amber-soft); color: var(--amber); }
+.tag.goal { background: var(--gold); color: var(--maroon-deep); font-weight: 600; }
+.tag.gened { background: rgba(46,92,139,.15); color: var(--blue); }
+.tag.tech { background: rgba(139,0,0,.10); color: var(--maroon); }
+.tag.risk { background: var(--red-soft); color: var(--red); }
+
+.pt-link {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--maroon);
+  background: rgba(139,0,0,.08);
+  border: 1px solid rgba(139,0,0,.2);
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-decoration: none;
+  vertical-align: middle;
+  transition: all .15s;
+}
+.pt-link:hover {
+  background: var(--maroon);
+  color: #FAF6EC;
+  border-color: var(--maroon);
+}
+
+.credits {
+  font-family: 'Fraunces', serif;
+  font-size: 1.05rem;
+  color: var(--ink);
+  font-weight: 500;
+  text-align: center;
+  line-height: 1;
+}
+.credits-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--slate);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.status-controls {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.status-btn {
+  width: 30px; height: 30px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--slate);
+  transition: all .15s;
+  padding: 0;
+}
+.status-btn:hover {
+  border-color: var(--maroon);
+  color: var(--maroon);
+}
+.status-btn.active {
+  background: var(--maroon);
+  color: #FAF6EC;
+  border-color: var(--maroon);
+}
+.status-btn.passed-active {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+.status-btn.failed-active {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+}
+.status-btn.transfer-active {
+  background: var(--blue);
+  color: white;
+  border-color: var(--blue);
+}
+.grade-select {
+  width: 60px;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  text-align: center;
+  color: var(--ink);
+}
+.grade-select:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: -1px;
+}
+
+.course-action {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--slate);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-left: 4px;
+}
+.course-action:hover { border-color: var(--red); color: var(--red); }
+
+.why-locked {
+  display: none;
+  grid-column: 1 / -1;
+  font-size: 0.74rem;
+  color: var(--red);
+  background: var(--red-soft);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+.course.locked .why-locked { display: block; }
+
+/* responsive course rows */
+@media (max-width: 700px) {
+  .course {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .credits { text-align: left; }
+  .credits-label { display: inline; margin-left: 4px; }
+  .status-controls { justify-content: flex-start; flex-wrap: wrap; }
+}
+
+/* ===========================================================
+   SIDEBAR
+   =========================================================== */
+.sidebar { align-self: start; }
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.panel h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.panel p.lead {
+  font-size: 0.8rem;
+  color: var(--slate);
+  margin: 0 0 14px;
+}
+
+.next-up {
+  background: linear-gradient(155deg, var(--maroon-deep) 0%, var(--maroon) 60%, var(--maroon-soft) 100%);
+  color: #FAF6EC;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+.next-up::after {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  background: radial-gradient(circle, var(--gold) 0%, transparent 60%);
+  opacity: 0.3;
+  border-radius: 50%;
+}
+.next-up h3, .next-up p.lead { color: #FAF6EC; position: relative; }
+.next-up p.lead { color: var(--gold-soft); }
+
+.next-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: relative;
+  max-height: 360px;
+  overflow-y: auto;
+}
+.next-list li {
+  padding: 9px 11px;
+  background: rgba(255,255,255,.10);
+  border-radius: 7px;
+  margin-bottom: 5px;
+  font-size: 0.85rem;
+  border: 1px solid rgba(255,255,255,.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.next-list li strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+.next-list .credits-mini {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--gold-soft);
+  background: rgba(0,0,0,.2);
+  padding: 1px 7px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+.next-list .empty {
+  color: var(--gold-soft);
+  font-style: italic;
+  padding: 8px 0;
+  text-align: center;
+  background: none;
+  border: none;
+}
+
+/* goal tracker */
+.goal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.goal-row:last-child { border-bottom: none; padding-bottom: 0; }
+.goal-row:first-child { padding-top: 4px; }
+.goal-icon {
+  width: 28px; height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  background: var(--cream-deep);
+  color: var(--slate);
+  border: 1px solid var(--line);
+  margin-top: 1px;
+}
+.goal-icon.ready { background: var(--gold); color: var(--maroon-deep); border-color: var(--gold); }
+.goal-icon.done { background: var(--green); color: white; border-color: var(--green); }
+.goal-icon.in-prog { background: var(--maroon); color: white; border-color: var(--maroon); }
+.goal-info { flex: 1; min-width: 0; }
+.goal-name { font-weight: 600; font-size: 0.88rem; }
+.goal-status { font-size: 0.74rem; color: var(--slate); margin-top: 1px; }
+.goal-status.ready { color: var(--amber); font-weight: 500; }
+.goal-status.done { color: var(--green); font-weight: 500; }
+.goal-status.in-prog { color: var(--maroon); font-weight: 500; }
+
+/* progress bar */
+.progress {
+  height: 6px;
+  background: var(--cream-deep);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--maroon) 0%, var(--gold) 100%);
+  border-radius: 100px;
+  transition: width .4s ease;
+}
+
+/* alerts */
+.alert {
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: var(--amber-soft);
+  border-left: 3px solid var(--amber);
+  font-size: 0.83rem;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.alert.danger { background: var(--red-soft); border-left-color: var(--red); }
+.alert.success { background: var(--green-soft); border-left-color: var(--green); }
+.alert.info { background: rgba(46,92,139,.10); border-left-color: var(--blue); }
+.alert strong { color: var(--ink); }
+
+/* ===========================================================
+   AUDIT VIEW
+   =========================================================== */
+.audit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 800px) {
+  .audit-grid { grid-template-columns: 1fr; }
+}
+.audit-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+}
+.audit-card h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0 0 14px;
+  color: var(--maroon);
+}
+.audit-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
+}
+.audit-line:last-child { border-bottom: none; }
+.audit-line .check {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  color: var(--slate);
+}
+.audit-line.done .check {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.audit-line.partial .check {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: white;
+}
+.audit-line .name { flex: 1; min-width: 0; }
+.audit-line .status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  color: var(--slate);
+  flex-shrink: 0;
+}
+
+.audit-summary {
+  background: linear-gradient(135deg, var(--maroon-deep) 0%, var(--maroon) 100%);
+  color: #FAF6EC;
+  padding: 28px;
+  border-radius: 14px;
+  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: center;
+}
+@media (max-width: 700px) { .audit-summary { grid-template-columns: 1fr; } }
+.audit-summary h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.6rem;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.audit-summary p {
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--gold-soft);
+}
+.audit-percent {
+  text-align: center;
+}
+.audit-percent .big {
+  font-family: 'Fraunces', serif;
+  font-size: 3.5rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--gold);
+}
+.audit-percent .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--gold-soft);
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* ===========================================================
+   TIMELINE VIEW
+   =========================================================== */
+.timeline-rail {
+  position: relative;
+  padding-left: 28px;
+}
+.timeline-rail::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--maroon) 0%, var(--gold) 100%);
+}
+.timeline-event {
+  position: relative;
+  margin-bottom: 18px;
+}
+.timeline-event::before {
+  content: '';
+  position: absolute;
+  left: -25px;
+  top: 6px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--maroon);
+  border: 3px solid var(--cream);
+  box-shadow: 0 0 0 1px var(--maroon);
+}
+.timeline-event.upcoming::before { background: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.timeline-event.past::before { background: var(--green); box-shadow: 0 0 0 1px var(--green); }
+.timeline-event.critical::before { background: var(--red); box-shadow: 0 0 0 1px var(--red); }
+.timeline-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+.timeline-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--maroon);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.timeline-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+.timeline-desc {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+/* ===========================================================
+   ROADMAP VIEW
+   =========================================================== */
+.roadmap-svg {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  overflow-x: auto;
+}
+.roadmap-svg svg {
+  display: block;
+  min-width: 700px;
+  width: 100%;
+}
+.node-rect {
+  fill: var(--paper);
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  rx: 6;
+  cursor: pointer;
+}
+.node-rect.passed { fill: var(--green-soft); stroke: var(--green); }
+.node-rect.in-progress { fill: rgba(139,0,0,.10); stroke: var(--maroon); }
+.node-rect.available { fill: var(--amber-soft); stroke: var(--gold); }
+.node-rect.failed { fill: var(--red-soft); stroke: var(--red); }
+.node-rect.goal {
+  stroke-width: 3;
+  stroke: var(--gold);
+  filter: drop-shadow(0 2px 4px rgba(232,185,35,.4));
+}
+.node-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  fill: var(--ink);
+  pointer-events: none;
+  font-weight: 500;
+}
+.node-text.muted { fill: var(--slate); font-weight: 400; }
+.edge {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  marker-end: url(#arrow);
+}
+.edge.satisfied { stroke: var(--green); }
+.edge.blocked { stroke: var(--red); stroke-dasharray: 4 3; }
+
+/* ===========================================================
+   MODAL
+   =========================================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--paper);
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.3rem;
+  margin: 0 0 14px;
+  color: var(--ink);
+}
+.modal label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-top: 12px;
+  margin-bottom: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.modal input[type="text"], .modal input[type="number"], .modal select, .modal textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+  font-size: 0.92rem;
+  color: var(--ink);
+  font-family: inherit;
+}
+.modal input:focus, .modal select:focus, .modal textarea:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: -1px;
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+.btn {
+  padding: 9px 18px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn:hover { border-color: var(--maroon); }
+.btn.primary {
+  background: var(--maroon);
+  color: #FAF6EC;
+  border-color: var(--maroon);
+}
+.btn.primary:hover { background: var(--maroon-deep); }
+.btn.danger {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+}
+
+/* ===========================================================
+   ONBOARDING
+   =========================================================== */
+.welcome-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px;
+  margin-bottom: 28px;
+  text-align: center;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(232,185,35,.08), transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(139,0,0,.06), transparent 50%);
+}
+.welcome-card h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--maroon);
+}
+.welcome-card p {
+  font-size: 1rem;
+  color: var(--ink-soft);
+  max-width: 580px;
+  margin: 0 auto 20px;
+}
+.welcome-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.welcome-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+  text-align: left;
+}
+.shortcut {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.shortcut .key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-right: 6px;
+  font-weight: 600;
+}
+.shortcut p {
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+}
+
+/* ===========================================================
+   MISC
+   =========================================================== */
+.footer {
+  text-align: center;
+  padding: 30px 20px;
+  color: var(--slate);
+  font-size: 0.8rem;
+  border-top: 1px solid var(--line);
+  margin-top: 40px;
+}
+.footer em {
+  font-family: 'Fraunces', serif;
+  color: var(--maroon);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.save-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--green);
+  color: white;
+  padding: 9px 16px;
+  border-radius: 100px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all .3s;
+  pointer-events: none;
+  z-index: 300;
+}
+.save-indicator.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* print styles */
+@media print {
+  .topbar, .tabs, .sidebar, .toolbar, .footer, .save-indicator,
+  .modal-backdrop, .add-course-btn, .course-action, .status-controls,
+  .welcome-card { display: none !important; }
+  body { background: white; color: black; }
+  .container { padding: 0; max-width: 100%; }
+  .plan-grid { grid-template-columns: 1fr; }
+  .semester { break-inside: avoid; box-shadow: none; }
+  .stat-bar { break-inside: avoid; }
+}
+</style>
+</head>
+<body data-theme="light">
+
+<div class="topbar">
+  <div class="brand"><span class="dot"></span>Terp Track</div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="theme-toggle" title="Toggle dark mode">
+      <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <span class="label">Theme</span>
+    </button>
+    <button class="icon-btn" onclick="window.print()" title="Print or save as PDF">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      <span class="label">Print</span>
+    </button>
+    <button class="icon-btn" onclick="exportData()" title="Export your data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="label">Export</span>
+    </button>
+    <button class="icon-btn" onclick="openImport()" title="Import data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span class="label">Import</span>
+    </button>
+    <input type="file" id="import-file" style="display:none" accept=".json">
+  </div>
+</div>
+
+<div class="hero">
+  <div class="eyebrow">UMD · Computer Engineering · 2026–2030</div>
+  <h1 class="hero-title">Your <em>Maryland</em> ML &amp; NLP track,<br>laid out semester by semester.</h1>
+  <p class="hero-sub">Mark courses as you finish them — Terp Track watches your prerequisites and tells you what to register for next. Everything saves locally.</p>
+</div>
+
+<div class="tabs" role="tablist">
+  <button class="tab active" data-tab="plan">📋 Plan</button>
+  <button class="tab" data-tab="audit">✓ Degree Audit</button>
+  <button class="tab" data-tab="timeline">⏰ Action Timeline</button>
+  <button class="tab" data-tab="roadmap">🗺 Prereq Roadmap</button>
+</div>
+
+<div class="container">
+
+  <div class="stat-bar" id="stat-bar">
+    <div class="stat">
+      <div class="stat-label">Credits Earned</div>
+      <div class="stat-value" id="stat-credits">0</div>
+      <div class="stat-detail" id="stat-credits-detail">of 137 total</div>
+    </div>
+    <div class="stat gold">
+      <div class="stat-label">Current GPA</div>
+      <div class="stat-value" id="stat-gpa">—</div>
+      <div class="stat-detail" id="stat-gpa-detail">add grades to calculate</div>
+    </div>
+    <div class="stat green">
+      <div class="stat-label">Goal Courses</div>
+      <div class="stat-value" id="stat-goals">0/3</div>
+      <div class="stat-detail">ML · Adv. Algo · NLP</div>
+    </div>
+    <div class="stat slate">
+      <div class="stat-label">Semesters Done</div>
+      <div class="stat-value" id="stat-sems">0/8</div>
+      <div class="stat-detail">F26 → S30</div>
+    </div>
+  </div>
+
+  <div class="view active" id="view-plan">
+    <div id="welcome-card" class="welcome-card" style="display:none">
+      <h2>Welcome to Terp Track 👋</h2>
+      <p>Click ✓ on any course you've already passed (e.g., AP credit, transfer credit, or a course you're confident about). Use the dropdown to log your grade. The tracker checks every prereq automatically and shows you what unlocks next on the right.</p>
+      <div class="welcome-actions">
+        <button class="btn primary" onclick="dismissWelcome()">Got it</button>
+        <button class="btn" onclick="quickStartAP()">Add AP Credits</button>
+      </div>
+      <div class="welcome-shortcuts">
+        <div class="shortcut">
+          <span class="key">P</span><span class="key">A</span><span class="key">T</span><span class="key">R</span>
+          <p>Switch tabs: <strong>P</strong>lan · <strong>A</strong>udit · <strong>T</strong>imeline · <strong>R</strong>oadmap</p>
+        </div>
+        <div class="shortcut">
+          <span class="key">/</span>
+          <p>Focus the search bar</p>
+        </div>
+        <div class="shortcut">
+          <span class="key">Ctrl+P</span>
+          <p>Print or save as PDF</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="plan-grid">
+      <div class="main">
+        <div class="toolbar">
+          <div class="search-box">
+            <input type="text" id="search-input" placeholder="Search courses (e.g., 'ENEE', 'NLP', 'F28')…">
+          </div>
+          <button class="filter-chip active" data-filter="all">All</button>
+          <button class="filter-chip" data-filter="goal">★ Goals</button>
+          <button class="filter-chip" data-filter="available">Available</button>
+          <button class="filter-chip" data-filter="locked">Locked</button>
+          <button class="filter-chip" data-filter="passed">Passed</button>
+        </div>
+
+        <div id="semesters-container"></div>
+      </div>
+
+      <div class="sidebar">
+        <div class="panel next-up">
+          <h3>Available Now</h3>
+          <p class="lead">Courses whose prereqs you've cleared</p>
+          <ul class="next-list" id="next-list"></ul>
+        </div>
+
+        <div class="panel">
+          <h3>Goal Course Tracker</h3>
+          <p class="lead">Path to ML, Adv. Algo, and NLP</p>
+          <div id="goal-tracker"></div>
+          <div class="progress"><div class="progress-fill" id="overall-progress"></div></div>
+          <p style="font-size:.74rem;color:var(--slate);margin-top:8px;font-style:italic">ENEE 436 &amp; CMSC 470 require CS-permission via your CE advisor — competitive seats.</p>
+        </div>
+
+        <div class="panel">
+          <h3>Heads Up</h3>
+          <p class="lead">Live alerts based on your status</p>
+          <div id="alerts-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="view-audit">
+    <div class="audit-summary">
+      <div>
+        <h2 id="audit-headline">Building Your Degree</h2>
+        <p id="audit-tagline">Mark courses to track progress against the 130-credit CE requirement.</p>
+      </div>
+      <div class="audit-percent">
+        <div class="big" id="audit-percent">0%</div>
+        <div class="label">complete</div>
+      </div>
+    </div>
+    <div class="audit-grid">
+      <div class="audit-card">
+        <h3>CE Major Core</h3>
+        <div id="audit-core"></div>
+      </div>
+      <div class="audit-card">
+        <h3>General Education</h3>
+        <div id="audit-gened"></div>
+      </div>
+      <div class="audit-card">
+        <h3>Tech Electives (Cat A–F)</h3>
+        <div id="audit-tech"></div>
+      </div>
+      <div class="audit-card">
+        <h3>Goal Courses</h3>
+        <div id="audit-goals"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="view-timeline">
+    <div class="section-rule">
+      <span class="badge">Critical Action Items</span>
+      <span class="line"></span>
+    </div>
+    <div class="timeline-rail" id="timeline-rail"></div>
+  </div>
+
+  <div class="view" id="view-roadmap">
+    <div class="section-rule">
+      <span class="badge">Prerequisite Dependency Map</span>
+      <span class="line"></span>
+    </div>
+    <p style="color:var(--slate);font-size:.9rem;margin-bottom:18px">Visual prerequisite chain to your three goal courses. Green = passed, gold = available now, red dashed = blocked.</p>
+    <div class="roadmap-svg" id="roadmap-container"></div>
+  </div>
+
+</div>
+
+<div class="modal-backdrop" id="add-course-modal">
+  <div class="modal">
+    <h3 id="add-course-title">Add Custom Course</h3>
+    <label>Course Code</label>
+    <input type="text" id="ac-code" placeholder="e.g., MATH 241">
+    <label>Title</label>
+    <input type="text" id="ac-title" placeholder="e.g., Calculus III">
+    <label>Credits</label>
+    <input type="number" id="ac-credits" min="1" max="6" value="3">
+    <label>Notes (optional)</label>
+    <input type="text" id="ac-note" placeholder="e.g., Tech Elective Cat A">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddCourse()">Cancel</button>
+      <button class="btn primary" onclick="saveCustomCourse()">Add Course</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <p><em>Terp Track</em> · Plan validated against UMD 2025–2026 catalog · Always confirm with your CE advisor before registration · Saves locally to your browser</p>
+</div>
+
+<div class="save-indicator" id="save-indicator">Saved</div>
+
+<script>
+'use strict';
+/* ============================================================
+   DATA MODEL
+   ============================================================ */
+const SCHEDULE = [
+  {
+    id: "F26", name: "Fall 2026", year: "Year 1",
+    courses: [
+      { code: "CMSC 131", title: "Object-Oriented Programming I", cr: 4, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "MATH 140", title: "Calculus I",                    cr: 4, prereqs: [], coreqs: [], kind: "core", category: "ce-core", note: "Satisfies FSMA" },
+      { code: "CHEM 135", title: "General Chemistry for Engineers",cr: 3, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "ENGL 101", title: "Academic Writing",               cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fsaw", note: "FSAW" },
+      { code: "UNIV 100", title: "The University Mind",            cr: 1, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
+    ]
+  },
+  {
+    id: "S27", name: "Spring 2027", year: "Year 1",
+    courses: [
+      { code: "CMSC 132", title: "Object-Oriented Programming II",cr: 4, prereqs: ["CMSC 131"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "MATH 141", title: "Calculus II",                    cr: 4, prereqs: ["MATH 140"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "PHYS 161", title: "General Physics: Mechanics",     cr: 3, prereqs: [], coreqs: ["MATH 141"], kind: "core", category: "ce-core", note: "DSNS" },
+      { code: "ENES 100", title: "Intro to Engineering Design",    cr: 3, prereqs: [], coreqs: [], kind: "core", category: "ce-core", note: "Cannot share semester w/ ENEE 101" },
+      { code: "GenEd HU-1", title: "Humanities Distributive #1",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshu", note: "DSHU #1" },
+    ]
+  },
+  {
+    id: "F27", name: "Fall 2027", year: "Year 2",
+    courses: [
+      { code: "CMSC 216", title: "Intro to Computer Systems",      cr: 4, prereqs: ["CMSC 132"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "ENEE 101", title: "Intro to ECE",                   cr: 3, prereqs: [], coreqs: ["MATH 140"], kind: "core", category: "ce-core" },
+      { code: "ENEE 244", title: "Digital Logic Design",           cr: 3, prereqs: [], coreqs: ["CMSC 132"], kind: "core", category: "ce-core" },
+      { code: "ENEE 290", title: "Diff Eq & LinAlg for Engr",      cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "critical", category: "ce-core", note: "Replaces MATH 246+461 · LinAlg prereq for CMSC 470" },
+      { code: "PHYS 260", title: "Physics: Waves & E&M (incl. 261 Lab)",cr: 4, prereqs: ["PHYS 161"], coreqs: [], kind: "core", category: "ce-core", note: "Lab → DSNL" },
+    ]
+  },
+  {
+    id: "S28", name: "Spring 2028", year: "Year 2",
+    courses: [
+      { code: "CMSC 250", title: "Discrete Structures",            cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "core", category: "ce-core", note: "Satisfies FSAR" },
+      { code: "ENEE 205", title: "Electric Circuits",              cr: 4, prereqs: ["PHYS 260"], coreqs: ["ENEE 290"], kind: "core", category: "ce-core" },
+      { code: "ENEE 222", title: "Discrete Signal Analysis",       cr: 4, prereqs: [], coreqs: ["ENEE 290"], kind: "core", category: "ce-core" },
+      { code: "ENEE 245", title: "Digital Circuits & Systems Lab", cr: 2, prereqs: ["ENEE 244"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "ENEE 200", title: "Engr Ethics & Humanity",         cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "ce-core", note: "Triple-counts: Core + DSHU + I-Series" },
+    ]
+  },
+  {
+    id: "F28", name: "Fall 2028", year: "Year 3",
+    courses: [
+      { code: "CMSC 330", title: "Org. of Programming Languages",  cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "ce-core", note: "Prereq for ENEE 436 + CMSC 470" },
+      { code: "ENEE 322", title: "Signal & System Theory",         cr: 3, prereqs: ["ENEE 222", "ENEE 290"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "ENEE 350", title: "Computer Organization",          cr: 3, prereqs: ["ENEE 244", "CMSC 132"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "COMM 107", title: "Oral Communication",             cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fsoc", note: "FSOC" },
+      { code: "GenEd HS-1", title: "History/Social Sciences #1",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshs", note: "DSHS #1" },
+      { code: "MATH 241", title: "Calculus III",                   cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "tech", category: "tech-a", note: "Tech Cat A (300-level) · supports high-dim ML" },
+    ]
+  },
+  {
+    id: "S29", name: "Spring 2029", year: "Year 3",
+    courses: [
+      { code: "CMSC 351", title: "Algorithms",                     cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "ce-core", note: "Prereq for ENEE 436 + CMSC 451 + CMSC 470" },
+      { code: "CMSC 320", title: "Intro to Data Science",          cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "tech-f", note: "Hard prereq for CMSC 470" },
+      { code: "ENEE 324", title: "Engineering Probability & Stats",cr: 3, prereqs: ["ENEE 322"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "ENEE 303", title: "Analog Electronics",             cr: 3, prereqs: ["ENEE 205"], coreqs: [], kind: "tech", category: "tech-c", note: "Tech Cat C" },
+      { code: "ENEE 307", title: "Analog Electronics Lab",         cr: 2, prereqs: [], coreqs: ["ENEE 303"], kind: "tech", category: "tech-d", note: "Tech Cat D" },
+      { code: "GenEd HS-2", title: "HS #2 + I-Series + Diversity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshs", note: "Pick HS course tagged I-Series + UP/CC" },
+    ]
+  },
+  {
+    id: "F29", name: "Fall 2029", year: "Year 4",
+    courses: [
+      { code: "ENEE 436", title: "Foundations of Machine Learning",cr: 3, prereqs: ["CMSC 330", "CMSC 351"], coreqs: [], kind: "goal", category: "tech-c", isGoal: true, note: "★ GOAL · Tech Cat C · EE Theory" },
+      { code: "CMSC 451", title: "Design & Analysis of Algorithms",cr: 3, prereqs: ["CMSC 351"], coreqs: [], kind: "goal", category: "tech-b", isGoal: true, note: "★ GOAL · Tech Cat B" },
+      { code: "ENEE 446", title: "Digital Computer Design",        cr: 3, prereqs: ["ENEE 350"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "ENGL 393", title: "Technical Writing",              cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fspw", note: "FSPW · Junior standing" },
+      { code: "GenEd SP-1", title: "Scholarship in Practice (outside major)",cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", note: "DSSP #1" },
+      { code: "MATH 401", title: "Applications of Linear Algebra", cr: 3, prereqs: ["MATH 241"], coreqs: [], kind: "tech", category: "tech-a", note: "Tech Cat A (400-level) · satisfies Cat A 400-lvl rule" },
+      { code: "ENEE 407", title: "Real-Time DSP Lab",              cr: 2, prereqs: ["ENEE 322"], coreqs: [], kind: "tech", category: "tech-d", note: "Tech Cat D · Advanced Lab" },
+    ]
+  },
+  {
+    id: "S30", name: "Spring 2030", year: "Year 4",
+    courses: [
+      { code: "CMSC 470", title: "Natural Language Processing",    cr: 3, prereqs: ["CMSC 320", "CMSC 330", "CMSC 351", "ENEE 290"], coreqs: [], kind: "goal", category: "tech-f", isGoal: true, note: "★ GOAL · Apply Nov 2029" },
+      { code: "CMSC 412", title: "Operating Systems (or ENEE 447)",cr: 4, prereqs: ["CMSC 330", "CMSC 351"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "ENEE 408X", title: "Capstone Design",               cr: 3, prereqs: [], coreqs: [], kind: "tech", category: "tech-e", note: "Tech Cat E · 408N pairs w/ ML" },
+      { code: "ENEE 440", title: "Microprocessors",                cr: 3, prereqs: ["ENEE 350"], coreqs: [], kind: "tech", category: "tech-c", note: "Tech Cat C" },
+      { code: "GenEd SP-2", title: "Scholarship in Practice #2",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", note: "DSSP #2" },
+    ]
+  },
+];
+
+const TIMELINE_EVENTS = [
+  { date: "Apr 2026", title: "Confirm AP/IB credit posting", desc: "If you have AP Calc BC, MATH 140 may already be done. Same for AP CS A → CMSC 131. Check Testudo before Fall 2026 registration.", phase: "past" },
+  { date: "Fall 2026", title: "Lock in 3.0+ GPA", desc: "First semester sets the LEP gateway tone. Use office hours for CMSC 131 from week 2.", phase: "past" },
+  { date: "Spring 2027", title: "Apply to internal Clark School transfer", desc: "Submit during the spring window. Typically requires 3.0 GPA + completion of MATH 140, CHEM 135, CMSC 131.", phase: "past" },
+  { date: "Spring 2028", title: "Apply to Academy of Machine Learning", desc: "ECE-based undergraduate research program. Membership = priority for ENEE 408N capstone in Y4.", phase: "upcoming" },
+  { date: "Fall 2028", title: "Start ML/NLP portfolio projects", desc: "Kaggle entry, open-source contribution, or undergrad research role. By F29 permission-request time, having evidence makes a real difference.", phase: "upcoming" },
+  { date: "Apr 2029", title: "Submit ENEE 436 & CMSC 451 permission requests", desc: "Through your CE advisor for Fall 2029 registration. CE majors don't get auto-priority — submit early. Bring screenshot of degree audit.", phase: "critical" },
+  { date: "Nov 2029", title: "Submit CMSC 470 permission request", desc: "For Spring 2030. By this point CMSC 320, 330, 351 should all be passed with C- or higher (B+ or higher = stronger case).", phase: "critical" },
+  { date: "Spring 2030", title: "Apply for graduation", desc: "Submit early in the term. Confirm degree audit with your CE advisor 60 days before commencement.", phase: "upcoming" },
+];
+
+const STORAGE_KEY = "terp-track-v2";
+const TOTAL_CREDITS_REQUIRED = 137;
+
+const GRADE_POINTS = {
+  "A+": 4.0, "A": 4.0, "A-": 3.7,
+  "B+": 3.3, "B": 3.0, "B-": 2.7,
+  "C+": 2.3, "C": 2.0, "C-": 1.7,
+  "D+": 1.3, "D": 1.0, "D-": 0.7,
+  "F": 0.0
+};
+const GRADE_OPTIONS = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F"];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  // migrate from v1 if present
+  try {
+    const oldRaw = localStorage.getItem("terp-track-v1");
+    if (oldRaw) {
+      const old = JSON.parse(oldRaw);
+      return { courses: old, customCourses: [], welcomeDismissed: false, theme: "light" };
+    }
+  } catch {}
+  return { courses: {}, customCourses: [], welcomeDismissed: false, theme: "light" };
+}
+
+let state = loadState();
+let currentTab = "plan";
+let currentFilter = "all";
+let searchQuery = "";
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const ind = document.getElementById('save-indicator');
+  ind.classList.add('show');
+  clearTimeout(saveState._t);
+  saveState._t = setTimeout(() => ind.classList.remove('show'), 1100);
+}
+
+function getCourseState(code) {
+  return state.courses[code] || { status: "not-started", grade: "" };
+}
+function setCourseState(code, patch) {
+  state.courses[code] = { ...getCourseState(code), ...patch };
+  saveState();
+  render();
+}
+
+function flatCourses() {
+  const all = [];
+  SCHEDULE.forEach(s => s.courses.forEach(c => all.push({ ...c, semId: s.id })));
+  state.customCourses.forEach(c => all.push(c));
+  return all;
+}
+function findCourse(code) {
+  return flatCourses().find(c => c.code === code);
+}
+
+function prereqsMet(course) {
+  for (const pre of course.prereqs) {
+    const s = getCourseState(pre);
+    if (s.status !== "passed" && s.status !== "transfer") return { met: false, missing: pre };
+  }
+  return { met: true };
+}
+
+/* ============================================================
+   THEME
+   ============================================================ */
+function applyTheme() {
+  document.body.dataset.theme = state.theme || "light";
+  const icon = document.getElementById('theme-icon');
+  if (state.theme === "dark") {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  } else {
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+  }
+}
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  state.theme = state.theme === "dark" ? "light" : "dark";
+  saveState();
+  applyTheme();
+});
+
+/* ============================================================
+   TABS
+   ============================================================ */
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.toggle('active', v.id === 'view-' + tab);
+  });
+  if (tab === 'audit') renderAudit();
+  if (tab === 'timeline') renderTimeline();
+  if (tab === 'roadmap') renderRoadmap();
+}
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.tab));
+});
+
+/* ============================================================
+   RENDER — PLAN VIEW
+   ============================================================ */
+function render() {
+  renderSemesters();
+  renderStats();
+  renderNextUp();
+  renderGoals();
+  renderAlerts();
+  if (currentTab === 'audit') renderAudit();
+  if (currentTab === 'roadmap') renderRoadmap();
+  // welcome card visibility
+  const welcome = document.getElementById('welcome-card');
+  const hasAnyCourseMarked = Object.keys(state.courses).length > 0;
+  welcome.style.display = (state.welcomeDismissed || hasAnyCourseMarked) ? 'none' : 'block';
+}
+
+function shouldShowCourse(course) {
+  // search filter
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    const hay = [course.code, course.title, course.note || '', course.semId || ''].join(' ').toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  // status filter
+  const cs = getCourseState(course.code);
+  const isLocked = !prereqsMet(course).met && cs.status === "not-started";
+  if (currentFilter === 'goal' && !course.isGoal) return false;
+  if (currentFilter === 'available' && (isLocked || cs.status !== 'not-started')) return false;
+  if (currentFilter === 'locked' && !isLocked) return false;
+  if (currentFilter === 'passed' && cs.status !== 'passed' && cs.status !== 'transfer') return false;
+  return true;
+}
+
+function renderSemesters() {
+  const container = document.getElementById('semesters-container');
+  container.innerHTML = '';
+  SCHEDULE.forEach((sem) => {
+    const visibleCourses = sem.courses.filter(shouldShowCourse);
+    if (visibleCourses.length === 0 && currentFilter !== 'all') return;
+
+    const totalCr = sem.courses.reduce((a, c) => a + c.cr, 0);
+    const passedCr = sem.courses.reduce((a, c) => {
+      const s = getCourseState(c.code);
+      return (s.status === "passed" || s.status === "transfer") ? a + c.cr : a;
+    }, 0);
+    const pct = totalCr ? (passedCr / totalCr) * 100 : 0;
+
+    const card = document.createElement('div');
+    card.className = 'semester';
+    card.innerHTML = `
+      <div class="sem-header">
+        <div class="sem-title"><span class="yr">${sem.year}</span>${sem.name}</div>
+        <div class="sem-meta">
+          <div class="sem-progress"><div class="sem-progress-fill" style="width:${pct}%"></div></div>
+          <span><strong>${passedCr}</strong>/${totalCr} cr</span>
+          <button class="add-course-btn" data-sem="${sem.id}">+ Add Course</button>
+        </div>
+      </div>
+      <div class="courses"></div>
+    `;
+    const cList = card.querySelector('.courses');
+    visibleCourses.forEach(c => cList.appendChild(renderCourse(c, sem.id)));
+    // custom courses for this semester
+    state.customCourses.filter(c => c.semId === sem.id && shouldShowCourse(c))
+      .forEach(c => cList.appendChild(renderCourse(c, sem.id, true)));
+
+    card.querySelector('.add-course-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAddCourse(sem.id);
+    });
+    container.appendChild(card);
+  });
+
+  // Custom courses without a semester (shouldn't happen but defensive)
+  const orphans = state.customCourses.filter(c => !c.semId && shouldShowCourse(c));
+  if (orphans.length) {
+    const card = document.createElement('div');
+    card.className = 'semester';
+    card.innerHTML = `<div class="sem-header"><div class="sem-title">Custom</div></div><div class="courses"></div>`;
+    orphans.forEach(c => card.querySelector('.courses').appendChild(renderCourse(c, null, true)));
+    container.appendChild(card);
+  }
+}
+
+function renderCourse(course, semId, isCustom = false) {
+  const cs = getCourseState(course.code);
+  const prereqStatus = prereqsMet(course);
+  const isLocked = !prereqStatus.met && cs.status === "not-started";
+
+  const div = document.createElement('div');
+  let cls = 'course';
+  if (course.isGoal) cls += ' goal';
+  if (isLocked) cls += ' locked';
+  else if (cs.status === "passed") cls += ' passed';
+  else if (cs.status === "transfer") cls += ' transfer';
+  else if (cs.status === "in-progress") cls += ' in-progress';
+  else if (cs.status === "failed") cls += ' failed';
+  else cls += ' available';
+  div.className = cls;
+
+  // tags
+  const tags = [];
+  if (course.kind === "critical") tags.push('<span class="tag crit">PREREQ-CRIT</span>');
+  if (course.isGoal) tags.push('<span class="tag goal">GOAL</span>');
+  if (course.kind === "tech") tags.push('<span class="tag tech">TECH ELEC</span>');
+  if (course.kind === "gened") tags.push('<span class="tag gened">GENED</span>');
+  if (cs.status === "transfer") tags.push('<span class="tag" style="background:rgba(46,92,139,.15);color:var(--blue)">TRANSFER</span>');
+  // permission risk for high-demand courses
+  if (course.code === "ENEE 436") tags.push('<span class="tag risk">PERMISSION-TIGHT</span>');
+  if (course.code === "CMSC 470") tags.push('<span class="tag risk">PERMISSION-TIGHT</span>');
+
+  const metaItems = [
+    ...tags,
+    course.prereqs.length ? `<span>Prereqs: ${course.prereqs.join(', ')}</span>` : '',
+    course.note || ''
+  ].filter(Boolean);
+
+  // grade dropdown
+  const gradeOptions = GRADE_OPTIONS.map(g => `<option value="${g}" ${cs.grade === g ? 'selected' : ''}>${g || '—'}</option>`).join('');
+
+  const ptSlug = course.code.replace(/\s+/g, '');
+  const ptLink = course.code.match(/^(CMSC|ENEE|MATH|PHYS|CHEM|ENES|ENGL|COMM|UNIV|AMSC|STAT)\s*\d/i)
+    ? `<a class="pt-link" href="https://planetterp.com/course/${ptSlug}" target="_blank" rel="noopener" title="PlanetTerp — grades &amp; reviews">PT ↗</a>`
+    : '';
+
+  div.innerHTML = `
+    <div class="code">${course.code}</div>
+    <div class="title-block">
+      <div class="title">${course.title}${ptLink}</div>
+      <div class="meta">${metaItems.join(' · ')}</div>
+    </div>
+    <div class="credits">${course.cr}<span class="credits-label">cr</span></div>
+    <div class="status-controls">
+      <button class="status-btn ${cs.status === 'in-progress' ? 'active' : ''}" data-status="in-progress" title="In progress (1)">⋯</button>
+      <button class="status-btn ${cs.status === 'passed' ? 'passed-active' : ''}" data-status="passed" title="Passed (2)">✓</button>
+      <button class="status-btn ${cs.status === 'failed' ? 'failed-active' : ''}" data-status="failed" title="Failed (3)">✗</button>
+      <button class="status-btn ${cs.status === 'transfer' ? 'transfer-active' : ''}" data-status="transfer" title="Transfer/AP credit (4)">T</button>
+      <select class="grade-select" title="Grade">${gradeOptions}</select>
+      ${isCustom ? `<button class="course-action" title="Remove" data-remove="${course.code}">×</button>` : ''}
+    </div>
+    ${isLocked ? `<div class="why-locked">🔒 Need to pass <strong>${prereqStatus.missing}</strong> first</div>` : ''}
+  `;
+
+  div.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newStatus = btn.dataset.status;
+      const current = getCourseState(course.code).status;
+      if (current === newStatus) {
+        setCourseState(course.code, { status: "not-started", grade: "" });
+      } else {
+        setCourseState(course.code, { status: newStatus });
+      }
+    });
+  });
+
+  const gs = div.querySelector('.grade-select');
+  gs.addEventListener('change', (e) => {
+    const val = e.target.value;
+    const update = { grade: val };
+    // Auto-set status based on grade entry
+    const current = getCourseState(course.code).status;
+    if (val && current === "not-started") update.status = "passed";
+    if (val === "F" && current !== "failed") update.status = "failed";
+    setCourseState(course.code, update);
+  });
+  gs.addEventListener('click', (e) => e.stopPropagation());
+
+  const remove = div.querySelector('[data-remove]');
+  if (remove) {
+    remove.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`Remove ${course.code}?`)) {
+        state.customCourses = state.customCourses.filter(c => c.code !== course.code);
+        delete state.courses[course.code];
+        saveState();
+        render();
+      }
+    });
+  }
+
+  return div;
+}
+
+function renderStats() {
+  const all = flatCourses();
+  let earnedCredits = 0, gpaPoints = 0, gpaCredits = 0;
+  let semestersDone = 0, goalsDone = 0;
+
+  all.forEach(c => {
+    const s = getCourseState(c.code);
+    if (s.status === "passed" || s.status === "transfer") {
+      earnedCredits += c.cr;
+      // GPA only counts non-transfer
+      if (s.status === "passed" && s.grade && GRADE_POINTS[s.grade] !== undefined) {
+        gpaPoints += GRADE_POINTS[s.grade] * c.cr;
+        gpaCredits += c.cr;
+      }
+      if (c.isGoal) goalsDone++;
+    }
+  });
+
+  SCHEDULE.forEach(sem => {
+    const allDone = sem.courses.every(c => {
+      const s = getCourseState(c.code);
+      return s.status === "passed" || s.status === "transfer";
+    });
+    if (allDone) semestersDone++;
+  });
+
+  document.getElementById('stat-credits').textContent = earnedCredits;
+  document.getElementById('stat-credits-detail').textContent = `of ${TOTAL_CREDITS_REQUIRED} total`;
+
+  const gpaEl = document.getElementById('stat-gpa');
+  if (gpaCredits > 0) {
+    gpaEl.textContent = (gpaPoints / gpaCredits).toFixed(2);
+    document.getElementById('stat-gpa-detail').textContent = `across ${gpaCredits} graded credits`;
+  } else {
+    gpaEl.textContent = '—';
+    document.getElementById('stat-gpa-detail').textContent = 'add grades to calculate';
+  }
+
+  document.getElementById('stat-goals').textContent = `${goalsDone}/3`;
+  document.getElementById('stat-sems').textContent = `${semestersDone}/8`;
+
+  const progressEl = document.getElementById('overall-progress');
+  if (progressEl) progressEl.style.width = `${Math.min(100, (earnedCredits / TOTAL_CREDITS_REQUIRED) * 100)}%`;
+}
+
+function renderNextUp() {
+  const list = document.getElementById('next-list');
+  list.innerHTML = '';
+  const eligible = flatCourses().filter(c => {
+    const s = getCourseState(c.code);
+    return s.status === "not-started" && prereqsMet(c).met;
+  });
+  if (eligible.length === 0) {
+    list.innerHTML = '<li class="empty">Mark courses as you complete them to see what unlocks</li>';
+    return;
+  }
+  eligible.slice(0, 10).forEach(c => {
+    const li = document.createElement('li');
+    const titleShort = c.title.length > 26 ? c.title.slice(0, 26) + '…' : c.title;
+    li.innerHTML = `<span><strong>${c.code}</strong> ${titleShort}</span><span class="credits-mini">${c.cr} cr</span>`;
+    list.appendChild(li);
+  });
+}
+
+function renderGoals() {
+  const goals = flatCourses().filter(c => c.isGoal);
+  const tracker = document.getElementById('goal-tracker');
+  tracker.innerHTML = '';
+  goals.forEach(g => {
+    const s = getCourseState(g.code);
+    const pre = prereqsMet(g);
+    let icon = '○', iconCls = '', statusText = '', statusCls = '';
+    if (s.status === "passed" || s.status === "transfer") {
+      icon = '✓'; iconCls = 'done'; statusText = 'Done · ' + (s.grade || (s.status === "transfer" ? 'transfer' : 'no grade')); statusCls = 'done';
+    } else if (s.status === "in-progress") {
+      icon = '◐'; iconCls = 'in-prog'; statusText = 'In progress'; statusCls = 'in-prog';
+    } else if (pre.met) {
+      icon = '◯'; iconCls = 'ready'; statusText = 'Ready · need CS-permission'; statusCls = 'ready';
+    } else {
+      const missing = g.prereqs.filter(p => {
+        const ps = getCourseState(p);
+        return ps.status !== "passed" && ps.status !== "transfer";
+      });
+      statusText = `Need: ${missing.join(', ')}`;
+    }
+    const row = document.createElement('div');
+    row.className = 'goal-row';
+    row.innerHTML = `
+      <div class="goal-icon ${iconCls}">${icon}</div>
+      <div class="goal-info">
+        <div class="goal-name">${g.code} · ${g.title}</div>
+        <div class="goal-status ${statusCls}">${statusText}</div>
+      </div>
+    `;
+    tracker.appendChild(row);
+  });
+}
+
+function renderAlerts() {
+  const cont = document.getElementById('alerts-container');
+  cont.innerHTML = '';
+  const alerts = [];
+
+  const all = flatCourses();
+  const failed = all.filter(c => getCourseState(c.code).status === "failed");
+  failed.forEach(c => {
+    alerts.push({ type: 'danger', text: `<strong>${c.code} failed.</strong> Every course downstream is blocked. Plan a retake.` });
+  });
+
+  const cMinus = all.filter(c => {
+    const s = getCourseState(c.code);
+    return s.status === "passed" && s.grade === "C-";
+  });
+  if (cMinus.length > 0) {
+    alerts.push({ type: 'warn', text: `<strong>C- in ${cMinus.map(c=>c.code).join(', ')}.</strong> You met the minimum, but the next course will be tighter. Consider office hours.` });
+  }
+
+  // GPA dip
+  let gp = 0, gc = 0;
+  all.forEach(c => {
+    const s = getCourseState(c.code);
+    if (s.status === "passed" && GRADE_POINTS[s.grade] !== undefined) {
+      gp += GRADE_POINTS[s.grade] * c.cr;
+      gc += c.cr;
+    }
+  });
+  if (gc >= 12 && gp / gc < 3.0) {
+    alerts.push({ type: 'warn', text: `<strong>GPA below 3.0.</strong> CS-permission for goal courses gets harder under 3.0. Talk to your CE advisor.` });
+  }
+
+  // Goal-course readiness
+  const mlReady = ['CMSC 330', 'CMSC 351'].every(p => {
+    const s = getCourseState(p);
+    return s.status === "passed" || s.status === "transfer";
+  });
+  const enee436 = getCourseState('ENEE 436');
+  if (mlReady && enee436.status === "not-started") {
+    alerts.push({ type: 'success', text: `<strong>ENEE 436 (ML) is unlocked.</strong> Submit permission via your CE advisor.` });
+  }
+
+  const nlpReady = ['CMSC 320', 'CMSC 330', 'CMSC 351', 'ENEE 290'].every(p => {
+    const s = getCourseState(p);
+    return s.status === "passed" || s.status === "transfer";
+  });
+  const cmsc470 = getCourseState('CMSC 470');
+  if (nlpReady && cmsc470.status === "not-started") {
+    alerts.push({ type: 'success', text: `<strong>CMSC 470 (NLP) is unlocked.</strong> All four prereqs cleared.` });
+  }
+
+  // Semester load warnings
+  SCHEDULE.forEach(sem => {
+    const inProgress = sem.courses.filter(c => getCourseState(c.code).status === "in-progress");
+    const totalCr = inProgress.reduce((a, c) => a + c.cr, 0);
+    if (totalCr >= 19) {
+      alerts.push({ type: 'warn', text: `<strong>${sem.name}:</strong> ${totalCr} credits in progress is heavy. Consider moving one course to summer.` });
+    }
+  });
+
+  if (alerts.length === 0) {
+    alerts.push({ type: 'info', text: `Nothing flagged — you're tracking on plan. Keep marking courses as you go.` });
+  }
+
+  alerts.slice(0, 5).forEach(a => {
+    const el = document.createElement('div');
+    el.className = 'alert' + (a.type === 'danger' ? ' danger' : a.type === 'success' ? ' success' : a.type === 'info' ? ' info' : '');
+    el.innerHTML = a.text;
+    cont.appendChild(el);
+  });
+}
+
+/* ============================================================
+   AUDIT VIEW
+   ============================================================ */
+function renderAudit() {
+  const all = flatCourses();
+  let earnedCredits = 0;
+  all.forEach(c => {
+    const s = getCourseState(c.code);
+    if (s.status === "passed" || s.status === "transfer") earnedCredits += c.cr;
+  });
+  const pct = Math.min(100, Math.round((earnedCredits / TOTAL_CREDITS_REQUIRED) * 100));
+  document.getElementById('audit-percent').textContent = pct + '%';
+  const headline = document.getElementById('audit-headline');
+  const tag = document.getElementById('audit-tagline');
+  if (pct === 0) { headline.textContent = "Building Your Degree"; tag.textContent = "Mark courses to track progress against the 130-credit CE requirement."; }
+  else if (pct < 25) { headline.textContent = "Strong start."; tag.textContent = "Foundation courses are the highest-leverage time investment of your degree."; }
+  else if (pct < 50) { headline.textContent = "Hitting your stride."; tag.textContent = "Y2 hardware/math chain is what gates the rest. Keep grades B+ or higher in CMSC 216/250."; }
+  else if (pct < 75) { headline.textContent = "Junior year — the pivot."; tag.textContent = "By end of S29, every ENEE 436, CMSC 451/470 prereq should be done. Submit permission requests on time."; }
+  else if (pct < 100) { headline.textContent = "Final stretch."; tag.textContent = "Capstone, ML, NLP. Your portfolio matters more than your GPA from here."; }
+  else { headline.textContent = "Degree complete."; tag.textContent = "Apply for graduation, confirm audit with advisor 60 days before commencement."; }
+
+  // Core
+  const coreEl = document.getElementById('audit-core');
+  coreEl.innerHTML = '';
+  const coreCourses = all.filter(c => c.category === 'ce-core');
+  coreCourses.forEach(c => coreEl.appendChild(auditLine(c)));
+
+  // GenEd
+  const genEdEl = document.getElementById('audit-gened');
+  genEdEl.innerHTML = '';
+  const geCats = [
+    { id: 'gened-fsaw', label: 'FSAW · Academic Writing', need: 1 },
+    { id: 'gened-fspw', label: 'FSPW · Professional Writing', need: 1 },
+    { id: 'gened-fsoc', label: 'FSOC · Oral Communication', need: 1 },
+    { id: 'gened-fsma', label: 'FSMA · Math Foundation (MATH 140)', need: 1, customCheck: () => {
+      const s = getCourseState('MATH 140');
+      return s.status === "passed" || s.status === "transfer";
+    } },
+    { id: 'gened-fsar', label: 'FSAR · Analytic Reasoning (CMSC 250)', need: 1, customCheck: () => {
+      const s = getCourseState('CMSC 250');
+      return s.status === "passed" || s.status === "transfer";
+    } },
+    { id: 'gened-dshs', label: 'DSHS · History/Social Sci', need: 2 },
+    { id: 'gened-dshu', label: 'DSHU · Humanities', need: 2 },
+    { id: 'gened-dssp', label: 'DSSP · Scholarship in Practice', need: 2 },
+  ];
+  geCats.forEach(cat => {
+    let done = 0;
+    if (cat.customCheck) {
+      done = cat.customCheck() ? 1 : 0;
+    } else {
+      done = all.filter(c => c.category === cat.id).filter(c => {
+        const s = getCourseState(c.code);
+        return s.status === "passed" || s.status === "transfer";
+      }).length;
+    }
+    // ENEE 200 also satisfies a DSHU
+    if (cat.id === 'gened-dshu') {
+      const s = getCourseState('ENEE 200');
+      if (s.status === "passed" || s.status === "transfer") done = Math.min(cat.need, done + 1);
+    }
+    const el = document.createElement('div');
+    const dCls = done >= cat.need ? 'done' : (done > 0 ? 'partial' : '');
+    el.className = 'audit-line ' + dCls;
+    el.innerHTML = `
+      <div class="check">${done >= cat.need ? '✓' : (done > 0 ? '◐' : '○')}</div>
+      <div class="name">${cat.label}</div>
+      <div class="status">${done}/${cat.need}</div>
+    `;
+    genEdEl.appendChild(el);
+  });
+
+  // Tech Electives
+  const techEl = document.getElementById('audit-tech');
+  techEl.innerHTML = '';
+  const techCats = [
+    { id: 'tech-a', label: 'Cat A · Math/Basic Sci (≥3 cr 400-lvl)', need: 6, type: 'cr' },
+    { id: 'tech-b', label: 'Cat B · CS Theory & Apps', need: 3, type: 'cr' },
+    { id: 'tech-c', label: 'Cat C · EE Theory & Apps', need: 6, type: 'cr' },
+    { id: 'tech-d', label: 'Cat D · Advanced Lab', need: 2, type: 'cr' },
+    { id: 'tech-e', label: 'Cat E · Capstone Design', need: 3, type: 'cr' },
+    { id: 'tech-f', label: 'Cat F · General Tech Elective', need: 3, type: 'cr' },
+  ];
+  techCats.forEach(cat => {
+    const matched = all.filter(c => c.category === cat.id);
+    const done = matched.filter(c => {
+      const s = getCourseState(c.code);
+      return s.status === "passed" || s.status === "transfer";
+    }).reduce((a, c) => a + c.cr, 0);
+    const totalPlanned = matched.reduce((a, c) => a + c.cr, 0);
+    const dCls = done >= cat.need ? 'done' : (done > 0 ? 'partial' : '');
+    const el = document.createElement('div');
+    el.className = 'audit-line ' + dCls;
+    el.innerHTML = `
+      <div class="check">${done >= cat.need ? '✓' : (done > 0 ? '◐' : '○')}</div>
+      <div class="name">${cat.label} <span style="color:var(--slate);font-size:.78rem">(${matched.map(c=>c.code).join(', ') || 'none'})</span></div>
+      <div class="status">${done}/${cat.need} cr</div>
+    `;
+    techEl.appendChild(el);
+  });
+
+  // Goals
+  const goalsEl = document.getElementById('audit-goals');
+  goalsEl.innerHTML = '';
+  all.filter(c => c.isGoal).forEach(c => goalsEl.appendChild(auditLine(c)));
+}
+
+function auditLine(course) {
+  const s = getCourseState(course.code);
+  const done = s.status === "passed" || s.status === "transfer";
+  const partial = s.status === "in-progress";
+  const dCls = done ? 'done' : (partial ? 'partial' : '');
+  const el = document.createElement('div');
+  el.className = 'audit-line ' + dCls;
+  const status = done ? (s.grade || (s.status === "transfer" ? "transfer" : "passed")) : (partial ? "in progress" : `${course.cr} cr`);
+  el.innerHTML = `
+    <div class="check">${done ? '✓' : (partial ? '◐' : '○')}</div>
+    <div class="name">${course.code} · ${course.title}</div>
+    <div class="status">${status}</div>
+  `;
+  return el;
+}
+
+/* ============================================================
+   TIMELINE VIEW
+   ============================================================ */
+function renderTimeline() {
+  const rail = document.getElementById('timeline-rail');
+  rail.innerHTML = '';
+  TIMELINE_EVENTS.forEach(ev => {
+    const el = document.createElement('div');
+    el.className = 'timeline-event ' + (ev.phase || '');
+    el.innerHTML = `
+      <div class="timeline-card">
+        <div class="timeline-date">${ev.date}</div>
+        <div class="timeline-title">${ev.title}</div>
+        <div class="timeline-desc">${ev.desc}</div>
+      </div>
+    `;
+    rail.appendChild(el);
+  });
+}
+
+/* ============================================================
+   ROADMAP VIEW (mini prereq graph)
+   ============================================================ */
+function renderRoadmap() {
+  // Show the prereq graph for goal courses + their chain
+  const focusCourses = ["CMSC 131", "CMSC 132", "CMSC 216", "CMSC 250", "MATH 140", "MATH 141",
+    "ENEE 290", "CMSC 320", "CMSC 330", "CMSC 351", "ENEE 436", "CMSC 451", "CMSC 470"];
+  // Layout — group by depth
+  const layers = {
+    0: ["MATH 140", "CMSC 131"],
+    1: ["MATH 141", "CMSC 132"],
+    2: ["ENEE 290", "CMSC 216", "CMSC 250"],
+    3: ["CMSC 330", "CMSC 351", "CMSC 320"],
+    4: ["ENEE 436", "CMSC 451", "CMSC 470"],
+  };
+  const nodeW = 110, nodeH = 40, gapX = 30, gapY = 70;
+  const layerCount = Object.keys(layers).length;
+  const maxPerLayer = Math.max(...Object.values(layers).map(l => l.length));
+  const svgW = layerCount * (nodeW + gapX) + 80;
+  const svgH = maxPerLayer * (nodeH + gapY) + 80;
+
+  const positions = {};
+  Object.keys(layers).forEach((lk) => {
+    const li = parseInt(lk);
+    const items = layers[lk];
+    const totalH = items.length * (nodeH + gapY) - gapY;
+    const startY = (svgH - totalH) / 2;
+    items.forEach((code, i) => {
+      positions[code] = {
+        x: 40 + li * (nodeW + gapX),
+        y: startY + i * (nodeH + gapY),
+      };
+    });
+  });
+
+  // Build edges
+  const edges = [];
+  focusCourses.forEach(code => {
+    const c = findCourse(code);
+    if (!c) return;
+    c.prereqs.forEach(p => {
+      if (positions[p]) {
+        const ps = getCourseState(p);
+        const cs = getCourseState(code);
+        let cls = '';
+        if (ps.status === "passed" || ps.status === "transfer") cls = 'satisfied';
+        else if (cs.status === "not-started" && ps.status !== "passed") cls = 'blocked';
+        edges.push({ from: p, to: code, cls });
+      }
+    });
+  });
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--line-strong)"/>
+      </marker>
+    </defs>`;
+  // edges first
+  edges.forEach(e => {
+    const a = positions[e.from], b = positions[e.to];
+    const x1 = a.x + nodeW, y1 = a.y + nodeH/2;
+    const x2 = b.x, y2 = b.y + nodeH/2;
+    const cx = (x1 + x2) / 2;
+    svg += `<path class="edge ${e.cls}" d="M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}"/>`;
+  });
+  // nodes
+  Object.keys(positions).forEach(code => {
+    const p = positions[code];
+    const c = findCourse(code);
+    if (!c) return;
+    const s = getCourseState(code);
+    const pre = prereqsMet(c);
+    let cls = '';
+    if (s.status === "passed" || s.status === "transfer") cls = 'passed';
+    else if (s.status === "in-progress") cls = 'in-progress';
+    else if (s.status === "failed") cls = 'failed';
+    else if (pre.met) cls = 'available';
+    if (c.isGoal) cls += ' goal';
+    svg += `<rect class="node-rect ${cls}" x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}"/>`;
+    svg += `<text class="node-text" x="${p.x + nodeW/2}" y="${p.y + 17}" text-anchor="middle">${code}</text>`;
+    svg += `<text class="node-text muted" x="${p.x + nodeW/2}" y="${p.y + 30}" text-anchor="middle" style="font-size:9px">${c.cr} cr${c.isGoal ? ' ★' : ''}</text>`;
+  });
+  svg += '</svg>';
+  document.getElementById('roadmap-container').innerHTML = svg;
+}
+
+/* ============================================================
+   ADD CUSTOM COURSE
+   ============================================================ */
+let addCourseSemId = null;
+function openAddCourse(semId) {
+  addCourseSemId = semId;
+  document.getElementById('ac-code').value = '';
+  document.getElementById('ac-title').value = '';
+  document.getElementById('ac-credits').value = '3';
+  document.getElementById('ac-note').value = '';
+  document.getElementById('add-course-modal').classList.add('open');
+  setTimeout(() => document.getElementById('ac-code').focus(), 50);
+}
+function closeAddCourse() {
+  document.getElementById('add-course-modal').classList.remove('open');
+}
+function saveCustomCourse() {
+  const code = document.getElementById('ac-code').value.trim();
+  const title = document.getElementById('ac-title').value.trim();
+  const cr = parseInt(document.getElementById('ac-credits').value) || 3;
+  const note = document.getElementById('ac-note').value.trim();
+  if (!code || !title) {
+    alert('Code and title are required');
+    return;
+  }
+  if (findCourse(code)) {
+    alert('A course with that code already exists');
+    return;
+  }
+  state.customCourses.push({
+    code, title, cr,
+    prereqs: [], coreqs: [],
+    kind: 'tech', category: 'tech-f',
+    semId: addCourseSemId,
+    note: note || 'Custom-added',
+    isCustom: true,
+  });
+  saveState();
+  closeAddCourse();
+  render();
+}
+
+/* ============================================================
+   IMPORT / EXPORT
+   ============================================================ */
+function exportData() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const date = new Date().toISOString().slice(0, 10);
+  a.download = `terp-track-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function openImport() {
+  document.getElementById('import-file').click();
+}
+document.getElementById('import-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.courses) throw new Error('Invalid file');
+      if (confirm('This will replace your current data. Continue?')) {
+        state = { ...state, ...data };
+        saveState();
+        applyTheme();
+        render();
+      }
+    } catch (err) {
+      alert('Could not import: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function dismissWelcome() {
+  state.welcomeDismissed = true;
+  saveState();
+  render();
+}
+
+function quickStartAP() {
+  // common AP credit assumption
+  if (confirm('Mark MATH 140 and CMSC 131 as transfer credit (typical AP equivalents)?')) {
+    state.courses["MATH 140"] = { status: "transfer", grade: "" };
+    state.courses["CMSC 131"] = { status: "transfer", grade: "" };
+    state.welcomeDismissed = true;
+    saveState();
+    render();
+  }
+}
+
+/* ============================================================
+   SEARCH + FILTER + KEYBOARD
+   ============================================================ */
+const searchInput = document.getElementById('search-input');
+searchInput.addEventListener('input', (e) => {
+  searchQuery = e.target.value;
+  renderSemesters();
+});
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.filter;
+    renderSemesters();
+  });
+});
+
+document.addEventListener('keydown', (e) => {
+  // Don't intercept while typing
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+    if (e.key === 'Escape') { e.target.blur(); }
+    return;
+  }
+  if (e.key === '/') {
+    e.preventDefault();
+    searchInput.focus();
+  } else if (e.key.toLowerCase() === 'p') switchTab('plan');
+  else if (e.key.toLowerCase() === 'a') switchTab('audit');
+  else if (e.key.toLowerCase() === 't') switchTab('timeline');
+  else if (e.key.toLowerCase() === 'r') switchTab('roadmap');
+  else if (e.key === 'Escape') {
+    closeAddCourse();
+  }
+});
+
+document.getElementById('add-course-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'add-course-modal') closeAddCourse();
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+applyTheme();
+render();
+</script>
+</body>
+</html>
