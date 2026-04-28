@@ -1319,7 +1319,7 @@ h1.hero-title em {
     <div class="stat">
       <div class="stat-label">Credits Earned</div>
       <div class="stat-value" id="stat-credits">0</div>
-      <div class="stat-detail" id="stat-credits-detail">of 140 total</div>
+      <div class="stat-detail" id="stat-credits-detail">of 137 total</div>
     </div>
     <div class="stat gold">
       <div class="stat-label">Current GPA</div>
@@ -1546,8 +1546,7 @@ const SCHEDULE = [
       { code: "ENEE 324", title: "Engineering Probability & Stats",cr: 3, prereqs: ["ENEE 322"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENEE 303", title: "Analog Electronics",             cr: 3, prereqs: ["ENEE 205"], coreqs: [], kind: "tech", category: "tech-c", note: "Tech Cat C" },
       { code: "ENEE 307", title: "Analog Electronics Lab",         cr: 2, prereqs: [], coreqs: ["ENEE 303"], kind: "tech", category: "tech-d", note: "Tech Cat D" },
-      { code: "ENEE 425", title: "Digital Signal Processing",      cr: 3, prereqs: ["ENEE 322"], coreqs: [], kind: "tech", category: "tech-c", note: "Tech Cat C · closes 26-cr elective gap" },
-      { code: "GenEd HS-2", title: "HS #2 + I-Series + Diversity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshs", note: "⚠ MUST be tagged DSHS + I-Series + UP/CC — verify at gened.umd.edu before enrolling. Resolves I-Series #2 + Diversity in one slot" },
+      { code: "GenEd HS-2", title: "HS #2 + I-Series + Diversity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshs", note: "Pick HS course tagged I-Series + UP/CC" },
     ]
   },
   {
@@ -1557,7 +1556,7 @@ const SCHEDULE = [
       { code: "CMSC 451", title: "Design & Analysis of Algorithms",cr: 3, prereqs: ["CMSC 351"], coreqs: [], kind: "goal", category: "tech-b", isGoal: true, note: "★ GOAL · Tech Cat B" },
       { code: "ENEE 446", title: "Digital Computer Design",        cr: 3, prereqs: ["ENEE 350"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENGL 393", title: "Technical Writing",              cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fspw", note: "FSPW · Junior standing" },
-      { code: "GenEd SP-1", title: "Scholarship in Practice (outside major)",cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", note: "⚠ DSSP #1 — must be outside CE major. Confirm DSSP tag at gened.umd.edu before enrolling" },
+      { code: "GenEd SP-1", title: "Scholarship in Practice (outside major)",cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", note: "DSSP #1" },
       { code: "MATH 401", title: "Applications of Linear Algebra", cr: 3, prereqs: ["MATH 241"], coreqs: [], kind: "tech", category: "tech-a", note: "Tech Cat A (400-level) · satisfies Cat A 400-lvl rule" },
     ]
   },
@@ -1568,7 +1567,7 @@ const SCHEDULE = [
       { code: "CMSC 412", title: "Operating Systems (or ENEE 447)",cr: 4, prereqs: ["CMSC 330", "CMSC 351"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENEE 408X", title: "Capstone Design",               cr: 3, prereqs: [], coreqs: [], kind: "tech", category: "tech-e", note: "Tech Cat E · 408N pairs w/ ML" },
       { code: "ENEE 440", title: "Microprocessors",                cr: 3, prereqs: ["ENEE 350"], coreqs: [], kind: "tech", category: "tech-c", note: "Tech Cat C" },
-      { code: "GenEd SP-2", title: "Scholarship in Practice #2",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", note: "⚠ DSSP #2 — must be outside CE major. Confirm DSSP tag at gened.umd.edu before enrolling" },
+      { code: "GenEd SP-2", title: "Scholarship in Practice #2",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", note: "DSSP #2" },
     ]
   },
 ];
@@ -1579,14 +1578,13 @@ const TIMELINE_EVENTS = [
   { date: "Spring 2027", title: "Apply to internal Clark School transfer", desc: "Submit during the spring window. Typically requires 3.0 GPA + completion of MATH 140, CHEM 135, CMSC 131.", phase: "past" },
   { date: "Spring 2028", title: "Apply to Academy of Machine Learning", desc: "ECE-based undergraduate research program. Membership = priority for ENEE 408N capstone in Y4.", phase: "upcoming" },
   { date: "Fall 2028", title: "Start ML/NLP portfolio projects", desc: "Kaggle entry, open-source contribution, or undergrad research role. By F29 permission-request time, having evidence makes a real difference.", phase: "upcoming" },
-  { date: "Before S29 Reg", title: "Choose HS-2 course carefully", desc: "The GenEd HS-2 slot in Spring 2029 MUST be a course tagged DSHS + I-Series + UP/CC simultaneously. Use the filter tool at gened.umd.edu. This single course satisfies three GenEd boxes. Also confirm SP-1 and SP-2 picks are tagged DSSP and outside the CE major.", phase: "critical" },
   { date: "Apr 2029", title: "Submit CMSC 422 & 451 permission requests", desc: "Through your CE advisor for Fall 2029 registration. CE majors don't get auto-priority — submit early. Bring screenshot of degree audit.", phase: "critical" },
   { date: "Nov 2029", title: "Submit CMSC 470 permission request", desc: "For Spring 2030. By this point CMSC 320, 330, 351 should all be passed with C- or higher (B+ or higher = stronger case).", phase: "critical" },
   { date: "Spring 2030", title: "Apply for graduation", desc: "Submit early in the term. Confirm degree audit with your CE advisor 60 days before commencement.", phase: "upcoming" },
 ];
 
 const STORAGE_KEY = "terp-track-v2";
-const TOTAL_CREDITS_REQUIRED = 140;
+const TOTAL_CREDITS_REQUIRED = 137;
 
 const GRADE_POINTS = {
   "A+": 4.0, "A": 4.0, "A-": 3.7,
