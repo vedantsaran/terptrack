@@ -8,6 +8,7 @@ function render() {
   renderNextUp();
   renderGoals();
   renderAlerts();
+  if (typeof renderRecommendations === 'function') renderRecommendations();
   if (currentTab === 'audit') renderAudit();
   if (currentTab === 'roadmap') renderRoadmap();
   if (currentTab === 'table') renderTable();

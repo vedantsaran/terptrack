@@ -113,6 +113,7 @@
           <button class="filter-chip" data-filter="locked">Locked</button>
           <button class="filter-chip" data-filter="passed">Passed</button>
           <button class="filter-chip" id="add-semester-chip" title="Add a new semester to your plan">+ Semester</button>
+          <button class="filter-chip" id="import-chip" title="Smart-import courses from umd.io + PlanetTerp">⚡ Import</button>
         </div>
 
         <div id="semesters-container"></div>
@@ -137,6 +138,12 @@
           <h3>Heads Up</h3>
           <p class="lead">Live alerts based on your status</p>
           <div id="alerts-container"></div>
+        </div>
+
+        <div class="panel">
+          <h3>Recommendations</h3>
+          <p class="lead">Powered by umd.io + PlanetTerp</p>
+          <div id="reco-container"></div>
         </div>
       </div>
     </div>
@@ -293,6 +300,17 @@
     <h3>Customize Your Plan</h3>
     <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">Defaults match UMD Computer Engineering. Tweak any field for your own program.</p>
 
+    <div class="major-section">
+      <label>Apply Major Template</label>
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <select id="set-major" style="flex:1"></select>
+        <button class="btn" type="button" onclick="applyMajorFromSettings()">Apply</button>
+      </div>
+      <p id="set-major-note" style="font-size:.74rem;color:var(--slate);margin:6px 0 0;font-style:italic"></p>
+      <p id="set-major-status" style="font-size:.78rem;margin:6px 0 0;min-height:1em"></p>
+      <p style="font-size:.74rem;color:var(--slate);margin:8px 0 0">Templates use umd.io + PlanetTerp to fill in titles, credits, prereqs, and avg GPA. Course progress is preserved when you switch.</p>
+    </div>
+
     <label>Program / Major Name</label>
     <input type="text" id="set-program" placeholder="e.g., Computer Engineering">
 
@@ -335,6 +353,29 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="import-modal">
+  <div class="modal" style="max-width:640px">
+    <h3>Smart Import Courses</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">
+      Paste course codes (one per line, or comma/space separated). We'll fetch titles, credits, prereqs, and avg GPA from umd.io + PlanetTerp.
+    </p>
+    <label>Course Codes</label>
+    <textarea id="import-codes" rows="4" placeholder="CMSC131&#10;CMSC132&#10;MATH140, MATH141"
+      style="width:100%;font-family:'JetBrains Mono', monospace;font-size:.86rem"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:500;margin-top:10px">
+      <input type="checkbox" id="import-recurse" style="width:auto" checked>
+      Recursively pull prerequisites (up to 3 levels)
+    </label>
+    <p id="import-status" style="font-size:.8rem;color:var(--slate);margin:10px 0 0;min-height:1em"></p>
+    <div id="import-preview" class="import-preview"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImportCourses()">Cancel</button>
+      <button class="btn" onclick="previewImport()">Preview</button>
+      <button class="btn primary" onclick="commitImport()">Import to Plan</button>
+    </div>
+  </div>
+</div>
+
 <div class="footer">
   <p id="footer-text"><em>Terp Track</em> · UMD degree planner · Always confirm requirements with your advisor before registration · Saves locally to your browser</p>
 </div>
@@ -342,6 +383,7 @@
 <div class="save-indicator" id="save-indicator">Saved</div>
 
 <script src="js/data.js"></script>
+<script src="js/majors.js"></script>
 <script src="js/state.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/tabs.js"></script>
@@ -350,10 +392,13 @@
 <script src="js/timeline.js"></script>
 <script src="js/roadmap.js"></script>
 <script src="js/planetterp.js"></script>
+<script src="js/api.js"></script>
 <script src="js/courses.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/semesters.js"></script>
 <script src="js/io.js"></script>
+<script src="js/import.js"></script>
+<script src="js/recommendations.js"></script>
 <script src="js/events.js"></script>
 <script src="js/table.js"></script>
 <script src="js/main.js"></script>

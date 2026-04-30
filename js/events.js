@@ -34,6 +34,7 @@ document.addEventListener('keydown', (e) => {
     closeAddCourse();
     closeSettings();
     closeAddSemester();
+    closeImportCourses();
   }
 });
 
@@ -49,6 +50,17 @@ document.getElementById('add-semester-modal').addEventListener('click', (e) => {
 document.getElementById('settings-btn').addEventListener('click', openSettings);
 document.getElementById('ac-lookup-btn').addEventListener('click', lookupCourseFromPlanetTerp);
 document.getElementById('add-semester-chip').addEventListener('click', openAddSemester);
+document.getElementById('import-chip').addEventListener('click', openImportCourses);
+document.getElementById('import-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'import-modal') closeImportCourses();
+});
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'set-major') {
+    const note = document.getElementById('set-major-note');
+    const tpl = getMajorTemplate(e.target.value);
+    if (note && tpl) note.textContent = tpl.notes || '';
+  }
+});
 // Allow Enter on the code field to trigger lookup
 document.getElementById('ac-code').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); lookupCourseFromPlanetTerp(); }

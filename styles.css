@@ -1403,3 +1403,95 @@ h1.hero-title em {
   .semester { break-inside: avoid; box-shadow: none; }
   .stat-bar { break-inside: avoid; }
 }
+
+/* ===========================================================
+   MAJOR PICKER (Settings) + SMART IMPORT + RECOMMENDATIONS
+   =========================================================== */
+.major-section {
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.major-section label { font-weight: 600; font-size: .82rem; color: var(--ink); }
+
+.import-preview {
+  margin-top: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.import-preview:empty { display: none; }
+.import-row {
+  display: grid;
+  grid-template-columns: 90px 1fr auto auto;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: .82rem;
+  align-items: center;
+}
+.import-row:last-child { border-bottom: none; }
+.import-row strong { font-family: 'JetBrains Mono', monospace; font-size: .8rem; color: var(--maroon); }
+.import-row .muted { color: var(--slate); font-size: .76rem; grid-column: 2 / -1; }
+.import-row .muted:nth-of-type(1) { grid-column: auto; }
+
+#reco-container .reco-section {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+#reco-container .reco-section:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+#reco-container h4 {
+  font-size: .82rem;
+  margin: 0 0 4px;
+  color: var(--ink);
+  letter-spacing: .01em;
+}
+#reco-container .reco-sub {
+  font-size: .72rem;
+  color: var(--slate);
+  margin: 0 0 8px;
+}
+#reco-container .reco-list { display: flex; flex-direction: column; gap: 6px; }
+#reco-container .reco-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--cream-deep);
+  border-radius: 6px;
+  font-size: .78rem;
+}
+#reco-container .reco-item strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .74rem;
+  color: var(--maroon);
+  flex-shrink: 0;
+}
+#reco-container .reco-item .reco-title {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#reco-container .reco-item .reco-gpa {
+  font-size: .7rem;
+  color: var(--green);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+#reco-container .reco-more { font-size: .72rem; color: var(--slate); padding: 4px 8px; font-style: italic; }
+#reco-container .reco-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+#reco-container .reco-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .68rem;
+  background: var(--gold-soft);
+  color: var(--ink);
+  padding: 2px 8px;
+  border-radius: 100px;
+  letter-spacing: .04em;
+}
+#reco-container .reco-empty { font-size: .8rem; color: var(--slate); font-style: italic; margin: 0; }
+.btn.small { padding: 3px 10px; font-size: .72rem; }

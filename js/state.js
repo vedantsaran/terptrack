@@ -7,6 +7,8 @@ function loadState() {
     courses: {},
     customCourses: [],
     customSemesters: [],
+    activeSchedule: null,
+    majorId: null,
     settings: { ...DEFAULT_SETTINGS },
     welcomeDismissed: false,
     theme: "light",
@@ -46,7 +48,10 @@ function isGoalCourse(course) {
   return (getSettings().goalCourses || []).map(s => s.trim()).includes(course.code);
 }
 function getAllSemesters() {
-  return [...SCHEDULE, ...(state.customSemesters || [])];
+  const base = (state.activeSchedule && state.activeSchedule.length)
+    ? state.activeSchedule
+    : SCHEDULE;
+  return [...base, ...(state.customSemesters || [])];
 }
 
 let state = loadState();
