@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Terp Track — UMD CE / ML / NLP Degree Planner</title>
+<title>Terp Track — UMD Degree Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1420,6 +1420,10 @@ h1.hero-title em {
 <div class="topbar">
   <div class="brand"><span class="dot"></span>Terp Track</div>
   <div class="topbar-actions">
+    <button class="icon-btn" id="settings-btn" title="Customize program, credits, goal courses">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="label">Settings</span>
+    </button>
     <button class="icon-btn" id="theme-toggle" title="Toggle dark mode">
       <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       <span class="label">Theme</span>
@@ -1441,8 +1445,8 @@ h1.hero-title em {
 </div>
 
 <div class="hero">
-  <div class="eyebrow">UMD · Computer Engineering · 2026–2030</div>
-  <h1 class="hero-title">Your <em>Maryland</em> ML &amp; NLP track,<br>laid out semester by semester.</h1>
+  <div class="eyebrow" id="hero-eyebrow">UMD · Degree Planner</div>
+  <h1 class="hero-title" id="hero-title">Your <em>Maryland</em> degree,<br>laid out semester by semester.</h1>
   <p class="hero-sub">Mark courses as you finish them — Terp Track watches your prerequisites and tells you what to register for next. Everything saves locally.</p>
 </div>
 
@@ -1469,23 +1473,23 @@ h1.hero-title em {
     </div>
     <div class="stat green">
       <div class="stat-label">Goal Courses</div>
-      <div class="stat-value" id="stat-goals">0/3</div>
-      <div class="stat-detail">ML · Adv. Algo · NLP</div>
+      <div class="stat-value" id="stat-goals">0/0</div>
+      <div class="stat-detail" id="stat-goals-detail">configure in Settings</div>
     </div>
     <div class="stat slate">
       <div class="stat-label">Semesters Done</div>
-      <div class="stat-value" id="stat-sems">0/8</div>
-      <div class="stat-detail">F26 → S30</div>
+      <div class="stat-value" id="stat-sems">0/0</div>
+      <div class="stat-detail" id="stat-sems-detail">term by term</div>
     </div>
   </div>
 
   <div class="view active" id="view-plan">
     <div id="welcome-card" class="welcome-card" style="display:none">
       <h2>Welcome to Terp Track 👋</h2>
-      <p>Click ✓ on any course you've already passed (e.g., AP credit, transfer credit, or a course you're confident about). Use the dropdown to log your grade. The tracker checks every prereq automatically and shows you what unlocks next on the right.</p>
+      <p>Click ✓ on any course you've already passed, or "T" for transfer credit. Use the dropdown to log your grade. The tracker checks every prereq automatically and shows you what unlocks next on the right.</p>
       <div class="welcome-actions">
         <button class="btn primary" onclick="dismissWelcome()">Got it</button>
-        <button class="btn" onclick="quickStartAP()">Add AP Credits</button>
+        <button class="btn" onclick="openSettings()">Customize Program</button>
       </div>
       <div class="welcome-shortcuts">
         <div class="shortcut">
@@ -1514,6 +1518,7 @@ h1.hero-title em {
           <button class="filter-chip" data-filter="available">Available</button>
           <button class="filter-chip" data-filter="locked">Locked</button>
           <button class="filter-chip" data-filter="passed">Passed</button>
+          <button class="filter-chip" id="add-semester-chip" title="Add a new semester to your plan">+ Semester</button>
         </div>
 
         <div id="semesters-container"></div>
@@ -1528,10 +1533,10 @@ h1.hero-title em {
 
         <div class="panel">
           <h3>Goal Course Tracker</h3>
-          <p class="lead">Path to ML, Adv. Algo, and NLP</p>
+          <p class="lead" id="goal-tracker-lead">Path to your most-wanted courses</p>
           <div id="goal-tracker"></div>
           <div class="progress"><div class="progress-fill" id="overall-progress"></div></div>
-          <p style="font-size:.74rem;color:var(--slate);margin-top:8px;font-style:italic">ENEE 436 &amp; CMSC 470 require CS-permission via your CE advisor — competitive seats.</p>
+          <p id="goal-tracker-note" style="font-size:.74rem;color:var(--slate);margin-top:8px;font-style:italic"></p>
         </div>
 
         <div class="panel">
@@ -1547,7 +1552,7 @@ h1.hero-title em {
     <div class="audit-summary">
       <div>
         <h2 id="audit-headline">Building Your Degree</h2>
-        <p id="audit-tagline">Mark courses to track progress against the 125-credit CE requirement.</p>
+        <p id="audit-tagline">Mark courses to track progress against your degree requirements.</p>
       </div>
       <div class="audit-percent">
         <div class="big" id="audit-percent">0%</div>
@@ -1555,16 +1560,16 @@ h1.hero-title em {
       </div>
     </div>
     <div class="audit-grid">
-      <div class="audit-card">
-        <h3>CE Major Core</h3>
+      <div class="audit-card" id="audit-core-card">
+        <h3 id="audit-core-title">Core Requirements</h3>
         <div id="audit-core"></div>
       </div>
-      <div class="audit-card">
+      <div class="audit-card" id="audit-gened-card">
         <h3>General Education</h3>
         <div id="audit-gened"></div>
       </div>
-      <div class="audit-card">
-        <h3>Tech Electives (Cat A–F)</h3>
+      <div class="audit-card" id="audit-tech-card">
+        <h3>Tech Electives</h3>
         <div id="audit-tech"></div>
       </div>
       <div class="audit-card">
@@ -1584,14 +1589,6 @@ h1.hero-title em {
       <input type="text" id="table-search" placeholder="Filter by code, title, category…" style="min-width:220px">
       <select id="table-filter-sem">
         <option value="">All Semesters</option>
-        <option value="F26">Fall 2026</option>
-        <option value="S27">Spring 2027</option>
-        <option value="F27">Fall 2027</option>
-        <option value="S28">Spring 2028</option>
-        <option value="F28">Fall 2028</option>
-        <option value="S29">Spring 2029</option>
-        <option value="F29">Fall 2029</option>
-        <option value="S30">Spring 2030</option>
       </select>
       <select id="table-filter-cat">
         <option value="">All Categories</option>
@@ -1655,13 +1652,41 @@ h1.hero-title em {
   <div class="modal">
     <h3 id="add-course-title">Add Custom Course</h3>
     <label>Course Code</label>
-    <input type="text" id="ac-code" placeholder="e.g., MATH 241">
+    <div style="display:flex;gap:8px">
+      <input type="text" id="ac-code" placeholder="e.g., MATH241 or STAT400" style="flex:1">
+      <button class="btn" id="ac-lookup-btn" type="button" title="Auto-fill via PlanetTerp">Lookup</button>
+    </div>
+    <p id="ac-lookup-status" style="font-size:.78rem;color:var(--slate);margin:6px 0 0;min-height:1em"></p>
     <label>Title</label>
     <input type="text" id="ac-title" placeholder="e.g., Calculus III">
     <label>Credits</label>
-    <input type="number" id="ac-credits" min="1" max="6" value="3">
+    <input type="number" id="ac-credits" min="0" max="12" step="1" value="3">
+    <label>Semester</label>
+    <select id="ac-semester"></select>
+    <label>Category</label>
+    <select id="ac-category">
+      <option value="ce-core">Core (Major)</option>
+      <option value="tech-a">Tech Elective · Cat A (Math/Sci)</option>
+      <option value="tech-b">Tech Elective · Cat B (CS Theory)</option>
+      <option value="tech-c">Tech Elective · Cat C (EE Theory)</option>
+      <option value="tech-d">Tech Elective · Cat D (Adv. Lab)</option>
+      <option value="tech-e">Tech Elective · Cat E (Capstone)</option>
+      <option value="tech-f" selected>Tech Elective · Cat F (Generic)</option>
+      <option value="gened-fsaw">GenEd · FSAW</option>
+      <option value="gened-fspw">GenEd · FSPW</option>
+      <option value="gened-fsoc">GenEd · FSOC</option>
+      <option value="gened-dshs">GenEd · DSHS</option>
+      <option value="gened-dshu">GenEd · DSHU</option>
+      <option value="gened-dssp">GenEd · DSSP</option>
+      <option value="elective">Free Elective / Other</option>
+    </select>
+    <label>Prerequisites (comma-separated codes, optional)</label>
+    <input type="text" id="ac-prereqs" placeholder="e.g., MATH140, MATH141">
+    <label>
+      <input type="checkbox" id="ac-goal" style="width:auto;margin-right:6px"> Mark as a Goal course
+    </label>
     <label>Notes (optional)</label>
-    <input type="text" id="ac-note" placeholder="e.g., Tech Elective Cat A">
+    <input type="text" id="ac-note" placeholder="e.g., Required for ML track">
     <div class="modal-actions">
       <button class="btn" onclick="closeAddCourse()">Cancel</button>
       <button class="btn primary" onclick="saveCustomCourse()">Add Course</button>
@@ -1669,8 +1694,55 @@ h1.hero-title em {
   </div>
 </div>
 
+<div class="modal-backdrop" id="settings-modal">
+  <div class="modal" style="max-width:560px">
+    <h3>Customize Your Plan</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">Defaults match UMD Computer Engineering. Tweak any field for your own program.</p>
+
+    <label>Program / Major Name</label>
+    <input type="text" id="set-program" placeholder="e.g., Computer Engineering">
+
+    <label>Eyebrow Subtitle (small caps text above hero)</label>
+    <input type="text" id="set-eyebrow" placeholder="e.g., UMD · Computer Engineering · 2026–2030">
+
+    <label>Total Credits Required</label>
+    <input type="number" id="set-total-credits" min="30" max="200" step="1" value="125">
+
+    <label>Goal Courses (comma-separated codes)</label>
+    <input type="text" id="set-goals" placeholder="e.g., ENEE436, CMSC451, CMSC470">
+    <p style="font-size:.76rem;color:var(--slate);margin:4px 0 0">These appear in the Goal Tracker and are starred in your plan.</p>
+
+    <label>Footer Note (optional)</label>
+    <input type="text" id="set-footer" placeholder="e.g., Confirm with your advisor before registration">
+
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn danger" onclick="resetAllData()" title="Wipe all course progress and customizations">Reset Everything</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn" onclick="closeSettings()">Cancel</button>
+        <button class="btn primary" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="add-semester-modal">
+  <div class="modal">
+    <h3>Add Semester</h3>
+    <label>Short ID (e.g., F26, S27, SUM27)</label>
+    <input type="text" id="as-id" placeholder="F26">
+    <label>Display Name</label>
+    <input type="text" id="as-name" placeholder="Fall 2026">
+    <label>Year Label (optional)</label>
+    <input type="text" id="as-year" placeholder="Year 1">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddSemester()">Cancel</button>
+      <button class="btn primary" onclick="saveAddSemester()">Add</button>
+    </div>
+  </div>
+</div>
+
 <div class="footer">
-  <p><em>Terp Track</em> · Plan validated against UMD 2024–2025 CE catalog (Fall 2024 matriculation) · Always confirm with your CE advisor before registration · Saves locally to your browser</p>
+  <p id="footer-text"><em>Terp Track</em> · UMD degree planner · Always confirm requirements with your advisor before registration · Saves locally to your browser</p>
 </div>
 
 <div class="save-indicator" id="save-indicator">Saved</div>
@@ -1765,19 +1837,25 @@ const SCHEDULE = [
   },
 ];
 
-const TIMELINE_EVENTS = [
-  { date: "Apr 2026", title: "Confirm AP/IB credit posting", desc: "If you have AP Calc BC, MATH 140 may already be done. Same for AP CS A → CMSC 131. Check Testudo before Fall 2026 registration.", phase: "past" },
-  { date: "Fall 2026", title: "Lock in 3.0+ GPA", desc: "First semester sets the LEP gateway tone. Use office hours for CMSC 131 from week 2.", phase: "past" },
-  { date: "Spring 2027", title: "Apply to internal Clark School transfer", desc: "Submit during the spring window. Typically requires 3.0 GPA + completion of MATH 140, CHEM 135, CMSC 131.", phase: "past" },
-  { date: "Spring 2028", title: "Apply to Academy of Machine Learning", desc: "ECE-based undergraduate research program. Membership = priority for ENEE 408N capstone in Y4.", phase: "upcoming" },
-  { date: "Fall 2028", title: "Start ML/NLP portfolio projects", desc: "Kaggle entry, open-source contribution, or undergrad research role. By F29 permission-request time, having evidence makes a real difference.", phase: "upcoming" },
-  { date: "Apr 2029", title: "Submit ENEE 436 & CMSC 451 permission requests", desc: "Through your CE advisor for Fall 2029 registration. CE majors don't get auto-priority — submit early. Bring screenshot of degree audit.", phase: "critical" },
-  { date: "Nov 2029", title: "Submit CMSC 470 permission request", desc: "For Spring 2030. By this point CMSC 320, 330, 351 should all be passed with C- or higher (B+ or higher = stronger case).", phase: "critical" },
-  { date: "Spring 2030", title: "Apply for graduation", desc: "Submit early in the term. Confirm degree audit with your CE advisor 60 days before commencement.", phase: "upcoming" },
+const DEFAULT_TIMELINE_EVENTS = [
+  { date: "Year 1", title: "Lock in 3.0+ GPA", desc: "First semesters set the gateway tone. Use office hours from week 2 in any quantitative course.", phase: "past" },
+  { date: "Year 2", title: "Apply to research / clubs", desc: "Programs like the Academy of Machine Learning or undergrad research roles unlock priority for capstones and competitive seats.", phase: "upcoming" },
+  { date: "Year 3", title: "Start portfolio projects", desc: "Kaggle entries, open-source contributions, or research roles. By permission-request time, evidence matters.", phase: "upcoming" },
+  { date: "Year 4 — Spring", title: "Submit goal-course permission requests", desc: "Most permission-tight courses require advisor sign-off the term before registration. Screenshot your degree audit and submit early.", phase: "critical" },
+  { date: "Final Term", title: "Apply for graduation", desc: "Submit early in the term. Confirm your degree audit with your advisor 60 days before commencement.", phase: "upcoming" },
 ];
 
 const STORAGE_KEY = "terp-track-v2";
-const TOTAL_CREDITS_REQUIRED = 125;
+const PT_CACHE_KEY = "terp-track-pt-cache-v1";
+const PT_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+
+const DEFAULT_SETTINGS = {
+  programName: "Computer Engineering",
+  eyebrow: "UMD · Computer Engineering · 2026–2030",
+  totalCredits: 125,
+  goalCourses: ["ENEE 436", "CMSC 451", "CMSC 470"],
+  footerNote: "Plan validated against UMD 2024–2025 CE catalog · Always confirm with your advisor before registration",
+};
 
 const GRADE_POINTS = {
   "A+": 4.0, "A": 4.0, "A-": 3.7,
@@ -1792,19 +1870,50 @@ const GRADE_OPTIONS = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D
    STATE
    ============================================================ */
 function loadState() {
+  const fallback = {
+    courses: {},
+    customCourses: [],
+    customSemesters: [],
+    settings: { ...DEFAULT_SETTINGS },
+    welcomeDismissed: false,
+    theme: "light",
+  };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        ...fallback,
+        ...parsed,
+        settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+        customSemesters: parsed.customSemesters || [],
+      };
+    }
   } catch {}
   // migrate from v1 if present
   try {
     const oldRaw = localStorage.getItem("terp-track-v1");
     if (oldRaw) {
       const old = JSON.parse(oldRaw);
-      return { courses: old, customCourses: [], welcomeDismissed: false, theme: "light" };
+      return { ...fallback, courses: old };
     }
   } catch {}
-  return { courses: {}, customCourses: [], welcomeDismissed: false, theme: "light" };
+  return fallback;
+}
+
+function getSettings() { return state.settings || DEFAULT_SETTINGS; }
+function getGoalCodes() {
+  const fromSettings = (getSettings().goalCourses || []).map(s => s.trim()).filter(Boolean);
+  // Always include any course flagged isGoal in the data (legacy + custom)
+  const fromData = flatCourses().filter(c => c.isGoal).map(c => c.code);
+  return Array.from(new Set([...fromSettings, ...fromData]));
+}
+function isGoalCourse(course) {
+  if (course.isGoal) return true;
+  return (getSettings().goalCourses || []).map(s => s.trim()).includes(course.code);
+}
+function getAllSemesters() {
+  return [...SCHEDULE, ...(state.customSemesters || [])];
 }
 
 let state = loadState();
@@ -1831,16 +1940,19 @@ function setCourseState(code, patch) {
 
 function flatCourses() {
   const all = [];
-  SCHEDULE.forEach(s => s.courses.forEach(c => all.push({ ...c, semId: s.id })));
-  state.customCourses.forEach(c => all.push(c));
+  getAllSemesters().forEach(s => (s.courses || []).forEach(c => all.push({ ...c, semId: s.id })));
+  (state.customCourses || []).forEach(c => all.push(c));
   return all;
+}
+function normalizeCode(code) {
+  return (code || '').toUpperCase().replace(/\s+/g, '');
 }
 function findCourse(code) {
   return flatCourses().find(c => c.code === code);
 }
 
 function prereqsMet(course) {
-  for (const pre of course.prereqs) {
+  for (const pre of (course.prereqs || [])) {
     const s = getCourseState(pre);
     if (s.status !== "passed" && s.status !== "transfer") return { met: false, missing: pre };
   }
@@ -1913,7 +2025,7 @@ function shouldShowCourse(course) {
   // status filter
   const cs = getCourseState(course.code);
   const isLocked = !prereqsMet(course).met && cs.status === "not-started";
-  if (currentFilter === 'goal' && !course.isGoal) return false;
+  if (currentFilter === 'goal' && !isGoalCourse(course)) return false;
   if (currentFilter === 'available' && (isLocked || cs.status !== 'not-started')) return false;
   if (currentFilter === 'locked' && !isLocked) return false;
   if (currentFilter === 'passed' && cs.status !== 'passed' && cs.status !== 'transfer') return false;
@@ -1923,40 +2035,56 @@ function shouldShowCourse(course) {
 function renderSemesters() {
   const container = document.getElementById('semesters-container');
   container.innerHTML = '';
-  SCHEDULE.forEach((sem) => {
-    const visibleCourses = sem.courses.filter(shouldShowCourse);
-    if (visibleCourses.length === 0 && currentFilter !== 'all') return;
+  getAllSemesters().forEach((sem) => {
+    const baseCourses = sem.courses || [];
+    const visibleCourses = baseCourses.filter(shouldShowCourse);
+    const semCustom = (state.customCourses || []).filter(c => c.semId === sem.id);
+    const visibleCustom = semCustom.filter(shouldShowCourse);
+    if (visibleCourses.length === 0 && visibleCustom.length === 0 && currentFilter !== 'all') return;
 
-    const totalCr = sem.courses.reduce((a, c) => a + c.cr, 0);
-    const passedCr = sem.courses.reduce((a, c) => {
+    const allCourses = [...baseCourses, ...semCustom];
+    const totalCr = allCourses.reduce((a, c) => a + c.cr, 0);
+    const passedCr = allCourses.reduce((a, c) => {
       const s = getCourseState(c.code);
       return (s.status === "passed" || s.status === "transfer") ? a + c.cr : a;
     }, 0);
     const pct = totalCr ? (passedCr / totalCr) * 100 : 0;
 
+    const isCustomSem = (state.customSemesters || []).some(cs => cs.id === sem.id);
+
     const card = document.createElement('div');
     card.className = 'semester';
     card.innerHTML = `
       <div class="sem-header">
-        <div class="sem-title"><span class="yr">${sem.year}</span>${sem.name}</div>
+        <div class="sem-title">${sem.year ? `<span class="yr">${sem.year}</span>` : ''}${sem.name}</div>
         <div class="sem-meta">
           <div class="sem-progress"><div class="sem-progress-fill" style="width:${pct}%"></div></div>
           <span><strong>${passedCr}</strong>/${totalCr} cr</span>
           <button class="add-course-btn" data-sem="${sem.id}">+ Add Course</button>
+          ${isCustomSem ? `<button class="add-course-btn" data-remove-sem="${sem.id}" title="Remove this custom semester" style="color:var(--red)">×</button>` : ''}
         </div>
       </div>
       <div class="courses"></div>
     `;
     const cList = card.querySelector('.courses');
     visibleCourses.forEach(c => cList.appendChild(renderCourse(c, sem.id)));
-    // custom courses for this semester
-    state.customCourses.filter(c => c.semId === sem.id && shouldShowCourse(c))
-      .forEach(c => cList.appendChild(renderCourse(c, sem.id, true)));
+    visibleCustom.forEach(c => cList.appendChild(renderCourse(c, sem.id, true)));
 
     card.querySelector('.add-course-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       openAddCourse(sem.id);
     });
+    const rm = card.querySelector('[data-remove-sem]');
+    if (rm) {
+      rm.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!confirm(`Remove semester ${sem.name}? Custom courses inside it will also be removed.`)) return;
+        state.customSemesters = (state.customSemesters || []).filter(s => s.id !== sem.id);
+        state.customCourses = (state.customCourses || []).filter(c => c.semId !== sem.id);
+        saveState();
+        render();
+      });
+    }
     container.appendChild(card);
   });
 
@@ -1975,10 +2103,11 @@ function renderCourse(course, semId, isCustom = false) {
   const cs = getCourseState(course.code);
   const prereqStatus = prereqsMet(course);
   const isLocked = !prereqStatus.met && cs.status === "not-started";
+  const goal = isGoalCourse(course);
 
   const div = document.createElement('div');
   let cls = 'course';
-  if (course.isGoal) cls += ' goal';
+  if (goal) cls += ' goal';
   if (isLocked) cls += ' locked';
   else if (cs.status === "passed") cls += ' passed';
   else if (cs.status === "transfer") cls += ' transfer';
@@ -1990,13 +2119,18 @@ function renderCourse(course, semId, isCustom = false) {
   // tags
   const tags = [];
   if (course.kind === "critical") tags.push('<span class="tag crit">PREREQ-CRIT</span>');
-  if (course.isGoal) tags.push('<span class="tag goal">GOAL</span>');
+  if (goal) tags.push('<span class="tag goal">GOAL</span>');
   if (course.kind === "tech") tags.push('<span class="tag tech">TECH ELEC</span>');
   if (course.kind === "gened") tags.push('<span class="tag gened">GENED</span>');
   if (cs.status === "transfer") tags.push('<span class="tag" style="background:rgba(46,92,139,.15);color:var(--blue)">TRANSFER</span>');
-  // permission risk for high-demand courses
-  if (course.code === "ENEE 436") tags.push('<span class="tag risk">PERMISSION-TIGHT</span>');
-  if (course.code === "CMSC 470") tags.push('<span class="tag risk">PERMISSION-TIGHT</span>');
+
+  // PlanetTerp avg-GPA badge if we've cached it
+  const ptInfo = ptCacheGet(course.code);
+  if (ptInfo && typeof ptInfo.average_gpa === 'number') {
+    const gpa = ptInfo.average_gpa.toFixed(2);
+    const color = ptInfo.average_gpa >= 3.3 ? 'var(--green)' : ptInfo.average_gpa >= 2.7 ? 'var(--amber)' : 'var(--red)';
+    tags.push(`<span class="tag" style="background:transparent;color:${color};border:1px solid ${color}" title="PlanetTerp average GPA">avg GPA ${gpa}</span>`);
+  }
 
   const metaItems = [
     ...tags,
@@ -2007,8 +2141,9 @@ function renderCourse(course, semId, isCustom = false) {
   // grade dropdown
   const gradeOptions = GRADE_OPTIONS.map(g => `<option value="${g}" ${cs.grade === g ? 'selected' : ''}>${g || '—'}</option>`).join('');
 
-  const ptSlug = course.code.replace(/\s+/g, '');
-  const ptLink = course.code.match(/^(CMSC|ENEE|MATH|PHYS|CHEM|ENES|ENGL|COMM|UNIV|AMSC|STAT)\s*\d/i)
+  const ptSlug = normalizeCode(course.code);
+  // PlanetTerp covers any UMD course code (4-letter dept + number)
+  const ptLink = /^[A-Z]{3,4}\d{3}[A-Z]?$/.test(ptSlug)
     ? `<a class="pt-link" href="https://planetterp.com/course/${ptSlug}" target="_blank" rel="noopener" title="PlanetTerp — grades &amp; reviews">PT ↗</a>`
     : '';
 
@@ -2023,7 +2158,7 @@ function renderCourse(course, semId, isCustom = false) {
       <button class="status-btn ${cs.status === 'in-progress' ? 'active' : ''}" data-status="in-progress" title="In progress (1)">⋯</button>
       <button class="status-btn ${cs.status === 'passed' ? 'passed-active' : ''}" data-status="passed" title="Passed (2)">✓</button>
       <button class="status-btn ${cs.status === 'failed' ? 'failed-active' : ''}" data-status="failed" title="Failed (3)">✗</button>
-      <button class="status-btn ${cs.status === 'transfer' ? 'transfer-active' : ''}" data-status="transfer" title="Transfer/AP credit (4)">T</button>
+      <button class="status-btn ${cs.status === 'transfer' ? 'transfer-active' : ''}" data-status="transfer" title="Transfer credit (4)">T</button>
       <select class="grade-select" title="Grade">${gradeOptions}</select>
       ${isCustom ? `<button class="course-action" title="Remove" data-remove="${course.code}">×</button>` : ''}
     </div>
@@ -2073,32 +2208,40 @@ function renderCourse(course, semId, isCustom = false) {
 
 function renderStats() {
   const all = flatCourses();
+  const goalCodes = new Set(getGoalCodes());
+  const totalRequired = Number(getSettings().totalCredits) || 125;
+
   let earnedCredits = 0, gpaPoints = 0, gpaCredits = 0;
-  let semestersDone = 0, goalsDone = 0;
+  let goalsDone = 0;
 
   all.forEach(c => {
     const s = getCourseState(c.code);
     if (s.status === "passed" || s.status === "transfer") {
       earnedCredits += c.cr;
-      // GPA only counts non-transfer
       if (s.status === "passed" && s.grade && GRADE_POINTS[s.grade] !== undefined) {
         gpaPoints += GRADE_POINTS[s.grade] * c.cr;
         gpaCredits += c.cr;
       }
-      if (c.isGoal) goalsDone++;
+      if (goalCodes.has(c.code)) goalsDone++;
     }
   });
 
-  SCHEDULE.forEach(sem => {
-    const allDone = sem.courses.every(c => {
+  const semesters = getAllSemesters();
+  let semestersDone = 0;
+  semesters.forEach(sem => {
+    const semBase = sem.courses || [];
+    const semCustoms = (state.customCourses || []).filter(c => c.semId === sem.id);
+    const all = [...semBase, ...semCustoms];
+    if (all.length === 0) return;
+    const done = all.every(c => {
       const s = getCourseState(c.code);
       return s.status === "passed" || s.status === "transfer";
     });
-    if (allDone) semestersDone++;
+    if (done) semestersDone++;
   });
 
   document.getElementById('stat-credits').textContent = earnedCredits;
-  document.getElementById('stat-credits-detail').textContent = `of ${TOTAL_CREDITS_REQUIRED} total`;
+  document.getElementById('stat-credits-detail').textContent = `of ${totalRequired} total`;
 
   const gpaEl = document.getElementById('stat-gpa');
   if (gpaCredits > 0) {
@@ -2109,11 +2252,20 @@ function renderStats() {
     document.getElementById('stat-gpa-detail').textContent = 'add grades to calculate';
   }
 
-  document.getElementById('stat-goals').textContent = `${goalsDone}/3`;
-  document.getElementById('stat-sems').textContent = `${semestersDone}/8`;
+  const goalTotal = goalCodes.size;
+  document.getElementById('stat-goals').textContent = `${goalsDone}/${goalTotal}`;
+  const goalLabels = Array.from(goalCodes).slice(0, 3).join(' · ');
+  document.getElementById('stat-goals-detail').textContent = goalTotal === 0
+    ? 'configure in Settings'
+    : (goalLabels.length > 36 ? goalLabels.slice(0, 36) + '…' : goalLabels);
+
+  document.getElementById('stat-sems').textContent = `${semestersDone}/${semesters.length}`;
+  const firstSem = semesters[0]?.id || '';
+  const lastSem = semesters[semesters.length - 1]?.id || '';
+  document.getElementById('stat-sems-detail').textContent = firstSem && lastSem ? `${firstSem} → ${lastSem}` : 'term by term';
 
   const progressEl = document.getElementById('overall-progress');
-  if (progressEl) progressEl.style.width = `${Math.min(100, (earnedCredits / TOTAL_CREDITS_REQUIRED) * 100)}%`;
+  if (progressEl) progressEl.style.width = `${Math.min(100, (earnedCredits / totalRequired) * 100)}%`;
 }
 
 function renderNextUp() {
@@ -2136,32 +2288,46 @@ function renderNextUp() {
 }
 
 function renderGoals() {
-  const goals = flatCourses().filter(c => c.isGoal);
+  const all = flatCourses();
+  const goalCodes = getGoalCodes();
   const tracker = document.getElementById('goal-tracker');
   tracker.innerHTML = '';
-  goals.forEach(g => {
-    const s = getCourseState(g.code);
-    const pre = prereqsMet(g);
+  const note = document.getElementById('goal-tracker-note');
+  if (note) note.textContent = '';
+
+  if (goalCodes.length === 0) {
+    tracker.innerHTML = '<p style="color:var(--slate);font-size:.85rem;font-style:italic">No goal courses set. Open <strong>Settings</strong> to add some.</p>';
+    return;
+  }
+
+  goalCodes.forEach(code => {
+    const g = all.find(c => c.code === code);
+    const s = getCourseState(code);
     let icon = '○', iconCls = '', statusText = '', statusCls = '';
-    if (s.status === "passed" || s.status === "transfer") {
-      icon = '✓'; iconCls = 'done'; statusText = 'Done · ' + (s.grade || (s.status === "transfer" ? 'transfer' : 'no grade')); statusCls = 'done';
-    } else if (s.status === "in-progress") {
-      icon = '◐'; iconCls = 'in-prog'; statusText = 'In progress'; statusCls = 'in-prog';
-    } else if (pre.met) {
-      icon = '◯'; iconCls = 'ready'; statusText = 'Ready · need CS-permission'; statusCls = 'ready';
+    if (!g) {
+      statusText = 'Not in plan yet — add it via "+ Add Course"';
     } else {
-      const missing = g.prereqs.filter(p => {
-        const ps = getCourseState(p);
-        return ps.status !== "passed" && ps.status !== "transfer";
-      });
-      statusText = `Need: ${missing.join(', ')}`;
+      const pre = prereqsMet(g);
+      if (s.status === "passed" || s.status === "transfer") {
+        icon = '✓'; iconCls = 'done'; statusText = 'Done · ' + (s.grade || (s.status === "transfer" ? 'transfer' : 'no grade')); statusCls = 'done';
+      } else if (s.status === "in-progress") {
+        icon = '◐'; iconCls = 'in-prog'; statusText = 'In progress'; statusCls = 'in-prog';
+      } else if (pre.met) {
+        icon = '◯'; iconCls = 'ready'; statusText = 'Ready to register'; statusCls = 'ready';
+      } else {
+        const missing = (g.prereqs || []).filter(p => {
+          const ps = getCourseState(p);
+          return ps.status !== "passed" && ps.status !== "transfer";
+        });
+        statusText = `Need: ${missing.join(', ')}`;
+      }
     }
     const row = document.createElement('div');
     row.className = 'goal-row';
     row.innerHTML = `
       <div class="goal-icon ${iconCls}">${icon}</div>
       <div class="goal-info">
-        <div class="goal-name">${g.code} · ${g.title}</div>
+        <div class="goal-name">${code}${g ? ` · ${g.title}` : ''}</div>
         <div class="goal-status ${statusCls}">${statusText}</div>
       </div>
     `;
@@ -2201,31 +2367,24 @@ function renderAlerts() {
     alerts.push({ type: 'warn', text: `<strong>GPA below 3.0.</strong> CS-permission for goal courses gets harder under 3.0. Talk to your CE advisor.` });
   }
 
-  // Goal-course readiness
-  const mlReady = ['CMSC 330', 'CMSC 351'].every(p => {
-    const s = getCourseState(p);
-    return s.status === "passed" || s.status === "transfer";
+  // Goal-course readiness — generic across whatever goals are configured
+  getGoalCodes().forEach(code => {
+    const g = all.find(c => c.code === code);
+    if (!g) return;
+    const s = getCourseState(code);
+    if (s.status !== "not-started") return;
+    if (prereqsMet(g).met) {
+      alerts.push({ type: 'success', text: `<strong>${code} is unlocked.</strong> All prereqs cleared — register or request permission.` });
+    }
   });
-  const enee436 = getCourseState('ENEE 436');
-  if (mlReady && enee436.status === "not-started") {
-    alerts.push({ type: 'success', text: `<strong>ENEE 436 (ML) is unlocked.</strong> Submit permission via your CE advisor.` });
-  }
-
-  const nlpReady = ['CMSC 320', 'CMSC 330', 'CMSC 351', 'ENEE 290'].every(p => {
-    const s = getCourseState(p);
-    return s.status === "passed" || s.status === "transfer";
-  });
-  const cmsc470 = getCourseState('CMSC 470');
-  if (nlpReady && cmsc470.status === "not-started") {
-    alerts.push({ type: 'success', text: `<strong>CMSC 470 (NLP) is unlocked.</strong> All four prereqs cleared.` });
-  }
 
   // Semester load warnings
-  SCHEDULE.forEach(sem => {
-    const inProgress = sem.courses.filter(c => getCourseState(c.code).status === "in-progress");
+  getAllSemesters().forEach(sem => {
+    const semCourses = [...(sem.courses || []), ...(state.customCourses || []).filter(c => c.semId === sem.id)];
+    const inProgress = semCourses.filter(c => getCourseState(c.code).status === "in-progress");
     const totalCr = inProgress.reduce((a, c) => a + c.cr, 0);
     if (totalCr >= 19) {
-      alerts.push({ type: 'warn', text: `<strong>${sem.name}:</strong> ${totalCr} credits in progress is heavy. Consider moving one course to summer.` });
+      alerts.push({ type: 'warn', text: `<strong>${sem.name}:</strong> ${totalCr} credits in progress is heavy. Consider moving one course to a different term.` });
     }
   });
 
@@ -2246,27 +2405,34 @@ function renderAlerts() {
    ============================================================ */
 function renderAudit() {
   const all = flatCourses();
+  const totalRequired = Number(getSettings().totalCredits) || 125;
   let earnedCredits = 0;
   all.forEach(c => {
     const s = getCourseState(c.code);
     if (s.status === "passed" || s.status === "transfer") earnedCredits += c.cr;
   });
-  const pct = Math.min(100, Math.round((earnedCredits / TOTAL_CREDITS_REQUIRED) * 100));
+  const pct = Math.min(100, Math.round((earnedCredits / totalRequired) * 100));
   document.getElementById('audit-percent').textContent = pct + '%';
   const headline = document.getElementById('audit-headline');
   const tag = document.getElementById('audit-tagline');
-  if (pct === 0) { headline.textContent = "Building Your Degree"; tag.textContent = "Mark courses to track progress against the 125-credit CE requirement."; }
+  if (pct === 0) { headline.textContent = "Building Your Degree"; tag.textContent = `Mark courses to track progress against your ${totalRequired}-credit requirement.`; }
   else if (pct < 25) { headline.textContent = "Strong start."; tag.textContent = "Foundation courses are the highest-leverage time investment of your degree."; }
-  else if (pct < 50) { headline.textContent = "Hitting your stride."; tag.textContent = "Y2 hardware/math chain is what gates the rest. Keep grades B+ or higher in CMSC 216/250."; }
-  else if (pct < 75) { headline.textContent = "Junior year — the pivot."; tag.textContent = "By end of S29, every ENEE 436, CMSC 451/470 prereq should be done. Submit permission requests on time."; }
-  else if (pct < 100) { headline.textContent = "Final stretch."; tag.textContent = "Capstone, ML, NLP. Your portfolio matters more than your GPA from here."; }
+  else if (pct < 50) { headline.textContent = "Hitting your stride."; tag.textContent = "Mid-program courses gate the rest. Keep grades up in critical-prereq courses."; }
+  else if (pct < 75) { headline.textContent = "The pivot year."; tag.textContent = "By end of this stretch, every prereq for your goal courses should be done. Submit permission requests on time."; }
+  else if (pct < 100) { headline.textContent = "Final stretch."; tag.textContent = "Capstone and depth electives. Your portfolio matters more than your GPA from here."; }
   else { headline.textContent = "Degree complete."; tag.textContent = "Apply for graduation, confirm audit with advisor 60 days before commencement."; }
+
+  // Dynamic core-card title
+  const coreTitleEl = document.getElementById('audit-core-title');
+  if (coreTitleEl) coreTitleEl.textContent = `${getSettings().programName || 'Major'} Core`;
 
   // Core
   const coreEl = document.getElementById('audit-core');
+  const coreCard = document.getElementById('audit-core-card');
   coreEl.innerHTML = '';
   const coreCourses = all.filter(c => c.category === 'ce-core');
   coreCourses.forEach(c => coreEl.appendChild(auditLine(c)));
+  if (coreCard) coreCard.style.display = coreCourses.length ? '' : 'none';
 
   // GenEd
   const genEdEl = document.getElementById('audit-gened');
@@ -2370,10 +2536,36 @@ function renderAudit() {
   `;
   techEl.appendChild(totalDoneEl);
 
+  // Tech card visibility
+  const techCard = document.getElementById('audit-tech-card');
+  if (techCard) {
+    const anyTech = all.some(c => c.category && c.category.startsWith('tech-'));
+    techCard.style.display = anyTech ? '' : 'none';
+  }
+  // GenEd card visibility
+  const genEdCard = document.getElementById('audit-gened-card');
+  if (genEdCard) {
+    const anyGenEd = all.some(c => c.category && c.category.startsWith('gened'));
+    genEdCard.style.display = anyGenEd ? '' : 'none';
+  }
+
   // Goals
   const goalsEl = document.getElementById('audit-goals');
   goalsEl.innerHTML = '';
-  all.filter(c => c.isGoal).forEach(c => goalsEl.appendChild(auditLine(c)));
+  const goalCodes = getGoalCodes();
+  goalCodes.forEach(code => {
+    const c = all.find(x => x.code === code);
+    if (c) goalsEl.appendChild(auditLine(c));
+    else {
+      const el = document.createElement('div');
+      el.className = 'audit-line';
+      el.innerHTML = `<div class="check">○</div><div class="name">${code}</div><div class="status">not in plan</div>`;
+      goalsEl.appendChild(el);
+    }
+  });
+  if (goalCodes.length === 0) {
+    goalsEl.innerHTML = '<p style="color:var(--slate);font-size:.85rem;font-style:italic;margin:0">No goal courses configured.</p>';
+  }
 }
 
 function auditLine(course) {
@@ -2398,7 +2590,7 @@ function auditLine(course) {
 function renderTimeline() {
   const rail = document.getElementById('timeline-rail');
   rail.innerHTML = '';
-  TIMELINE_EVENTS.forEach(ev => {
+  DEFAULT_TIMELINE_EVENTS.forEach(ev => {
     const el = document.createElement('div');
     el.className = 'timeline-event ' + (ev.phase || '');
     el.innerHTML = `
@@ -2490,54 +2682,233 @@ function renderRoadmap() {
     else if (s.status === "in-progress") cls = 'in-progress';
     else if (s.status === "failed") cls = 'failed';
     else if (pre.met) cls = 'available';
-    if (c.isGoal) cls += ' goal';
+    const goal = isGoalCourse(c);
+    if (goal) cls += ' goal';
     svg += `<rect class="node-rect ${cls}" x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}"/>`;
     svg += `<text class="node-text" x="${p.x + nodeW/2}" y="${p.y + 17}" text-anchor="middle">${code}</text>`;
-    svg += `<text class="node-text muted" x="${p.x + nodeW/2}" y="${p.y + 30}" text-anchor="middle" style="font-size:9px">${c.cr} cr${c.isGoal ? ' ★' : ''}</text>`;
+    svg += `<text class="node-text muted" x="${p.x + nodeW/2}" y="${p.y + 30}" text-anchor="middle" style="font-size:9px">${c.cr} cr${goal ? ' ★' : ''}</text>`;
   });
   svg += '</svg>';
   document.getElementById('roadmap-container').innerHTML = svg;
 }
 
 /* ============================================================
+   PLANETTERP API
+   ============================================================ */
+function ptCacheLoad() {
+  try { return JSON.parse(localStorage.getItem(PT_CACHE_KEY) || '{}'); }
+  catch { return {}; }
+}
+function ptCacheSave(cache) {
+  try { localStorage.setItem(PT_CACHE_KEY, JSON.stringify(cache)); } catch {}
+}
+function ptCacheGet(code) {
+  const cache = ptCacheLoad();
+  const key = normalizeCode(code);
+  const entry = cache[key];
+  if (!entry) return null;
+  if (Date.now() - entry.t > PT_CACHE_TTL_MS) return null;
+  return entry.v;
+}
+function ptCachePut(code, value) {
+  const cache = ptCacheLoad();
+  cache[normalizeCode(code)] = { t: Date.now(), v: value };
+  ptCacheSave(cache);
+}
+
+async function planetTerpFetchCourse(code) {
+  const key = normalizeCode(code);
+  const cached = ptCacheGet(key);
+  if (cached) return cached;
+  const url = `https://planetterp.com/api/v1/course?name=${encodeURIComponent(key)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try { const body = await resp.json(); if (body && body.error) msg = body.error; } catch {}
+    throw new Error(msg);
+  }
+  const data = await resp.json();
+  ptCachePut(key, data);
+  return data;
+}
+
+/* ============================================================
    ADD CUSTOM COURSE
    ============================================================ */
 let addCourseSemId = null;
+
+function populateAcSemesterSelect() {
+  const sel = document.getElementById('ac-semester');
+  if (!sel) return;
+  sel.innerHTML = '';
+  getAllSemesters().forEach(sem => {
+    const opt = document.createElement('option');
+    opt.value = sem.id;
+    opt.textContent = sem.name;
+    sel.appendChild(opt);
+  });
+}
+
 function openAddCourse(semId) {
   addCourseSemId = semId;
+  populateAcSemesterSelect();
   document.getElementById('ac-code').value = '';
   document.getElementById('ac-title').value = '';
   document.getElementById('ac-credits').value = '3';
   document.getElementById('ac-note').value = '';
+  document.getElementById('ac-prereqs').value = '';
+  document.getElementById('ac-goal').checked = false;
+  document.getElementById('ac-category').value = 'tech-f';
+  document.getElementById('ac-semester').value = semId || (getAllSemesters()[0]?.id || '');
+  document.getElementById('ac-lookup-status').textContent = '';
   document.getElementById('add-course-modal').classList.add('open');
   setTimeout(() => document.getElementById('ac-code').focus(), 50);
 }
 function closeAddCourse() {
   document.getElementById('add-course-modal').classList.remove('open');
 }
+
+async function lookupCourseFromPlanetTerp() {
+  const codeRaw = document.getElementById('ac-code').value.trim();
+  const status = document.getElementById('ac-lookup-status');
+  if (!codeRaw) { status.textContent = 'Type a course code first (e.g., CMSC131).'; return; }
+  status.style.color = 'var(--slate)';
+  status.textContent = 'Looking up on PlanetTerp…';
+  try {
+    const data = await planetTerpFetchCourse(codeRaw);
+    if (data.title)   document.getElementById('ac-title').value   = data.title;
+    if (data.credits) document.getElementById('ac-credits').value = data.credits;
+    const dept = (data.department || '').toUpperCase();
+    const num  = data.course_number || '';
+    if (dept && num) document.getElementById('ac-code').value = `${dept} ${num}`;
+    const gpa = (typeof data.average_gpa === 'number') ? `· avg GPA ${data.average_gpa.toFixed(2)}` : '';
+    status.style.color = 'var(--green)';
+    status.textContent = `✓ Found: ${data.name || codeRaw} ${gpa}`;
+  } catch (err) {
+    status.style.color = 'var(--red)';
+    status.textContent = `Couldn't find that course (${err.message}). You can still fill it in manually.`;
+  }
+}
+
 function saveCustomCourse() {
   const code = document.getElementById('ac-code').value.trim();
   const title = document.getElementById('ac-title').value.trim();
-  const cr = parseInt(document.getElementById('ac-credits').value) || 3;
+  const cr = parseFloat(document.getElementById('ac-credits').value) || 3;
   const note = document.getElementById('ac-note').value.trim();
-  if (!code || !title) {
-    alert('Code and title are required');
-    return;
-  }
-  if (findCourse(code)) {
-    alert('A course with that code already exists');
-    return;
-  }
+  const semId = document.getElementById('ac-semester').value || addCourseSemId;
+  const category = document.getElementById('ac-category').value || 'tech-f';
+  const isGoal = document.getElementById('ac-goal').checked;
+  const prereqs = document.getElementById('ac-prereqs').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+
+  if (!code || !title) { alert('Code and title are required'); return; }
+  if (findCourse(code)) { alert('A course with that code already exists'); return; }
+
+  let kind = 'tech';
+  if (category === 'ce-core') kind = 'core';
+  else if (category && category.startsWith('gened')) kind = 'gened';
+  else if (category === 'elective') kind = 'tech';
+
   state.customCourses.push({
     code, title, cr,
-    prereqs: [], coreqs: [],
-    kind: 'tech', category: 'tech-f',
-    semId: addCourseSemId,
-    note: note || 'Custom-added',
+    prereqs, coreqs: [],
+    kind, category,
+    semId,
+    isGoal,
+    note: note || '',
     isCustom: true,
   });
   saveState();
   closeAddCourse();
+  render();
+}
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function openSettings() {
+  const s = getSettings();
+  document.getElementById('set-program').value = s.programName || '';
+  document.getElementById('set-eyebrow').value = s.eyebrow || '';
+  document.getElementById('set-total-credits').value = s.totalCredits || 125;
+  document.getElementById('set-goals').value = (s.goalCourses || []).join(', ');
+  document.getElementById('set-footer').value = s.footerNote || '';
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+function saveSettings() {
+  const programName = document.getElementById('set-program').value.trim() || 'Computer Engineering';
+  const eyebrow     = document.getElementById('set-eyebrow').value.trim() || `UMD · ${programName}`;
+  const totalCredits = parseInt(document.getElementById('set-total-credits').value) || 125;
+  const goalCourses = document.getElementById('set-goals').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const footerNote = document.getElementById('set-footer').value.trim();
+  state.settings = { ...DEFAULT_SETTINGS, ...state.settings, programName, eyebrow, totalCredits, goalCourses, footerNote };
+  saveState();
+  applySettings();
+  closeSettings();
+  render();
+}
+function resetAllData() {
+  if (!confirm('This will erase all course progress, custom courses, custom semesters, and settings. Continue?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(PT_CACHE_KEY);
+  state = loadState();
+  applyTheme();
+  applySettings();
+  closeSettings();
+  render();
+}
+function applySettings() {
+  const s = getSettings();
+  const eyebrow = document.getElementById('hero-eyebrow');
+  if (eyebrow) eyebrow.textContent = s.eyebrow || `UMD · ${s.programName}`;
+  const footer = document.getElementById('footer-text');
+  if (footer) {
+    const note = s.footerNote ? ` · ${s.footerNote}` : '';
+    footer.innerHTML = `<em>Terp Track</em> · ${s.programName || 'Degree'} planner${note} · Saves locally to your browser`;
+  }
+  // Populate semester filter dropdown in table view
+  const semSel = document.getElementById('table-filter-sem');
+  if (semSel) {
+    const cur = semSel.value;
+    semSel.innerHTML = '<option value="">All Semesters</option>';
+    getAllSemesters().forEach(sem => {
+      const opt = document.createElement('option');
+      opt.value = sem.id;
+      opt.textContent = sem.name;
+      semSel.appendChild(opt);
+    });
+    semSel.value = cur;
+  }
+}
+
+/* ============================================================
+   ADD SEMESTER
+   ============================================================ */
+function openAddSemester() {
+  document.getElementById('as-id').value = '';
+  document.getElementById('as-name').value = '';
+  document.getElementById('as-year').value = '';
+  document.getElementById('add-semester-modal').classList.add('open');
+  setTimeout(() => document.getElementById('as-id').focus(), 50);
+}
+function closeAddSemester() {
+  document.getElementById('add-semester-modal').classList.remove('open');
+}
+function saveAddSemester() {
+  const id = document.getElementById('as-id').value.trim().toUpperCase();
+  const name = document.getElementById('as-name').value.trim();
+  const year = document.getElementById('as-year').value.trim();
+  if (!id || !name) { alert('Short ID and Display Name are required'); return; }
+  if (getAllSemesters().some(s => s.id === id)) { alert('A semester with that ID already exists'); return; }
+  state.customSemesters = state.customSemesters || [];
+  state.customSemesters.push({ id, name, year, courses: [] });
+  saveState();
+  closeAddSemester();
+  applySettings();
   render();
 }
 
@@ -2567,9 +2938,15 @@ document.getElementById('import-file').addEventListener('change', (e) => {
       const data = JSON.parse(ev.target.result);
       if (!data.courses) throw new Error('Invalid file');
       if (confirm('This will replace your current data. Continue?')) {
-        state = { ...state, ...data };
+        state = {
+          ...state,
+          ...data,
+          settings: { ...DEFAULT_SETTINGS, ...(data.settings || state.settings || {}) },
+          customSemesters: data.customSemesters || state.customSemesters || [],
+        };
         saveState();
         applyTheme();
+        applySettings();
         render();
       }
     } catch (err) {
@@ -2584,17 +2961,6 @@ function dismissWelcome() {
   state.welcomeDismissed = true;
   saveState();
   render();
-}
-
-function quickStartAP() {
-  // common AP credit assumption
-  if (confirm('Mark MATH 140 and CMSC 131 as transfer credit (typical AP equivalents)?')) {
-    state.courses["MATH 140"] = { status: "transfer", grade: "" };
-    state.courses["CMSC 131"] = { status: "transfer", grade: "" };
-    state.welcomeDismissed = true;
-    saveState();
-    render();
-  }
 }
 
 /* ============================================================
@@ -2630,11 +2996,26 @@ document.addEventListener('keydown', (e) => {
   else if (e.key.toLowerCase() === 'r') switchTab('roadmap');
   else if (e.key === 'Escape') {
     closeAddCourse();
+    closeSettings();
+    closeAddSemester();
   }
 });
 
 document.getElementById('add-course-modal').addEventListener('click', (e) => {
   if (e.target.id === 'add-course-modal') closeAddCourse();
+});
+document.getElementById('settings-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'settings-modal') closeSettings();
+});
+document.getElementById('add-semester-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'add-semester-modal') closeAddSemester();
+});
+document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('ac-lookup-btn').addEventListener('click', lookupCourseFromPlanetTerp);
+document.getElementById('add-semester-chip').addEventListener('click', openAddSemester);
+// Allow Enter on the code field to trigger lookup
+document.getElementById('ac-code').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); lookupCourseFromPlanetTerp(); }
 });
 
 /* ============================================================
@@ -2642,7 +3023,11 @@ document.getElementById('add-course-modal').addEventListener('click', (e) => {
    ============================================================ */
 let tableSortCol = 'sem';
 let tableSortDir = 1; // 1=asc, -1=desc
-const SEM_ORDER = { 'F26':1,'S27':2,'F27':3,'S28':4,'F28':5,'S29':6,'F29':7,'S30':8 };
+function semOrderMap() {
+  const m = {};
+  getAllSemesters().forEach((s, i) => { m[s.id] = i + 1; });
+  return m;
+}
 const CAT_LABELS = {
   'ce-core':'CE Core', 'tech-a':'Cat A','tech-b':'Cat B','tech-c':'Cat C',
   'tech-d':'Cat D','tech-e':'Cat E','tech-f':'Cat F',
@@ -2657,7 +3042,7 @@ function getBadgeClass(cat) {
   return CAT_BADGE_CLASS[cat] || 'gened';
 }
 function getSemLabel(semId) {
-  const s = SCHEDULE.find(x => x.id === semId);
+  const s = getAllSemesters().find(x => x.id === semId);
   return s ? s.name : (semId || '—');
 }
 
@@ -2684,20 +3069,20 @@ function renderTable() {
   if (filterStatus) rows = rows.filter(r => r._status === filterStatus);
 
   // Sort
+  const order = semOrderMap();
   rows.sort((a, b) => {
     let av, bv;
     if (tableSortCol === 'code')   { av = a.code; bv = b.code; }
     else if (tableSortCol === 'title') { av = a.title; bv = b.title; }
     else if (tableSortCol === 'cr')    { av = a.cr; bv = b.cr; }
-    else if (tableSortCol === 'sem')   { av = SEM_ORDER[a.semId]||99; bv = SEM_ORDER[b.semId]||99; }
+    else if (tableSortCol === 'sem')   { av = order[a.semId]||99; bv = order[b.semId]||99; }
     else if (tableSortCol === 'cat')   { av = a.category||''; bv = b.category||''; }
     else if (tableSortCol === 'status'){ av = a._status; bv = b._status; }
     else if (tableSortCol === 'grade') { av = a._grade; bv = b._grade; }
     else { av = 0; bv = 0; }
     if (av < bv) return -tableSortDir;
     if (av > bv) return tableSortDir;
-    // secondary sort by sem order
-    return (SEM_ORDER[a.semId]||99) - (SEM_ORDER[b.semId]||99);
+    return (order[a.semId]||99) - (order[b.semId]||99);
   });
 
   // Update sort arrows
@@ -2754,10 +3139,10 @@ function renderTable() {
     else if (r.category === 'ce-core') catDisplay = 'CE Core';
     else if (r.category && r.category.startsWith('gened')) catDisplay = 'GenEd';
 
-    const goalStar = r.isGoal ? ' ★' : '';
-    const ptSlug = r.code.replace(/\s+/g,'');
+    const goalStar = isGoalCourse(r) ? ' ★' : '';
+    const ptSlug = normalizeCode(r.code);
     const ptUrl = `https://planetterp.com/course/${ptSlug}`;
-    const hasPt = r.code.match(/^(CMSC|ENEE|MATH|PHYS|CHEM|ENES|ENGL|COMM|STAT)\s*\d/i);
+    const hasPt = /^[A-Z]{3,4}\d{3}[A-Z]?$/.test(ptSlug);
 
     tr.innerHTML = `
       <td class="td-code">${r.code}${goalStar}${hasPt ? ` <a class="pt-link" href="${ptUrl}" target="_blank" rel="noopener">PT</a>` : ''}</td>
@@ -2792,8 +3177,21 @@ function initTableEvents() {
    INIT
    ============================================================ */
 applyTheme();
+applySettings();
 render();
 initTableEvents();
+// Background-prefetch PlanetTerp data for any UMD-style course codes so GPA badges populate.
+(function prefetchPlanetTerp() {
+  const codes = flatCourses().map(c => c.code).filter(code => /^[A-Z]{3,4}\s*\d{3}[A-Z]?$/i.test(code));
+  let i = 0;
+  function next() {
+    if (i >= codes.length) { render(); return; }
+    const code = codes[i++];
+    if (ptCacheGet(code)) { next(); return; }
+    planetTerpFetchCourse(code).catch(() => {}).finally(() => setTimeout(next, 120));
+  }
+  next();
+})();
 </script>
 </body>
 </html>
