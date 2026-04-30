@@ -8,6 +8,8 @@ function render() {
   renderNextUp();
   renderGoals();
   renderAlerts();
+  if (typeof renderRecommendations === 'function') renderRecommendations();
+  if (typeof attachDndHandlers === 'function') attachDndHandlers();
   if (currentTab === 'audit') renderAudit();
   if (currentTab === 'roadmap') renderRoadmap();
   if (currentTab === 'table') renderTable();
@@ -56,6 +58,7 @@ function renderSemesters() {
 
     const card = document.createElement('div');
     card.className = 'semester';
+    card.dataset.semId = sem.id;
     card.innerHTML = `
       <div class="sem-header">
         <div class="sem-title">${sem.year ? `<span class="yr">${sem.year}</span>` : ''}${sem.name}</div>
@@ -63,6 +66,7 @@ function renderSemesters() {
           <div class="sem-progress"><div class="sem-progress-fill" style="width:${pct}%"></div></div>
           <span><strong>${passedCr}</strong>/${totalCr} cr</span>
           <button class="add-course-btn" data-sem="${sem.id}">+ Add Course</button>
+          <button class="add-course-btn sem-bulk-btn" data-bulk-sem="${sem.id}" title="Bulk-mark all courses in this semester">⋯</button>
           ${isCustomSem ? `<button class="add-course-btn" data-remove-sem="${sem.id}" title="Remove this custom semester" style="color:var(--red)">×</button>` : ''}
         </div>
       </div>
@@ -76,6 +80,13 @@ function renderSemesters() {
       e.stopPropagation();
       openAddCourse(sem.id);
     });
+    const bulkBtn = card.querySelector('[data-bulk-sem]');
+    if (bulkBtn) {
+      bulkBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showBulkMenu(bulkBtn, sem.id);
+      });
+    }
     const rm = card.querySelector('[data-remove-sem]');
     if (rm) {
       rm.addEventListener('click', (e) => {
@@ -95,7 +106,7 @@ function renderSemesters() {
   if (orphans.length) {
     const card = document.createElement('div');
     card.className = 'semester';
-    card.innerHTML = `<div class="sem-header"><div class="sem-title">Custom</div></div><div class="courses"></div>`;
+    card.innerHTML = `<div class="sem-header"><div class="sem-title">Transfer / Outside Plan</div></div><div class="courses"></div>`;
     orphans.forEach(c => card.querySelector('.courses').appendChild(renderCourse(c, null, true)));
     container.appendChild(card);
   }
@@ -117,6 +128,9 @@ function renderCourse(course, semId, isCustom = false) {
   else if (cs.status === "failed") cls += ' failed';
   else cls += ' available';
   div.className = cls;
+  div.dataset.code = course.code;
+  div.dataset.semId = semId || '';
+  if (isCustom) div.dataset.custom = '1';
 
   // tags
   const tags = [];

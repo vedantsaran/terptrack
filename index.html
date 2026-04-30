@@ -34,6 +34,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <span class="label">Import</span>
     </button>
+    <button class="icon-btn" onclick="copyShareUrl()" title="Copy a link to share this plan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      <span class="label">Share</span>
+    </button>
     <input type="file" id="import-file" style="display:none" accept=".json">
   </div>
 </div>
@@ -50,6 +54,7 @@
   <button class="tab" data-tab="table">⊞ All Courses</button>
   <button class="tab" data-tab="timeline">⏰ Action Timeline</button>
   <button class="tab" data-tab="roadmap">🗺 Prereq Roadmap</button>
+  <button class="tab" data-tab="browse">🔍 Browse Courses</button>
 </div>
 
 <div class="container">
@@ -113,6 +118,7 @@
           <button class="filter-chip" data-filter="locked">Locked</button>
           <button class="filter-chip" data-filter="passed">Passed</button>
           <button class="filter-chip" id="add-semester-chip" title="Add a new semester to your plan">+ Semester</button>
+          <button class="filter-chip" id="import-chip" title="Smart-import courses from umd.io + PlanetTerp">⚡ Import</button>
         </div>
 
         <div id="semesters-container"></div>
@@ -137,6 +143,12 @@
           <h3>Heads Up</h3>
           <p class="lead">Live alerts based on your status</p>
           <div id="alerts-container"></div>
+        </div>
+
+        <div class="panel">
+          <h3>Recommendations</h3>
+          <p class="lead">Powered by umd.io + PlanetTerp</p>
+          <div id="reco-container"></div>
         </div>
       </div>
     </div>
@@ -240,6 +252,30 @@
     <div class="roadmap-svg" id="roadmap-container"></div>
   </div>
 
+  <div class="view" id="view-browse">
+    <div class="section-rule">
+      <span class="badge">Course Catalog · powered by umd.io</span>
+      <span class="line"></span>
+    </div>
+    <div class="browse-toolbar">
+      <select id="br-dept" style="min-width:140px">
+        <option value="">Pick a department…</option>
+      </select>
+      <input type="text" id="br-search" placeholder="Filter by code or title…" style="flex:1;min-width:160px">
+      <select id="br-gened" style="min-width:140px">
+        <option value="">Any Gen-Ed</option>
+        <option value="FSAW">FSAW</option><option value="FSPW">FSPW</option>
+        <option value="FSOC">FSOC</option><option value="FSMA">FSMA</option>
+        <option value="FSAR">FSAR</option><option value="DSHS">DSHS</option>
+        <option value="DSHU">DSHU</option><option value="DSNS">DSNS</option>
+        <option value="DSNL">DSNL</option><option value="DSSP">DSSP</option>
+        <option value="DVUP">DVUP</option><option value="DVCC">DVCC</option>
+        <option value="SCIS">SCIS</option>
+      </select>
+    </div>
+    <div id="br-grid" class="br-grid"></div>
+  </div>
+
 </div>
 
 <div class="modal-backdrop" id="add-course-modal">
@@ -293,6 +329,22 @@
     <h3>Customize Your Plan</h3>
     <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">Defaults match UMD Computer Engineering. Tweak any field for your own program.</p>
 
+    <div class="major-section">
+      <label>Apply Major Template</label>
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <select id="set-major" style="flex:1"></select>
+        <button class="btn" type="button" onclick="applyMajorFromSettings()">Apply</button>
+      </div>
+      <p id="set-major-note" style="font-size:.74rem;color:var(--slate);margin:6px 0 0;font-style:italic"></p>
+      <p id="set-major-status" style="font-size:.78rem;margin:6px 0 0;min-height:1em"></p>
+      <p style="font-size:.74rem;color:var(--slate);margin:8px 0 0">Templates use umd.io + PlanetTerp to fill in titles, credits, prereqs, and avg GPA. Course progress is preserved when you switch.</p>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn small" type="button" onclick="openMajorBuilder()">+ Build Custom Major</button>
+        <button class="btn small" type="button" onclick="openImportMajor()">Import Major JSON</button>
+        <button class="btn small" type="button" onclick="exportMajorTemplate(document.getElementById('set-major').value)">Export Selected</button>
+      </div>
+    </div>
+
     <label>Program / Major Name</label>
     <input type="text" id="set-program" placeholder="e.g., Computer Engineering">
 
@@ -335,6 +387,134 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="onboard-modal">
+  <div class="modal" style="max-width:560px">
+    <div id="ob-dots" class="ob-dots"></div>
+
+    <div id="ob-step-major">
+      <h3>Welcome to Terp Track 👋</h3>
+      <p style="color:var(--slate);font-size:.88rem;margin-top:-4px">Let's get your plan set up in under a minute.</p>
+      <label>What's your major?</label>
+      <select id="ob-major"></select>
+      <p style="font-size:.74rem;color:var(--slate);margin-top:6px">Templates fetch live data from umd.io + PlanetTerp. You can swap or customize anytime.</p>
+      <label>Starting Fall semester (year)</label>
+      <input type="number" id="ob-start-year" min="2020" max="2035" step="1">
+    </div>
+
+    <div id="ob-step-year" style="display:none">
+      <h3>What year are you?</h3>
+      <p style="color:var(--slate);font-size:.88rem;margin-top:-4px">We'll auto-mark earlier semesters as passed so you don't have to click through everything.</p>
+      <label>Current year</label>
+      <select id="ob-current-year">
+        <option value="1">Year 1 (Freshman) — starting fresh</option>
+        <option value="2">Year 2 (Sophomore)</option>
+        <option value="3">Year 3 (Junior)</option>
+        <option value="4">Year 4 (Senior)</option>
+      </select>
+      <p style="font-size:.74rem;color:var(--slate);margin-top:8px">You can edit any course's status individually after setup.</p>
+    </div>
+
+    <div id="ob-step-transfer" style="display:none">
+      <h3>AP / IB / transfer credits?</h3>
+      <p style="color:var(--slate);font-size:.88rem;margin-top:-4px">Paste codes for any courses you've already earned credit for. Skip if none.</p>
+      <label>Course codes (one per line, or comma-separated)</label>
+      <textarea id="ob-transfer-codes" rows="4"
+        style="width:100%;font-family:'JetBrains Mono', monospace;font-size:.85rem"
+        placeholder="MATH140&#10;ENGL101&#10;CHEM131"></textarea>
+      <p style="font-size:.74rem;color:var(--slate);margin-top:6px">We'll mark these as transfer credit. Title + credits are filled in via umd.io.</p>
+    </div>
+
+    <div id="ob-step-finish" style="display:none">
+      <h3>You're all set</h3>
+      <p style="color:var(--slate);font-size:.9rem">Click Finish and we'll generate your schedule. This takes a few seconds while we fetch course data.</p>
+      <ul style="font-size:.86rem;color:var(--ink-soft);line-height:1.8;padding-left:20px">
+        <li>Drag courses between semesters to rearrange</li>
+        <li>Use the ⋯ menu on any semester to bulk-mark courses</li>
+        <li>Browse Courses tab → discover anything in the UMD catalog</li>
+        <li>Settings → swap majors or build a custom template anytime</li>
+      </ul>
+      <p id="ob-finish-status" style="font-size:.8rem;color:var(--slate);margin-top:8px;min-height:1em"></p>
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn" id="ob-skip" type="button" onclick="skipOnboarding()" style="font-size:.78rem;color:var(--slate)">Skip</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="ob-back" type="button" onclick="onboardBack()">← Back</button>
+        <button class="btn primary" id="ob-next" type="button" onclick="onboardNext()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mb-modal">
+  <div class="modal" style="max-width:640px">
+    <h3>Custom Major Builder</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">
+      Define a major as lists of course codes. We'll fetch metadata + auto-generate a schedule when applied.
+      Share with friends via JSON export.
+    </p>
+    <div style="display:grid;grid-template-columns:1fr 120px;gap:10px">
+      <div>
+        <label>Major Name</label>
+        <input type="text" id="mb-name" placeholder="e.g., Mechanical Engineering">
+      </div>
+      <div>
+        <label>Total Credits</label>
+        <input type="number" id="mb-credits" min="60" max="200" step="1" value="120">
+      </div>
+    </div>
+    <label>Program Name (used in hero)</label>
+    <input type="text" id="mb-program" placeholder="e.g., Mechanical Engineering · BS">
+    <label>Core Required Courses (one per line)</label>
+    <textarea id="mb-core" rows="4" style="font-family:'JetBrains Mono',monospace;font-size:.84rem;width:100%"
+      placeholder="ENME271&#10;ENME272&#10;MATH140&#10;PHYS161"></textarea>
+    <label>Support Courses (math, science, writing — one per line)</label>
+    <textarea id="mb-support" rows="3" style="font-family:'JetBrains Mono',monospace;font-size:.84rem;width:100%"
+      placeholder="MATH240&#10;STAT400"></textarea>
+    <label>Upper-Division Electives (one per line)</label>
+    <textarea id="mb-upper" rows="3" style="font-family:'JetBrains Mono',monospace;font-size:.84rem;width:100%"
+      placeholder="ENME414&#10;ENME462"></textarea>
+    <label>Goal Courses (comma-separated, optional)</label>
+    <input type="text" id="mb-goals" placeholder="e.g., ENME462, ENME489">
+    <label>Notes (optional)</label>
+    <input type="text" id="mb-notes" placeholder="e.g., Aerospace track. Pick 3 of ENME 4xx.">
+    <input type="hidden" id="mb-id" value="">
+    <p id="mb-status" style="font-size:.78rem;color:var(--slate);margin:8px 0 0;min-height:1em"></p>
+    <div class="modal-actions" style="justify-content:space-between">
+      <div style="display:flex;gap:8px">
+        <button class="btn" type="button" onclick="openImportMajor()" title="Load a major from a JSON file">Import JSON</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" type="button" onclick="closeMajorBuilder()">Cancel</button>
+        <button class="btn primary" type="button" onclick="saveCustomMajor()">Save Major</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="import-modal">
+  <div class="modal" style="max-width:640px">
+    <h3>Smart Import Courses</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">
+      Paste course codes (one per line, or comma/space separated). We'll fetch titles, credits, prereqs, and avg GPA from umd.io + PlanetTerp.
+    </p>
+    <label>Course Codes</label>
+    <textarea id="import-codes" rows="4" placeholder="CMSC131&#10;CMSC132&#10;MATH140, MATH141"
+      style="width:100%;font-family:'JetBrains Mono', monospace;font-size:.86rem"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:500;margin-top:10px">
+      <input type="checkbox" id="import-recurse" style="width:auto" checked>
+      Recursively pull prerequisites (up to 3 levels)
+    </label>
+    <p id="import-status" style="font-size:.8rem;color:var(--slate);margin:10px 0 0;min-height:1em"></p>
+    <div id="import-preview" class="import-preview"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImportCourses()">Cancel</button>
+      <button class="btn" onclick="previewImport()">Preview</button>
+      <button class="btn primary" onclick="commitImport()">Import to Plan</button>
+    </div>
+  </div>
+</div>
+
 <div class="footer">
   <p id="footer-text"><em>Terp Track</em> · UMD degree planner · Always confirm requirements with your advisor before registration · Saves locally to your browser</p>
 </div>
@@ -342,6 +522,7 @@
 <div class="save-indicator" id="save-indicator">Saved</div>
 
 <script src="js/data.js"></script>
+<script src="js/majors.js"></script>
 <script src="js/state.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/tabs.js"></script>
@@ -350,10 +531,19 @@
 <script src="js/timeline.js"></script>
 <script src="js/roadmap.js"></script>
 <script src="js/planetterp.js"></script>
+<script src="js/api.js"></script>
 <script src="js/courses.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/semesters.js"></script>
 <script src="js/io.js"></script>
+<script src="js/import.js"></script>
+<script src="js/recommendations.js"></script>
+<script src="js/major-builder.js"></script>
+<script src="js/onboarding.js"></script>
+<script src="js/browse.js"></script>
+<script src="js/dnd.js"></script>
+<script src="js/bulk.js"></script>
+<script src="js/share.js"></script>
 <script src="js/events.js"></script>
 <script src="js/table.js"></script>
 <script src="js/main.js"></script>

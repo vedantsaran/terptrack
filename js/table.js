@@ -12,12 +12,14 @@ function semOrderMap() {
 const CAT_LABELS = {
   'ce-core':'CE Core', 'tech-a':'Cat A','tech-b':'Cat B','tech-c':'Cat C',
   'tech-d':'Cat D','tech-e':'Cat E','tech-f':'Cat F',
+  'major-core':'Major Core','major-support':'Support','major-upper':'Upper Elective',
   'gened-fsaw':'GenEd','gened-fspw':'GenEd','gened-fsoc':'GenEd','gened-fsma':'GenEd',
   'gened-fsar':'GenEd','gened-dshs':'GenEd','gened-dshu':'GenEd','gened-dssp':'GenEd',
 };
 const CAT_BADGE_CLASS = {
   'ce-core':'core','tech-a':'tech-a','tech-b':'tech-b','tech-c':'tech-c',
   'tech-d':'tech-d','tech-e':'tech-e','tech-f':'tech-f',
+  'major-core':'core','major-support':'tech-a','major-upper':'tech-b',
 };
 function getBadgeClass(cat) {
   return CAT_BADGE_CLASS[cat] || 'gened';

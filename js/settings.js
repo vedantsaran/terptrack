@@ -2,14 +2,58 @@
 /* ============================================================
    SETTINGS
    ============================================================ */
+function populateMajorSelect() {
+  const sel = document.getElementById('set-major');
+  if (!sel) return;
+  sel.innerHTML = '';
+  listMajors().forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name + (m.useDefaultSchedule ? ' (curated default)' : '');
+    sel.appendChild(opt);
+  });
+  sel.value = state.majorId || 'CE';
+  const note = document.getElementById('set-major-note');
+  const tpl = getMajorTemplate(sel.value);
+  if (note && tpl) note.textContent = tpl.notes || '';
+}
+
 function openSettings() {
   const s = getSettings();
+  populateMajorSelect();
   document.getElementById('set-program').value = s.programName || '';
   document.getElementById('set-eyebrow').value = s.eyebrow || '';
   document.getElementById('set-total-credits').value = s.totalCredits || 125;
   document.getElementById('set-goals').value = (s.goalCourses || []).join(', ');
   document.getElementById('set-footer').value = s.footerNote || '';
+  const status = document.getElementById('set-major-status');
+  if (status) status.textContent = '';
   document.getElementById('settings-modal').classList.add('open');
+}
+
+async function applyMajorFromSettings() {
+  const sel = document.getElementById('set-major');
+  const status = document.getElementById('set-major-status');
+  const id = sel.value;
+  const tpl = getMajorTemplate(id);
+  if (!tpl) return;
+  if (!confirm(`Apply ${tpl.name}? This will replace your current schedule structure (course progress is kept).`)) return;
+  status.style.color = 'var(--slate)';
+  status.textContent = 'Generating schedule…';
+  try {
+    await applyMajorTemplate(id, {});
+    status.style.color = 'var(--green)';
+    status.textContent = `Applied ${tpl.name}.`;
+    // Refresh the visible settings inputs to reflect new program metadata
+    const s = getSettings();
+    document.getElementById('set-program').value = s.programName || '';
+    document.getElementById('set-eyebrow').value = s.eyebrow || '';
+    document.getElementById('set-total-credits').value = s.totalCredits || 125;
+    document.getElementById('set-goals').value = (s.goalCourses || []).join(', ');
+  } catch (e) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'Error: ' + e.message;
+  }
 }
 function closeSettings() {
   document.getElementById('settings-modal').classList.remove('open');

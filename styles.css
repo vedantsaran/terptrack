@@ -1403,3 +1403,228 @@ h1.hero-title em {
   .semester { break-inside: avoid; box-shadow: none; }
   .stat-bar { break-inside: avoid; }
 }
+
+/* ===========================================================
+   MAJOR PICKER (Settings) + SMART IMPORT + RECOMMENDATIONS
+   =========================================================== */
+.major-section {
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.major-section label { font-weight: 600; font-size: .82rem; color: var(--ink); }
+
+.import-preview {
+  margin-top: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.import-preview:empty { display: none; }
+.import-row {
+  display: grid;
+  grid-template-columns: 90px 1fr auto auto;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: .82rem;
+  align-items: center;
+}
+.import-row:last-child { border-bottom: none; }
+.import-row strong { font-family: 'JetBrains Mono', monospace; font-size: .8rem; color: var(--maroon); }
+.import-row .muted { color: var(--slate); font-size: .76rem; grid-column: 2 / -1; }
+.import-row .muted:nth-of-type(1) { grid-column: auto; }
+
+#reco-container .reco-section {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+#reco-container .reco-section:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+#reco-container h4 {
+  font-size: .82rem;
+  margin: 0 0 4px;
+  color: var(--ink);
+  letter-spacing: .01em;
+}
+#reco-container .reco-sub {
+  font-size: .72rem;
+  color: var(--slate);
+  margin: 0 0 8px;
+}
+#reco-container .reco-list { display: flex; flex-direction: column; gap: 6px; }
+#reco-container .reco-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--cream-deep);
+  border-radius: 6px;
+  font-size: .78rem;
+}
+#reco-container .reco-item strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .74rem;
+  color: var(--maroon);
+  flex-shrink: 0;
+}
+#reco-container .reco-item .reco-title {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#reco-container .reco-item .reco-gpa {
+  font-size: .7rem;
+  color: var(--green);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+#reco-container .reco-more { font-size: .72rem; color: var(--slate); padding: 4px 8px; font-style: italic; }
+#reco-container .reco-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+#reco-container .reco-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .68rem;
+  background: var(--gold-soft);
+  color: var(--ink);
+  padding: 2px 8px;
+  border-radius: 100px;
+  letter-spacing: .04em;
+}
+#reco-container .reco-empty { font-size: .8rem; color: var(--slate); font-style: italic; margin: 0; }
+.btn.small { padding: 3px 10px; font-size: .72rem; }
+
+/* ===========================================================
+   ONBOARDING WIZARD
+   =========================================================== */
+.ob-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.ob-dot {
+  width: 8px; height: 8px;
+  border-radius: 100px;
+  background: var(--line);
+  transition: background-color .2s;
+}
+.ob-dot.active { background: var(--maroon); }
+
+#onboard-modal label {
+  display: block;
+  font-weight: 600;
+  font-size: .82rem;
+  color: var(--ink);
+  margin: 12px 0 4px;
+}
+#onboard-modal input,
+#onboard-modal select,
+#onboard-modal textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: .9rem;
+}
+
+/* ===========================================================
+   BROWSE COURSES
+   =========================================================== */
+.browse-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.browse-toolbar select,
+.browse-toolbar input {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: .88rem;
+}
+.br-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.br-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform .12s, box-shadow .12s;
+}
+.br-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.br-card.in-plan { background: var(--green-soft); border-color: var(--green); }
+.br-head {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.br-head strong {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--maroon);
+  font-size: .88rem;
+}
+.br-credits { font-size: .76rem; color: var(--slate); font-weight: 500; }
+.br-title { font-weight: 500; font-size: .88rem; line-height: 1.3; }
+.br-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.br-gpa { font-size: .72rem; color: var(--green); font-weight: 600; }
+.br-desc { font-size: .76rem; color: var(--slate); line-height: 1.5; }
+.br-actions { margin-top: 4px; }
+.br-pill {
+  font-size: .72rem;
+  background: var(--green);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-weight: 600;
+}
+
+/* ===========================================================
+   DRAG-AND-DROP
+   =========================================================== */
+.course[draggable="true"] { cursor: grab; }
+.course.dragging { opacity: .4; }
+.semester.drop-target {
+  outline: 2px dashed var(--maroon);
+  outline-offset: -4px;
+  background: rgba(232,185,35,.08);
+}
+
+/* ===========================================================
+   BULK-MARK MENU
+   =========================================================== */
+.sem-bulk-btn { font-weight: 700; letter-spacing: .04em; }
+.bulk-menu {
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  z-index: 1000;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+.bulk-menu button {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: .84rem;
+  color: var(--ink);
+  border-radius: 6px;
+  font-family: inherit;
+  transition: background-color .1s;
+}
+.bulk-menu button:hover { background: var(--cream-deep); }
