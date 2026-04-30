@@ -27,24 +27,29 @@ function umdioCachePut(key, value) {
   umdioCacheSave(cache);
 }
 
+const _umdioInflight = {};
 async function umdioFetchCourse(code) {
   const id = normalizeCode(code);
   const cacheKey = 'course:' + id;
   const cached = umdioCacheGet(cacheKey);
-  if (cached !== null) return cached;
+  if (cached !== undefined && cached !== null) return cached;
+  if (_umdioInflight[id]) return _umdioInflight[id];
   const url = `${UMDIO_BASE}/courses/${encodeURIComponent(id)}`;
-  let resp;
-  try { resp = await fetch(url); }
-  catch (e) { return null; }
-  if (!resp.ok) {
-    if (resp.status === 404) { umdioCachePut(cacheKey, null); return null; }
-    return null;
-  }
-  const data = await resp.json();
-  // umd.io returns either a single course object or an array depending on endpoint variant
-  const course = Array.isArray(data) ? data[0] : data;
-  umdioCachePut(cacheKey, course || null);
-  return course || null;
+  _umdioInflight[id] = (async () => {
+    let resp;
+    try { resp = await fetch(url); }
+    catch (e) { return null; }
+    if (!resp.ok) {
+      if (resp.status === 404) { umdioCachePut(cacheKey, null); return null; }
+      return null; // transient — don't poison cache
+    }
+    const data = await resp.json();
+    const course = Array.isArray(data) ? data[0] : data;
+    if (course) umdioCachePut(cacheKey, course);
+    return course || null;
+  })();
+  try { return await _umdioInflight[id]; }
+  finally { delete _umdioInflight[id]; }
 }
 
 async function umdioListCoursesByDept(dept, semester) {

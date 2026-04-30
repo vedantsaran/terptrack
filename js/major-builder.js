@@ -29,7 +29,7 @@ function _splitCodeList(text) {
 
 function saveCustomMajor() {
   const name = document.getElementById('mb-name').value.trim();
-  if (!name) { alert('Major name is required'); return; }
+  if (!name) { toastError('Major name is required.'); return; }
   const id = (document.getElementById('mb-id').value.trim() || ('custom-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))).toLowerCase();
   const programName = document.getElementById('mb-program').value.trim() || name;
   const totalCredits = parseInt(document.getElementById('mb-credits').value) || 120;
@@ -40,7 +40,7 @@ function saveCustomMajor() {
   const notes = document.getElementById('mb-notes').value.trim();
 
   if (!core.length && !support.length && !upper.length) {
-    alert('Add at least one course code'); return;
+    toastError('Add at least one course code.'); return;
   }
 
   const tpl = {
@@ -68,7 +68,7 @@ function saveCustomMajor() {
     populateMajorSelect();
     document.getElementById('set-major').value = id;
   }
-  alert(settingsOpen
+  toastSuccess(settingsOpen
     ? `Saved "${name}". Click Apply to use it.`
     : `Saved "${name}". Open Settings → Apply Major to use it.`);
 }
@@ -82,7 +82,7 @@ function deleteCustomMajor(id) {
 
 function exportMajorTemplate(id) {
   const tpl = getMajorTemplate(id);
-  if (!tpl) { alert('Template not found'); return; }
+  if (!tpl) { toastError('Template not found.'); return; }
   const json = JSON.stringify(tpl, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -96,9 +96,9 @@ function exportMajorTemplate(id) {
 function importMajorFromJSON(text) {
   let tpl;
   try { tpl = JSON.parse(text); }
-  catch (e) { alert('Invalid JSON: ' + e.message); return; }
+  catch (e) { toastError('Invalid JSON: ' + e.message); return; }
   if (!tpl || !tpl.id || !tpl.name) {
-    alert('Major template must have at least id and name fields'); return;
+    toastError('Major template must have at least id and name fields.'); return;
   }
   tpl.isCustom = true;
   state.customMajors = state.customMajors || [];
@@ -114,10 +114,25 @@ function importMajorFromJSON(text) {
     populateMajorSelect();
     document.getElementById('set-major').value = tpl.id;
   }
-  alert(`Imported "${tpl.name}". Open Settings → Apply Major to use it.`);
+  toastSuccess(`Imported "${tpl.name}". Open Settings → Apply Major to use it.`);
 }
 
 function openImportMajor() {
+  const choice = prompt(
+    'Import a major template:\n\n  • Type "url" to paste a URL pointing to a JSON file\n  • Type "paste" to paste JSON directly\n  • Click OK to pick a file from disk',
+    ''
+  );
+  if (choice === null) return;
+  if (choice.trim().toLowerCase() === 'url') {
+    importMajorFromURL();
+  } else if (choice.trim().toLowerCase() === 'paste') {
+    importMajorFromPaste();
+  } else {
+    importMajorFromFile();
+  }
+}
+
+function importMajorFromFile() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'application/json';
@@ -129,4 +144,23 @@ function openImportMajor() {
     reader.readAsText(file);
   });
   input.click();
+}
+
+async function importMajorFromURL() {
+  const url = prompt('Paste a URL pointing to a JSON major template:');
+  if (!url) return;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    importMajorFromJSON(text);
+  } catch (e) {
+    toastError('Could not fetch URL: ' + e.message);
+  }
+}
+
+function importMajorFromPaste() {
+  const text = prompt('Paste the JSON major template:');
+  if (!text) return;
+  importMajorFromJSON(text);
 }

@@ -43,6 +43,7 @@ document.addEventListener('keydown', (e) => {
     if (typeof closeMajorBuilder === 'function') closeMajorBuilder();
     if (typeof closeResolver === 'function') closeResolver();
     if (typeof closeGpaSim === 'function') closeGpaSim();
+    if (typeof closeSnapshots === 'function') closeSnapshots();
   }
 });
 
@@ -69,6 +70,10 @@ if (_rsModal) _rsModal.addEventListener('click', (e) => {
 const _gpaModal = document.getElementById('gpa-modal');
 if (_gpaModal) _gpaModal.addEventListener('click', (e) => {
   if (e.target.id === 'gpa-modal') closeGpaSim();
+});
+const _snapModal = document.getElementById('snapshots-modal');
+if (_snapModal) _snapModal.addEventListener('click', (e) => {
+  if (e.target.id === 'snapshots-modal') closeSnapshots();
 });
 const _mbModal = document.getElementById('mb-modal');
 if (_mbModal) _mbModal.addEventListener('click', (e) => {

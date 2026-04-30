@@ -8,6 +8,7 @@ function loadState() {
     customCourses: [],
     customSemesters: [],
     customMajors: [],
+    snapshots: [],
     activeSchedule: null,
     majorId: null,
     onboardingComplete: false,

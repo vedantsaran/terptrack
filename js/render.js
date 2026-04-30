@@ -148,9 +148,21 @@ function renderCourse(course, semId, isCustom = false) {
     tags.push(`<span class="tag" style="background:transparent;color:${color};border:1px solid ${color}" title="PlanetTerp average GPA">avg GPA ${gpa}</span>`);
   }
 
+  // Render prereqs respecting OR groups when present.
+  // groups [[A,B], [C]] → "A or B; C"
+  // legacy flat list → "A, B, C"
+  let prereqText = '';
+  if (Array.isArray(course.prereqGroups) && course.prereqGroups.length) {
+    prereqText = course.prereqGroups
+      .map(g => g.length > 1 ? g.join(' or ') : g[0])
+      .filter(Boolean)
+      .join('; ');
+  } else if (course.prereqs && course.prereqs.length) {
+    prereqText = course.prereqs.join(', ');
+  }
   const metaItems = [
     ...tags,
-    course.prereqs.length ? `<span>Prereqs: ${course.prereqs.join(', ')}</span>` : '',
+    prereqText ? `<span>Prereqs: ${prereqText}</span>` : '',
     course.note || ''
   ].filter(Boolean);
 
@@ -176,7 +188,8 @@ function renderCourse(course, semId, isCustom = false) {
       <button class="status-btn ${cs.status === 'failed' ? 'failed-active' : ''}" data-status="failed" title="Failed (3)">✗</button>
       <button class="status-btn ${cs.status === 'transfer' ? 'transfer-active' : ''}" data-status="transfer" title="Transfer credit (4)">T</button>
       <select class="grade-select" title="Grade">${gradeOptions}</select>
-      ${isCustom ? `<button class="course-action" title="Remove" data-remove="${course.code}">×</button>` : ''}
+      <button class="course-action" title="Edit course" data-edit="${course.code}" aria-label="Edit ${course.code}">✎</button>
+      ${isCustom ? `<button class="course-action" title="Remove" data-remove="${course.code}" aria-label="Remove ${course.code}">×</button>` : ''}
     </div>
     ${isLocked ? `<div class="why-locked">🔒 Need to pass <strong>${prereqStatus.missing}</strong> first<button class="why-add" data-resolve="${course.code}" title="Auto-add missing prereqs">+ auto-add</button></div>` : ''}
   `;
@@ -211,6 +224,14 @@ function renderCourse(course, semId, isCustom = false) {
     why.addEventListener('click', (e) => {
       e.stopPropagation();
       resolveAndAddCourse(why.dataset.resolve);
+    });
+  }
+
+  const edit = div.querySelector('[data-edit]');
+  if (edit) {
+    edit.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditCourse(edit.dataset.edit);
     });
   }
 

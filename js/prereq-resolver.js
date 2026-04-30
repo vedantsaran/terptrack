@@ -38,7 +38,7 @@ async function gatherPrereqChain(rootCode, onProgress) {
     }
     if (!course) continue;
     out.push({ course, depth, alreadyHave: have });
-    if (depth < 4) {
+    if (depth < 6) {
       // Use prereqGroups when available so we only pull ONE prereq per
       // OR-group (the first already-passed alternative if any, else first).
       // Falls back to the flat prereqs list when groups aren't parsed.
@@ -137,7 +137,7 @@ async function resolveAndAddCourse(rootCode) {
   if (rootCourse) {
     const status = prereqsMet(rootCourse);
     if (status.met) {
-      alert(`${displayCode(rootCode)} is already in your plan and unlocked.`);
+      toastInfo(`${displayCode(rootCode)} is already in your plan and unlocked.`);
       return;
     }
   }
