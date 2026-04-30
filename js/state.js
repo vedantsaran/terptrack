@@ -7,8 +7,10 @@ function loadState() {
     courses: {},
     customCourses: [],
     customSemesters: [],
+    customMajors: [],
     activeSchedule: null,
     majorId: null,
+    onboardingComplete: false,
     settings: { ...DEFAULT_SETTINGS },
     welcomeDismissed: false,
     theme: "light",
@@ -95,4 +97,13 @@ function prereqsMet(course) {
     if (s.status !== "passed" && s.status !== "transfer") return { met: false, missing: pre };
   }
   return { met: true };
+}
+
+// Lazily copy SCHEDULE into state.activeSchedule so semester structure
+// is mutable (needed for drag-drop, bulk-mark, etc).
+function mutableSchedule() {
+  if (!state.activeSchedule || !state.activeSchedule.length) {
+    state.activeSchedule = JSON.parse(JSON.stringify(SCHEDULE));
+  }
+  return state.activeSchedule;
 }

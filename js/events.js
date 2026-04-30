@@ -30,11 +30,13 @@ document.addEventListener('keydown', (e) => {
   else if (e.key.toLowerCase() === 'x') switchTab('table');
   else if (e.key.toLowerCase() === 't') switchTab('timeline');
   else if (e.key.toLowerCase() === 'r') switchTab('roadmap');
+  else if (e.key.toLowerCase() === 'b') switchTab('browse');
   else if (e.key === 'Escape') {
     closeAddCourse();
     closeSettings();
     closeAddSemester();
     closeImportCourses();
+    if (typeof closeMajorBuilder === 'function') closeMajorBuilder();
   }
 });
 
@@ -53,6 +55,10 @@ document.getElementById('add-semester-chip').addEventListener('click', openAddSe
 document.getElementById('import-chip').addEventListener('click', openImportCourses);
 document.getElementById('import-modal').addEventListener('click', (e) => {
   if (e.target.id === 'import-modal') closeImportCourses();
+});
+const _mbModal = document.getElementById('mb-modal');
+if (_mbModal) _mbModal.addEventListener('click', (e) => {
+  if (e.target.id === 'mb-modal') closeMajorBuilder();
 });
 document.addEventListener('change', (e) => {
   if (e.target && e.target.id === 'set-major') {

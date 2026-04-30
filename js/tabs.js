@@ -14,6 +14,7 @@ function switchTab(tab) {
   if (tab === 'timeline') renderTimeline();
   if (tab === 'roadmap') renderRoadmap();
   if (tab === 'table') renderTable();
+  if (tab === 'browse' && typeof renderBrowse === 'function') renderBrowse();
 }
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => switchTab(t.dataset.tab));

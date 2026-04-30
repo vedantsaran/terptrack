@@ -129,11 +129,14 @@ const MAJOR_TEMPLATES = {
 };
 
 function getMajorTemplate(id) {
-  return MAJOR_TEMPLATES[id] || null;
+  if (MAJOR_TEMPLATES[id]) return MAJOR_TEMPLATES[id];
+  const custom = (state && state.customMajors) || [];
+  return custom.find(m => m.id === id) || null;
 }
 
 function listMajors() {
-  return Object.values(MAJOR_TEMPLATES);
+  const custom = (state && state.customMajors) || [];
+  return [...Object.values(MAJOR_TEMPLATES), ...custom];
 }
 
 // All required + recommended codes, with default categorizations.
