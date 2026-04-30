@@ -40,6 +40,7 @@ document.addEventListener('keydown', (e) => {
     closeAddSemester();
     closeImportCourses();
     if (typeof closeMajorBuilder === 'function') closeMajorBuilder();
+    if (typeof closeResolver === 'function') closeResolver();
   }
 });
 
@@ -58,6 +59,10 @@ document.getElementById('add-semester-chip').addEventListener('click', openAddSe
 document.getElementById('import-chip').addEventListener('click', openImportCourses);
 document.getElementById('import-modal').addEventListener('click', (e) => {
   if (e.target.id === 'import-modal') closeImportCourses();
+});
+const _rsModal = document.getElementById('resolver-modal');
+if (_rsModal) _rsModal.addEventListener('click', (e) => {
+  if (e.target.id === 'resolver-modal') closeResolver();
 });
 const _mbModal = document.getElementById('mb-modal');
 if (_mbModal) _mbModal.addEventListener('click', (e) => {

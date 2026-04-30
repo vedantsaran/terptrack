@@ -492,6 +492,21 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="resolver-modal">
+  <div class="modal" style="max-width:680px">
+    <h3>Add Course + Prerequisites</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">
+      We'll auto-fetch the full prereq chain. Uncheck anything you've already taken elsewhere or want to skip.
+    </p>
+    <p id="rs-status" style="font-size:.86rem;margin:6px 0 12px;min-height:1em"></p>
+    <div id="rs-list" class="rs-list"></div>
+    <div class="modal-actions">
+      <button class="btn" type="button" onclick="closeResolver()">Cancel</button>
+      <button class="btn primary" type="button" onclick="commitResolver()">Add to Plan</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="import-modal">
   <div class="modal" style="max-width:640px">
     <h3>Smart Import Courses</h3>
@@ -537,6 +552,7 @@
 <script src="js/semesters.js"></script>
 <script src="js/io.js"></script>
 <script src="js/import.js"></script>
+<script src="js/prereq-resolver.js"></script>
 <script src="js/recommendations.js"></script>
 <script src="js/major-builder.js"></script>
 <script src="js/onboarding.js"></script>

@@ -178,7 +178,7 @@ function renderCourse(course, semId, isCustom = false) {
       <select class="grade-select" title="Grade">${gradeOptions}</select>
       ${isCustom ? `<button class="course-action" title="Remove" data-remove="${course.code}">×</button>` : ''}
     </div>
-    ${isLocked ? `<div class="why-locked">🔒 Need to pass <strong>${prereqStatus.missing}</strong> first</div>` : ''}
+    ${isLocked ? `<div class="why-locked">🔒 Need to pass <strong>${prereqStatus.missing}</strong> first<button class="why-add" data-resolve="${course.code}" title="Auto-add missing prereqs">+ auto-add</button></div>` : ''}
   `;
 
   div.querySelectorAll('.status-btn').forEach(btn => {
@@ -205,6 +205,14 @@ function renderCourse(course, semId, isCustom = false) {
     setCourseState(course.code, update);
   });
   gs.addEventListener('click', (e) => e.stopPropagation());
+
+  const why = div.querySelector('[data-resolve]');
+  if (why) {
+    why.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resolveAndAddCourse(why.dataset.resolve);
+    });
+  }
 
   const remove = div.querySelector('[data-remove]');
   if (remove) {
