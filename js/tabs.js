@@ -15,6 +15,7 @@ function switchTab(tab) {
   if (tab === 'roadmap') renderRoadmap();
   if (tab === 'table') renderTable();
   if (tab === 'browse' && typeof renderBrowse === 'function') renderBrowse();
+  if (tab === 'gened' && typeof renderGenEdMatrix === 'function') renderGenEdMatrix();
 }
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => switchTab(t.dataset.tab));

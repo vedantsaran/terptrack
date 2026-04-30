@@ -139,6 +139,7 @@ async function applyMajorTemplate(majorId, opts) {
         title: f.title,
         cr: f.cr,
         prereqs: f.prereqs,
+        prereqGroups: f.prereqGroups,
         coreqs: f.coreqs,
         kind: item.kind,
         category: item.category, // keep template's role bucket; gen-ed override only for non-major courses
@@ -268,7 +269,7 @@ function commitImport() {
     if (target === -1) target = semesters.length - 1;
     semesters[target].courses.push({
       code: c.code, title: c.title, cr: c.cr,
-      prereqs: c.prereqs, coreqs: c.coreqs,
+      prereqs: c.prereqs, prereqGroups: c.prereqGroups, coreqs: c.coreqs,
       kind: c.kind, category: c.category,
     });
   }

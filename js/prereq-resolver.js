@@ -39,8 +39,17 @@ async function gatherPrereqChain(rootCode, onProgress) {
     if (!course) continue;
     out.push({ course, depth, alreadyHave: have });
     if (depth < 4) {
-      (course.prereqs || []).forEach(p => {
-        const n = normalizeCode(p);
+      // Use prereqGroups when available so we only pull ONE prereq per
+      // OR-group (the first already-passed alternative if any, else first).
+      // Falls back to the flat prereqs list when groups aren't parsed.
+      const groups = Array.isArray(course.prereqGroups) && course.prereqGroups.length
+        ? course.prereqGroups
+        : (course.prereqs || []).map(p => [p]);
+      groups.forEach(group => {
+        if (!group.length) return;
+        const passed = group.find(_isPassed);
+        const pick = passed || group[0];
+        const n = normalizeCode(pick);
         if (!visited.has(n)) queue.push({ code: n, depth: depth + 1 });
       });
     }
@@ -109,6 +118,7 @@ function _slotCourses(items, opts) {
       title: it.course.title,
       cr: it.course.cr,
       prereqs: it.course.prereqs,
+      prereqGroups: it.course.prereqGroups,
       coreqs: it.course.coreqs,
       kind: 'core',
       category: 'major-core',

@@ -34,6 +34,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <span class="label">Import</span>
     </button>
+    <button class="icon-btn" onclick="openGpaSim()" title="GPA simulator — project what-if grades">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="label">GPA</span>
+    </button>
     <button class="icon-btn" onclick="copyShareUrl()" title="Copy a link to share this plan">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       <span class="label">Share</span>
@@ -55,6 +59,7 @@
   <button class="tab" data-tab="timeline">⏰ Action Timeline</button>
   <button class="tab" data-tab="roadmap">🗺 Prereq Roadmap</button>
   <button class="tab" data-tab="browse">🔍 Browse Courses</button>
+  <button class="tab" data-tab="gened">🎓 Gen-Eds</button>
 </div>
 
 <div class="container">
@@ -276,6 +281,15 @@
     <div id="br-grid" class="br-grid"></div>
   </div>
 
+  <div class="view" id="view-gened">
+    <div class="section-rule">
+      <span class="badge">Gen-Ed Coverage Matrix</span>
+      <span class="line"></span>
+    </div>
+    <p style="color:var(--slate);font-size:.9rem;margin-bottom:18px">Tracks each UMD gen-ed category against your plan. Green = completed, gold = planned, red = missing. Click <strong>Find</strong> to discover qualifying courses.</p>
+    <div id="gened-matrix"></div>
+  </div>
+
 </div>
 
 <div class="modal-backdrop" id="add-course-modal">
@@ -492,6 +506,20 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="gpa-modal">
+  <div class="modal" style="max-width:680px">
+    <h3>GPA Simulator</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 10px">
+      Project hypothetical grades for any incomplete course. Numbers update live.
+    </p>
+    <div id="gpa-summary" class="gpa-summary"></div>
+    <div id="gpa-list" class="gpa-list"></div>
+    <div class="modal-actions">
+      <button class="btn primary" type="button" onclick="closeGpaSim()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="resolver-modal">
   <div class="modal" style="max-width:680px">
     <h3>Add Course + Prerequisites</h3>
@@ -560,6 +588,8 @@
 <script src="js/dnd.js"></script>
 <script src="js/bulk.js"></script>
 <script src="js/share.js"></script>
+<script src="js/gened.js"></script>
+<script src="js/gpa-sim.js"></script>
 <script src="js/events.js"></script>
 <script src="js/table.js"></script>
 <script src="js/main.js"></script>

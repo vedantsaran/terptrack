@@ -34,6 +34,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key.toLowerCase() === 't') switchTab('timeline');
   else if (e.key.toLowerCase() === 'r') switchTab('roadmap');
   else if (e.key.toLowerCase() === 'b') switchTab('browse');
+  else if (e.key.toLowerCase() === 'g') switchTab('gened');
   else if (e.key === 'Escape') {
     closeAddCourse();
     closeSettings();
@@ -41,6 +42,7 @@ document.addEventListener('keydown', (e) => {
     closeImportCourses();
     if (typeof closeMajorBuilder === 'function') closeMajorBuilder();
     if (typeof closeResolver === 'function') closeResolver();
+    if (typeof closeGpaSim === 'function') closeGpaSim();
   }
 });
 
@@ -63,6 +65,10 @@ document.getElementById('import-modal').addEventListener('click', (e) => {
 const _rsModal = document.getElementById('resolver-modal');
 if (_rsModal) _rsModal.addEventListener('click', (e) => {
   if (e.target.id === 'resolver-modal') closeResolver();
+});
+const _gpaModal = document.getElementById('gpa-modal');
+if (_gpaModal) _gpaModal.addEventListener('click', (e) => {
+  if (e.target.id === 'gpa-modal') closeGpaSim();
 });
 const _mbModal = document.getElementById('mb-modal');
 if (_mbModal) _mbModal.addEventListener('click', (e) => {

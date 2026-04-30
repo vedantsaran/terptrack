@@ -81,6 +81,34 @@ function extractCourseCodes(text) {
   return Array.from(out);
 }
 
+// Parse a free-text prereq blurb into AND-of-OR groups.
+// Returns [[code, code, ...], [code, ...]]:
+//   outer array = AND, inner array = OR alternatives.
+// Heuristics:
+//   - split on ';' or ' and ' (top-level conjunctions)
+//   - within each chunk, split on ' or '/'either ... or'
+//   - extract codes from each piece
+// Imperfect on nested parens but covers the vast majority of UMD descriptions.
+function parsePrereqGroups(text) {
+  if (!text) return [];
+  // Normalize whitespace, strip parens (we don't honor nesting precisely)
+  const cleaned = text.replace(/\s+/g, ' ').replace(/[()]/g, ' ');
+  // Top-level AND splitters
+  const andChunks = cleaned.split(/\s*;\s*|\s+and\s+|,\s*and\s+/i);
+  const groups = [];
+  for (const chunk of andChunks) {
+    if (!chunk.trim()) continue;
+    // OR splitters within chunk
+    const orParts = chunk.split(/\s+or\s+|either\s+|\s+\/\s+/i);
+    const orCodes = new Set();
+    for (const part of orParts) {
+      extractCourseCodes(part).forEach(c => orCodes.add(c));
+    }
+    if (orCodes.size) groups.push(Array.from(orCodes).map(displayCode));
+  }
+  return groups;
+}
+
 // Map umd.io gen_ed array (e.g. [["FSAW"], ["DSHS","DVUP"]]) to our category strings
 function genEdToCategory(genEdArray) {
   if (!Array.isArray(genEdArray)) return null;
@@ -104,6 +132,7 @@ async function fetchCourseFull(code) {
   const title = (umd && umd.name) || (pt && pt.title) || display;
   const prereqText = umd && umd.relationships ? umd.relationships.prereqs : (pt && pt.prerequisites);
   const prereqCodes = extractCourseCodes(prereqText).map(displayCode);
+  const prereqGroups = parsePrereqGroups(prereqText);
   const coreqCodes = extractCourseCodes(umd && umd.relationships ? umd.relationships.coreqs : '').map(displayCode);
   const genEd = umd && umd.gen_ed ? umd.gen_ed : null;
   const category = genEdToCategory(genEd) || 'major-core';
@@ -113,6 +142,7 @@ async function fetchCourseFull(code) {
     title,
     cr: credits,
     prereqs: prereqCodes,
+    prereqGroups,
     coreqs: coreqCodes,
     kind,
     category,
