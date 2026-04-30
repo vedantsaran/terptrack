@@ -108,9 +108,7 @@ async function recoAddCourse(code) {
   const f = await fetchCourseFull(norm);
   if (!f) { alert(`Couldn't fetch ${code}.`); return; }
 
-  let semesters = state.activeSchedule;
-  if (!semesters) semesters = JSON.parse(JSON.stringify(SCHEDULE));
-
+  const semesters = mutableSchedule();
   const cap = 18;
   let target = -1;
   for (let i = 0; i < semesters.length; i++) {
@@ -123,7 +121,6 @@ async function recoAddCourse(code) {
     prereqs: f.prereqs, coreqs: f.coreqs,
     kind: 'core', category: 'major-core',
   });
-  state.activeSchedule = semesters;
   saveState();
   render();
 }

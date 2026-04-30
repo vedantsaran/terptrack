@@ -22,6 +22,9 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.target.blur(); }
     return;
   }
+  // Don't intercept while a modal is open (Escape still allowed below)
+  const modalOpen = document.querySelector('.modal-backdrop.open');
+  if (modalOpen && e.key !== 'Escape') return;
   if (e.key === '/') {
     e.preventDefault();
     searchInput.focus();

@@ -52,15 +52,14 @@ function moveCourseToSemester(code, fromSemId, toSemId, isCustom) {
     if (c) c.semId = toSemId;
   } else {
     const sched = mutableSchedule();
+    const allSems = [...sched, ...(state.customSemesters || [])];
     let courseObj = null;
-    for (const sem of sched) {
+    for (const sem of allSems) {
       const idx = (sem.courses || []).findIndex(c => c.code === code);
       if (idx >= 0) { courseObj = sem.courses.splice(idx, 1)[0]; break; }
     }
     if (!courseObj) return;
-    // Also check customSemesters
-    const target = sched.find(s => s.id === toSemId)
-      || (state.customSemesters || []).find(s => s.id === toSemId);
+    const target = allSems.find(s => s.id === toSemId);
     if (target) {
       target.courses = target.courses || [];
       target.courses.push(courseObj);

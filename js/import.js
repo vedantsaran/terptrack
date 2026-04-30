@@ -248,12 +248,8 @@ function commitImport() {
   const list = window._importPreviewList || [];
   if (!list.length) { alert('Click Preview first.'); return; }
 
-  // Auto-schedule: ensure we have an active schedule to drop into.
-  // If user is on default CE schedule, build a fresh one from imports + existing CE codes.
-  let semesters = state.activeSchedule;
-  if (!semesters) {
-    semesters = JSON.parse(JSON.stringify(SCHEDULE));
-  }
+  // Ensure an active schedule exists (lazily copies SCHEDULE the first time)
+  const semesters = mutableSchedule();
 
   // Dedup against existing courses
   const existingCodes = new Set();
@@ -277,7 +273,6 @@ function commitImport() {
     });
   }
 
-  state.activeSchedule = semesters;
   saveState();
   applySettings();
   render();

@@ -63,11 +63,14 @@ function saveCustomMajor() {
   saveState();
   closeMajorBuilder();
   // Re-populate major select if settings is open
-  if (document.getElementById('settings-modal').classList.contains('open')) {
+  const settingsOpen = document.getElementById('settings-modal').classList.contains('open');
+  if (settingsOpen) {
     populateMajorSelect();
     document.getElementById('set-major').value = id;
   }
-  alert(`Saved "${name}". Open Settings → Apply Major to use it.`);
+  alert(settingsOpen
+    ? `Saved "${name}". Click Apply to use it.`
+    : `Saved "${name}". Open Settings → Apply Major to use it.`);
 }
 
 function deleteCustomMajor(id) {
