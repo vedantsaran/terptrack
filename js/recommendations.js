@@ -103,24 +103,5 @@ function renderRecommendations() {
 }
 
 async function recoAddCourse(code) {
-  const norm = normalizeCode(code);
-  const status = document.createElement('div');
-  const f = await fetchCourseFull(norm);
-  if (!f) { alert(`Couldn't fetch ${code}.`); return; }
-
-  const semesters = mutableSchedule();
-  const cap = 18;
-  let target = -1;
-  for (let i = 0; i < semesters.length; i++) {
-    const cur = (semesters[i].courses || []).reduce((a, x) => a + (x.cr || 0), 0);
-    if (cur + f.cr <= cap) { target = i; break; }
-  }
-  if (target === -1) target = semesters.length - 1;
-  semesters[target].courses.push({
-    code: f.code, title: f.title, cr: f.cr,
-    prereqs: f.prereqs, coreqs: f.coreqs,
-    kind: 'core', category: 'major-core',
-  });
-  saveState();
-  render();
+  await resolveAndAddCourse(code);
 }

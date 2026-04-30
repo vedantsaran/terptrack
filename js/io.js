@@ -37,7 +37,7 @@ document.getElementById('import-file').addEventListener('change', (e) => {
         render();
       }
     } catch (err) {
-      alert('Could not import: ' + err.message);
+      toastError('Could not import: ' + err.message);
     }
   };
   reader.readAsText(file);

@@ -8,6 +8,7 @@ function loadState() {
     customCourses: [],
     customSemesters: [],
     customMajors: [],
+    snapshots: [],
     activeSchedule: null,
     majorId: null,
     onboardingComplete: false,
@@ -91,10 +92,24 @@ function findCourse(code) {
   return flatCourses().find(c => c.code === code);
 }
 
+function _isPassed(code) {
+  const s = getCourseState(code);
+  return s.status === "passed" || s.status === "transfer";
+}
+
+// AND-of-OR semantics: every group must have at least one passed alternative.
+// Falls back to flat AND list when prereqGroups is absent (legacy data).
 function prereqsMet(course) {
+  if (Array.isArray(course.prereqGroups) && course.prereqGroups.length) {
+    for (const group of course.prereqGroups) {
+      if (!group.length) continue;
+      const groupMet = group.some(_isPassed);
+      if (!groupMet) return { met: false, missing: group.join(' or '), missingGroup: group };
+    }
+    return { met: true };
+  }
   for (const pre of (course.prereqs || [])) {
-    const s = getCourseState(pre);
-    if (s.status !== "passed" && s.status !== "transfer") return { met: false, missing: pre };
+    if (!_isPassed(pre)) return { met: false, missing: pre };
   }
   return { met: true };
 }

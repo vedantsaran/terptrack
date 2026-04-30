@@ -98,24 +98,7 @@ async function renderBrowse() {
 }
 
 async function browseAddCourse(code) {
-  // Slot greedily into first semester with capacity
-  const f = await fetchCourseFull(code);
-  if (!f) { alert(`Couldn't fetch ${code}`); return; }
-  const sched = mutableSchedule();
-  const cap = 18;
-  let target = -1;
-  for (let i = 0; i < sched.length; i++) {
-    const cur = (sched[i].courses || []).reduce((a, x) => a + (x.cr || 0), 0);
-    if (cur + f.cr <= cap) { target = i; break; }
-  }
-  if (target === -1) target = sched.length - 1;
-  sched[target].courses.push({
-    code: f.code, title: f.title, cr: f.cr,
-    prereqs: f.prereqs, coreqs: f.coreqs,
-    kind: 'core', category: 'major-core',
-  });
-  saveState();
-  render();
+  await resolveAndAddCourse(code);
   renderBrowse();
 }
 

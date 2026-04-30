@@ -25,7 +25,7 @@ function generateSemesterLabels(startTerm, startYear, count) {
 // Returns: array of { id, name, year, courses: [...] }
 function autoSchedule(courses, opts) {
   const numSemesters = opts.numSemesters || 8;
-  const creditCap    = opts.creditCap    || 16;
+  const creditCap    = opts.creditCap    || 17;
   const startTerm    = opts.startTerm    || 'Fall';
   const startYear    = opts.startYear    || 2026;
 
@@ -139,6 +139,7 @@ async function applyMajorTemplate(majorId, opts) {
         title: f.title,
         cr: f.cr,
         prereqs: f.prereqs,
+        prereqGroups: f.prereqGroups,
         coreqs: f.coreqs,
         kind: item.kind,
         category: item.category, // keep template's role bucket; gen-ed override only for non-major courses
@@ -155,7 +156,7 @@ async function applyMajorTemplate(majorId, opts) {
 
   const schedule = autoSchedule(courseObjs, {
     numSemesters: opts && opts.numSemesters || 8,
-    creditCap:    opts && opts.creditCap    || 16,
+    creditCap:    opts && opts.creditCap    || 17,
     startTerm:    opts && opts.startTerm    || 'Fall',
     startYear:    opts && opts.startYear    || 2026,
   });
@@ -246,7 +247,7 @@ async function previewImport() {
 
 function commitImport() {
   const list = window._importPreviewList || [];
-  if (!list.length) { alert('Click Preview first.'); return; }
+  if (!list.length) { toastInfo('Click Preview first.'); return; }
 
   // Ensure an active schedule exists (lazily copies SCHEDULE the first time)
   const semesters = mutableSchedule();
@@ -268,7 +269,7 @@ function commitImport() {
     if (target === -1) target = semesters.length - 1;
     semesters[target].courses.push({
       code: c.code, title: c.title, cr: c.cr,
-      prereqs: c.prereqs, coreqs: c.coreqs,
+      prereqs: c.prereqs, prereqGroups: c.prereqGroups, coreqs: c.coreqs,
       kind: c.kind, category: c.category,
     });
   }

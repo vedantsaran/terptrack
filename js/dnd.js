@@ -1,12 +1,20 @@
 'use strict';
 /* ============================================================
-   DRAG AND DROP — move courses between semesters
+   DRAG AND DROP — move and reorder courses
    ============================================================ */
 
 let dndDragData = null; // { code, fromSemId, isCustom }
 
+function _findInsertIndex(container, y) {
+  const rows = [...container.querySelectorAll('.course:not(.dragging)')];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i].getBoundingClientRect();
+    if (y < r.top + r.height / 2) return i;
+  }
+  return rows.length;
+}
+
 function attachDndHandlers() {
-  // Course rows
   document.querySelectorAll('.course[data-code]').forEach(el => {
     el.draggable = true;
     el.addEventListener('dragstart', (e) => {
@@ -21,48 +29,77 @@ function attachDndHandlers() {
     el.addEventListener('dragend', () => {
       el.classList.remove('dragging');
       document.querySelectorAll('.semester.drop-target').forEach(s => s.classList.remove('drop-target'));
+      document.querySelectorAll('.course.drop-above, .course.drop-below').forEach(c => c.classList.remove('drop-above', 'drop-below'));
       dndDragData = null;
     });
   });
 
-  // Semester drop zones
   document.querySelectorAll('.semester[data-sem-id]').forEach(sem => {
+    const list = sem.querySelector('.courses');
     sem.addEventListener('dragover', (e) => {
       if (!dndDragData) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       sem.classList.add('drop-target');
+      // Reorder: highlight position
+      if (list) {
+        list.querySelectorAll('.course').forEach(c => c.classList.remove('drop-above', 'drop-below'));
+        const idx = _findInsertIndex(list, e.clientY);
+        const rows = [...list.querySelectorAll('.course:not(.dragging)')];
+        if (rows.length === 0) {
+          // empty semester
+        } else if (idx >= rows.length) {
+          rows[rows.length - 1].classList.add('drop-below');
+        } else {
+          rows[idx].classList.add('drop-above');
+        }
+      }
     });
-    sem.addEventListener('dragleave', () => sem.classList.remove('drop-target'));
+    sem.addEventListener('dragleave', (e) => {
+      // Only clear if we're actually leaving the semester element (not entering a child)
+      if (e.relatedTarget && sem.contains(e.relatedTarget)) return;
+      sem.classList.remove('drop-target');
+    });
     sem.addEventListener('drop', (e) => {
       e.preventDefault();
       sem.classList.remove('drop-target');
       if (!dndDragData) return;
       const toSemId = sem.dataset.semId;
+      const insertAt = list ? _findInsertIndex(list, e.clientY) : -1;
       const { code, fromSemId, isCustom } = dndDragData;
-      if (toSemId === fromSemId) return;
-      moveCourseToSemester(code, fromSemId, toSemId, isCustom);
+      moveCourseToSemester(code, fromSemId, toSemId, isCustom, insertAt);
     });
   });
 }
 
-function moveCourseToSemester(code, fromSemId, toSemId, isCustom) {
+function moveCourseToSemester(code, fromSemId, toSemId, isCustom, insertAt) {
+  const sched = mutableSchedule();
+  const allSems = [...sched, ...(state.customSemesters || [])];
+  const targetSem = allSems.find(s => s.id === toSemId);
+  if (!targetSem) return;
+
   if (isCustom) {
     const c = (state.customCourses || []).find(x => x.code === code);
-    if (c) c.semId = toSemId;
+    if (!c) return;
+    // Reorder inside customCourses pool — no inherent position; just move semId
+    if (c.semId !== toSemId) c.semId = toSemId;
   } else {
-    const sched = mutableSchedule();
-    const allSems = [...sched, ...(state.customSemesters || [])];
     let courseObj = null;
+    let sourceSem = null;
     for (const sem of allSems) {
       const idx = (sem.courses || []).findIndex(c => c.code === code);
-      if (idx >= 0) { courseObj = sem.courses.splice(idx, 1)[0]; break; }
+      if (idx >= 0) {
+        sourceSem = sem;
+        courseObj = sem.courses.splice(idx, 1)[0];
+        break;
+      }
     }
     if (!courseObj) return;
-    const target = allSems.find(s => s.id === toSemId);
-    if (target) {
-      target.courses = target.courses || [];
-      target.courses.push(courseObj);
+    targetSem.courses = targetSem.courses || [];
+    if (typeof insertAt === 'number' && insertAt >= 0 && insertAt < targetSem.courses.length) {
+      targetSem.courses.splice(insertAt, 0, courseObj);
+    } else {
+      targetSem.courses.push(courseObj);
     }
   }
   saveState();

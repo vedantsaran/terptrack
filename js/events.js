@@ -34,12 +34,16 @@ document.addEventListener('keydown', (e) => {
   else if (e.key.toLowerCase() === 't') switchTab('timeline');
   else if (e.key.toLowerCase() === 'r') switchTab('roadmap');
   else if (e.key.toLowerCase() === 'b') switchTab('browse');
+  else if (e.key.toLowerCase() === 'g') switchTab('gened');
   else if (e.key === 'Escape') {
     closeAddCourse();
     closeSettings();
     closeAddSemester();
     closeImportCourses();
     if (typeof closeMajorBuilder === 'function') closeMajorBuilder();
+    if (typeof closeResolver === 'function') closeResolver();
+    if (typeof closeGpaSim === 'function') closeGpaSim();
+    if (typeof closeSnapshots === 'function') closeSnapshots();
   }
 });
 
@@ -58,6 +62,18 @@ document.getElementById('add-semester-chip').addEventListener('click', openAddSe
 document.getElementById('import-chip').addEventListener('click', openImportCourses);
 document.getElementById('import-modal').addEventListener('click', (e) => {
   if (e.target.id === 'import-modal') closeImportCourses();
+});
+const _rsModal = document.getElementById('resolver-modal');
+if (_rsModal) _rsModal.addEventListener('click', (e) => {
+  if (e.target.id === 'resolver-modal') closeResolver();
+});
+const _gpaModal = document.getElementById('gpa-modal');
+if (_gpaModal) _gpaModal.addEventListener('click', (e) => {
+  if (e.target.id === 'gpa-modal') closeGpaSim();
+});
+const _snapModal = document.getElementById('snapshots-modal');
+if (_snapModal) _snapModal.addEventListener('click', (e) => {
+  if (e.target.id === 'snapshots-modal') closeSnapshots();
 });
 const _mbModal = document.getElementById('mb-modal');
 if (_mbModal) _mbModal.addEventListener('click', (e) => {

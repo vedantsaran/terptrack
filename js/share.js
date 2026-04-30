@@ -102,7 +102,7 @@ async function loadSharedPlanFromHash() {
     render();
     return true;
   } catch (e) {
-    alert('Could not load shared plan: ' + e.message);
+    toastError('Could not load shared plan: ' + e.message);
     return false;
   }
 }

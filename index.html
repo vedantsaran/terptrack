@@ -14,27 +14,35 @@
 <div class="topbar">
   <div class="brand"><span class="dot"></span>Terp Track</div>
   <div class="topbar-actions">
-    <button class="icon-btn" id="settings-btn" title="Customize program, credits, goal courses">
+    <button class="icon-btn" id="settings-btn" title="Customize program, credits, goal courses" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span class="label">Settings</span>
     </button>
-    <button class="icon-btn" id="theme-toggle" title="Toggle dark mode">
+    <button class="icon-btn" id="theme-toggle" title="Toggle dark mode" aria-label="Toggle theme">
       <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       <span class="label">Theme</span>
     </button>
-    <button class="icon-btn" onclick="window.print()" title="Print or save as PDF">
+    <button class="icon-btn" onclick="window.print()" title="Print or save as PDF" aria-label="Print">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
       <span class="label">Print</span>
     </button>
-    <button class="icon-btn" onclick="exportData()" title="Export your data">
+    <button class="icon-btn" onclick="exportData()" title="Export your data" aria-label="Export plan as JSON">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span class="label">Export</span>
     </button>
-    <button class="icon-btn" onclick="openImport()" title="Import data">
+    <button class="icon-btn" onclick="openImport()" title="Import data" aria-label="Import JSON">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <span class="label">Import</span>
     </button>
-    <button class="icon-btn" onclick="copyShareUrl()" title="Copy a link to share this plan">
+    <button class="icon-btn" onclick="openSnapshots()" title="Save / load plan snapshots" aria-label="Snapshots">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/><circle cx="12" cy="3" r="0"/></svg>
+      <span class="label">Plans</span>
+    </button>
+    <button class="icon-btn" onclick="openGpaSim()" title="GPA simulator — project what-if grades" aria-label="GPA simulator">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="label">GPA</span>
+    </button>
+    <button class="icon-btn" onclick="copyShareUrl()" title="Copy a link to share this plan" aria-label="Share plan">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       <span class="label">Share</span>
     </button>
@@ -55,6 +63,7 @@
   <button class="tab" data-tab="timeline">⏰ Action Timeline</button>
   <button class="tab" data-tab="roadmap">🗺 Prereq Roadmap</button>
   <button class="tab" data-tab="browse">🔍 Browse Courses</button>
+  <button class="tab" data-tab="gened">🎓 Gen-Eds</button>
 </div>
 
 <div class="container">
@@ -276,6 +285,15 @@
     <div id="br-grid" class="br-grid"></div>
   </div>
 
+  <div class="view" id="view-gened">
+    <div class="section-rule">
+      <span class="badge">Gen-Ed Coverage Matrix</span>
+      <span class="line"></span>
+    </div>
+    <p style="color:var(--slate);font-size:.9rem;margin-bottom:18px">Tracks each UMD gen-ed category against your plan. Green = completed, gold = planned, red = missing. Click <strong>Find</strong> to discover qualifying courses.</p>
+    <div id="gened-matrix"></div>
+  </div>
+
 </div>
 
 <div class="modal-backdrop" id="add-course-modal">
@@ -314,6 +332,9 @@
     <input type="text" id="ac-prereqs" placeholder="e.g., MATH140, MATH141">
     <label>
       <input type="checkbox" id="ac-goal" style="width:auto;margin-right:6px"> Mark as a Goal course
+    </label>
+    <label id="ac-auto-prereqs-row">
+      <input type="checkbox" id="ac-auto-prereqs" style="width:auto;margin-right:6px"> Auto-add missing prerequisites after saving
     </label>
     <label>Notes (optional)</label>
     <input type="text" id="ac-note" placeholder="e.g., Required for ML track">
@@ -492,6 +513,52 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="snapshots-modal">
+  <div class="modal" style="max-width:600px">
+    <h3>Plan Snapshots</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 10px">
+      Save your current plan as a named snapshot, then load any of them later. Useful for comparing scenarios — "with minor", "fast-track", "if I switch majors".
+    </p>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="text" id="snap-name" placeholder="e.g., 4-year CS plan" style="flex:1">
+      <button class="btn primary" type="button" onclick="commitSnapshotSave()">+ Save current plan</button>
+    </div>
+    <div id="snap-list" class="snap-list"></div>
+    <div class="modal-actions">
+      <button class="btn primary" type="button" onclick="closeSnapshots()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="gpa-modal">
+  <div class="modal" style="max-width:680px">
+    <h3>GPA Simulator</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 10px">
+      Project hypothetical grades for any incomplete course. Numbers update live.
+    </p>
+    <div id="gpa-summary" class="gpa-summary"></div>
+    <div id="gpa-list" class="gpa-list"></div>
+    <div class="modal-actions">
+      <button class="btn primary" type="button" onclick="closeGpaSim()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="resolver-modal">
+  <div class="modal" style="max-width:680px">
+    <h3>Add Course + Prerequisites</h3>
+    <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">
+      We'll auto-fetch the full prereq chain. Uncheck anything you've already taken elsewhere or want to skip.
+    </p>
+    <p id="rs-status" style="font-size:.86rem;margin:6px 0 12px;min-height:1em"></p>
+    <div id="rs-list" class="rs-list"></div>
+    <div class="modal-actions">
+      <button class="btn" type="button" onclick="closeResolver()">Cancel</button>
+      <button class="btn primary" type="button" onclick="commitResolver()">Add to Plan</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="import-modal">
   <div class="modal" style="max-width:640px">
     <h3>Smart Import Courses</h3>
@@ -521,6 +588,7 @@
 
 <div class="save-indicator" id="save-indicator">Saved</div>
 
+<script src="js/toast.js"></script>
 <script src="js/data.js"></script>
 <script src="js/majors.js"></script>
 <script src="js/state.js"></script>
@@ -537,6 +605,7 @@
 <script src="js/semesters.js"></script>
 <script src="js/io.js"></script>
 <script src="js/import.js"></script>
+<script src="js/prereq-resolver.js"></script>
 <script src="js/recommendations.js"></script>
 <script src="js/major-builder.js"></script>
 <script src="js/onboarding.js"></script>
@@ -544,6 +613,9 @@
 <script src="js/dnd.js"></script>
 <script src="js/bulk.js"></script>
 <script src="js/share.js"></script>
+<script src="js/gened.js"></script>
+<script src="js/gpa-sim.js"></script>
+<script src="js/snapshots.js"></script>
 <script src="js/events.js"></script>
 <script src="js/table.js"></script>
 <script src="js/main.js"></script>
