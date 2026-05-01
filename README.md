@@ -1,1 +1,1 @@
-little scheduling project @ https://www.terptrack.vercel.app
+little scheduling project @ https://terptrack.vercel.app
