@@ -96,15 +96,52 @@ function extractCourseCodes(text) {
 // Imperfect on nested parens but covers the vast majority of UMD descriptions.
 function parsePrereqGroups(text) {
   if (!text) return [];
-  // Normalize whitespace, strip parens (we don't honor nesting precisely)
-  const cleaned = text.replace(/\s+/g, ' ').replace(/[()]/g, ' ');
-  // Top-level AND splitters
-  const andChunks = cleaned.split(/\s*;\s*|\s+and\s+|,\s*and\s+/i);
+  // Normalize whitespace but preserve paren depth so we can split only at top-level.
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+
+  function splitTopLevel(input, isBoundary) {
+    const parts = [];
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
+      if (ch === '(') { depth++; continue; }
+      if (ch === ')') { depth = Math.max(0, depth - 1); continue; }
+      if (depth !== 0) continue;
+      const m = isBoundary(input, i);
+      if (!m) continue;
+      const left = input.slice(start, i).trim();
+      if (left) parts.push(left);
+      i += m.length - 1;
+      start = i + 1;
+    }
+    const tail = input.slice(start).trim();
+    if (tail) parts.push(tail);
+    return parts;
+  }
+
+  function andBoundary(input, idx) {
+    if (input[idx] === ';') return ';';
+    const rest = input.slice(idx);
+    const andWord = rest.match(/^\s+,?\s*and\s+/i);
+    return andWord ? andWord[0] : null;
+  }
+
+  function orBoundary(input, idx) {
+    const rest = input.slice(idx);
+    const orWord = rest.match(/^\s+or\s+/i);
+    if (orWord) return orWord[0];
+    const slash = rest.match(/^\s*\/\s*/);
+    return slash ? slash[0] : null;
+  }
+
+  const andChunks = splitTopLevel(cleaned, andBoundary);
   const groups = [];
   for (const chunk of andChunks) {
     if (!chunk.trim()) continue;
-    // OR splitters within chunk
-    const orParts = chunk.split(/\s+or\s+|either\s+|\s+\/\s+/i);
+    // Drop optional leading "either" then split OR at top-level only.
+    const normalizedChunk = chunk.replace(/^\s*either\s+/i, '');
+    const orParts = splitTopLevel(normalizedChunk, orBoundary);
     const orCodes = new Set();
     for (const part of orParts) {
       extractCourseCodes(part).forEach(c => orCodes.add(c));
@@ -119,8 +156,14 @@ function genEdToCategory(genEdArray) {
   if (!Array.isArray(genEdArray)) return null;
   const flat = genEdArray.flat().filter(Boolean);
   if (!flat.length) return null;
-  const tag = flat[0].toLowerCase();
+  // Prefer stable ordering so multi-tag courses map consistently.
+  const tag = flat.map(t => String(t).toLowerCase()).sort()[0];
   return `gened-${tag}`;
+}
+
+function genEdTags(genEdArray) {
+  if (!Array.isArray(genEdArray)) return [];
+  return Array.from(new Set(genEdArray.flat().filter(Boolean).map(t => String(t).toLowerCase())));
 }
 
 // Combined fetch: umd.io for canonical metadata + structured prereqs + gen_ed,
@@ -141,6 +184,7 @@ async function fetchCourseFull(code) {
   const coreqCodes = extractCourseCodes(umd && umd.relationships ? umd.relationships.coreqs : '').map(displayCode);
   const genEd = umd && umd.gen_ed ? umd.gen_ed : null;
   const category = genEdToCategory(genEd) || 'major-core';
+  const genEdCategories = genEdTags(genEd).map(t => `gened-${t}`);
   const kind = category.startsWith('gened') ? 'gened' : 'core';
   return {
     code: display,
@@ -151,6 +195,7 @@ async function fetchCourseFull(code) {
     coreqs: coreqCodes,
     kind,
     category,
+    categories: genEdCategories.length ? genEdCategories : [category],
     avg_gpa: (pt && typeof pt.average_gpa === 'number') ? pt.average_gpa : null,
     gen_ed: genEd,
     description: (umd && umd.description) || (pt && pt.description) || '',
