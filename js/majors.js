@@ -959,6 +959,24 @@ function listMajors() {
   return [...Object.values(MAJOR_TEMPLATES), ...custom];
 }
 
+// True when a major ships with a curated 4-year schedule (CE default or
+// any template with a fixedSchedule array). Auto-gen-only majors return false.
+function isMajorFullyBaked(m) {
+  if (!m) return false;
+  if (m.useDefaultSchedule) return true;
+  if (Array.isArray(m.fixedSchedule) && m.fixedSchedule.length) return true;
+  return false;
+}
+
+// Display string used in dropdowns. Fully-baked majors get a ★;
+// auto-gen majors get a faint ✱ marker so users know they'll see a
+// sparser layout until they fill in electives.
+function majorDisplayLabel(m) {
+  const star = isMajorFullyBaked(m) ? '★ ' : '✱ ';
+  const tail = m.useDefaultSchedule ? ' (curated)' : (m.isCustom ? ' (custom)' : '');
+  return star + m.name + tail;
+}
+
 // Group templates by college so dropdowns can use <optgroup>.
 function groupedMajors() {
   const groups = {};

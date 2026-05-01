@@ -376,7 +376,10 @@
       </div>
       <p id="set-major-note" style="font-size:.74rem;color:var(--slate);margin:6px 0 0;font-style:italic"></p>
       <p id="set-major-status" style="font-size:.78rem;margin:6px 0 0;min-height:1em"></p>
-      <p style="font-size:.74rem;color:var(--slate);margin:8px 0 0">Templates use umd.io + PlanetTerp to fill in titles, credits, prereqs, and avg GPA. Course progress is preserved when you switch.</p>
+      <p style="font-size:.74rem;color:var(--slate);margin:8px 0 0">
+        <strong>★</strong> = curated 4-year schedule (drops in fully populated). <strong>✱</strong> = auto-generated from a code list (sparser; fill electives manually).
+        Templates use umd.io + PlanetTerp to fill in titles, credits, prereqs, and avg GPA. Course progress is preserved when you switch.
+      </p>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
         <button class="btn small" type="button" onclick="openMajorBuilder()">+ Build Custom Major</button>
         <button class="btn small" type="button" onclick="openImportMajor()">Import Major JSON</button>
@@ -435,7 +438,10 @@
       <p style="color:var(--slate);font-size:.88rem;margin-top:-4px">Let's get your plan set up in under a minute.</p>
       <label>What's your major?</label>
       <select id="ob-major"></select>
-      <p style="font-size:.74rem;color:var(--slate);margin-top:6px">Templates fetch live data from umd.io + PlanetTerp. You can swap or customize anytime.</p>
+      <p style="font-size:.74rem;color:var(--slate);margin-top:6px">
+        <strong>★</strong> = curated 4-year schedule. <strong>✱</strong> = auto-generated from a code list (you'll fill in electives later).
+        Live data via umd.io + PlanetTerp. You can swap or customize anytime.
+      </p>
       <label>Starting Fall semester (year)</label>
       <input type="number" id="ob-start-year" min="2020" max="2035" step="1">
     </div>
