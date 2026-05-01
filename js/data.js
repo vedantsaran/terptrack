@@ -4,7 +4,7 @@ const SCHEDULE = [
     id: "F26", name: "Fall 2026", year: "Year 1",
     courses: [
       { code: "CMSC 131", title: "Object-Oriented Programming I", cr: 4, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
-      { code: "MATH 140", title: "Calculus I",                    cr: 4, prereqs: [], coreqs: [], kind: "core", category: "ce-core", note: "Satisfies FSMA" },
+      { code: "MATH 140", title: "Calculus I",                    cr: 4, prereqs: [], coreqs: [], kind: "core", category: "gened-fsma", note: "Double-counts: CE Core + FSMA" },
       { code: "CHEM 135", title: "General Chemistry for Engineers",cr: 3, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENGL 101", title: "Academic Writing",               cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fsaw", note: "FSAW" },
       { code: "UNIV 100", title: "The University Mind",            cr: 1, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
@@ -15,7 +15,7 @@ const SCHEDULE = [
     courses: [
       { code: "CMSC 132", title: "Object-Oriented Programming II",cr: 4, prereqs: ["CMSC 131"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "MATH 141", title: "Calculus II",                    cr: 4, prereqs: ["MATH 140"], coreqs: [], kind: "core", category: "ce-core" },
-      { code: "PHYS 161", title: "General Physics: Mechanics",     cr: 3, prereqs: [], coreqs: ["MATH 141"], kind: "core", category: "ce-core", note: "DSNS" },
+      { code: "PHYS 161", title: "General Physics: Mechanics",     cr: 3, prereqs: [], coreqs: ["MATH 141"], kind: "core", category: "gened-dsns", note: "Double-counts: CE Core + DSNS" },
       { code: "ENES 100", title: "Intro to Engineering Design",    cr: 3, prereqs: [], coreqs: [], kind: "core", category: "ce-core", note: "Cannot share semester w/ ENEE 101" },
       { code: "GenEd HU-1", title: "Humanities Distributive #1",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshu", note: "DSHU #1" },
     ]
@@ -27,17 +27,17 @@ const SCHEDULE = [
       { code: "ENEE 101", title: "Intro to ECE",                   cr: 3, prereqs: [], coreqs: ["MATH 140"], kind: "core", category: "ce-core" },
       { code: "ENEE 244", title: "Digital Logic Design",           cr: 3, prereqs: [], coreqs: ["CMSC 132"], kind: "core", category: "ce-core" },
       { code: "ENEE 290", title: "Diff Eq & LinAlg for Engr",      cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "critical", category: "ce-core", note: "Replaces MATH 246+461 · LinAlg prereq for CMSC 472" },
-      { code: "PHYS 260", title: "Physics: Waves & E&M (incl. 261 Lab)",cr: 4, prereqs: ["PHYS 161"], coreqs: [], kind: "core", category: "ce-core", note: "Lab → DSNL" },
+      { code: "PHYS 260", title: "Physics: Waves & E&M (incl. 261 Lab)",cr: 4, prereqs: ["PHYS 161"], coreqs: [], kind: "core", category: "gened-dsnl", note: "Double-counts: CE Core + DSNL" },
     ]
   },
   {
     id: "S28", name: "Spring 2028", year: "Year 2",
     courses: [
-      { code: "CMSC 250", title: "Discrete Structures",            cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "core", category: "ce-core", note: "Satisfies FSAR" },
+      { code: "CMSC 250", title: "Discrete Structures",            cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "core", category: "gened-fsar", note: "Double-counts: CE Core + FSAR" },
       { code: "ENEE 205", title: "Electric Circuits",              cr: 4, prereqs: ["PHYS 260"], coreqs: ["ENEE 290"], kind: "core", category: "ce-core" },
       { code: "ENEE 222", title: "Discrete Signal Analysis",       cr: 4, prereqs: [], coreqs: ["ENEE 290"], kind: "core", category: "ce-core" },
       { code: "ENEE 245", title: "Digital Circuits & Systems Lab", cr: 2, prereqs: ["ENEE 244"], coreqs: [], kind: "core", category: "ce-core" },
-      { code: "ENEE 200", title: "Engr Ethics & Humanity",         cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "ce-core", note: "Triple-counts: Core + DSHU + I-Series" },
+      { code: "ENEE 200", title: "Engr Ethics & Humanity",         cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshu", note: "Double-counts: CE Core + DSHU (often also I-Series)" },
     ]
   },
   {
