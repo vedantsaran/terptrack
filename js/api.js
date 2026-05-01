@@ -179,8 +179,11 @@ async function fetchCourseFull(code) {
   const credits = parseInt((umd && umd.credits) || (pt && pt.credits) || '3', 10) || 3;
   const title = (umd && umd.name) || (pt && pt.title) || display;
   const prereqText = umd && umd.relationships ? umd.relationships.prereqs : (pt && pt.prerequisites);
-  const prereqCodes = extractCourseCodes(prereqText).map(displayCode);
   const prereqGroups = parsePrereqGroups(prereqText);
+  const prereqCodes = prereqGroups.length
+    ? prereqGroups.map(g => (g && g.length ? g[0] : null)).filter(Boolean)
+    : extractCourseCodes(prereqText).map(displayCode);
+  const allPrereqCodes = extractCourseCodes(prereqText).map(displayCode);
   const coreqCodes = extractCourseCodes(umd && umd.relationships ? umd.relationships.coreqs : '').map(displayCode);
   const genEd = umd && umd.gen_ed ? umd.gen_ed : null;
   const category = genEdToCategory(genEd) || 'major-core';
@@ -192,6 +195,7 @@ async function fetchCourseFull(code) {
     cr: credits,
     prereqs: prereqCodes,
     prereqGroups,
+    allPrereqs: allPrereqCodes,
     coreqs: coreqCodes,
     kind,
     category,
