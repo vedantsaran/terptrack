@@ -6,11 +6,16 @@ function populateMajorSelect() {
   const sel = document.getElementById('set-major');
   if (!sel) return;
   sel.innerHTML = '';
-  listMajors().forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m.id;
-    opt.textContent = m.name + (m.useDefaultSchedule ? ' (curated default)' : '');
-    sel.appendChild(opt);
+  groupedMajors().forEach(g => {
+    const og = document.createElement('optgroup');
+    og.label = g.label;
+    g.majors.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name + (m.useDefaultSchedule ? ' (curated default)' : '');
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
   });
   sel.value = state.majorId || 'CE';
   const note = document.getElementById('set-major-note');
