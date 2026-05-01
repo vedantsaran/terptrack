@@ -14,7 +14,7 @@ function loadState() {
     onboardingComplete: false,
     settings: { ...DEFAULT_SETTINGS },
     welcomeDismissed: false,
-    theme: "light",
+    theme: "dark",
   };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
