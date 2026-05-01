@@ -60,6 +60,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Mechanical Engineering',
     eyebrow: 'UMD · Mechanical Engineering · BS',
     totalCredits: 124,
+    fixedSchedule: typeof SCHEDULE_ENME !== 'undefined' ? SCHEDULE_ENME : null,
     coreCodes: [
       'ENES100','ENES102',
       'ENME271','ENME272',
@@ -237,6 +238,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Business — Finance',
     eyebrow: 'UMD · Business Finance · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_FINANCE !== 'undefined' ? SCHEDULE_FINANCE : null,
     coreCodes: [
       'BMGT110','BMGT220','BMGT221','BMGT230','BMGT289','BMGT340','BMGT350','BMGT364','BMGT367','BMGT380',
       'BMGT343','BMGT440','BMGT443','BMGT446','BMGT496',
@@ -299,6 +301,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Economics',
     eyebrow: 'UMD · Economics · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_ECON !== 'undefined' ? SCHEDULE_ECON : null,
     coreCodes: [
       'ECON200','ECON201','ECON305','ECON306','ECON321','ECON325','ECON326',
       'MATH140','MATH141','STAT400',
@@ -431,6 +434,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Communication',
     eyebrow: 'UMD · Communication · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_COMM !== 'undefined' ? SCHEDULE_COMM : null,
     coreCodes: [
       'COMM107','COMM200','COMM230','COMM250','COMM330','COMM350','COMM402','COMM497',
     ],
@@ -461,6 +465,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Information Science',
     eyebrow: 'UMD · Information Science · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_INST !== 'undefined' ? SCHEDULE_INST : null,
     coreCodes: [
       'INST126','INST201','INST301','INST311','INST314','INST326','INST327','INST335','INST352','INST362','INST414','INST490',
     ],

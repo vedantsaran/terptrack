@@ -71,13 +71,11 @@ const SCHEDULE_CS = [
     _c('CMSC 451', 'Design and Analysis of Algorithms', 3, { prereqs: ['CMSC 351'], category: 'major-upper', isGoal: true }),
     _c('CMSC 4xx Upper Elective A', 'Upper-Division CS Elective', 3, { category: 'major-upper' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('CMSC 4xx Upper Elective B', 'Upper-Division CS Elective', 3, { category: 'major-upper' }),
     _c('CMSC 4xx Upper Elective C', 'Upper-Division CS Elective', 3, { category: 'major-upper' }),
     _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
@@ -133,6 +131,7 @@ const SCHEDULE_BIOL = [
     _c('BSCI 440', 'Mammalian Physiology', 4, { prereqs: ['BSCI 330'], category: 'major-upper', isGoal: true }),
     _c('BSCI 4xx Upper Lab', 'Upper-Division BSCI Lab', 4, { category: 'major-upper' }),
     _c('BSCI 4xx Upper Elective B', 'Upper-Division BSCI Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
@@ -208,6 +207,7 @@ const SCHEDULE_PSYC = [
 
 // ============================================================
 // CCJS — Criminology & Criminal Justice (BA)
+// BA degrees require 4 semesters of one foreign language
 // ============================================================
 const SCHEDULE_CCJS = [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
@@ -216,40 +216,40 @@ const SCHEDULE_CCJS = [
     _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
     _c('MATH 113', 'College Algebra with Applications', 3, { category: 'major-support', note: 'Satisfies FSMA' }),
     _c('UNIV 100', 'The Student in the University', 1, { category: 'major-core' }),
-    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('Foreign Language 101', 'Foreign Language Sequence I', 4, { category: 'major-support', note: 'BA req' }),
   ]},
   { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
     _c('CCJS 230', 'Criminal Procedure', 3, { prereqs: ['CCJS 100'], category: 'major-core' }),
     _c('ECON 200', 'Principles of Microeconomics', 3, { kind: 'gened', category: 'gened-dshs' }),
     _c('COMM 107', 'Oral Communication', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('Foreign Language 102', 'Foreign Language Sequence II', 4, { prereqs: ['Foreign Language 101'], category: 'major-support', note: 'BA req' }),
     _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
-    _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
   ]},
   { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
     _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support' }),
     _c('CCJS 200', 'Methods of Criminal Justice Research', 3, { prereqs: ['CCJS 100'], category: 'major-core' }),
     _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
-    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Foreign Language 201', 'Foreign Language Sequence III', 3, { prereqs: ['Foreign Language 102'], category: 'major-support', note: 'BA req' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
   ]},
   { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
     _c('CCJS 300', 'Criminological and Criminal Justice Theory', 3, { prereqs: ['CCJS 105','CCJS 200'], category: 'major-core' }),
     _c('CCJS 320', 'Concepts of Law Enforcement Administration', 3, { prereqs: ['CCJS 100'], category: 'major-core' }),
+    _c('Foreign Language 202', 'Foreign Language Sequence IV', 3, { prereqs: ['Foreign Language 201'], category: 'major-support', note: 'BA req' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
     _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
-    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
     _c('CCJS 340', 'Concepts of Law', 3, { prereqs: ['CCJS 100'], category: 'major-core' }),
     _c('CCJS 352', 'Drugs and Crime', 3, { prereqs: ['CCJS 105'], category: 'major-core' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
     _c('CCJS 400', 'Criminal Justice Process', 3, { prereqs: ['CCJS 200','CCJS 300'], category: 'major-core', isGoal: true }),
     _c('CCJS 4xx Elective A', 'Upper-Division CCJS Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
@@ -263,13 +263,14 @@ const SCHEDULE_CCJS = [
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('CCJS 498', 'Senior Internship in Criminal Justice', 3, { prereqs: ['CCJS 400'], category: 'major-upper', isGoal: true }),
     _c('CCJS 4xx Elective D', 'Upper-Division CCJS Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('CCJS 4xx Elective E', 'Upper-Division CCJS Elective', 3, { category: 'major-upper' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
 
 // ============================================================
 // GVPT — Government & Politics (BA)
+// BA degrees require 4 semesters of one foreign language
 // ============================================================
 const SCHEDULE_GVPT = [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
@@ -277,35 +278,35 @@ const SCHEDULE_GVPT = [
     _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
     _c('MATH 113', 'College Algebra with Applications', 3, { category: 'major-support', note: 'Satisfies FSMA' }),
     _c('UNIV 100', 'The Student in the University', 1, { category: 'major-core' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Foreign Language 101', 'Foreign Language Sequence I', 4, { category: 'major-support', note: 'BA req' }),
     _c('COMM 107', 'Oral Communication', 3, { kind: 'gened', category: 'gened-fsoc' }),
   ]},
   { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
     _c('GVPT 170', 'American Government', 3, { category: 'major-core' }),
     _c('ECON 200', 'Principles of Microeconomics', 3, { kind: 'gened', category: 'gened-dshs' }),
     _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support' }),
-    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Foreign Language 102', 'Foreign Language Sequence II', 4, { prereqs: ['Foreign Language 101'], category: 'major-support', note: 'BA req' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
   ]},
   { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
     _c('GVPT 200', 'Introduction to Comparative Politics', 3, { prereqs: ['GVPT 100'], category: 'major-core' }),
     _c('GVPT 241', 'The Study of Political Philosophy', 3, { prereqs: ['GVPT 100'], category: 'major-core' }),
-    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('Foreign Language 201', 'Foreign Language Sequence III', 3, { prereqs: ['Foreign Language 102'], category: 'major-support', note: 'BA req' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
     _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
     _c('GVPT 280', 'Introduction to International Relations', 3, { prereqs: ['GVPT 100'], category: 'major-core' }),
     _c('GVPT 3xx Elective A', 'Upper-Division GVPT Elective', 3, { prereqs: ['GVPT 100'], category: 'major-upper' }),
-    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Foreign Language 202', 'Foreign Language Sequence IV', 3, { prereqs: ['Foreign Language 201'], category: 'major-support', note: 'BA req' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
     _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
     _c('GVPT 3xx Elective B', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
     _c('GVPT 3xx Elective C', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
+    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
     _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
@@ -325,6 +326,318 @@ const SCHEDULE_GVPT = [
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('GVPT 399', 'Senior Seminar', 3, { prereqs: ['GVPT 200','GVPT 280'], category: 'major-upper', isGoal: true }),
     _c('GVPT 4xx Elective D', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ENME — Mechanical Engineering (BS, 124 cr)
+// ============================================================
+const SCHEDULE_ENME = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ENES 100', 'Introduction to Engineering Design', 3, { category: 'major-core' }),
+    _c('MATH 140', 'Calculus I', 4, { category: 'major-support', note: 'Satisfies FSMA' }),
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-core' }),
+    _c('COMM 107', 'Oral Communication', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ENES 102', 'Mechanics I', 3, { prereqs: ['MATH 140'], category: 'major-core' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { coreqs: ['MATH 141'], category: 'major-support' }),
+    _c('ENME 271', 'Engineering Computation', 3, { prereqs: ['MATH 140'], category: 'major-core' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('MATH 240', 'Linear Algebra', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 260', 'General Physics: Vibrations, Waves, Electricity and Magnetism', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], category: 'major-support' }),
+    _c('ENME 220', 'Mechanics II: Dynamics', 3, { prereqs: ['ENES 102'], category: 'major-core' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('MATH 246', 'Differential Equations for Scientists and Engineers', 3, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('ENME 217', 'Mechanics of Materials', 3, { prereqs: ['ENES 102'], category: 'major-core' }),
+    _c('ENME 232', 'Thermodynamics', 3, { prereqs: ['MATH 141','PHYS 161'], category: 'major-core' }),
+    _c('ENME 272', 'Introduction to Mechanical Engineering Design and CAD', 3, { prereqs: ['ENME 271'], category: 'major-core' }),
+    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ENME 300', 'Engineering Materials', 3, { prereqs: ['CHEM 135','ENME 217'], category: 'major-core' }),
+    _c('ENME 342', 'Fluid Mechanics', 3, { prereqs: ['ENME 232','MATH 246'], category: 'major-core' }),
+    _c('ENME 351', 'Manufacturing Process Engineering', 3, { prereqs: ['ENME 272'], category: 'major-core' }),
+    _c('ENME 382', 'Introduction to Materials Engineering', 3, { prereqs: ['ENME 217'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ENME 360', 'Vibration, Controls, and Optimization I', 3, { prereqs: ['ENME 220','MATH 246'], category: 'major-core' }),
+    _c('ENME 414', 'Computer-Aided Design', 3, { prereqs: ['ENME 272'], category: 'major-upper' }),
+    _c('ENME 432', 'Heat Transfer', 3, { prereqs: ['ENME 342'], category: 'major-core' }),
+    _c('ENME 4xx Tech Elective A', 'Upper-Division ENME Elective', 3, { category: 'major-upper' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ENME 462', 'Vibrations, Controls, and Optimization II', 3, { prereqs: ['ENME 360'], category: 'major-core' }),
+    _c('ENME 4xx Tech Elective B', 'Upper-Division ENME Elective', 3, { category: 'major-upper' }),
+    _c('ENME 4xx Tech Elective C', 'Upper-Division ENME Elective', 3, { category: 'major-upper' }),
+    _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('ENME 472', 'Integrated Product and Process Development', 3, { prereqs: ['ENME 462'], category: 'major-upper', isGoal: true }),
+    _c('ENME 4xx Tech Elective D', 'Upper-Division ENME Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// FINANCE — Smith Business, Finance track (BS, 120 cr)
+// ============================================================
+const SCHEDULE_FINANCE = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('BMGT 110', 'Introduction to Business and Management', 3, { category: 'major-core' }),
+    _c('ECON 200', 'Principles of Microeconomics', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('MATH 220', 'Elementary Calculus I', 3, { category: 'major-support', note: 'Satisfies FSMA' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-core' }),
+    _c('COMM 107', 'Oral Communication', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ECON 201', 'Principles of Macroeconomics', 3, { prereqs: ['ECON 200'], category: 'major-core' }),
+    _c('BMGT 230', 'Business Statistics', 3, { prereqs: ['MATH 220'], category: 'major-core' }),
+    _c('BMGT 220', 'Principles of Accounting I', 3, { category: 'major-core' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('BMGT 221', 'Principles of Accounting II', 3, { prereqs: ['BMGT 220'], category: 'major-core' }),
+    _c('BMGT 289I', 'Introductory Business Lecture Series', 1, { category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('Free Elective', 'Free Elective', 2, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('BMGT 340', 'Business Finance', 3, { prereqs: ['BMGT 220','ECON 201'], category: 'major-core' }),
+    _c('BMGT 350', 'Marketing Principles', 3, { prereqs: ['ECON 200'], category: 'major-core' }),
+    _c('BMGT 364', 'Management and Organization Theory', 3, { category: 'major-core' }),
+    _c('BMGT 367', 'Career Search Strategies in Business', 1, { category: 'major-core' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('BMGT 343', 'Investments', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
+    _c('BMGT 380', 'Business Law', 3, { category: 'major-core' }),
+    _c('BMGT 4xx Finance Elective A', 'Upper-Division Finance Elective', 3, { category: 'major-upper' }),
+    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('BMGT 440', 'Advanced Financial Management', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
+    _c('BMGT 443', 'Security Analysis and Valuation', 3, { prereqs: ['BMGT 343'], category: 'major-upper', isGoal: true }),
+    _c('BMGT 446', 'Commercial Bank Management', 3, { prereqs: ['BMGT 343'], category: 'major-upper' }),
+    _c('BMGT 4xx Finance Elective B', 'Upper-Division Finance Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BMGT 449', 'Real Estate Finance and Investment', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
+    _c('BMGT 4xx Finance Elective C', 'Upper-Division Finance Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('BMGT 496', 'Business Ethics', 3, { category: 'major-upper', isGoal: true }),
+    _c('BMGT 4xx Finance Elective D', 'Upper-Division Finance Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// INST — Information Science (BS, 120 cr)
+// ============================================================
+const SCHEDULE_INST = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('INST 126', 'Introduction to Programming for Information Science', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('MATH 113', 'College Algebra with Applications', 3, { category: 'major-support', note: 'Satisfies FSMA' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-core' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('COMM 107', 'Oral Communication', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('INST 201', 'Introduction to Information Science', 3, { category: 'major-core' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('INST 301', 'Integrated Information Technology', 3, { prereqs: ['INST 126'], category: 'major-core' }),
+    _c('INST 311', 'Information Organization', 3, { prereqs: ['INST 201'], category: 'major-core' }),
+    _c('INST 314', 'Statistics for Information Science', 3, { prereqs: ['STAT 100'], category: 'major-core' }),
+    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('INST 326', 'Object-Oriented Programming for Information Science', 3, { prereqs: ['INST 126'], category: 'major-core' }),
+    _c('INST 327', 'Database Design and Modeling', 3, { prereqs: ['INST 126'], category: 'major-core' }),
+    _c('INST 335', 'Tech, Society and Policy', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('INST 352', 'Information User Needs and Assessment', 3, { prereqs: ['INST 201'], category: 'major-core' }),
+    _c('INST 362', 'User-Centered Design', 3, { prereqs: ['INST 352'], category: 'major-core' }),
+    _c('INST 4xx Specialization A', 'INST Specialization Elective', 3, { category: 'major-upper' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('INST 414', 'Advanced Data Science', 3, { prereqs: ['INST 314','INST 327'], category: 'major-upper', isGoal: true }),
+    _c('INST 4xx Specialization B', 'INST Specialization Elective', 3, { category: 'major-upper' }),
+    _c('INST 4xx Specialization C', 'INST Specialization Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('INST 4xx Specialization D', 'INST Specialization Elective', 3, { category: 'major-upper' }),
+    _c('INST 4xx Specialization E', 'INST Specialization Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('INST 490', 'Integrated Capstone for Information Science', 3, { prereqs: ['INST 414'], category: 'major-upper', isGoal: true }),
+    _c('INST 4xx Specialization F', 'INST Specialization Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// COMM — Communication (BA, 120 cr)
+// BA degrees require 4 semesters of one foreign language
+// ============================================================
+const SCHEDULE_COMM = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('COMM 107', 'Oral Communication', 3, { category: 'major-core', note: 'Satisfies FSOC' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('Foreign Language 101', 'Foreign Language Sequence I', 4, { category: 'major-support', note: 'BA req' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-core' }),
+    _c('MATH 113', 'College Algebra with Applications', 3, { category: 'major-support', note: 'Satisfies FSMA' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('COMM 200', 'Critical Thinking and Speaking', 3, { prereqs: ['COMM 107'], category: 'major-core' }),
+    _c('Foreign Language 102', 'Foreign Language Sequence II', 4, { prereqs: ['Foreign Language 101'], category: 'major-support', note: 'BA req' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('COMM 230', 'Argumentation and Debate', 3, { prereqs: ['COMM 107'], category: 'major-core' }),
+    _c('COMM 250', 'Introduction to Communication Inquiry', 3, { category: 'major-core' }),
+    _c('Foreign Language 201', 'Foreign Language Sequence III', 3, { prereqs: ['Foreign Language 102'], category: 'major-support', note: 'BA req' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('COMM 330', 'Argumentation and Public Policy', 3, { prereqs: ['COMM 230'], category: 'major-core' }),
+    _c('COMM 350', 'Mass Communication and Society', 3, { prereqs: ['COMM 250'], category: 'major-core' }),
+    _c('Foreign Language 202', 'Foreign Language Sequence IV', 3, { prereqs: ['Foreign Language 201'], category: 'major-support', note: 'BA req' }),
+    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('COMM 4xx Elective A', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
+    _c('COMM 4xx Elective B', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('COMM 4xx Elective C', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
+    _c('COMM 4xx Elective D', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('COMM 402', 'Communication Theory and Process', 3, { prereqs: ['COMM 250'], category: 'major-core' }),
+    _c('COMM 4xx Elective E', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('COMM 497', 'Senior Capstone in Communication', 3, { prereqs: ['COMM 402'], category: 'major-upper', isGoal: true }),
+    _c('COMM 4xx Elective F', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ECON — Economics (BS, 120 cr)
+// ============================================================
+const SCHEDULE_ECON = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ECON 200', 'Principles of Microeconomics', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('MATH 140', 'Calculus I', 4, { category: 'major-support', note: 'Satisfies FSMA' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-core' }),
+    _c('COMM 107', 'Oral Communication', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ECON 201', 'Principles of Macroeconomics', 3, { prereqs: ['ECON 200'], category: 'major-core' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ECON 305', 'Intermediate Microeconomic Theory', 3, { prereqs: ['ECON 200','MATH 140'], category: 'major-core' }),
+    _c('ECON 306', 'Intermediate Macroeconomic Theory', 3, { prereqs: ['ECON 201','MATH 140'], category: 'major-core' }),
+    _c('STAT 400', 'Applied Probability and Statistics I', 3, { prereqs: ['MATH 141'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ECON 321', 'Economic Statistics', 3, { prereqs: ['STAT 400'], category: 'major-core' }),
+    _c('ECON 325', 'Intermediate Mathematical Microeconomics', 3, { prereqs: ['ECON 305','MATH 141'], category: 'major-core' }),
+    _c('MATH 240', 'Linear Algebra', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ECON 326', 'Intermediate Mathematical Macroeconomics', 3, { prereqs: ['ECON 306','MATH 141'], category: 'major-core' }),
+    _c('ECON 4xx Elective A', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
+    _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ECON 4xx Elective B', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
+    _c('ECON 4xx Elective C', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
+    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ECON 414', 'Game Theory', 3, { prereqs: ['ECON 325'], category: 'major-upper', isGoal: true }),
+    _c('ECON 4xx Elective D', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('ECON 422', 'Econometrics II', 3, { prereqs: ['ECON 321'], category: 'major-upper', isGoal: true }),
+    _c('ECON 4xx Elective E', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
