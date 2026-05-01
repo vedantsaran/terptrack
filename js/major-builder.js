@@ -14,6 +14,8 @@ function openMajorBuilder(existingId) {
   document.getElementById('mb-upper').value = existing ? (existing.upperElectiveCodes || []).join('\n') : '';
   document.getElementById('mb-goals').value = existing ? (existing.goals || []).join(', ') : '';
   document.getElementById('mb-notes').value = existing ? (existing.notes || '') : '';
+  const cs = document.getElementById('mb-college');
+  if (cs) cs.value = existing ? (existing.college || '') : '';
   document.getElementById('mb-status').textContent = '';
   document.getElementById('mb-modal').classList.add('open');
   setTimeout(() => document.getElementById('mb-name').focus(), 50);
@@ -38,6 +40,7 @@ function saveCustomMajor() {
   const upper = _splitCodeList(document.getElementById('mb-upper').value);
   const goals = _splitCodeList(document.getElementById('mb-goals').value);
   const notes = document.getElementById('mb-notes').value.trim();
+  const college = (document.getElementById('mb-college') || {}).value || '';
 
   if (!core.length && !support.length && !upper.length) {
     toastError('Add at least one course code.'); return;
@@ -52,6 +55,7 @@ function saveCustomMajor() {
     upperElectiveCodes: upper,
     goals,
     notes,
+    college: college || undefined,
     isCustom: true,
   };
 

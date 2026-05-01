@@ -15,19 +15,27 @@ function shouldShowOnboarding() {
 
 function startOnboarding() {
   onboardStep = 0;
-  // Pre-populate major options
+  // Pre-populate major options grouped by college
   const sel = document.getElementById('ob-major');
   sel.innerHTML = '';
-  listMajors().forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m.id;
-    opt.textContent = m.name;
-    sel.appendChild(opt);
+  groupedMajors().forEach(g => {
+    const og = document.createElement('optgroup');
+    og.label = g.label;
+    g.majors.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
   });
+  const customOg = document.createElement('optgroup');
+  customOg.label = 'Other';
   const customOpt = document.createElement('option');
   customOpt.value = '__custom__';
   customOpt.textContent = '+ My major isn\'t listed (build custom)';
-  sel.appendChild(customOpt);
+  customOg.appendChild(customOpt);
+  sel.appendChild(customOg);
   sel.value = 'CE';
 
   // Default year start
