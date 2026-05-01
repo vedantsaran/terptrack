@@ -14,11 +14,14 @@ function umdioCacheLoad() {
 function umdioCacheSave(c) {
   try { localStorage.setItem(UMDIO_CACHE_KEY, JSON.stringify(c)); } catch {}
 }
+// Returns the cached value (which may be null for known-404s) or undefined
+// if there's no fresh entry. Lets callers distinguish "cache hit, no such
+// course" from "cache miss".
 function umdioCacheGet(key) {
   const cache = umdioCacheLoad();
   const e = cache[key];
-  if (!e) return null;
-  if (Date.now() - e.t > UMDIO_CACHE_TTL_MS) return null;
+  if (!e) return undefined;
+  if (Date.now() - e.t > UMDIO_CACHE_TTL_MS) return undefined;
   return e.v;
 }
 function umdioCachePut(key, value) {
@@ -32,7 +35,7 @@ async function umdioFetchCourse(code) {
   const id = normalizeCode(code);
   const cacheKey = 'course:' + id;
   const cached = umdioCacheGet(cacheKey);
-  if (cached !== undefined && cached !== null) return cached;
+  if (cached !== undefined) return cached; // cache hit (may be null for 404)
   if (_umdioInflight[id]) return _umdioInflight[id];
   const url = `${UMDIO_BASE}/courses/${encodeURIComponent(id)}`;
   _umdioInflight[id] = (async () => {

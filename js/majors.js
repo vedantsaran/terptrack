@@ -41,6 +41,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Computer Science',
     eyebrow: 'UMD · Computer Science · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_CS !== 'undefined' ? SCHEDULE_CS : null,
     coreCodes: [
       'CMSC131','CMSC132','CMSC216','CMSC250',
       'CMSC330','CMSC351',
@@ -140,6 +141,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Biological Sciences',
     eyebrow: 'UMD · Biological Sciences · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_BIOL !== 'undefined' ? SCHEDULE_BIOL : null,
     coreCodes: [
       'BSCI160','BSCI161','BSCI170','BSCI171','BSCI222','BSCI223','BSCI330',
       'CHEM131','CHEM132','CHEM231','CHEM232','CHEM241','CHEM242',
@@ -312,6 +314,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Psychology',
     eyebrow: 'UMD · Psychology · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_PSYC !== 'undefined' ? SCHEDULE_PSYC : null,
     coreCodes: [
       'PSYC100','PSYC200','PSYC300','PSYC332','PSYC341','PSYC353','PSYC355','PSYC361','PSYC489',
     ],
@@ -326,6 +329,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Criminology & Criminal Justice',
     eyebrow: 'UMD · Criminology & Criminal Justice · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_CCJS !== 'undefined' ? SCHEDULE_CCJS : null,
     coreCodes: [
       'CCJS100','CCJS105','CCJS200','CCJS230','CCJS300','CCJS320','CCJS340','CCJS352','CCJS400','CCJS498',
     ],
@@ -340,6 +344,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Government & Politics',
     eyebrow: 'UMD · Government & Politics · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_GVPT !== 'undefined' ? SCHEDULE_GVPT : null,
     coreCodes: [
       'GVPT100','GVPT170','GVPT200','GVPT241','GVPT280','GVPT399',
     ],

@@ -120,12 +120,34 @@ async function applyMajorTemplate(majorId, opts) {
     return { ok: true, schedule: SCHEDULE };
   }
 
+  // Templates with a hand-curated 4-year layout skip auto-gen.
+  // Course metadata (gpa, gen-eds) refines via the background prefetch.
+  if (Array.isArray(tpl.fixedSchedule) && tpl.fixedSchedule.length) {
+    state.activeSchedule = JSON.parse(JSON.stringify(tpl.fixedSchedule));
+    state.majorId = majorId;
+    state.settings = { ...state.settings,
+      programName: tpl.programName, eyebrow: tpl.eyebrow,
+      totalCredits: tpl.totalCredits, goalCourses: tpl.goals || [],
+    };
+    saveState();
+    applySettings();
+    render();
+    return { ok: true, schedule: state.activeSchedule };
+  }
+
   const codes = majorAllCodes(tpl).map(c => c.code);
-  const status = document.getElementById('import-status');
-  if (status) { status.textContent = `Fetching ${codes.length} courses…`; status.style.color = 'var(--slate)'; }
+  // Try multiple status elements so callers (Smart Import, settings, onboarding)
+  // all get visible feedback. opts.statusId can override.
+  const statusIds = [opts && opts.statusId, 'import-status', 'set-major-status', 'ob-finish-status'].filter(Boolean);
+  const statusEls = statusIds.map(id => document.getElementById(id)).filter(Boolean);
+  const setStatus = (text, color) => statusEls.forEach(el => {
+    el.textContent = text;
+    if (color) el.style.color = color;
+  });
+  setStatus(`Fetching ${codes.length} courses…`, 'var(--slate)');
 
   const fetched = await fetchCoursesBatch(codes, (done, total) => {
-    if (status) status.textContent = `Fetching ${done}/${total}…`;
+    setStatus(`Fetching ${done}/${total}…`);
   });
 
   // Build course objects, falling back to template-only data on miss
@@ -170,7 +192,7 @@ async function applyMajorTemplate(majorId, opts) {
   saveState();
   applySettings();
   render();
-  if (status) { status.textContent = `Applied ${tpl.name} (${courseObjs.length} courses across ${schedule.length} semesters).`; status.style.color = 'var(--green)'; }
+  setStatus(`Applied ${tpl.name} (${courseObjs.length} courses across ${schedule.length} semesters).`, 'var(--green)');
   return { ok: true, schedule };
 }
 

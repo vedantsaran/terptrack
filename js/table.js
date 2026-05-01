@@ -48,7 +48,11 @@ function renderTable() {
     });
   }
   if (filterSem) rows = rows.filter(r => r.semId === filterSem);
-  if (filterCat) rows = rows.filter(r => r.category === filterCat);
+  if (filterCat) rows = rows.filter(r =>
+    filterCat === 'gened'
+      ? (r.category && r.category.startsWith('gened'))
+      : r.category === filterCat
+  );
   if (filterStatus) rows = rows.filter(r => r._status === filterStatus);
 
   // Sort
