@@ -77,14 +77,17 @@ function saveSettings() {
   render();
 }
 function resetAllData() {
-  if (!confirm('This will erase all course progress, custom courses, custom semesters, and settings. Continue?')) return;
+  if (!confirm('This will erase all course progress, custom courses, custom semesters, snapshots, custom majors, and settings. Continue?')) return;
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(PT_CACHE_KEY);
+  if (typeof UMDIO_CACHE_KEY !== 'undefined') localStorage.removeItem(UMDIO_CACHE_KEY);
   state = loadState();
   applyTheme();
   applySettings();
   closeSettings();
   render();
+  // Re-trigger onboarding for a clean start
+  if (typeof startOnboarding === 'function') startOnboarding();
 }
 function applySettings() {
   const s = getSettings();

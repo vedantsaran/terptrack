@@ -207,14 +207,17 @@
       </select>
       <select id="table-filter-cat">
         <option value="">All Categories</option>
-        <option value="ce-core">CE Core</option>
+        <option value="major-core">Major Core</option>
+        <option value="major-support">Major Support</option>
+        <option value="major-upper">Major Upper Elective</option>
+        <option value="ce-core">CE Core (legacy)</option>
         <option value="tech-a">Cat A (Math/Sci)</option>
         <option value="tech-b">Cat B (CS Theory)</option>
         <option value="tech-c">Cat C (EE Theory)</option>
         <option value="tech-d">Cat D (Adv. Lab)</option>
         <option value="tech-e">Cat E (Capstone)</option>
         <option value="tech-f">Cat F (Gen. Tech)</option>
-        <option value="gened">GenEd</option>
+        <option value="gened">GenEd (any)</option>
       </select>
       <select id="table-filter-status">
         <option value="">All Statuses</option>
@@ -313,19 +316,34 @@
     <select id="ac-semester"></select>
     <label>Category</label>
     <select id="ac-category">
-      <option value="ce-core">Core (Major)</option>
-      <option value="tech-a">Tech Elective · Cat A (Math/Sci)</option>
-      <option value="tech-b">Tech Elective · Cat B (CS Theory)</option>
-      <option value="tech-c">Tech Elective · Cat C (EE Theory)</option>
-      <option value="tech-d">Tech Elective · Cat D (Adv. Lab)</option>
-      <option value="tech-e">Tech Elective · Cat E (Capstone)</option>
-      <option value="tech-f" selected>Tech Elective · Cat F (Generic)</option>
-      <option value="gened-fsaw">GenEd · FSAW</option>
-      <option value="gened-fspw">GenEd · FSPW</option>
-      <option value="gened-fsoc">GenEd · FSOC</option>
-      <option value="gened-dshs">GenEd · DSHS</option>
-      <option value="gened-dshu">GenEd · DSHU</option>
-      <option value="gened-dssp">GenEd · DSSP</option>
+      <optgroup label="Major">
+        <option value="major-core">Major Core</option>
+        <option value="major-support">Major Support (math/sci/writing)</option>
+        <option value="major-upper">Major Upper-Division Elective</option>
+        <option value="ce-core">CE Core (legacy)</option>
+      </optgroup>
+      <optgroup label="CE Tech Electives (legacy)">
+        <option value="tech-a">Tech Elective · Cat A (Math/Sci)</option>
+        <option value="tech-b">Tech Elective · Cat B (CS Theory)</option>
+        <option value="tech-c">Tech Elective · Cat C (EE Theory)</option>
+        <option value="tech-d">Tech Elective · Cat D (Adv. Lab)</option>
+        <option value="tech-e">Tech Elective · Cat E (Capstone)</option>
+        <option value="tech-f" selected>Tech Elective · Cat F (Generic)</option>
+      </optgroup>
+      <optgroup label="Gen-Ed">
+        <option value="gened-fsaw">GenEd · FSAW</option>
+        <option value="gened-fspw">GenEd · FSPW</option>
+        <option value="gened-fsoc">GenEd · FSOC</option>
+        <option value="gened-fsma">GenEd · FSMA</option>
+        <option value="gened-fsar">GenEd · FSAR</option>
+        <option value="gened-dshs">GenEd · DSHS</option>
+        <option value="gened-dshu">GenEd · DSHU</option>
+        <option value="gened-dsns">GenEd · DSNS</option>
+        <option value="gened-dsnl">GenEd · DSNL</option>
+        <option value="gened-dssp">GenEd · DSSP</option>
+        <option value="gened-dvup">GenEd · DVUP</option>
+        <option value="gened-dvcc">GenEd · DVCC</option>
+      </optgroup>
       <option value="elective">Free Elective / Other</option>
     </select>
     <label>Prerequisites (comma-separated codes, optional)</label>

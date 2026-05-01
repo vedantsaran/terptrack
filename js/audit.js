@@ -25,11 +25,16 @@ function renderAudit() {
   const coreTitleEl = document.getElementById('audit-core-title');
   if (coreTitleEl) coreTitleEl.textContent = `${getSettings().programName || 'Major'} Core`;
 
-  // Core
+  // Core — accept CE's 'ce-core' and the auto-gen 'major-core'/'major-support'/'major-upper' buckets
   const coreEl = document.getElementById('audit-core');
   const coreCard = document.getElementById('audit-core-card');
   coreEl.innerHTML = '';
-  const coreCourses = all.filter(c => c.category === 'ce-core');
+  const coreCourses = all.filter(c =>
+    c.category === 'ce-core' ||
+    c.category === 'major-core' ||
+    c.category === 'major-support' ||
+    c.category === 'major-upper'
+  );
   coreCourses.forEach(c => coreEl.appendChild(auditLine(c)));
   if (coreCard) coreCard.style.display = coreCourses.length ? '' : 'none';
 

@@ -13,10 +13,11 @@ function render() {
   if (currentTab === 'audit') renderAudit();
   if (currentTab === 'roadmap') renderRoadmap();
   if (currentTab === 'table') renderTable();
-  // welcome card visibility
+  // welcome card visibility — hide after onboarding completes too
   const welcome = document.getElementById('welcome-card');
   const hasAnyCourseMarked = Object.keys(state.courses).length > 0;
-  welcome.style.display = (state.welcomeDismissed || hasAnyCourseMarked) ? 'none' : 'block';
+  const hidden = state.welcomeDismissed || hasAnyCourseMarked || state.onboardingComplete;
+  welcome.style.display = hidden ? 'none' : 'block';
 }
 
 function shouldShowCourse(course) {
@@ -359,12 +360,11 @@ function renderGoals() {
         icon = '◐'; iconCls = 'in-prog'; statusText = 'In progress'; statusCls = 'in-prog';
       } else if (pre.met) {
         icon = '◯'; iconCls = 'ready'; statusText = 'Ready to register'; statusCls = 'ready';
+      } else if (pre.missing) {
+        // prereqsMet returns the first unmet group as a human-readable "A or B" string
+        statusText = `Need: ${pre.missing}`;
       } else {
-        const missing = (g.prereqs || []).filter(p => {
-          const ps = getCourseState(p);
-          return ps.status !== "passed" && ps.status !== "transfer";
-        });
-        statusText = `Need: ${missing.join(', ')}`;
+        statusText = 'Need prereqs';
       }
     }
     const row = document.createElement('div');
@@ -409,7 +409,7 @@ function renderAlerts() {
     }
   });
   if (gc >= 12 && gp / gc < 3.0) {
-    alerts.push({ type: 'warn', text: `<strong>GPA below 3.0.</strong> CS-permission for goal courses gets harder under 3.0. Talk to your CE advisor.` });
+    alerts.push({ type: 'warn', text: `<strong>GPA below 3.0.</strong> Permission-only courses and selective programs get harder under 3.0. Talk to your advisor.` });
   }
 
   // Goal-course readiness — generic across whatever goals are configured
