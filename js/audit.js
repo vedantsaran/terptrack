@@ -41,26 +41,35 @@ function renderAudit() {
   // GenEd
   const genEdEl = document.getElementById('audit-gened');
   genEdEl.innerHTML = '';
+  // FSMA / FSAR are normally satisfied by a major's math/analytic course
+  // (MATH 140 for engineering/CS, MATH 130 for life sciences, MATH 113/220
+  // for BA/business, etc.). Look for any course tagged with that gen-ed
+  // category OR any course whose `note` field flags it as the satisfier.
   const geCats = [
     { id: 'gened-fsaw', label: 'FSAW · Academic Writing', need: 1 },
     { id: 'gened-fspw', label: 'FSPW · Professional Writing', need: 1 },
     { id: 'gened-fsoc', label: 'FSOC · Oral Communication', need: 1 },
-    { id: 'gened-fsma', label: 'FSMA · Math Foundation (MATH 140)', need: 1, customCheck: () => {
-      const s = getCourseState('MATH 140');
-      return s.status === "passed" || s.status === "transfer";
-    } },
-    { id: 'gened-fsar', label: 'FSAR · Analytic Reasoning (CMSC 250)', need: 1, customCheck: () => {
-      const s = getCourseState('CMSC 250');
-      return s.status === "passed" || s.status === "transfer";
-    } },
+    { id: 'gened-fsma', label: 'FSMA · Math Foundation', need: 1, fuzzy: true },
+    { id: 'gened-fsar', label: 'FSAR · Analytic Reasoning', need: 1, fuzzy: true },
     { id: 'gened-dshs', label: 'DSHS · History/Social Sci', need: 2 },
     { id: 'gened-dshu', label: 'DSHU · Humanities', need: 2 },
     { id: 'gened-dssp', label: 'DSSP · Scholarship in Practice', need: 2 },
   ];
+  // Any course noted as satisfying FSMA/FSAR (set in fixedSchedule via note)
+  const fuzzyMatches = (catId) => {
+    const tag = catId.replace('gened-', '').toUpperCase();
+    return all.filter(c =>
+      c.category === catId ||
+      (c.note && c.note.toLowerCase().includes('satisfies ' + tag.toLowerCase()))
+    );
+  };
   geCats.forEach(cat => {
     let done = 0;
-    if (cat.customCheck) {
-      done = cat.customCheck() ? 1 : 0;
+    if (cat.fuzzy) {
+      done = fuzzyMatches(cat.id).filter(c => {
+        const s = getCourseState(c.code);
+        return s.status === "passed" || s.status === "transfer";
+      }).length;
     } else {
       done = all.filter(c => c.category === cat.id).filter(c => {
         const s = getCourseState(c.code);
