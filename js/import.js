@@ -120,6 +120,21 @@ async function applyMajorTemplate(majorId, opts) {
     return { ok: true, schedule: SCHEDULE };
   }
 
+  // Templates with a hand-curated 4-year layout skip auto-gen.
+  // Course metadata (gpa, gen-eds) refines via the background prefetch.
+  if (Array.isArray(tpl.fixedSchedule) && tpl.fixedSchedule.length) {
+    state.activeSchedule = JSON.parse(JSON.stringify(tpl.fixedSchedule));
+    state.majorId = majorId;
+    state.settings = { ...state.settings,
+      programName: tpl.programName, eyebrow: tpl.eyebrow,
+      totalCredits: tpl.totalCredits, goalCourses: tpl.goals || [],
+    };
+    saveState();
+    applySettings();
+    render();
+    return { ok: true, schedule: state.activeSchedule };
+  }
+
   const codes = majorAllCodes(tpl).map(c => c.code);
   // Try multiple status elements so callers (Smart Import, settings, onboarding)
   // all get visible feedback. opts.statusId can override.
