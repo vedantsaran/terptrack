@@ -12,7 +12,7 @@ function populateMajorSelect() {
     g.majors.forEach(m => {
       const opt = document.createElement('option');
       opt.value = m.id;
-      opt.textContent = m.name + (m.useDefaultSchedule ? ' (curated default)' : '');
+      opt.textContent = majorDisplayLabel(m);
       og.appendChild(opt);
     });
     sel.appendChild(og);
@@ -20,7 +20,13 @@ function populateMajorSelect() {
   sel.value = state.majorId || 'CE';
   const note = document.getElementById('set-major-note');
   const tpl = getMajorTemplate(sel.value);
-  if (note && tpl) note.textContent = tpl.notes || '';
+  if (note && tpl) {
+    const baked = isMajorFullyBaked(tpl);
+    const badge = baked
+      ? '<span style="color:var(--green);font-weight:600">★ Curated 4-year schedule</span>'
+      : '<span style="color:var(--amber);font-weight:600">✱ Auto-generated (sparser — fill electives manually)</span>';
+    note.innerHTML = `${badge} · ${tpl.notes || ''}`;
+  }
 }
 
 function openSettings() {
@@ -42,13 +48,22 @@ async function applyMajorFromSettings() {
   const id = sel.value;
   const tpl = getMajorTemplate(id);
   if (!tpl) return;
-  if (!confirm(`Apply ${tpl.name}? This will replace your current schedule structure (course progress is kept).`)) return;
+  // Skip confirmation when applying CE default (no destructive change vs default)
+  // or when user has no progress / customizations yet.
+  const hasProgress = Object.keys(state.courses || {}).length > 0
+    || (state.customCourses || []).length > 0
+    || (state.customSemesters || []).length > 0;
+  if (hasProgress && !confirm(`Apply ${tpl.name}? Your current schedule structure will be replaced. Course progress (passed/transfer marks) is preserved.`)) return;
+
   status.style.color = 'var(--slate)';
-  status.textContent = 'Generating schedule…';
+  status.textContent = isMajorFullyBaked(tpl) ? 'Applying curated schedule…' : 'Generating schedule from API…';
   try {
     await applyMajorTemplate(id, {});
+    const courseCount = (state.activeSchedule || []).reduce((a, sem) => a + (sem.courses || []).length, 0);
+    const baked = isMajorFullyBaked(tpl);
     status.style.color = 'var(--green)';
-    status.textContent = `Applied ${tpl.name}.`;
+    status.textContent = `Applied ${tpl.name} · ${courseCount} courses across ${(state.activeSchedule || []).length || 8} semesters.`;
+    toastSuccess(`${baked ? '★' : '✱'} ${tpl.name} applied (${courseCount} courses).${baked ? '' : ' Auto-generated — fill electives manually.'}`);
     // Refresh the visible settings inputs to reflect new program metadata
     const s = getSettings();
     document.getElementById('set-program').value = s.programName || '';
@@ -58,6 +73,7 @@ async function applyMajorFromSettings() {
   } catch (e) {
     status.style.color = 'var(--red)';
     status.textContent = 'Error: ' + e.message;
+    toastError('Could not apply major: ' + e.message);
   }
 }
 function closeSettings() {

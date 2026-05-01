@@ -2022,3 +2022,23 @@ h1.hero-title em {
   .snap-row { flex-direction: column; align-items: stretch; gap: 8px; }
   .snap-actions { justify-content: flex-end; }
 }
+
+/* ===========================================================
+   PLACEHOLDER COURSES (Free Electives, gen-ed slots, "CMSC 4xx" picks)
+   Render visually muted so users know to fill them in.
+   =========================================================== */
+.course.placeholder {
+  border-style: dashed;
+  background: transparent;
+  opacity: .8;
+}
+.course.placeholder .code,
+.course.placeholder .title {
+  color: var(--slate);
+  font-style: italic;
+}
+.course.placeholder.passed,
+.course.placeholder.transfer,
+.course.placeholder.in-progress {
+  opacity: 1;
+}

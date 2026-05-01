@@ -128,6 +128,10 @@ function renderCourse(course, semId, isCustom = false) {
   else if (cs.status === "in-progress") cls += ' in-progress';
   else if (cs.status === "failed") cls += ' failed';
   else cls += ' available';
+  // Mark placeholder/elective rows so they render slightly muted.
+  // A placeholder has a non-canonical code (no UMD dept+number pattern).
+  const isPlaceholder = !/^[A-Z]{3,4}\s*\d{3}[A-Z]?(\s+#\d+)?$/i.test(course.code);
+  if (isPlaceholder) cls += ' placeholder';
   div.className = cls;
   div.dataset.code = course.code;
   div.dataset.semId = semId || '';

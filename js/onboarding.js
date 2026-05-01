@@ -24,7 +24,7 @@ function startOnboarding() {
     g.majors.forEach(m => {
       const opt = document.createElement('option');
       opt.value = m.id;
-      opt.textContent = m.name;
+      opt.textContent = majorDisplayLabel(m);
       og.appendChild(opt);
     });
     sel.appendChild(og);

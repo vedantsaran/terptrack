@@ -123,11 +123,28 @@ async function applyMajorTemplate(majorId, opts) {
   // Templates with a hand-curated 4-year layout skip auto-gen.
   // Course metadata (gpa, gen-eds) refines via the background prefetch.
   if (Array.isArray(tpl.fixedSchedule) && tpl.fixedSchedule.length) {
-    state.activeSchedule = JSON.parse(JSON.stringify(tpl.fixedSchedule));
+    const cloned = JSON.parse(JSON.stringify(tpl.fixedSchedule));
+    // Uniquify duplicate placeholder codes (e.g. "Free Elective" appears
+    // 5x in a schedule). Without this, marking one passed marks them all
+    // because state.courses is keyed by code.
+    const seen = {};
+    const goalsFromSchedule = [];
+    cloned.forEach(sem => (sem.courses || []).forEach(c => {
+      if (seen[c.code]) {
+        seen[c.code]++;
+        c.code = `${c.code} #${seen[c.code]}`;
+      } else {
+        seen[c.code] = 1;
+      }
+      if (c.isGoal) goalsFromSchedule.push(c.code);
+    }));
+    state.activeSchedule = cloned;
     state.majorId = majorId;
+    // Union template goals with isGoal-flagged rows in the schedule
+    const goalSet = new Set([...(tpl.goals || []), ...goalsFromSchedule]);
     state.settings = { ...state.settings,
       programName: tpl.programName, eyebrow: tpl.eyebrow,
-      totalCredits: tpl.totalCredits, goalCourses: tpl.goals || [],
+      totalCredits: tpl.totalCredits, goalCourses: Array.from(goalSet),
     };
     saveState();
     applySettings();

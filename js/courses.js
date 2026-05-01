@@ -56,15 +56,24 @@ function openEditCourse(courseCode) {
   document.getElementById('ac-semester').value = c.semId || addCourseSemId || '';
   document.getElementById('ac-lookup-status').textContent = '';
   const title = document.getElementById('add-course-title');
-  if (title) title.textContent = 'Edit Course';
-  document.getElementById('ac-code').disabled = true; // changing code would orphan progress
+  // Placeholders (Free Elective, "CMSC 4xx", etc.) and untouched rows
+  // can have their code freely replaced. Real courses with progress
+  // marks lock the code so the user doesn't orphan their state.courses entry.
+  const isPlaceholder = !/^[A-Z]{3,4}\s*\d{3}[A-Z]?(\s+#\d+)?$/i.test(c.code);
+  const cs = getCourseState(c.code);
+  const hasProgress = cs.status !== 'not-started' || !!cs.grade;
+  const lockCode = hasProgress && !isPlaceholder;
+  if (title) title.textContent = isPlaceholder ? 'Replace Placeholder Course' : 'Edit Course';
+  document.getElementById('ac-code').disabled = lockCode;
   const apr = document.getElementById('ac-auto-prereqs-row');
-  if (apr) apr.style.display = 'none';
+  if (apr) apr.style.display = isPlaceholder ? '' : 'none';
   document.getElementById('add-course-modal').classList.add('open');
 }
 
 function closeAddCourse() {
   document.getElementById('add-course-modal').classList.remove('open');
+  // Reset state so the next open() doesn't inherit the previous mode
+  document.getElementById('ac-code').disabled = false;
   editingCourseCode = null;
 }
 
@@ -117,10 +126,16 @@ async function saveCustomCourse() {
   else if (category === 'elective') kind = 'tech';
 
   if (editingCourseCode) {
+    const codeChanged = codeInput !== editingCourseCode;
+    // Block code collisions with another course in the plan
+    if (codeChanged && findCourse(codeInput)) {
+      toastError(`A course with code "${codeInput}" already exists.`);
+      return;
+    }
     // EDIT path: find course in customCourses or activeSchedule, mutate in place
     const cust = (state.customCourses || []).find(c => c.code === editingCourseCode);
     if (cust) {
-      Object.assign(cust, { title, cr, prereqs, kind, category, semId, isGoal, note });
+      Object.assign(cust, { code: codeInput, title, cr, prereqs, kind, category, semId, isGoal, note });
     } else {
       // Find in active schedule and mutate
       const sched = mutableSchedule();
@@ -128,10 +143,10 @@ async function saveCustomCourse() {
       for (const sem of [...sched, ...(state.customSemesters || [])]) {
         const c = (sem.courses || []).find(x => x.code === editingCourseCode);
         if (c) {
-          Object.assign(c, { title, cr, prereqs, kind, category, isGoal, note });
+          Object.assign(c, { code: codeInput, title, cr, prereqs, kind, category, isGoal, note });
           // Move semesters if changed
           if (semId && sem.id !== semId) {
-            sem.courses = sem.courses.filter(x => x.code !== editingCourseCode);
+            sem.courses = sem.courses.filter(x => x.code !== codeInput);
             const target = [...sched, ...(state.customSemesters || [])].find(s => s.id === semId);
             if (target) { target.courses = target.courses || []; target.courses.push(c); }
           }
@@ -141,10 +156,19 @@ async function saveCustomCourse() {
       }
       if (!found) { toastError('Could not locate course to edit.'); return; }
     }
+    // Migrate any progress entry to the new code
+    if (codeChanged && state.courses[editingCourseCode]) {
+      state.courses[codeInput] = state.courses[editingCourseCode];
+      delete state.courses[editingCourseCode];
+    }
     saveState();
     closeAddCourse();
     render();
-    toastSuccess(`Updated ${editingCourseCode}.`);
+    toastSuccess(codeChanged ? `Replaced ${editingCourseCode} → ${codeInput}.` : `Updated ${codeInput}.`);
+    // Optionally pull in prereqs after a placeholder replacement
+    if (autoPrereqs && codeChanged && /^[A-Z]{3,4}\s*\d{3}[A-Z]?$/i.test(codeInput)) {
+      setTimeout(() => resolveAndAddCourse(codeInput), 250);
+    }
     return;
   }
 
