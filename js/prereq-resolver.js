@@ -15,6 +15,31 @@ function _alreadyHave(code) {
   return !!findCourse(display);
 }
 
+async function _rankGroupAlternatives(group) {
+  const uniq = Array.from(new Set((group || []).map(displayCode).filter(Boolean)));
+  const enriched = await Promise.all(uniq.map(async (code) => {
+    const inPlan = _alreadyHave(code);
+    if (inPlan) return { code, inPlan: true, prereqCount: 0, unlockNow: true, avgGpa: null };
+    const fetched = await fetchCourseFull(code).catch(() => null);
+    const prereqCount = fetched && Array.isArray(fetched.prereqs) ? fetched.prereqs.length : 0;
+    const unlockNow = fetched ? prereqsMet(fetched).met : false;
+    const avgGpa = fetched && typeof fetched.avg_gpa === 'number' ? fetched.avg_gpa : null;
+    return { code, inPlan: false, prereqCount, unlockNow, avgGpa };
+  }));
+
+  enriched.sort((a, b) => {
+    if (a.inPlan !== b.inPlan) return a.inPlan ? -1 : 1;
+    if (a.unlockNow !== b.unlockNow) return a.unlockNow ? -1 : 1;
+    const ag = (a.avgGpa == null ? -Infinity : a.avgGpa);
+    const bg = (b.avgGpa == null ? -Infinity : b.avgGpa);
+    if (ag !== bg) return bg - ag;
+    if (a.prereqCount !== b.prereqCount) return a.prereqCount - b.prereqCount;
+    return a.code.localeCompare(b.code);
+  });
+
+  return enriched;
+}
+
 // BFS over prereqs, returning a flat list { course, depth, alreadyHave }
 async function gatherPrereqChain(rootCode, onProgress) {
   const visited = new Set();
@@ -45,13 +70,22 @@ async function gatherPrereqChain(rootCode, onProgress) {
       const groups = Array.isArray(course.prereqGroups) && course.prereqGroups.length
         ? course.prereqGroups
         : (course.prereqs || []).map(p => [p]);
-      groups.forEach(group => {
-        if (!group.length) return;
-        const passed = group.find(_isPassed);
-        const pick = passed || group[0];
-        const n = normalizeCode(pick);
-        if (!visited.has(n)) queue.push({ code: n, depth: depth + 1 });
-      });
+      for (const group of groups) {
+        if (!group.length) continue;
+        const passed = group.find(_isPassed) || group.find(_alreadyHave);
+        if (passed) {
+          const n = normalizeCode(passed);
+          if (!visited.has(n)) queue.push({ code: n, depth: depth + 1 });
+          continue;
+        }
+
+        // No already-satisfied alternative: surface every option in ranked order.
+        const ranked = await _rankGroupAlternatives(group);
+        for (const option of ranked) {
+          const n = normalizeCode(option.code);
+          if (!visited.has(n)) queue.push({ code: n, depth: depth + 1 });
+        }
+      }
     }
   }
   return out;
