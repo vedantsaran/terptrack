@@ -41,56 +41,60 @@ function renderAudit() {
   // GenEd
   const genEdEl = document.getElementById('audit-gened');
   genEdEl.innerHTML = '';
-  // FSMA / FSAR are normally satisfied by a major's math/analytic course
-  // (MATH 140 for engineering/CS, MATH 130 for life sciences, MATH 113/220
-  // for BA/business, etc.). Look for any course tagged with that gen-ed
-  // category OR any course whose `note` field flags it as the satisfier.
-  const geCats = [
-    { id: 'gened-fsaw', label: 'FSAW · Academic Writing', need: 1 },
-    { id: 'gened-fspw', label: 'FSPW · Professional Writing', need: 1 },
-    { id: 'gened-fsoc', label: 'FSOC · Oral Communication', need: 1 },
-    { id: 'gened-fsma', label: 'FSMA · Math Foundation', need: 1, fuzzy: true },
-    { id: 'gened-fsar', label: 'FSAR · Analytic Reasoning', need: 1, fuzzy: true },
-    { id: 'gened-dshs', label: 'DSHS · History/Social Sci', need: 2 },
-    { id: 'gened-dshu', label: 'DSHU · Humanities', need: 2 },
-    { id: 'gened-dssp', label: 'DSSP · Scholarship in Practice', need: 2 },
-  ];
-  // Any course noted as satisfying FSMA/FSAR (set in fixedSchedule via note)
-  const fuzzyMatches = (catId) => {
-    const tag = catId.replace('gened-', '').toUpperCase();
-    return all.filter(c =>
-      c.category === catId ||
-      (c.note && c.note.toLowerCase().includes('satisfies ' + tag.toLowerCase()))
-    );
-  };
-  geCats.forEach(cat => {
-    let done = 0;
-    if (cat.fuzzy) {
-      done = fuzzyMatches(cat.id).filter(c => {
-        const s = getCourseState(c.code);
-        return s.status === "passed" || s.status === "transfer";
-      }).length;
-    } else {
-      done = all.filter(c => c.category === cat.id).filter(c => {
-        const s = getCourseState(c.code);
-        return s.status === "passed" || s.status === "transfer";
-      }).length;
-    }
-    // ENEE 200 also satisfies a DSHU
-    if (cat.id === 'gened-dshu') {
-      const s = getCourseState('ENEE 200');
-      if (s.status === "passed" || s.status === "transfer") done = Math.min(cat.need, done + 1);
-    }
+  const baseGenEdDefs = (typeof GENED_DEFS !== 'undefined' ? GENED_DEFS : [
+    { id: 'FSAW', name: 'Academic Writing', need: 1 },
+    { id: 'FSPW', name: 'Professional Writing', need: 1 },
+    { id: 'FSOC', name: 'Oral Communication', need: 1 },
+    { id: 'FSMA', name: 'Math Foundation', need: 1 },
+    { id: 'FSAR', name: 'Analytic Reasoning', need: 1 },
+    { id: 'DSHS', name: 'History/Social Sciences', need: 2 },
+    { id: 'DSHU', name: 'Humanities', need: 2 },
+    { id: 'DSNS', name: 'Natural Sciences', need: 1 },
+    { id: 'DSNL', name: 'Natural Sciences w/ Lab', need: 1 },
+    { id: 'DSSP', name: 'Scholarship in Practice', need: 2 },
+    { id: 'SCIS', name: 'I-Series', need: 1 },
+  ]).filter(d => d.id !== 'DVUP' && d.id !== 'DVCC');
+  const countForTag = (tag) => all.filter(c => {
+    if (typeof courseGenEdTags === 'function') return courseGenEdTags(c).includes(tag);
+    return c.category === `gened-${tag.toLowerCase()}`;
+  });
+  const renderGenEdAuditLine = ({ label, need, matched, doneOverride = null }) => {
+    const done = doneOverride === null
+      ? matched.filter(c => {
+          const s = getCourseState(c.code);
+          return s.status === "passed" || s.status === "transfer";
+        }).length
+      : doneOverride;
+    const planned = matched.length;
     const el = document.createElement('div');
-    const dCls = done >= cat.need ? 'done' : (done > 0 ? 'partial' : '');
+    const dCls = done >= need ? 'done' : (planned >= need ? 'partial' : '');
     el.className = 'audit-line ' + dCls;
     el.innerHTML = `
-      <div class="check">${done >= cat.need ? '✓' : (done > 0 ? '◐' : '○')}</div>
-      <div class="name">${cat.label}</div>
-      <div class="status">${done}/${cat.need}</div>
+      <div class="check">${done >= need ? '✓' : (planned >= need ? '◐' : '○')}</div>
+      <div class="name">${label} <span style="color:var(--slate);font-size:.78rem">${matched.map(c => c.code).join(', ') || 'none planned'}</span></div>
+      <div class="status">${done}/${need}</div>
     `;
     genEdEl.appendChild(el);
+  };
+
+  baseGenEdDefs.forEach(d => {
+    renderGenEdAuditLine({
+      label: `${d.id} · ${d.name}`,
+      need: d.need,
+      matched: countForTag(d.id),
+    });
   });
+
+  const dvupMatches = countForTag('DVUP');
+  const dvccMatches = countForTag('DVCC');
+  const diversityMatches = [...dvupMatches, ...dvccMatches.filter(c => !dvupMatches.some(u => u.code === c.code))];
+  const diversityDone = diversityMatches.filter(c => {
+    const s = getCourseState(c.code);
+    return s.status === "passed" || s.status === "transfer";
+  }).length;
+  renderGenEdAuditLine({ label: 'DVUP · Understanding Plural Societies', need: 1, matched: dvupMatches });
+  renderGenEdAuditLine({ label: 'Diversity #2 · DVUP or DVCC', need: 2, matched: diversityMatches, doneOverride: diversityDone });
+
 
   // Tech Electives
   const techEl = document.getElementById('audit-tech');

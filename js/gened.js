@@ -9,11 +9,11 @@ const GENED_DEFS = [
   { id: 'FSOC', name: 'Oral Communication',        group: 'Fundamental Studies', need: 1 },
   { id: 'FSMA', name: 'Mathematics',               group: 'Fundamental Studies', need: 1 },
   { id: 'FSAR', name: 'Analytic Reasoning',        group: 'Fundamental Studies', need: 1 },
-  { id: 'DSHS', name: 'History & Social Sciences', group: 'Distributive Studies', need: 1 },
-  { id: 'DSHU', name: 'Humanities',                group: 'Distributive Studies', need: 1 },
+  { id: 'DSHS', name: 'History & Social Sciences', group: 'Distributive Studies', need: 2 },
+  { id: 'DSHU', name: 'Humanities',                group: 'Distributive Studies', need: 2 },
   { id: 'DSNS', name: 'Natural Sciences',          group: 'Distributive Studies', need: 1 },
   { id: 'DSNL', name: 'Natural Sciences w/ Lab',   group: 'Distributive Studies', need: 1 },
-  { id: 'DSSP', name: 'Scholarship in Practice',   group: 'Distributive Studies', need: 1 },
+  { id: 'DSSP', name: 'Scholarship in Practice',   group: 'Distributive Studies', need: 2 },
   { id: 'DVUP', name: 'Understanding Plural Societies', group: 'Diversity', need: 1 },
   { id: 'DVCC', name: 'Cultural Competence',       group: 'Diversity', need: 1 },
   { id: 'SCIS', name: 'Signature Course (I-Series)', group: 'Other', need: 1 },
@@ -26,14 +26,9 @@ function computeGenEdCoverage() {
   GENED_DEFS.forEach(d => { covered[d.id] = []; planned[d.id] = []; });
 
   flatCourses().forEach(c => {
-    // umd.io gen_ed array stored on cached course; otherwise via category
-    const cached = umdioCacheGet('course:' + normalizeCode(c.code));
-    let tags = [];
-    if (cached && Array.isArray(cached.gen_ed)) {
-      tags = cached.gen_ed.flat().filter(Boolean);
-    } else if (c.category && c.category.startsWith('gened-')) {
-      tags = [c.category.replace('gened-', '').toUpperCase()];
-    }
+    const tags = (typeof courseGenEdTags === 'function')
+      ? courseGenEdTags(c)
+      : (c.category && c.category.startsWith('gened-') ? [c.category.replace('gened-', '').toUpperCase()] : []);
     if (!tags.length) return;
     const cs = getCourseState(c.code);
     const isComplete = cs.status === 'passed' || cs.status === 'transfer';
