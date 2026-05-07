@@ -8,6 +8,7 @@ applySettings();
 render();
 initTableEvents();
 if (typeof initBrowse === 'function') initBrowse();
+if (typeof initPlaceholderSearch === 'function') initPlaceholderSearch();
 
 // If the page was opened with a #plan=... share link, offer to load it.
 (async function maybeLoadSharedPlan() {
