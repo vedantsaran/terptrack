@@ -541,7 +541,8 @@
     <input type="hidden" id="mb-id" value="">
     <p id="mb-status" style="font-size:.78rem;color:var(--slate);margin:8px 0 0;min-height:1em"></p>
     <div class="modal-actions" style="justify-content:space-between">
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" type="button" onclick="openPlanTextImport()" title="Paste any UMD four-year plan text or URL and extract the courses">Import 4-Year Plan</button>
         <button class="btn" type="button" onclick="openImportMajor()" title="Load a major from a JSON file">Import JSON</button>
       </div>
       <div style="display:flex;gap:8px">

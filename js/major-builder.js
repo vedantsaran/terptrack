@@ -29,6 +29,138 @@ function _splitCodeList(text) {
   return (text || '').split(/[\s,;\n]+/).map(s => s.trim()).filter(Boolean);
 }
 
+/* ----------------------------------------------------------
+   Universal major importer
+   ----------------------------------------------------------
+   Many UMD majors publish slightly different four-year plan pages,
+   PDFs, or advisor worksheets. This parser lets students paste the
+   text (or a fetchable URL) and turns any recognized course codes into
+   a custom major template, so Terp Track can support majors beyond the
+   built-in curated list without waiting for a code release.
+*/
+const PLAN_IMPORT_SUPPORT_DEPTS = new Set([
+  'AASP','AMST','ANTH','ARTH','ASTR','BSCI','CHEM','COMM','ECON','ENGL','GEOG','GEOL','HIST','JOUR',
+  'MATH','PHIL','PHYS','PSYC','SOCY','STAT','THET','WGSS','WOMS','UNIV'
+]);
+const PLAN_IMPORT_SKIP_TOKENS = new Set([
+  'AP','IB','CLEP','CORE','DSSP','DSHS','DSHU','DSNL','DSNS','DVCC','DVUP','FSAR','FSAW','FSMA','FSOC','FSPW','I','II','III','IV'
+]);
+
+function extractCourseCodesFromText(text) {
+  const source = (text || '').toUpperCase().replace(/[\u2010-\u2015]/g, '-');
+  const out = [];
+  const seen = new Set();
+  const re = /\b([A-Z]{2,4})\s*-?\s*(\d{3}[A-Z]?)(?:\s*(?:[-–—/&,]|AND)\s*(\d{3}[A-Z]?))?\b/g;
+  let m;
+  while ((m = re.exec(source)) !== null) {
+    const dept = m[1].toUpperCase();
+    if (PLAN_IMPORT_SKIP_TOKENS.has(dept)) continue;
+    const nums = [m[2], m[3]].filter(Boolean);
+    nums.forEach(num => {
+      const code = `${dept}${num.toUpperCase()}`;
+      if (!seen.has(code)) {
+        seen.add(code);
+        out.push(code);
+      }
+    });
+  }
+  return out;
+}
+
+function inferMajorDeptFromCodes(codes) {
+  const allCounts = {};
+  const majorishCounts = {};
+  (codes || []).forEach(code => {
+    const dept = (code.match(/^([A-Z]{2,4})/) || [])[1];
+    if (!dept) return;
+    allCounts[dept] = (allCounts[dept] || 0) + 1;
+    if (!PLAN_IMPORT_SUPPORT_DEPTS.has(dept)) {
+      majorishCounts[dept] = (majorishCounts[dept] || 0) + 1;
+    }
+  });
+  const rankedMajorish = Object.entries(majorishCounts).sort((a, b) => b[1] - a[1]);
+  if (rankedMajorish.length) return rankedMajorish[0][0];
+  return Object.entries(allCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+}
+
+function categorizePlanImportCodes(codes, majorDept) {
+  const buckets = { core: [], support: [], upper: [] };
+  (codes || []).forEach(code => {
+    const dept = (code.match(/^([A-Z]{2,4})/) || [])[1] || '';
+    const level = parseInt((code.match(/\d{3}/) || ['0'])[0], 10);
+    if (dept === majorDept && level >= 300) buckets.upper.push(code);
+    else if (dept === majorDept) buckets.core.push(code);
+    else if (PLAN_IMPORT_SUPPORT_DEPTS.has(dept) || level < 300) buckets.support.push(code);
+    else buckets.core.push(code);
+  });
+  return buckets;
+}
+
+function fillMajorBuilderFromPlanText(text, sourceLabel) {
+  const codes = extractCourseCodesFromText(text);
+  const status = document.getElementById('mb-status');
+  if (!codes.length) {
+    if (status) {
+      status.style.color = 'var(--red)';
+      status.textContent = 'No course codes found. Paste text such as "CMSC131, MATH140, ENGL101".';
+    }
+    toastError('No course codes found in that plan text.');
+    return false;
+  }
+
+  const majorDept = inferMajorDeptFromCodes(codes);
+  const buckets = categorizePlanImportCodes(codes, majorDept);
+  const existingName = document.getElementById('mb-name').value.trim();
+  const inferredName = existingName || (majorDept ? `${majorDept} Major` : 'Imported Major');
+  document.getElementById('mb-name').value = inferredName;
+  document.getElementById('mb-program').value = document.getElementById('mb-program').value.trim() || inferredName;
+  document.getElementById('mb-core').value = buckets.core.join('\n');
+  document.getElementById('mb-support').value = buckets.support.join('\n');
+  document.getElementById('mb-upper').value = buckets.upper.join('\n');
+  document.getElementById('mb-goals').value = buckets.upper.slice(-3).join(', ');
+  document.getElementById('mb-notes').value = document.getElementById('mb-notes').value.trim()
+    || `Imported from ${sourceLabel || 'pasted four-year plan text'}. Review with an advisor before registration.`;
+
+  if (status) {
+    status.style.color = 'var(--green)';
+    status.textContent = `Extracted ${codes.length} unique courses${majorDept ? ` · inferred ${majorDept} as the major department` : ''}. Review, then Save Major.`;
+  }
+  toastSuccess(`Imported ${codes.length} courses into the major builder.`);
+  return true;
+}
+
+async function openPlanTextImport() {
+  if (!document.getElementById('mb-modal').classList.contains('open')) openMajorBuilder();
+  const choice = prompt(
+    'Import a four-year plan for any major.\n\nPaste a URL to a plan page, or paste raw plan text with course codes:',
+    ''
+  );
+  if (!choice) return;
+  const trimmed = choice.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    const status = document.getElementById('mb-status');
+    if (status) {
+      status.style.color = 'var(--slate)';
+      status.textContent = 'Fetching plan URL…';
+    }
+    try {
+      const resp = await fetch(trimmed);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const text = await resp.text();
+      if (fillMajorBuilderFromPlanText(text, trimmed)) return;
+    } catch (e) {
+      if (status) {
+        status.style.color = 'var(--amber)';
+        status.textContent = `Browser could not read that URL (${e.message}). Paste the copied plan text instead.`;
+      }
+    }
+    const pasted = prompt('Could not read the URL directly. Copy the plan text from the page/PDF and paste it here:', '');
+    if (pasted) fillMajorBuilderFromPlanText(pasted, trimmed);
+    return;
+  }
+  fillMajorBuilderFromPlanText(trimmed, 'pasted text');
+}
+
 function saveCustomMajor() {
   const name = document.getElementById('mb-name').value.trim();
   if (!name) { toastError('Major name is required.'); return; }
