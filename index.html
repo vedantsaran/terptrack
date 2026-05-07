@@ -299,6 +299,42 @@
 
 </div>
 
+<div class="modal-backdrop" id="placeholder-search-modal">
+  <div class="modal" style="max-width:900px">
+    <h3 id="ps-title">Replace Placeholder</h3>
+    <p id="ps-subtitle" style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">Pick a course that fits this requirement.</p>
+    <div class="ps-toolbar">
+      <select id="ps-dept" title="Department"></select>
+      <select id="ps-mode" title="Gen-Ed match mode">
+        <option value="all">Match all selected tags</option>
+        <option value="any">Match any selected tag</option>
+      </select>
+      <select id="ps-sort" title="Sort courses">
+        <option value="fit">Sort: best fit</option>
+        <option value="gpa">Sort: highest GPA</option>
+        <option value="code">Sort: course code</option>
+        <option value="credits">Sort: credits</option>
+      </select>
+      <input type="text" id="ps-search" placeholder="Search department, or type exact code like HIST200…">
+      <button class="btn" type="button" id="ps-lookup">Lookup Code</button>
+      <button class="btn" type="button" id="ps-missing">Use Missing</button>
+      <button class="btn" type="button" id="ps-clear">Clear Filters</button>
+    </div>
+    <div class="ps-filter-row">
+      <div>Gen-Ed filters <span>DVUP + DVCC means either diversity tag can match; verification still checks the full diversity rule.</span></div>
+      <div id="ps-tags" class="ps-tags"></div>
+    </div>
+    <div id="ps-verification" class="ps-verify"></div>
+    <p id="ps-status" role="status" aria-live="polite" style="font-size:.8rem;color:var(--slate);margin:10px 0 0;min-height:1em"></p>
+    <p id="ps-semester" style="font-size:.76rem;color:var(--slate);margin:4px 0 8px"></p>
+    <div id="ps-results" class="ps-results" aria-label="Placeholder replacement course results"></div>
+    <div class="modal-actions">
+      <button class="btn" type="button" onclick="closePlaceholderSearch()">Cancel</button>
+      <button class="btn" type="button" onclick="openEditCourse(placeholderSearchTarget && placeholderSearchTarget.code); closePlaceholderSearch();">Manual Edit</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="add-course-modal">
   <div class="modal">
     <h3 id="add-course-title">Add Custom Course</h3>
@@ -655,6 +691,7 @@
 <script src="js/bulk.js"></script>
 <script src="js/share.js"></script>
 <script src="js/gened.js"></script>
+<script src="js/placeholder-search.js"></script>
 <script src="js/gpa-sim.js"></script>
 <script src="js/snapshots.js"></script>
 <script src="js/events.js"></script>

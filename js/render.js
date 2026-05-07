@@ -232,11 +232,17 @@ function renderCourse(course, semId, isCustom = false) {
     });
   }
 
+  if (isPlaceholder && typeof openPlaceholderSearch === 'function') {
+    div.title = 'Click to search for a course that replaces this placeholder';
+    div.addEventListener('click', () => openPlaceholderSearch(course.code, semId));
+  }
+
   const edit = div.querySelector('[data-edit]');
   if (edit) {
     edit.addEventListener('click', (e) => {
       e.stopPropagation();
-      openEditCourse(edit.dataset.edit);
+      if (isPlaceholder && typeof openPlaceholderSearch === 'function') openPlaceholderSearch(edit.dataset.edit, semId);
+      else openEditCourse(edit.dataset.edit);
     });
   }
 
