@@ -38,8 +38,15 @@ function browseAllSearchDepts() {
 }
 
 async function browseListCoursesByGenEdWithFallback(tag, dept = '') {
-  const apiRows = await umdioListCoursesByGenEd(tag, { dept }).catch(() => []);
-  if (apiRows.length || dept) return apiRows;
+  const cleanTag = String(tag || '').trim().toUpperCase();
+  const cleanDept = String(dept || '').trim().toUpperCase();
+  if (!cleanTag) return [];
+  const apiRows = await umdioListCoursesByGenEd(cleanTag, { dept: cleanDept }).catch(() => []);
+  if (apiRows.length || cleanDept) return apiRows;
+
+  // Same client-side fallback used by the working Gen-Ed browser: if the
+  // API's global gen_ed filter is empty/unavailable, scan departments and
+  // keep rows whose returned metadata carries the selected Gen-Ed tag.
   const rows = [];
   let idx = 0;
   const depts = browseAllSearchDepts();
@@ -52,7 +59,22 @@ async function browseListCoursesByGenEdWithFallback(tag, dept = '') {
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker));
-  return rows.filter(r => Array.isArray(r.gen_ed) && r.gen_ed.flat().includes(tag));
+  return rows.filter(r => Array.isArray(r.gen_ed) && r.gen_ed.flat().map(t => String(t).toUpperCase()).includes(cleanTag));
+}
+
+async function browseListCoursesByGenEdTags(tags, opts = {}) {
+  const cleanTags = Array.from(new Set((tags || []).map(t => String(t || '').trim().toUpperCase()).filter(Boolean)));
+  const cleanDept = opts.dept ? String(opts.dept).trim().toUpperCase() : '';
+  if (!cleanTags.length) return [];
+  const lists = await Promise.all(cleanTags.map(tag => browseListCoursesByGenEdWithFallback(tag, cleanDept).catch(() => [])));
+  const byCode = new Map();
+  lists.flat().forEach(r => {
+    const key = normalizeCode(r.course_id || '');
+    if (!key) return;
+    const existing = byCode.get(key) || {};
+    byCode.set(key, { ...existing, ...r, _sourceGenEd: r._sourceGenEd || cleanTags.find(tag => ((r.gen_ed && r.gen_ed.flat()) || []).map(t => String(t).toUpperCase()).includes(tag)) || '' });
+  });
+  return Array.from(byCode.values());
 }
 
 async function renderBrowse() {
@@ -87,13 +109,10 @@ async function renderBrowse() {
       : browseGenEd && !browseDept ? `all ${browseGenEd} courses` : `${browseDept} courses`;
     grid.innerHTML = `<p class="reco-empty">Loading ${scopeLabel}…</p>`;
     if (allGenEds && !browseDept) {
-      const lists = await Promise.all(BROWSE_GENED_TAGS.map(tag => umdioListCoursesByGenEd(tag).catch(() => [])));
-      const byCode = new Map();
-      lists.flat().forEach(r => { if (r.course_id) byCode.set(normalizeCode(r.course_id), r); });
-      browseCache = Array.from(byCode.values());
+      browseCache = await browseListCoursesByGenEdTags(BROWSE_GENED_TAGS).catch(() => []);
     } else {
       browseCache = browseGenEd && !allGenEds
-        ? await umdioListCoursesByGenEd(browseGenEd, { dept: browseDept || '' }).catch(() => [])
+        ? await browseListCoursesByGenEdWithFallback(browseGenEd, browseDept || '').catch(() => [])
         : await umdioListCoursesByDept(browseDept).catch(() => []);
     }
   }
