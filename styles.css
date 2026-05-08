@@ -2046,8 +2046,10 @@ h1.hero-title em {
 /* ===========================================================
    PLACEHOLDER SEARCH MODAL
    =========================================================== */
-.course.placeholder { cursor: pointer; }
-.course.placeholder:hover {
+.course.placeholder,
+.course.gened-searchable { cursor: pointer; }
+.course.placeholder:hover,
+.course.gened-searchable:hover {
   border-color: var(--gold);
   background: rgba(255, 205, 0, .07);
   opacity: 1;
