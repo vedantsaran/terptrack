@@ -2170,11 +2170,3 @@ h1.hero-title em {
   border: 1px solid var(--line);
   color: var(--slate);
 }
-.reco-tag.gpa {
-  background: rgba(16, 185, 129, .10);
-  color: var(--green);
-}
-.reco-tag.fallback {
-  background: rgba(245, 158, 11, .10);
-  color: var(--amber);
-}

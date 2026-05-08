@@ -7,33 +7,12 @@ let placeholderSearchTarget = null;
 let placeholderSearchResults = [];
 let placeholderSearchSelectedTags = [];
 let placeholderSearchMode = 'all';
-let placeholderSearchSort = 'fit';
 let placeholderSearchRequestSeq = 0;
 
 const PLACEHOLDER_ALL_DEPTS_VALUE = '__ALL_GENED_DEPTS__';
-const PLACEHOLDER_DEFAULT_DEPTS = ['ENGL','COMM','HIST','GVPT','PSYC','SOCY','ANTH','PHIL','ARTH','THET','MUSC','RELS','WMST','AASP','AMST','GEOG','ECON','MATH','STAT','BSCI','UNIV'];
+const PLACEHOLDER_DEFAULT_DEPTS = ['ENGL','COMM','HIST','GVPT','PSYC','SOCY','ANTH','PHIL','ARTH','THET','MUSC','RELS','WMST','AASP','AMST','GEOG','ECON'];
 const PLACEHOLDER_GENED_TAGS = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','DVUP','DVCC','SCIS'];
 const PLACEHOLDER_CORE_REQUIREMENTS = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','SCIS'];
-
-const PLACEHOLDER_FALLBACK_COURSES = [
-  { code: 'ENGL101', title: 'Academic Writing', cr: 3, dept: 'ENGL', tags: ['FSAW'], description: 'Common Academic Writing option.' },
-  { code: 'ENGL393', title: 'Technical Writing', cr: 3, dept: 'ENGL', tags: ['FSPW'], description: 'Professional Writing option commonly used by STEM majors.' },
-  { code: 'COMM107', title: 'Oral Communication: Principles and Practices', cr: 3, dept: 'COMM', tags: ['FSOC'], description: 'Common Oral Communication option.' },
-  { code: 'STAT100', title: 'Elementary Statistics and Probability', cr: 3, dept: 'STAT', tags: ['FSAR'], description: 'Analytic reasoning / statistics option.' },
-  { code: 'MATH113', title: 'College Algebra with Applications', cr: 3, dept: 'MATH', tags: ['FSMA'], description: 'Mathematics Gen-Ed option.' },
-  { code: 'PHIL100', title: 'Introduction to Philosophy', cr: 3, dept: 'PHIL', tags: ['DSHU'], description: 'Humanities distributive option.' },
-  { code: 'RELS170', title: 'The Religions of the World', cr: 3, dept: 'RELS', tags: ['DSHU', 'DVUP'], description: 'Humanities and diversity option.' },
-  { code: 'HIST200', title: 'Interpreting American History', cr: 3, dept: 'HIST', tags: ['DSHS'], description: 'History and social sciences option.' },
-  { code: 'PSYC100', title: 'Introduction to Psychology', cr: 3, dept: 'PSYC', tags: ['DSHS'], description: 'Social sciences distributive option.' },
-  { code: 'SOCY100', title: 'Introduction to Sociology', cr: 3, dept: 'SOCY', tags: ['DSHS', 'DVUP'], description: 'Social sciences and diversity option.' },
-  { code: 'AASP100', title: 'Introduction to African American Studies', cr: 3, dept: 'AASP', tags: ['DSHS', 'DVUP'], description: 'Social sciences and diversity option.' },
-  { code: 'AMST201', title: 'Constructing American Cultures', cr: 3, dept: 'AMST', tags: ['DSHU', 'DVUP'], description: 'Humanities and diversity option.' },
-  { code: 'THET110', title: 'Theatre Performance: Process and Practice', cr: 3, dept: 'THET', tags: ['DSHU', 'DSSP'], description: 'Humanities / Scholarship in Practice option.' },
-  { code: 'ARTH200', title: 'Art and Society in Ancient and Medieval Europe', cr: 3, dept: 'ARTH', tags: ['DSHU', 'SCIS'], description: 'Humanities / I-Series style option.' },
-  { code: 'UNIV200', title: 'I-Series Seminar', cr: 3, dept: 'UNIV', tags: ['SCIS', 'DSSP'], description: 'Signature-course fallback suggestion; verify exact section tags.' },
-  { code: 'BSCI160', title: 'Principles of Ecology and Evolution', cr: 3, dept: 'BSCI', tags: ['DSNS'], description: 'Natural sciences distributive option.' },
-  { code: 'BSCI161', title: 'Principles of Ecology and Evolution Lab', cr: 1, dept: 'BSCI', tags: ['DSNL'], description: 'Natural sciences lab option.' },
-];
 
 function placeholderEscape(value) {
   return String(value ?? '').replace(/[&<>\"']/g, ch => ({
@@ -135,53 +114,6 @@ function candidateMatchesSelectedTags(tags) {
   return requiredMatch && diversityMatch;
 }
 
-function fallbackCourseToFull(item) {
-  const display = displayCode(item.code);
-  const category = item.tags[0] ? `gened-${item.tags[0].toLowerCase()}` : 'elective';
-  return {
-    code: display,
-    title: item.title,
-    cr: item.cr,
-    prereqs: [],
-    prereqGroups: [],
-    coreqs: [],
-    kind: category.startsWith('gened') ? 'gened' : 'tech',
-    category,
-    categories: item.tags.map(t => `gened-${t.toLowerCase()}`),
-    gen_ed: item.tags.map(t => [t]),
-    description: item.description || '',
-    _fallback: true,
-  };
-}
-
-function fallbackCourseToRow(item) {
-  return {
-    course_id: normalizeCode(item.code),
-    name: item.title,
-    credits: item.cr,
-    gen_ed: item.tags.map(t => [t]),
-    description: `${item.description || ''} Built-in fallback; verify current UMD catalog tags before registering.`,
-    _dept: item.dept,
-    _tags: item.tags,
-    _fallback: true,
-    _full: fallbackCourseToFull(item),
-  };
-}
-
-function getFallbackRowsForDepts(depts) {
-  const all = depts.includes(PLACEHOLDER_ALL_DEPTS_VALUE) || depts.length > 1;
-  const deptSet = new Set(depts);
-  return PLACEHOLDER_FALLBACK_COURSES
-    .filter(item => all || deptSet.has(item.dept))
-    .map(fallbackCourseToRow);
-}
-
-function getCandidateGpa(row) {
-  if (typeof row._avgGpa === 'number') return row._avgGpa;
-  const cached = (typeof ptCacheGet === 'function') ? ptCacheGet(row.course_id || '') : null;
-  return cached && typeof cached.average_gpa === 'number' ? cached.average_gpa : null;
-}
-
 function closePlaceholderSearch() {
   placeholderSearchRequestSeq++;
   const modal = document.getElementById('placeholder-search-modal');
@@ -196,7 +128,7 @@ function openPlaceholderSearch(courseCode, semId = '') {
   placeholderSearchTarget = { ...course };
   placeholderSearchSelectedTags = inferPlaceholderTags(course);
   placeholderSearchResults = [];
-  placeholderSearchMode = placeholderSearchSelectedTags.length > 1 ? 'any' : (placeholderSearchSelectedTags.length ? 'all' : 'any');
+  placeholderSearchMode = placeholderSearchSelectedTags.length ? 'all' : 'any';
   placeholderSearchRequestSeq++;
 
   const title = document.getElementById('ps-title');
@@ -207,9 +139,6 @@ function openPlaceholderSearch(courseCode, semId = '') {
   if (q) q.value = '';
   const mode = document.getElementById('ps-mode');
   if (mode) mode.value = placeholderSearchMode;
-  placeholderSearchSort = 'fit';
-  const sort = document.getElementById('ps-sort');
-  if (sort) sort.value = placeholderSearchSort;
   const dept = document.getElementById('ps-dept');
   if (dept) {
     populatePlaceholderDeptSelect();
@@ -351,33 +280,6 @@ async function listPlaceholderCoursesByDepts(depts) {
   return out;
 }
 
-function filterPlaceholderRows(rows, query) {
-  return rows.filter(r => {
-    const tags = getCandidateTags(r);
-    if (placeholderSearchMode === 'all' && !candidateMatchesSelectedTags(tags)) return false;
-    if (placeholderSearchMode === 'any' && placeholderSearchSelectedTags.length && !tags.some(t => placeholderSearchSelectedTags.includes(t))) return false;
-    if (!query) return tags.length > 0;
-    const hay = [r.course_id, r.name, r.description, r._dept].join(' ').toLowerCase();
-    return hay.includes(query);
-  });
-}
-
-function mergePlaceholderRows(liveRows, fallbackRows) {
-  const byCode = new Map();
-  fallbackRows.forEach(r => {
-    const key = normalizeCode(r.course_id || '');
-    if (key) byCode.set(key, r);
-  });
-  liveRows.forEach(r => {
-    const key = normalizeCode(r.course_id || '');
-    if (key) byCode.set(key, r);
-  });
-  return Array.from(byCode.values()).map(r => ({
-    ...r,
-    _tags: (r._tags || (r.gen_ed && r.gen_ed.flat().filter(Boolean)) || []).map(t => String(t).toUpperCase()),
-  }));
-}
-
 async function searchPlaceholderCourses() {
   const requestId = ++placeholderSearchRequestSeq;
   const grid = document.getElementById('ps-results');
@@ -385,18 +287,30 @@ async function searchPlaceholderCourses() {
   const dept = document.getElementById('ps-dept')?.value || PLACEHOLDER_ALL_DEPTS_VALUE;
   const query = (document.getElementById('ps-search')?.value || '').trim().toLowerCase();
   const depts = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? PLACEHOLDER_DEFAULT_DEPTS : [dept];
-  const scope = depts.length === 1 ? depts[0] : `${depts.length} departments`;
-  const fallbackRows = getFallbackRowsForDepts(depts);
-  placeholderSearchResults = filterPlaceholderRows(mergePlaceholderRows([], fallbackRows), query);
-  if (status) status.textContent = placeholderSearchResults.length
-    ? `${placeholderSearchResults.length} fallback suggestion${placeholderSearchResults.length === 1 ? '' : 's'} shown while live catalog data loads…`
-    : `Searching ${scope} live catalog courses…`;
-  renderPlaceholderResults();
-
-  const liveRows = await listPlaceholderCoursesByDepts(depts);
+  if (status) status.textContent = depts.length === 1
+    ? `Searching ${depts[0]} courses…`
+    : `Searching ${depts.length} common Gen-Ed departments…`;
+  if (grid) grid.innerHTML = '<p class="reco-empty">Loading candidate courses…</p>';
+  const rows = await listPlaceholderCoursesByDepts(depts);
   if (requestId !== placeholderSearchRequestSeq) return;
-  placeholderSearchResults = filterPlaceholderRows(mergePlaceholderRows(liveRows, fallbackRows), query);
+  const byCode = new Map();
+  rows.forEach(r => {
+    const key = normalizeCode(r.course_id || '');
+    if (key && !byCode.has(key)) byCode.set(key, r);
+  });
+  const withTags = Array.from(byCode.values()).map(r => ({
+    ...r,
+    _tags: ((r.gen_ed && r.gen_ed.flat().filter(Boolean)) || []).map(t => String(t).toUpperCase()),
+  }));
+  placeholderSearchResults = withTags.filter(r => {
+    if (placeholderSearchMode === 'all' && !candidateMatchesSelectedTags(r._tags)) return false;
+    if (placeholderSearchMode === 'any' && placeholderSearchSelectedTags.length && !r._tags.some(t => placeholderSearchSelectedTags.includes(t))) return false;
+    if (!query) return r._tags.length > 0;
+    const hay = [r.course_id, r.name, r.description, r._dept].join(' ').toLowerCase();
+    return hay.includes(query);
+  });
   if (status) {
+    const scope = depts.length === 1 ? depts[0] : `${depts.length} departments`;
     status.textContent = placeholderSearchResults.length
       ? `${placeholderSearchResults.length} matching course${placeholderSearchResults.length === 1 ? '' : 's'} found across ${scope}. Best Gen-Ed fits appear first.`
       : 'No matches. Try Any selected tag, fewer tags, another department scope, or direct course-code lookup.';
@@ -432,21 +346,7 @@ function scorePlaceholderCandidate(row) {
   const tags = getCandidateTags(row);
   const selectedHits = tags.filter(t => placeholderSearchSelectedTags.includes(t)).length;
   const missingHits = tags.filter(t => getMissingPlaceholderFilterTags().includes(t)).length;
-  const gpa = getCandidateGpa(row) || 0;
-  return (after.complete ? 10000 : 0) + (improvement * 500) + (missingHits * 50) + (selectedHits * 10) + gpa - after.missing.length;
-}
-
-function comparePlaceholderCandidates(a, b) {
-  if (placeholderSearchSort === 'gpa') {
-    const gpaDiff = (getCandidateGpa(b) ?? -1) - (getCandidateGpa(a) ?? -1);
-    if (gpaDiff) return gpaDiff;
-  } else if (placeholderSearchSort === 'code') {
-    return normalizeCode(a.course_id || '').localeCompare(normalizeCode(b.course_id || ''));
-  } else if (placeholderSearchSort === 'credits') {
-    const creditDiff = (parseFloat(a.credits) || 0) - (parseFloat(b.credits) || 0);
-    if (creditDiff) return creditDiff;
-  }
-  return scorePlaceholderCandidate(b) - scorePlaceholderCandidate(a);
+  return (after.complete ? 10000 : 0) + (improvement * 500) + (missingHits * 50) + (selectedHits * 10) - after.missing.length;
 }
 
 function renderPlaceholderResults() {
@@ -461,7 +361,7 @@ function renderPlaceholderResults() {
     return;
   }
   grid.innerHTML = '';
-  rows = rows.slice().sort(comparePlaceholderCandidates);
+  rows = rows.slice().sort((a, b) => scorePlaceholderCandidate(b) - scorePlaceholderCandidate(a));
   rows.slice(0, 80).forEach(r => {
     const code = displayCode(r.course_id || '');
     const tags = getCandidateTags(r);
@@ -475,8 +375,6 @@ function renderPlaceholderResults() {
     const safeCredits = placeholderEscape(r.credits || '?');
     const safeName = placeholderEscape(r.name || '');
     const safeDept = placeholderEscape(r._dept || '');
-    const gpa = getCandidateGpa(r);
-    const safeGpa = typeof gpa === 'number' ? placeholderEscape(gpa.toFixed(2)) : '';
     const safeGapText = placeholderEscape(gapText);
     const safeImpact = placeholderEscape(newlyHelps.length ? `Counts as ${newlyHelps.join(' + ')}` : 'No Gen-Ed tags found for this course');
     const safeDesc = placeholderEscape(r.description ? `${r.description.slice(0, 180)}${r.description.length > 180 ? '…' : ''}` : '');
@@ -488,7 +386,7 @@ function renderPlaceholderResults() {
         <span class="br-credits">${safeCredits} cr</span>
       </div>
       <div class="br-title">${safeName}</div>
-      <div class="br-meta">${safeDept ? `<span class="reco-tag dept">${safeDept}</span>` : ''}${safeGpa ? `<span class="reco-tag gpa">GPA ${safeGpa}</span>` : ''}${r._fallback ? '<span class="reco-tag fallback">fallback</span>' : ''}${tags.map(t => `<span class="reco-tag ${selected.has(t) ? 'selected' : ''}">${placeholderEscape(t)}</span>`).join('')}</div>
+      <div class="br-meta">${safeDept ? `<span class="reco-tag dept">${safeDept}</span>` : ''}${tags.map(t => `<span class="reco-tag ${selected.has(t) ? 'selected' : ''}">${placeholderEscape(t)}</span>`).join('')}</div>
       <div class="ps-impact ${preview.complete ? 'complete' : ''}">
         <strong>${safeGapText}</strong>
         <span>${safeImpact}</span>
@@ -499,18 +397,6 @@ function renderPlaceholderResults() {
     card.querySelector('button').addEventListener('click', () => replacePlaceholderWithCourse(r.course_id, r._full || null));
     grid.appendChild(card);
   });
-  hydratePlaceholderGpas(rows.slice(0, 24));
-}
-
-
-async function hydratePlaceholderGpas(rows) {
-  if (placeholderSearchSort !== 'gpa') return;
-  const requestId = placeholderSearchRequestSeq;
-  const missing = rows.filter(r => !r._fallback && getCandidateGpa(r) === null).slice(0, 8);
-  if (!missing.length) return;
-  await Promise.all(missing.map(r => planetTerpFetchCourse(r.course_id).catch(() => null)));
-  if (requestId !== placeholderSearchRequestSeq) return;
-  renderPlaceholderResults();
 }
 
 function renderPlaceholderVerification(candidate) {
@@ -593,11 +479,6 @@ function initPlaceholderSearch() {
   if (mode) mode.addEventListener('change', (e) => {
     placeholderSearchMode = e.target.value;
     searchPlaceholderCourses();
-  });
-  const sort = document.getElementById('ps-sort');
-  if (sort) sort.addEventListener('change', (e) => {
-    placeholderSearchSort = e.target.value;
-    renderPlaceholderResults();
   });
   const lookup = document.getElementById('ps-lookup');
   if (lookup) lookup.addEventListener('click', lookupPlaceholderTypedCourse);
