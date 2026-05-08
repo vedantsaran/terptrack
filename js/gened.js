@@ -107,7 +107,12 @@ function renderGenEdMatrix() {
 function genEdJumpToBrowse(tag) {
   const sel = document.getElementById('br-gened');
   if (sel) sel.value = tag;
+  const dept = document.getElementById('br-dept');
+  if (dept) dept.value = '';
+  browseDept = '';
   browseGenEd = tag;
+  browseCache = [];
+  browseCacheKey = '';
   switchTab('browse');
   renderBrowse();
 }
