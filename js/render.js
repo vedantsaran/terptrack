@@ -131,7 +131,11 @@ function renderCourse(course, semId, isCustom = false) {
   // Mark placeholder/elective rows so they render slightly muted.
   // A placeholder has a non-canonical code (no UMD dept+number pattern).
   const isPlaceholder = !/^[A-Z]{3,4}\s*\d{3}[A-Z]?(\s+#\d+)?$/i.test(course.code);
+  const isGenEdSearchable = course.kind === 'gened'
+    || (course.category && String(course.category).startsWith('gened-'))
+    || (Array.isArray(course.categories) && course.categories.some(cat => String(cat).startsWith('gened-')));
   if (isPlaceholder) cls += ' placeholder';
+  if (isGenEdSearchable) cls += ' gened-searchable';
   div.className = cls;
   div.dataset.code = course.code;
   div.dataset.semId = semId || '';
@@ -232,8 +236,10 @@ function renderCourse(course, semId, isCustom = false) {
     });
   }
 
-  if (isPlaceholder && typeof openPlaceholderSearch === 'function') {
-    div.title = 'Click to search for a course that replaces this placeholder';
+  if (isGenEdSearchable && typeof openPlaceholderSearch === 'function') {
+    div.title = isPlaceholder
+      ? 'Click to search for a course that replaces this placeholder'
+      : 'Click to search for courses that satisfy this Gen-Ed slot';
     div.addEventListener('click', () => openPlaceholderSearch(course.code, semId));
   }
 

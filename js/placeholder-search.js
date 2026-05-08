@@ -292,44 +292,34 @@ function placeholderSearchTagsForApi() {
 }
 
 async function listPlaceholderCoursesByGenEdTags(tags, dept) {
+  const uniqueTags = Array.from(new Set((tags || []).map(t => String(t || '').trim().toUpperCase()).filter(Boolean)));
+  const cleanDept = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? '' : String(dept || '').trim().toUpperCase();
+  if (!uniqueTags.length) return [];
+
+  // Reuse the same Gen-Ed query path as the Browse Courses tab so clicking a
+  // schedule Gen-Ed placeholder and using the generic Gen-Ed browser return
+  // the same candidate set. That helper also owns the global-gen-ed fallback.
+  if (typeof browseListCoursesByGenEdTags === 'function') {
+    return (await browseListCoursesByGenEdTags(uniqueTags, { dept: cleanDept })).map(r => ({
+      ...r,
+      _dept: r.dept_id || cleanDept || r._dept || '',
+    }));
+  }
+
   const out = [];
   let idx = 0;
-  const uniqueTags = Array.from(new Set(tags));
   const concurrency = Math.min(4, uniqueTags.length);
   async function worker() {
     while (idx < uniqueTags.length) {
       const tag = uniqueTags[idx++];
-      const rows = await umdioListCoursesByGenEd(tag, { dept: dept === PLACEHOLDER_ALL_DEPTS_VALUE ? '' : dept }).catch(() => []);
-      rows.forEach(r => out.push({ ...r, _dept: r.dept_id || dept || '', _sourceGenEd: tag }));
-    }
-  }
-  await Promise.all(Array.from({ length: concurrency }, worker));
-  return out;
-}
-
-function placeholderSearchTagsForApi() {
-  if (placeholderSearchSelectedTags.length) return placeholderSearchSelectedTags;
-  return PLACEHOLDER_GENED_TAGS;
-}
-
-async function listPlaceholderCoursesByGenEdTags(tags, dept) {
-  const out = [];
-  let idx = 0;
-  const uniqueTags = Array.from(new Set(tags));
-  const concurrency = Math.min(4, uniqueTags.length);
-  async function worker() {
-    while (idx < uniqueTags.length) {
-      const tag = uniqueTags[idx++];
-      const rows = await umdioListCoursesByGenEd(tag, { dept: dept === PLACEHOLDER_ALL_DEPTS_VALUE ? '' : dept }).catch(() => []);
-      rows.forEach(r => out.push({ ...r, _dept: r.dept_id || dept || '', _sourceGenEd: tag }));
+      const rows = await umdioListCoursesByGenEd(tag, { dept: cleanDept }).catch(() => []);
+      rows.forEach(r => out.push({ ...r, _dept: r.dept_id || cleanDept || '', _sourceGenEd: tag }));
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker));
 
-  // If the API-side Gen-Ed filter returns nothing (or is blocked), fall back
-  // to scanning departments client-side so the popup still produces choices.
   if (!out.length) {
-    const fallbackDepts = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? placeholderAllSearchDepts() : [dept];
+    const fallbackDepts = cleanDept ? [cleanDept] : placeholderAllSearchDepts();
     const deptRows = await listPlaceholderCoursesByDepts(fallbackDepts);
     const selected = new Set(uniqueTags);
     return deptRows.filter(r => ((r.gen_ed && r.gen_ed.flat().filter(Boolean)) || [])
