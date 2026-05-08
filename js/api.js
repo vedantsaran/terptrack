@@ -4,7 +4,7 @@
    ============================================================ */
 
 const UMDIO_BASE = 'https://api.umd.io/v1';
-const UMDIO_CACHE_KEY = 'terp-track-umdio-cache-v1';
+const UMDIO_CACHE_KEY = 'terp-track-umdio-cache-v2';
 const UMDIO_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 function umdioCacheLoad() {

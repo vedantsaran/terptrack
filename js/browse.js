@@ -33,6 +33,28 @@ function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
 }
 
+function browseAllSearchDepts() {
+  return (typeof COMMON_DEPTS !== 'undefined' && Array.isArray(COMMON_DEPTS)) ? COMMON_DEPTS : [];
+}
+
+async function browseListCoursesByGenEdWithFallback(tag, dept = '') {
+  const apiRows = await umdioListCoursesByGenEd(tag, { dept }).catch(() => []);
+  if (apiRows.length || dept) return apiRows;
+  const rows = [];
+  let idx = 0;
+  const depts = browseAllSearchDepts();
+  const concurrency = Math.min(4, depts.length);
+  async function worker() {
+    while (idx < depts.length) {
+      const d = depts[idx++];
+      const deptRows = await umdioListCoursesByDept(d).catch(() => []);
+      deptRows.forEach(r => rows.push(r));
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return rows.filter(r => Array.isArray(r.gen_ed) && r.gen_ed.flat().includes(tag));
+}
+
 async function renderBrowse() {
   const view = document.getElementById('view-browse');
   if (!view) return;
