@@ -55,32 +55,24 @@ async function umdioFetchCourse(code) {
   finally { delete _umdioInflight[id]; }
 }
 
-function umdioNormalizeCourseListResponse(data) {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.data)) return data.data;
-  if (data && Array.isArray(data.results)) return data.results;
-  return [];
-}
-
 async function umdioFetchPagedCourses(params, cacheKey, maxPages = 12) {
   const cached = umdioCacheGet(cacheKey);
-  if (cached !== undefined) return cached;
+  if (cached) return cached;
   const all = [];
-  let completed = false;
   for (let page = 1; page <= maxPages; page++) {
     const pageParams = new URLSearchParams(params);
     pageParams.set('per_page', '100');
     pageParams.set('page', String(page));
     let resp;
     try { resp = await fetch(`${UMDIO_BASE}/courses?${pageParams}`); }
-    catch (e) { break; }
-    if (!resp.ok) break;
-    const data = umdioNormalizeCourseListResponse(await resp.json());
-    if (!data.length) { completed = true; break; }
+    catch (e) { return all; }
+    if (!resp.ok) return all;
+    const data = await resp.json();
+    if (!Array.isArray(data) || !data.length) break;
     all.push(...data);
-    if (data.length < 100) { completed = true; break; }
+    if (data.length < 100) break;
   }
-  if (completed) umdioCachePut(cacheKey, all);
+  umdioCachePut(cacheKey, all);
   return all;
 }
 

@@ -304,6 +304,27 @@ async function listPlaceholderCoursesByGenEdTags(tags, dept) {
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker));
+  return out;
+}
+
+function placeholderSearchTagsForApi() {
+  if (placeholderSearchSelectedTags.length) return placeholderSearchSelectedTags;
+  return PLACEHOLDER_GENED_TAGS;
+}
+
+async function listPlaceholderCoursesByGenEdTags(tags, dept) {
+  const out = [];
+  let idx = 0;
+  const uniqueTags = Array.from(new Set(tags));
+  const concurrency = Math.min(4, uniqueTags.length);
+  async function worker() {
+    while (idx < uniqueTags.length) {
+      const tag = uniqueTags[idx++];
+      const rows = await umdioListCoursesByGenEd(tag, { dept: dept === PLACEHOLDER_ALL_DEPTS_VALUE ? '' : dept }).catch(() => []);
+      rows.forEach(r => out.push({ ...r, _dept: r.dept_id || dept || '', _sourceGenEd: tag }));
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, worker));
 
   // If the API-side Gen-Ed filter returns nothing (or is blocked), fall back
   // to scanning departments client-side so the popup still produces choices.

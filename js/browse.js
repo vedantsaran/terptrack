@@ -87,13 +87,13 @@ async function renderBrowse() {
       : browseGenEd && !browseDept ? `all ${browseGenEd} courses` : `${browseDept} courses`;
     grid.innerHTML = `<p class="reco-empty">Loading ${scopeLabel}…</p>`;
     if (allGenEds && !browseDept) {
-      const lists = await Promise.all(BROWSE_GENED_TAGS.map(tag => browseListCoursesByGenEdWithFallback(tag).catch(() => [])));
+      const lists = await Promise.all(BROWSE_GENED_TAGS.map(tag => umdioListCoursesByGenEd(tag).catch(() => [])));
       const byCode = new Map();
       lists.flat().forEach(r => { if (r.course_id) byCode.set(normalizeCode(r.course_id), r); });
       browseCache = Array.from(byCode.values());
     } else {
       browseCache = browseGenEd && !allGenEds
-        ? await browseListCoursesByGenEdWithFallback(browseGenEd, browseDept || '').catch(() => [])
+        ? await umdioListCoursesByGenEd(browseGenEd, { dept: browseDept || '' }).catch(() => [])
         : await umdioListCoursesByDept(browseDept).catch(() => []);
     }
   }
