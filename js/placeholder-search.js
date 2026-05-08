@@ -273,7 +273,28 @@ async function listPlaceholderCoursesByDepts(depts) {
     while (idx < depts.length) {
       const dept = depts[idx++];
       const rows = await umdioListCoursesByDept(dept).catch(() => []);
-      rows.forEach(r => out.push({ ...r, _dept: dept }));
+      rows.forEach(r => out.push({ ...r, _dept: r.dept_id || dept }));
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return out;
+}
+
+function placeholderSearchTagsForApi() {
+  if (placeholderSearchSelectedTags.length) return placeholderSearchSelectedTags;
+  return PLACEHOLDER_GENED_TAGS;
+}
+
+async function listPlaceholderCoursesByGenEdTags(tags, dept) {
+  const out = [];
+  let idx = 0;
+  const uniqueTags = Array.from(new Set(tags));
+  const concurrency = Math.min(4, uniqueTags.length);
+  async function worker() {
+    while (idx < uniqueTags.length) {
+      const tag = uniqueTags[idx++];
+      const rows = await umdioListCoursesByGenEd(tag, { dept: dept === PLACEHOLDER_ALL_DEPTS_VALUE ? '' : dept }).catch(() => []);
+      rows.forEach(r => out.push({ ...r, _dept: r.dept_id || dept || '', _sourceGenEd: tag }));
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker));
@@ -286,17 +307,25 @@ async function searchPlaceholderCourses() {
   const status = document.getElementById('ps-status');
   const dept = document.getElementById('ps-dept')?.value || PLACEHOLDER_ALL_DEPTS_VALUE;
   const query = (document.getElementById('ps-search')?.value || '').trim().toLowerCase();
-  const depts = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? PLACEHOLDER_DEFAULT_DEPTS : [dept];
-  if (status) status.textContent = depts.length === 1
-    ? `Searching ${depts[0]} courses…`
-    : `Searching ${depts.length} common Gen-Ed departments…`;
+  const useGenEdApi = placeholderSearchSelectedTags.length || dept === PLACEHOLDER_ALL_DEPTS_VALUE;
+  const apiTags = placeholderSearchTagsForApi();
+  if (status) {
+    const scope = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? 'all departments' : dept;
+    status.textContent = useGenEdApi
+      ? `Searching ${apiTags.length === PLACEHOLDER_GENED_TAGS.length ? 'all Gen-Ed tags' : apiTags.join(' + ')} across ${scope}…`
+      : `Searching ${dept} courses…`;
+  }
   if (grid) grid.innerHTML = '<p class="reco-empty">Loading candidate courses…</p>';
-  const rows = await listPlaceholderCoursesByDepts(depts);
+  const rows = useGenEdApi
+    ? await listPlaceholderCoursesByGenEdTags(apiTags, dept)
+    : await listPlaceholderCoursesByDepts([dept]);
   if (requestId !== placeholderSearchRequestSeq) return;
   const byCode = new Map();
   rows.forEach(r => {
     const key = normalizeCode(r.course_id || '');
-    if (key && !byCode.has(key)) byCode.set(key, r);
+    if (!key) return;
+    const existing = byCode.get(key) || {};
+    byCode.set(key, { ...existing, ...r, _dept: r.dept_id || r._dept || existing._dept || '' });
   });
   const withTags = Array.from(byCode.values()).map(r => ({
     ...r,
@@ -306,11 +335,11 @@ async function searchPlaceholderCourses() {
     if (placeholderSearchMode === 'all' && !candidateMatchesSelectedTags(r._tags)) return false;
     if (placeholderSearchMode === 'any' && placeholderSearchSelectedTags.length && !r._tags.some(t => placeholderSearchSelectedTags.includes(t))) return false;
     if (!query) return r._tags.length > 0;
-    const hay = [r.course_id, r.name, r.description, r._dept].join(' ').toLowerCase();
+    const hay = [r.course_id, r.name, r.description, r._dept, r.department].join(' ').toLowerCase();
     return hay.includes(query);
   });
   if (status) {
-    const scope = depts.length === 1 ? depts[0] : `${depts.length} departments`;
+    const scope = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? 'all departments' : dept;
     status.textContent = placeholderSearchResults.length
       ? `${placeholderSearchResults.length} matching course${placeholderSearchResults.length === 1 ? '' : 's'} found across ${scope}. Best Gen-Ed fits appear first.`
       : 'No matches. Try Any selected tag, fewer tags, another department scope, or direct course-code lookup.';

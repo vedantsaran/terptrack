@@ -20,10 +20,14 @@ const COMMON_DEPTS = [
   'SPHL','STAT','SURV','THET','TLPL','UMEI','URSP','USLT','WMST',
 ];
 
+const BROWSE_ALL_GENEDS_VALUE = '__ALL_GENEDS__';
+const BROWSE_GENED_TAGS = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','DVUP','DVCC','SCIS'];
+
 let browseDept = '';
 let browseSearch = '';
 let browseGenEd = '';
-let browseCache = []; // current dept results
+let browseCache = []; // current dept/gen-ed result set
+let browseCacheKey = '';
 
 function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
@@ -44,14 +48,32 @@ async function renderBrowse() {
   }
 
   const grid = document.getElementById('br-grid');
-  if (!browseDept) {
-    grid.innerHTML = '<p class="reco-empty">Pick a department to browse courses. Tip: type a code in the search to jump.</p>';
+  if (!browseDept && !browseGenEd) {
+    grid.innerHTML = '<p class="reco-empty">Pick a department, choose a Gen-Ed tag, or choose “All Gen-Ed categories” to browse Gen-Eds across every department.</p>';
     return;
   }
 
+  const desiredCacheKey = `${browseDept || 'ALL'}:${browseGenEd || 'ANY'}`;
+  if (browseCacheKey !== desiredCacheKey) {
+    browseCache = [];
+    browseCacheKey = desiredCacheKey;
+  }
   if (!browseCache.length) {
-    grid.innerHTML = '<p class="reco-empty">Loading…</p>';
-    browseCache = await umdioListCoursesByDept(browseDept).catch(() => []);
+    const allGenEds = browseGenEd === BROWSE_ALL_GENEDS_VALUE;
+    const scopeLabel = allGenEds && !browseDept
+      ? 'all Gen-Ed courses'
+      : browseGenEd && !browseDept ? `all ${browseGenEd} courses` : `${browseDept} courses`;
+    grid.innerHTML = `<p class="reco-empty">Loading ${scopeLabel}…</p>`;
+    if (allGenEds && !browseDept) {
+      const lists = await Promise.all(BROWSE_GENED_TAGS.map(tag => umdioListCoursesByGenEd(tag).catch(() => [])));
+      const byCode = new Map();
+      lists.flat().forEach(r => { if (r.course_id) byCode.set(normalizeCode(r.course_id), r); });
+      browseCache = Array.from(byCode.values());
+    } else {
+      browseCache = browseGenEd && !allGenEds
+        ? await umdioListCoursesByGenEd(browseGenEd, { dept: browseDept || '' }).catch(() => [])
+        : await umdioListCoursesByDept(browseDept).catch(() => []);
+    }
   }
 
   let rows = browseCache;
@@ -59,8 +81,10 @@ async function renderBrowse() {
     const q = browseSearch.toLowerCase();
     rows = rows.filter(r => (r.course_id || '').toLowerCase().includes(q) || (r.name || '').toLowerCase().includes(q));
   }
-  if (browseGenEd) {
+  if (browseGenEd && browseGenEd !== BROWSE_ALL_GENEDS_VALUE) {
     rows = rows.filter(r => Array.isArray(r.gen_ed) && r.gen_ed.flat().includes(browseGenEd));
+  } else if (browseGenEd === BROWSE_ALL_GENEDS_VALUE) {
+    rows = rows.filter(r => Array.isArray(r.gen_ed) && r.gen_ed.flat().filter(Boolean).length);
   }
 
   if (!rows.length) {
@@ -107,6 +131,7 @@ function initBrowse() {
   if (dept) dept.addEventListener('change', (e) => {
     browseDept = e.target.value;
     browseCache = [];
+    browseCacheKey = '';
     renderBrowse();
   });
   const search = document.getElementById('br-search');
@@ -117,6 +142,8 @@ function initBrowse() {
   const ge = document.getElementById('br-gened');
   if (ge) ge.addEventListener('change', (e) => {
     browseGenEd = e.target.value;
+    browseCache = [];
+    browseCacheKey = '';
     renderBrowse();
   });
 }
