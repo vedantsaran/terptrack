@@ -55,19 +55,44 @@ async function umdioFetchCourse(code) {
   finally { delete _umdioInflight[id]; }
 }
 
-async function umdioListCoursesByDept(dept, semester) {
-  const key = `dept:${dept}:${semester || 'any'}`;
-  const cached = umdioCacheGet(key);
+async function umdioFetchPagedCourses(params, cacheKey, maxPages = 12) {
+  const cached = umdioCacheGet(cacheKey);
   if (cached) return cached;
-  const params = new URLSearchParams({ dept_id: dept.toUpperCase(), per_page: '100' });
+  const all = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const pageParams = new URLSearchParams(params);
+    pageParams.set('per_page', '100');
+    pageParams.set('page', String(page));
+    let resp;
+    try { resp = await fetch(`${UMDIO_BASE}/courses?${pageParams}`); }
+    catch (e) { return all; }
+    if (!resp.ok) return all;
+    const data = await resp.json();
+    if (!Array.isArray(data) || !data.length) break;
+    all.push(...data);
+    if (data.length < 100) break;
+  }
+  umdioCachePut(cacheKey, all);
+  return all;
+}
+
+async function umdioListCoursesByDept(dept, semester) {
+  const cleanDept = String(dept || '').trim().toUpperCase();
+  if (!cleanDept) return [];
+  const params = new URLSearchParams({ dept_id: cleanDept });
   if (semester) params.set('semester', semester);
-  let resp;
-  try { resp = await fetch(`${UMDIO_BASE}/courses?${params}`); }
-  catch (e) { return []; }
-  if (!resp.ok) return [];
-  const data = await resp.json();
-  umdioCachePut(key, data);
-  return data;
+  return umdioFetchPagedCourses(params, `dept:${cleanDept}:${semester || 'any'}:paged`);
+}
+
+async function umdioListCoursesByGenEd(tag, opts = {}) {
+  const cleanTag = String(tag || '').trim().toUpperCase();
+  if (!cleanTag) return [];
+  const cleanDept = opts.dept ? String(opts.dept).trim().toUpperCase() : '';
+  const params = new URLSearchParams({ gen_ed: cleanTag });
+  if (cleanDept) params.set('dept_id', cleanDept);
+  if (opts.semester) params.set('semester', opts.semester);
+  const key = `gened:${cleanTag}:${cleanDept || 'all'}:${opts.semester || 'any'}:paged`;
+  return umdioFetchPagedCourses(params, key);
 }
 
 // Display form: "CMSC 131" — UMD-style with space before number
