@@ -1894,3 +1894,68 @@ Next pass candidates:
 - Add a first-run interactive profile flow that creates a personalized four-year plan from major, interests, AP/transfer credits, and target graduation date.
 - Add diagnostics actions that jump directly from placeholder source samples to Browse replacement searches.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 43
+
+Focus: make Browse reusable for students who repeatedly search the same departments, GenEd gaps, and profile-aligned topics.
+
+Planned changes:
+- Add saved Browse search presets for department, profile-department, GenEd, and keyword filters.
+- Persist saved searches across local state, imports, snapshots, share links, and cloud restores.
+- Surface GenEd gap matches directly on Browse course cards.
+- Add regression coverage and browser-check desktop/mobile layout.
+
+Completed:
+- Added normalized `browseSavedSearches` state with a 12-search limit.
+- Added `Save search`, saved-search chips, apply, active-state, and remove behavior in Browse.
+- Saved search chips preserve:
+  - department filters.
+  - profile-department mode.
+  - GenEd filters including all-GenEd mode.
+  - typed keyword filters.
+- Added Browse result prioritization for courses that satisfy current GenEd gaps.
+- Added `Fills gap` course-card tags for matching GenEd requirements.
+- Persisted saved Browse searches through:
+  - local state load.
+  - JSON import/export.
+  - snapshots.
+  - share links.
+  - cloud plan restore.
+- Added responsive chip-strip styling with stable mobile hit targets and ellipsis for long saved searches.
+- Versioned changed browser assets:
+  - `styles.css?v=41`
+  - `js/state.js?v=13`
+  - `js/io.js?v=10`
+  - `js/browse.js?v=4`
+  - `js/share.js?v=10`
+  - `js/snapshots.js?v=9`
+  - `js/account.js?v=6`
+- Extended generated-plan regression coverage:
+  - shared plans normalize and retain valid saved Browse searches.
+  - invalid saved Browse searches are dropped.
+  - Browse can save, apply, and delete a profile-department + GenEd + keyword preset.
+
+Verification:
+- Ran `node --check` on the touched JavaScript files and `scripts/test-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the auto-plan diagnostics fixture, the account/share fixture with saved Browse search persistence, the account setup fixture, the schedule timing fixture, the planner checklist fixture, the planner questions fixture, and the Browse profile saved-search fixture.
+- Reused the existing static server at `http://127.0.0.1:5173/`.
+- Loaded a temporary same-origin browser seed page, then removed it before commit.
+- Browser desktop check confirmed:
+  - `styles.css?v=41`, `js/state.js?v=13`, and `js/browse.js?v=4` loaded.
+  - Browse opened without horizontal overflow.
+  - saving `CMSC · systems` created one active saved-search chip and one remove button.
+  - changing filters away and clicking the chip restored `CMSC` and `systems`.
+  - the saved chip persisted after reload.
+  - removing the chip hid the saved-search strip.
+- Browser mobile check at a 390px viewport confirmed:
+  - toolbar wraps inside the viewport.
+  - a long saved search chip plus remove button fit in the saved-search strip.
+  - no horizontal overflow.
+  - no browser console errors.
+- Reset the browser viewport after QA.
+
+Next pass candidates:
+- Add first-run profile onboarding that builds an individualized plan from major, interests, AP/transfer credits, target graduation date, and time constraints.
+- Add diagnostics actions that jump from placeholder source samples directly to Browse saved replacement searches.
+- Add Browse result sections for "best for your plan", "fills missing GenEd", and "available in your next term".
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

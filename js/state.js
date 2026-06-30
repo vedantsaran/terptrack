@@ -230,6 +230,33 @@ function normalizeAccountPrefs(value) {
   };
 }
 
+function normalizeBrowseSavedSearch(search, index = 0) {
+  const dept = String(search?.dept || '').trim().toUpperCase();
+  const genEd = String(search?.genEd || '').trim().toUpperCase();
+  const query = String(search?.search || search?.query || '').trim().slice(0, 80);
+  const safeDept = dept === '__PROFILE_DEPTS__' || /^[A-Z]{3,4}$/.test(dept) ? dept : '';
+  const safeGenEd = genEd === '__ALL_GENEDS__' || /^[A-Z0-9-]{4,16}$/.test(genEd) ? genEd : '';
+  if (!safeDept && !safeGenEd && !query) return null;
+  const fallbackLabel = [safeDept === '__PROFILE_DEPTS__' ? 'Profile departments' : safeDept, safeGenEd, query].filter(Boolean).join(' · ') || `Saved search ${index + 1}`;
+  const fallbackId = `browse-search-${index + 1}`;
+  const id = String(search?.id || fallbackId).trim().slice(0, 60) || fallbackId;
+  return {
+    id,
+    label: String(search?.label || fallbackLabel).trim().slice(0, 90) || fallbackLabel,
+    dept: safeDept,
+    genEd: safeGenEd,
+    search: query,
+    createdAt: String(search?.createdAt || search?.created_at || ''),
+  };
+}
+
+function normalizeBrowseSavedSearches(value) {
+  return (Array.isArray(value) ? value : [])
+    .map((search, index) => normalizeBrowseSavedSearch(search, index))
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
 function loadState() {
   const fallback = {
     courses: {},
@@ -244,6 +271,7 @@ function loadState() {
     scheduleOutputPreset: 'personal',
     scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true },
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '' },
+    browseSavedSearches: [],
     recentChanges: [],
     majorId: null,
     accountPrefs: defaultAccountPrefs(),
@@ -268,6 +296,7 @@ function loadState() {
         scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(parsed.scheduleOutputPreset) ? parsed.scheduleOutputPreset : 'personal',
         scheduleOutputOptions: { ...fallback.scheduleOutputOptions, ...(parsed.scheduleOutputOptions || {}) },
         roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(parsed.roadmapPrefs || {}) },
+        browseSavedSearches: normalizeBrowseSavedSearches(parsed.browseSavedSearches),
         recentChanges: Array.isArray(parsed.recentChanges) ? parsed.recentChanges.slice(0, 12) : [],
         accountPrefs: normalizeAccountPrefs({ ...fallback.accountPrefs, ...(parsed.accountPrefs || {}) }),
         profilePrefs: normalizeProfilePrefs({ ...fallback.profilePrefs, ...(parsed.profilePrefs || {}) }),

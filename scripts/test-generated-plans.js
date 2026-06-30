@@ -206,6 +206,7 @@ function testAccountAndShareState(context) {
       activeSchedule: null,
       selectedSections: {},
       schedulePrefs: {},
+      browseSavedSearches: [],
       profilePrefs: defaultProfilePrefs(),
       settings: { ...DEFAULT_SETTINGS }
     };
@@ -220,6 +221,10 @@ function testAccountAndShareState(context) {
       scheduleOutputPreset: 'advisor',
       scheduleOutputOptions: { warnings: false },
       roadmapPrefs: { filter: 'gened', query: 'math', selectedCode: 'MATH 140' },
+      browseSavedSearches: [
+        { id: 'friend-search', dept: '__PROFILE_DEPTS__', genEd: 'DSHU', search: 'ethics' },
+        { id: 'invalid-search', dept: 'TOOLONG', genEd: '', search: '' }
+      ],
       recentChanges: [{ id: 'change-1' }],
       profilePrefs: { interests: ['business'], careerGoal: 'finance analytics', genEdDepts: ['ECON'] },
       settings: { theme: 'light' }
@@ -238,6 +243,9 @@ function testAccountAndShareState(context) {
       selectedSection: state.selectedSections['MATH 140'],
       profileInterest: state.profilePrefs.interests[0],
       roadmapFilter: state.roadmapPrefs.filter,
+      browseSearchCount: state.browseSavedSearches.length,
+      browseSearchDept: state.browseSavedSearches[0]?.dept,
+      browseSearchQuery: state.browseSavedSearches[0]?.search,
       outputPreset: state.scheduleOutputPreset,
     })
   `, context));
@@ -255,6 +263,9 @@ function testAccountAndShareState(context) {
   assert(result.selectedSection === '0101', 'shared plan: selected section should persist');
   assert(result.profileInterest === 'business', 'shared plan: profile prefs should normalize');
   assert(result.roadmapFilter === 'gened', 'shared plan: roadmap prefs should persist');
+  assert(result.browseSearchCount === 1, 'shared plan: invalid saved browse searches should be removed');
+  assert(result.browseSearchDept === '__PROFILE_DEPTS__', 'shared plan: saved browse profile department preset should persist');
+  assert(result.browseSearchQuery === 'ethics', 'shared plan: saved browse search keyword should persist');
   assert(result.outputPreset === 'advisor', 'shared plan: output preset should persist');
 
   return {
@@ -663,6 +674,18 @@ async function testBrowseProfileDepartments(context) {
       const genEdRows = await browseListCoursesForCurrentScope();
       browseGenEd = '';
       const deptRows = await browseListCoursesForCurrentScope();
+      state.browseSavedSearches = [];
+      browseDept = BROWSE_PROFILE_DEPTS_VALUE;
+      browseGenEd = 'DSHS';
+      browseSearch = 'policy';
+      browseSaveCurrentSearch();
+      const saved = browseSavedSearches();
+      browseDept = 'CMSC';
+      browseGenEd = '';
+      browseSearch = '';
+      browseApplySavedSearch(saved[0].id);
+      const restored = { dept: browseDept, genEd: browseGenEd, search: browseSearch };
+      browseDeleteSavedSearch(saved[0].id);
       return {
         defaultDept,
         scope: defaultScope.depts.slice(0, 4),
@@ -670,6 +693,10 @@ async function testBrowseProfileDepartments(context) {
         deptCodes: deptRows.map(row => row.course_id).sort(),
         callCount: calls.length,
         calls,
+        savedCount: saved.length,
+        savedLabel: saved[0]?.label || '',
+        restored,
+        afterDelete: state.browseSavedSearches.length,
       };
     })()
   `, context));
@@ -681,12 +708,17 @@ async function testBrowseProfileDepartments(context) {
   assert(result.genEdCodes.filter(code => code === 'INST201').length === 1, 'browse profile: GenEd rows should dedupe shared courses');
   assert(result.deptCodes.filter(code => code === 'INST201').length === 1, 'browse profile: department rows should dedupe shared courses');
   assert(result.callCount >= 6, 'browse profile: expected multiple department calls');
+  assert(result.savedCount === 1, 'browse saved search: should save one preset');
+  assert(/Profile departments/.test(result.savedLabel) && /DSHS/.test(result.savedLabel), 'browse saved search: label should summarize filters');
+  assert(result.restored.dept === '__PROFILE_DEPTS__' && result.restored.genEd === 'DSHS' && result.restored.search === 'policy', 'browse saved search: apply should restore filters');
+  assert(result.afterDelete === 0, 'browse saved search: delete should remove preset');
 
   return {
-    id: 'BROWSE-PROFILE',
+    id: 'BROWSE-PROFILE-SAVED',
     scope: result.scope.join(','),
     genEdCount: result.genEdCodes.length,
     deptCount: result.deptCodes.length,
+    saved: result.savedLabel,
   };
 }
 
@@ -722,8 +754,8 @@ async function main() {
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
-  console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile).`);
+  console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches).`);
 }
 
 main().catch(error => {

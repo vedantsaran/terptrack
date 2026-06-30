@@ -333,6 +333,7 @@ function accountNormalizeLoadedState(cloudState) {
     scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(cloudState.scheduleOutputPreset) ? cloudState.scheduleOutputPreset : 'personal',
     scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(cloudState.scheduleOutputOptions || {}) },
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(cloudState.roadmapPrefs || {}) },
+    browseSavedSearches: typeof normalizeBrowseSavedSearches === 'function' ? normalizeBrowseSavedSearches(cloudState.browseSavedSearches) : (cloudState.browseSavedSearches || []),
     recentChanges: Array.isArray(cloudState.recentChanges) ? cloudState.recentChanges.slice(0, 12) : [],
     accountPrefs: typeof normalizeAccountPrefs === 'function'
       ? normalizeAccountPrefs({ ...getAccountPrefs(), ...(cloudState.accountPrefs || {}) })
