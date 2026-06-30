@@ -2850,3 +2850,63 @@ Next pass candidates:
 - Add a compact advisor-export summary of open audit issues.
 - Add student-facing conflict explanations when undo is unavailable because a course changed afterward.
 - Broaden prior-credit equivalency coverage with official-source mappings.
+
+## 2026-06-30 Pass 59
+
+Focus: explain and block stale undo actions after students make later edits.
+
+Planned changes:
+- Detect when a placeholder-replacement undo is stale because the replacement course or section pick changed afterward.
+- Detect when a prior-credit undo is stale because one of the applied transfer statuses changed afterward.
+- Show the stale reason directly in Timeline Recent Changes instead of presenting an unsafe Undo button.
+- Keep direct undo clicks guarded with the same reason.
+- Add deterministic regression and Chrome coverage.
+
+Completed:
+- Added dynamic Timeline undo availability checks for:
+  - placeholder replacements.
+  - placeholder replacements with expected pinned section state.
+  - bulk prior-credit applications.
+- Added a stored expected replacement selected-section snapshot to placeholder replacement undo payloads.
+- Added a stored applied course-state snapshot to prior-credit undo entries.
+- Updated Recent Changes so stale undo rows show compact `Undo unavailable` text and hide the Undo button.
+- Guarded direct `undoPlanChange()` calls so stale undo attempts return false and report the same reason through the existing toast path.
+- Versioned changed browser assets:
+  - `styles.css?v=55`
+  - `js/timeline.js?v=11`
+  - `js/onboarding.js?v=8`
+  - `js/placeholder-search.js?v=9`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `PLACEHOLDER-SECTIONS` fixture confirms:
+  - Recent Changes renders Undo while the replacement section still matches the expected pinned section.
+  - changing the replacement section to a different section disables undo.
+  - the stale row explains that the section pick changed after replacement.
+  - the stale row hides the Undo button.
+  - direct stale undo reports the same section-pick reason and returns false.
+  - restoring the expected section allows the normal placeholder undo to complete.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - Recent Changes renders Undo while applied prior-credit statuses are untouched.
+  - changing `MATH 140` from transfer to passed disables undo.
+  - the stale row explains that `MATH 140` changed after credits were applied.
+  - the stale row hides the Undo button.
+  - direct stale undo reports the same edited-status reason and returns false.
+  - restoring the expected transfer status allows the normal prior-credit undo to complete.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=55`, `js/timeline.js?v=11`, `js/onboarding.js?v=8`, and `js/placeholder-search.js?v=9` loaded.
+  - a seeded stale placeholder replacement rendered `Undo unavailable: GVPT 200's section pick changed after this replacement.`
+  - a seeded stale prior-credit application rendered `Undo unavailable: MATH 140 was changed after these credits were applied.`
+  - both stale rows had zero Undo buttons.
+  - the Timeline had no horizontal overflow.
+  - the restored app page no longer showed the seeded QA state.
+  - Chrome console warnings/errors were clean.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor.
+- Add a compact advisor-export summary of open audit issues.
+- Add a safe stale-undo recovery affordance that jumps to the edited course or section.
+- Broaden prior-credit equivalency coverage with official-source mappings.

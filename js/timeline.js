@@ -964,7 +964,7 @@ function plannerChangeTime(iso) {
 }
 
 function plannerChangeCanUndo(change) {
-  return ['placeholder-replacement', 'prior-credit'].includes(change?.undo?.kind) && !change.undo.appliedAt;
+  return plannerChangeUndoAvailability(change).can;
 }
 
 function plannerClonePlain(value) {
@@ -974,6 +974,46 @@ function plannerClonePlain(value) {
   } catch {
     return Array.isArray(value) ? value.slice() : { ...value };
   }
+}
+
+function plannerHasOwn(value, key) {
+  return !!value && Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function plannerComparableValue(value) {
+  if (Array.isArray(value)) return value.map(plannerComparableValue);
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((acc, key) => {
+      if (key === 'updatedAt') return acc;
+      acc[key] = plannerComparableValue(value[key]);
+      return acc;
+    }, {});
+  }
+  return value == null ? null : value;
+}
+
+function plannerValuesEqual(actual, expected) {
+  return JSON.stringify(plannerComparableValue(actual)) === JSON.stringify(plannerComparableValue(expected));
+}
+
+function plannerFormatCodes(codes) {
+  const clean = (codes || []).map(code => String(code || '').trim()).filter(Boolean);
+  if (!clean.length) return 'That course';
+  return clean.slice(0, 3).join(', ') + (clean.length > 3 ? ` +${clean.length - 3} more` : '');
+}
+
+function plannerCourseStateSnapshot(code) {
+  const key = String(code || '');
+  const courses = state.courses || {};
+  const had = !!key && plannerHasOwn(courses, key);
+  return { had, value: had ? plannerClonePlain(courses[key]) : null };
+}
+
+function plannerSelectedSectionSnapshot(semId, code) {
+  const bucket = (state.selectedSections || {})[semId] || {};
+  const key = normalizeCode(code || '');
+  const had = !!key && plannerHasOwn(bucket, key);
+  return { had, value: had ? plannerClonePlain(bucket[key]) : null };
 }
 
 function plannerUndoSemester(location) {
@@ -1031,9 +1071,65 @@ function plannerRestoreSelectedSection(semId, code, hadValue, value) {
   if (!Object.keys(state.selectedSections[term]).length) delete state.selectedSections[term];
 }
 
+function plannerPlaceholderUndoAvailability(change) {
+  const undo = change?.undo;
+  if (undo?.kind !== 'placeholder-replacement' || undo.appliedAt) return { can: false, reason: '' };
+  const slot = plannerUndoCourseSlot(undo);
+  if (!slot || slot.index < 0) {
+    return { can: false, reason: 'Undo unavailable: the replacement course was moved or removed.' };
+  }
+  const replacementCode = undo.replacementCode || 'the replacement course';
+  const replacementNorm = normalizeCode(undo.replacementCode || '');
+  if (replacementNorm && normalizeCode(slot.list[slot.index]?.code) !== replacementNorm) {
+    return { can: false, reason: `Undo unavailable: ${replacementCode} changed after this replacement.` };
+  }
+  if (plannerHasOwn(undo, 'expectedReplacementSelectedSection')) {
+    const expectedHad = !!undo.hadExpectedReplacementSelectedSection;
+    const expectedValue = expectedHad ? undo.expectedReplacementSelectedSection : null;
+    const current = plannerSelectedSectionSnapshot(undo.semId, undo.replacementCode);
+    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
+      return { can: false, reason: `Undo unavailable: ${replacementCode}'s section pick changed after this replacement.` };
+    }
+  }
+  return { can: true, reason: '' };
+}
+
+function plannerPriorCreditUndoAvailability(change) {
+  const undo = change?.undo;
+  if (undo?.kind !== 'prior-credit' || undo.appliedAt) return { can: false, reason: '' };
+  if (!Array.isArray(undo.entries) || !undo.entries.length) {
+    return { can: false, reason: 'Undo unavailable: this prior-credit change has no restore data.' };
+  }
+  const changed = [];
+  undo.entries.forEach(entry => {
+    const expected = plannerHasOwn(entry, 'appliedCourseState')
+      ? entry.appliedCourseState
+      : { status: 'transfer', grade: '' };
+    const current = plannerCourseStateSnapshot(entry.code);
+    if (!current.had || !plannerValuesEqual(current.value, expected)) changed.push(entry.code);
+  });
+  if (changed.length) {
+    return {
+      can: false,
+      reason: `Undo unavailable: ${plannerFormatCodes(changed)} ${changed.length === 1 ? 'was' : 'were'} changed after these credits were applied.`,
+    };
+  }
+  return { can: true, reason: '' };
+}
+
+function plannerChangeUndoAvailability(change) {
+  if (change?.undo?.kind === 'placeholder-replacement') return plannerPlaceholderUndoAvailability(change);
+  if (change?.undo?.kind === 'prior-credit') return plannerPriorCreditUndoAvailability(change);
+  return { can: false, reason: '' };
+}
+
 function plannerApplyPlaceholderUndo(change) {
   const undo = change?.undo;
-  if (!plannerChangeCanUndo(change)) return false;
+  const availability = plannerPlaceholderUndoAvailability(change);
+  if (!availability.can) {
+    if (typeof toastError === 'function') toastError(availability.reason || 'That change cannot be undone here.');
+    return false;
+  }
   const slot = plannerUndoCourseSlot(undo);
   if (!slot || slot.index < 0) {
     if (typeof toastError === 'function') toastError('Could not find the replacement course to undo.');
@@ -1087,7 +1183,11 @@ function plannerRemovePriorCustomCourse(entry) {
 
 function plannerApplyPriorCreditUndo(change) {
   const undo = change?.undo;
-  if (!plannerChangeCanUndo(change) || !Array.isArray(undo.entries)) return false;
+  const availability = plannerPriorCreditUndoAvailability(change);
+  if (!availability.can || !Array.isArray(undo.entries)) {
+    if (typeof toastError === 'function') toastError(availability.reason || 'That change cannot be undone here.');
+    return false;
+  }
   const restored = [];
   const removed = [];
   undo.entries.forEach(entry => {
@@ -1137,21 +1237,26 @@ function renderPlanChangeHistory() {
     </div>
     ${changes.length ? `
       <div class="change-history-list">
-        ${changes.slice(0, 8).map(change => `
+        ${changes.slice(0, 8).map(change => {
+          const undoStatus = plannerChangeUndoAvailability(change);
+          return `
           <div class="change-history-row">
             <span class="change-history-icon">${timelineEscape(plannerChangeIcon(change.type))}</span>
             <div class="change-history-body">
               <strong>${timelineEscape(change.title)}</strong>
               ${change.detail ? `<p>${timelineEscape(change.detail)}</p>` : ''}
               <span class="change-history-meta">${timelineEscape([change.meta, plannerChangeTime(change.at)].filter(Boolean).join(' · '))}</span>
-              ${plannerChangeCanUndo(change) ? `
+              ${undoStatus.can ? `
                 <div class="change-history-actions">
                   <button class="btn small" type="button" data-change-undo="${timelineEscape(change.id)}">Undo</button>
                 </div>
+              ` : undoStatus.reason ? `
+                <div class="change-history-unavailable">${timelineEscape(undoStatus.reason)}</div>
               ` : ''}
             </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     ` : '<p class="change-history-empty">No changes logged yet. Apply a move or schedule edit and it will appear here.</p>'}
   `;

@@ -1241,6 +1241,14 @@ h1.hero-title em {
   flex-wrap: wrap;
   margin-top: 6px;
 }
+.change-history-unavailable {
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 6px;
+  color: var(--maroon);
+  font-size: .7rem;
+  line-height: 1.35;
+}
 .change-history-empty {
   margin: 0;
   color: var(--slate);

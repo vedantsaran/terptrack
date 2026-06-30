@@ -1009,6 +1009,9 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
       ? scheduleSectionShortLabel(sectionForSave)
       : (sectionForSave.number || sectionForSave.section_id || 'section');
   }
+  const expectedReplacementSelectedSection = replacementContext.semId
+    ? placeholderSelectedSectionSnapshot(replacementContext.semId, updated.code)
+    : { had: false, value: null };
   if (typeof recordPlanChange === 'function') {
     recordPlanChange({
       type: selectedPreviewSection ? 'placeholder-section-replacement' : 'placeholder-replacement',
@@ -1034,6 +1037,8 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
         originalSelectedSection: originalSelectedSection.value,
         hadReplacementSelectedSection: replacementSelectedSection.had,
         replacementSelectedSection: replacementSelectedSection.value,
+        hadExpectedReplacementSelectedSection: expectedReplacementSelectedSection.had,
+        expectedReplacementSelectedSection: expectedReplacementSelectedSection.value,
       },
     }, { save: false });
   }

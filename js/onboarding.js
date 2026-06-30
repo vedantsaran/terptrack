@@ -434,11 +434,13 @@ async function onboardApplyPriorCredits(setup) {
       addedCourse = onboardClonePlain(finalCourse);
     }
     state.courses[code] = { status: 'transfer', grade: '' };
+    const appliedState = onboardCourseStateSnapshot(code);
     applied.push(code);
     undoEntries.push({
       code,
       hadCourseState: previousState.had,
       courseState: previousState.value,
+      appliedCourseState: appliedState.value,
       addedCustomCourse: !!addedCourse,
       customCourse: addedCourse,
     });

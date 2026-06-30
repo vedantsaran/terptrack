@@ -1148,9 +1148,26 @@ async function testPlaceholderSectionPreview(context) {
         if (id === 'plan-change-history') return historyRoot;
         return oldGetElementById(id);
       };
+      const expectedReplacementSelected = JSON.parse(JSON.stringify(state.selectedSections.PASS55?.GVPT200 || null));
       renderPlanChangeHistory();
       const historyHtml = historyRoot.innerHTML;
       const canUndoBefore = plannerChangeCanUndo(recentChange);
+      state.selectedSections.PASS55.GVPT200 = {
+        ...expectedReplacementSelected,
+        section_id: 'GVPT200-0999',
+        number: '0999',
+        updatedAt: '2026-06-30T23:59:00.000Z'
+      };
+      renderPlanChangeHistory();
+      const staleHistoryHtml = historyRoot.innerHTML;
+      const canUndoAfterSectionEdit = plannerChangeCanUndo(recentChange);
+      let staleUndoApplied = null;
+      let staleUndoMessage = '';
+      const oldToastError = toastError;
+      toastError = message => { staleUndoMessage = message; };
+      staleUndoApplied = undoPlanChange(recentChange.id);
+      toastError = oldToastError;
+      state.selectedSections.PASS55.GVPT200 = expectedReplacementSelected;
       const undoApplied = undoPlanChange(recentChange.id);
       document.getElementById = oldGetElementById;
       const restored = state.activeSchedule[0].courses[0];
@@ -1175,6 +1192,10 @@ async function testPlaceholderSectionPreview(context) {
         recentChange,
         historyHtml,
         canUndoBefore,
+        staleHistoryHtml,
+        canUndoAfterSectionEdit,
+        staleUndoApplied,
+        staleUndoMessage,
         undoApplied,
         restored,
         restoredOldSection,
@@ -1211,6 +1232,10 @@ async function testPlaceholderSectionPreview(context) {
   assert(result.recentChange?.undo?.kind === 'placeholder-replacement', 'placeholder section preview: recent change should include undo payload');
   assert(/data-change-undo/.test(result.historyHtml) && /Undo/.test(result.historyHtml), 'placeholder section preview: recent changes should render undo action');
   assert(result.canUndoBefore === true, 'placeholder section preview: change should be undoable before applying undo');
+  assert(result.canUndoAfterSectionEdit === false, 'placeholder section preview: changed replacement section should disable undo');
+  assert(/Undo unavailable/.test(result.staleHistoryHtml) && /section pick changed/.test(result.staleHistoryHtml), 'placeholder section preview: stale undo should explain changed section pick');
+  assert(!/data-change-undo/.test(result.staleHistoryHtml), 'placeholder section preview: stale undo should hide undo button');
+  assert(result.staleUndoApplied === false && /section pick changed/.test(result.staleUndoMessage), 'placeholder section preview: stale undo click should report changed section pick');
   assert(result.undoApplied === true, 'placeholder section preview: undo should apply successfully');
   assert(result.restored.code === 'GenEd DSHS', 'placeholder section preview: undo should restore the placeholder course');
   assert(result.restoredOldSection?.section_id === 'PLACEHOLDER-OLD' && result.restoredOldSection.pinned === true, 'placeholder section preview: undo should restore the prior placeholder section state');
@@ -1877,6 +1902,17 @@ async function testSettingsPriorCreditEditor(context) {
       renderPlanChangeHistory();
       const historyHtml = elements['plan-change-history'].innerHTML;
       const canUndoBefore = plannerChangeCanUndo(changeAfterApply);
+      state.courses['MATH 140'] = { status: 'passed', grade: 'A' };
+      renderPlanChangeHistory();
+      const staleHistoryHtml = elements['plan-change-history'].innerHTML;
+      const canUndoAfterStatusEdit = plannerChangeCanUndo(changeAfterApply);
+      let staleUndoApplied = null;
+      let staleUndoMessage = '';
+      const oldToastError = toastError;
+      toastError = message => { staleUndoMessage = message; };
+      staleUndoApplied = undoPlanChange(changeAfterApply.id);
+      toastError = oldToastError;
+      state.courses['MATH 140'] = { status: 'transfer', grade: '' };
       const undoApplied = undoPlanChange(changeAfterApply.id);
       const transferKeysAfterUndo = Object.entries(state.courses || {}).filter(([, value]) => value.status === 'transfer').map(([key]) => key).sort();
       const customCodesAfterUndo = state.customCourses.map(course => course.code).sort();
@@ -1892,6 +1928,10 @@ async function testSettingsPriorCreditEditor(context) {
         recentChange: changeAfterApply,
         historyHtml,
         canUndoBefore,
+        staleHistoryHtml,
+        canUndoAfterStatusEdit,
+        staleUndoApplied,
+        staleUndoMessage,
         undoApplied,
         transferKeysAfterUndo,
         customCodesAfterUndo,
@@ -1913,6 +1953,10 @@ async function testSettingsPriorCreditEditor(context) {
   assert(result.recentChange.undo?.kind === 'prior-credit', 'settings prior credit: recent change should include undo payload');
   assert(/data-change-undo/.test(result.historyHtml) && /Undo/.test(result.historyHtml), 'settings prior credit: recent changes should render undo action');
   assert(result.canUndoBefore === true, 'settings prior credit: change should be undoable before applying undo');
+  assert(result.canUndoAfterStatusEdit === false, 'settings prior credit: edited course status should disable undo');
+  assert(/Undo unavailable/.test(result.staleHistoryHtml) && /MATH 140 was changed/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should explain edited course status');
+  assert(!/data-change-undo/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should hide undo button');
+  assert(result.staleUndoApplied === false && /MATH 140 was changed/.test(result.staleUndoMessage), 'settings prior credit: stale undo click should report edited course status');
   assert(result.undoApplied === true, 'settings prior credit: undo should apply successfully');
   assert(!result.transferKeysAfterUndo.includes('MATH 140') && !result.transferKeysAfterUndo.includes('CMSC 131'), 'settings prior credit: undo should restore planned-course statuses');
   assert(result.customCodesAfterUndo.length === 0, 'settings prior credit: undo should remove added outside-plan prior-credit courses');
