@@ -1159,6 +1159,23 @@ function plannerChangeReviewTarget(change) {
   return null;
 }
 
+function plannerChangeScheduleTarget(change) {
+  const undo = change?.undo;
+  if (undo?.kind !== 'placeholder-replacement' || undo.appliedAt) return null;
+  if (!undo.semId || !plannerHasOwn(undo, 'expectedReplacementSelectedSection')) return null;
+  const expectedHad = !!undo.hadExpectedReplacementSelectedSection;
+  const expectedValue = expectedHad ? undo.expectedReplacementSelectedSection : null;
+  const current = plannerSelectedSectionSnapshot(undo.semId, undo.replacementCode);
+  if (current.had === expectedHad && plannerValuesEqual(current.value, expectedValue)) return null;
+  const sem = getAllSemesters().find(item => item.id === undo.semId);
+  if (!sem) return null;
+  return {
+    semId: undo.semId,
+    code: undo.replacementCode || '',
+    label: 'Show schedule term',
+  };
+}
+
 function plannerResetPlanFilters() {
   currentFilter = 'all';
   searchQuery = '';
@@ -1198,6 +1215,38 @@ function plannerOpenChangeReviewTarget(changeId) {
     return false;
   }
   return plannerJumpToPlanCourse(target.code);
+}
+
+function plannerFocusScheduleCourse(code, attempt = 0) {
+  const norm = normalizeCode(code || '');
+  if (!norm) return false;
+  const row = Array.from(document.querySelectorAll('#schedule-section-list .section-pick[data-code]'))
+    .find(el => normalizeCode(el.dataset.code) === norm);
+  if (!row) {
+    if (attempt < 24) {
+      setTimeout(() => plannerFocusScheduleCourse(code, attempt + 1), 120);
+      return true;
+    }
+    if (typeof toastInfo === 'function') toastInfo('That course is not visible in this Schedule term.');
+    return false;
+  }
+  row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  row.classList.add('timeline-schedule-focus');
+  clearTimeout(plannerFocusScheduleCourse._t);
+  plannerFocusScheduleCourse._t = setTimeout(() => row.classList.remove('timeline-schedule-focus'), 1800);
+  return true;
+}
+
+function plannerOpenChangeScheduleTarget(changeId) {
+  const change = recentPlanChanges().find(item => item.id === String(changeId || ''));
+  const target = plannerChangeScheduleTarget(change);
+  if (!target?.semId) {
+    if (typeof toastInfo === 'function') toastInfo('That Schedule term is no longer available.');
+    return false;
+  }
+  plannerOpenSchedule(target.semId);
+  if (target.code) plannerFocusScheduleCourse(target.code);
+  return true;
 }
 
 function plannerApplyPlaceholderUndo(change) {
@@ -1317,6 +1366,7 @@ function renderPlanChangeHistory() {
         ${changes.slice(0, 8).map(change => {
           const undoStatus = plannerChangeUndoAvailability(change);
           const reviewTarget = !undoStatus.can && undoStatus.reason ? plannerChangeReviewTarget(change) : null;
+          const scheduleTarget = !undoStatus.can && undoStatus.reason ? plannerChangeScheduleTarget(change) : null;
           return `
           <div class="change-history-row">
             <span class="change-history-icon">${timelineEscape(plannerChangeIcon(change.type))}</span>
@@ -1330,9 +1380,10 @@ function renderPlanChangeHistory() {
                 </div>
               ` : undoStatus.reason ? `
                 <div class="change-history-unavailable">${timelineEscape(undoStatus.reason)}</div>
-                ${reviewTarget ? `
+                ${reviewTarget || scheduleTarget ? `
                   <div class="change-history-actions change-history-recovery">
-                    <button class="btn small" type="button" data-change-review="${timelineEscape(change.id)}">${timelineEscape(reviewTarget.label)}</button>
+                    ${reviewTarget ? `<button class="btn small" type="button" data-change-review="${timelineEscape(change.id)}">${timelineEscape(reviewTarget.label)}</button>` : ''}
+                    ${scheduleTarget ? `<button class="btn small" type="button" data-change-schedule="${timelineEscape(change.id)}">${timelineEscape(scheduleTarget.label)}</button>` : ''}
                   </div>
                 ` : ''}
               ` : ''}
@@ -1437,6 +1488,11 @@ document.addEventListener('click', e => {
   const reviewChange = e.target.closest('[data-change-review]');
   if (reviewChange) {
     plannerOpenChangeReviewTarget(reviewChange.dataset.changeReview);
+    return;
+  }
+  const scheduleChange = e.target.closest('[data-change-schedule]');
+  if (scheduleChange) {
+    plannerOpenChangeScheduleTarget(scheduleChange.dataset.changeSchedule);
     return;
   }
   const move = e.target.closest('[data-planner-move]');

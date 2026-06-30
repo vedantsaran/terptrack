@@ -1162,6 +1162,7 @@ async function testPlaceholderSectionPreview(context) {
       const staleHistoryHtml = historyRoot.innerHTML;
       const canUndoAfterSectionEdit = plannerChangeCanUndo(recentChange);
       const staleReviewTarget = plannerChangeReviewTarget(recentChange);
+      const staleScheduleTarget = plannerChangeScheduleTarget(recentChange);
       let staleUndoApplied = null;
       let staleUndoMessage = '';
       const oldToastError = toastError;
@@ -1196,6 +1197,7 @@ async function testPlaceholderSectionPreview(context) {
         staleHistoryHtml,
         canUndoAfterSectionEdit,
         staleReviewTarget,
+        staleScheduleTarget,
         staleUndoApplied,
         staleUndoMessage,
         undoApplied,
@@ -1239,6 +1241,8 @@ async function testPlaceholderSectionPreview(context) {
   assert(!/data-change-undo/.test(result.staleHistoryHtml), 'placeholder section preview: stale undo should hide undo button');
   assert(/data-change-review/.test(result.staleHistoryHtml) && /Show edited course/.test(result.staleHistoryHtml), 'placeholder section preview: stale undo should offer a recovery jump');
   assert(result.staleReviewTarget?.code === 'GVPT 200', 'placeholder section preview: recovery jump should target the edited replacement course');
+  assert(/data-change-schedule/.test(result.staleHistoryHtml) && /Show schedule term/.test(result.staleHistoryHtml), 'placeholder section preview: stale section undo should offer a schedule-term jump');
+  assert(result.staleScheduleTarget?.semId === 'PASS55' && result.staleScheduleTarget?.code === 'GVPT 200', 'placeholder section preview: schedule jump should target the edited replacement term and course');
   assert(result.staleUndoApplied === false && /section pick changed/.test(result.staleUndoMessage), 'placeholder section preview: stale undo click should report changed section pick');
   assert(result.undoApplied === true, 'placeholder section preview: undo should apply successfully');
   assert(result.restored.code === 'GenEd DSHS', 'placeholder section preview: undo should restore the placeholder course');
@@ -1992,6 +1996,7 @@ async function testSettingsPriorCreditEditor(context) {
   assert(!/data-change-undo/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should hide undo button');
   assert(/data-change-review/.test(result.staleHistoryHtml) && /Show edited course/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should offer a recovery jump');
   assert(result.staleReviewTarget?.code === 'MATH 140', 'settings prior credit: recovery jump should target the edited course');
+  assert(!/data-change-schedule/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should not show a section schedule jump');
   assert(result.staleUndoApplied === false && /MATH 140 was changed/.test(result.staleUndoMessage), 'settings prior credit: stale undo click should report edited course status');
   assert(result.undoApplied === true, 'settings prior credit: undo should apply successfully');
   assert(!result.transferKeysAfterUndo.includes('MATH 140') && !result.transferKeysAfterUndo.includes('CMSC 131'), 'settings prior credit: undo should restore planned-course statuses');

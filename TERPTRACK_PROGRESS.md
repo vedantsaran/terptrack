@@ -3086,3 +3086,59 @@ Next pass candidates:
 - Broaden prior-credit equivalency coverage with official-source mappings.
 - Add advisor packet quick links from audit issues into Browse or placeholder replacement.
 - Add Schedule tab quick jump from Timeline stale section-pick rows to the affected term.
+
+## 2026-06-30 Pass 63
+
+Focus: add Schedule-term recovery jumps for stale section-pick undo rows.
+
+Planned changes:
+- Keep the existing Plan recovery action for stale undo rows.
+- Add a Schedule-specific recovery action only when stale undo is caused by a changed section pick.
+- Land the student on the affected Schedule term and highlight the edited course's section row.
+- Keep prior-credit stale rows Plan-only.
+
+Completed:
+- Added Timeline schedule recovery target detection for placeholder replacements whose expected replacement section no longer matches the current selected section.
+- Recent Changes now renders `Show schedule term` next to `Show edited course` for stale section-pick undo rows.
+- Added a click handler that:
+  - switches to the Schedule tab.
+  - selects the affected semester.
+  - waits for the async section list to render.
+  - scrolls the edited course row into view.
+  - flashes the row with a Schedule-specific focus style.
+- Prior-credit stale undo rows continue to show only the Plan recovery action.
+- Versioned changed browser assets:
+  - `styles.css?v=59`
+  - `js/timeline.js?v=13`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `PLACEHOLDER-SECTIONS` fixture confirms:
+  - stale section-pick undo rows still hide the unsafe Undo button.
+  - stale section-pick undo rows render `Show edited course`.
+  - stale section-pick undo rows render `Show schedule term`.
+  - the schedule recovery target resolves to `PASS55` and `GVPT 200`.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - stale prior-credit undo rows still hide Undo.
+  - stale prior-credit undo rows render `Show edited course`.
+  - stale prior-credit undo rows do not render a section Schedule jump.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page with deterministic cached section data, then restored the backed-up local app state and section cache and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=59` and `js/timeline.js?v=13` loaded.
+  - a seeded stale section-pick row rendered `Undo unavailable: GVPT 200's section pick changed after this replacement.`
+  - the stale row had zero Undo buttons, one `Show edited course` button, and one `Show schedule term` button.
+  - clicking `Show schedule term` switched to the Schedule tab.
+  - the Schedule semester selector landed on `PASS63`.
+  - the Schedule term stayed on `202608`.
+  - the `GVPT 200` section row was visible, highlighted, and still selected `GVPT200-0999`.
+  - there was no horizontal overflow.
+  - Chrome console warnings/errors were clean.
+  - the restored app page no longer showed the seeded QA state.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add source-level notes per prior-credit preset.
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add advisor packet quick links from audit issues into Browse or placeholder replacement.
+- Add richer Timeline recovery for moved or removed replacement courses.
