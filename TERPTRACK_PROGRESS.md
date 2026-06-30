@@ -4087,3 +4087,55 @@ Next pass candidates:
 - Clean ARHU/BSOS templates with stale upper-level seminar/capstone placeholders.
 - Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
 - Add official per-major citation links beside generated requirement groups.
+
+## 2026-06-30 Pass 81
+
+Focus: clean engineering generated templates against live PlanetTerp.
+
+Planned changes:
+- Use the live PlanetTerp verifier to target the remaining engineering templates from the Pass 80 failure list.
+- Replace stale engineering requirement, elective, and goal codes with live PlanetTerp-resolving same-program courses.
+- Prove the cleaned engineering batch with targeted verification, then rerun the all-major sweep to update the remaining debt count.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Replaced stale engineering generated-template codes with live PlanetTerp-resolving courses:
+  - ENAE: `ENAE201`, `ENAE302`, `ENAE371`, `ENAE451`, `ENAE452`, and `ENAE488` -> `ENAE200`, `ENAE404`, `ENAE455`, `ENAE481`, `ENAE482`, and `ENAE488C`; goals now use `ENAE481` / `ENAE482`.
+  - ENCE: `ENCE330`, `ENCE350`, `ENCE362`, `ENCE410`, `ENCE471`, and generic `ENCE489` -> `ENCE305`, `ENCE353`, `ENCE360`, `ENCE411`, `ENCE472`, and `ENCE489B`; goal now uses `ENCE489B`.
+  - ENCH: old non-resolving chemical engineering sequence codes -> live `ENCH424`, `ENCH440`, `ENCH446`, `ENCH476`, `ENCH482`, `ENCH490`, `ENCH468C`, and `ENCH468F`.
+  - ENEE: `ENEE408`, `ENEE439`, `ENEE459`, and `ENEE429` -> `ENEE408A`, `ENEE411`, `ENEE459B`, and `ENEE420`; goal now uses `ENEE408A`.
+  - ENFP: `ENFP251`, `ENFP421`, `ENFP422`, `ENFP424`, and generic `ENFP489` -> `ENFP250`, `ENFP420`, `ENFP440`, `ENFP461`, and `ENFP489I`; goal now uses `ENFP489I`.
+  - ENMA: `ENMA371`, generic `ENMA489`, and `ENMA483` -> `ENMA461`, `ENMA490`, and `ENMA482`; goal now uses `ENMA490`.
+  - BIOE: `BIOE241L`, `BIOE385`, `BIOE441`, `BIOE451`, `BIOE452`, `BIOE419`, `BIOE438`, and generic `BIOE489` -> `BIOE340`, `BIOE404`, `BIOE453`, `BIOE485`, `BIOE486`, `BIOE411`, `BIOE420`, and `BIOE489A`; goals now use `BIOE485` / `BIOE486`.
+
+Verification:
+- Ran direct PlanetTerp department-list and course checks for replacement ENAE, ENCE, ENCH, ENEE, ENFP, ENMA, and BIOE courses before editing.
+- Ran `node scripts/verify-random-schedules.js --majors ENAE,ENCE,ENCH,ENEE,ENFP,ENMA,BIOE --keep-going --seed pass81-engineering`; it passed:
+  - `ENAE`: 125 credits, 30 required courses verified in PlanetTerp.
+  - `ENCE`: 124 credits, 25 required courses verified in PlanetTerp.
+  - `ENCH`: 124 credits, 27 required courses verified in PlanetTerp.
+  - `ENEE`: 126 credits, 27 required courses verified in PlanetTerp.
+  - `ENFP`: 125 credits, 21 required courses verified in PlanetTerp.
+  - `ENMA`: 125 credits, 25 required courses verified in PlanetTerp.
+  - `BIOE`: 128 credits, 28 required courses verified in PlanetTerp.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass81-all`.
+  - Confirmed `BIOE`, `ENAE`, `ENCE`, `ENCH`, `ENEE`, `ENFP`, and `ENMA` now pass and dropped out of the failure summary.
+  - Remaining generated-template failure count is now 23:
+    `AMST`, `ANSC`, `ANTH`, `AREC`, `ARTH`, `ARTT`, `CINE`, `EDUC`, `ENGL`, `FMSC`, `HIST`, `HLTH`, `JOUR`, `KNES`, `LING`, `MUSC`, `NFSC`, `PHIL`, `PLSC`, `SOCY`, `SPAN`, `THET`, `WMST`.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/`, then finalized Chrome and stopped the server before commit.
+- Chrome confirmed:
+  - Settings opened normally.
+  - Selecting Aerospace Engineering showed the generated-major note.
+  - The ENAE auto-plan review rendered `30/30 live course records`.
+  - The ENAE review rendered full tracked GenEd coverage.
+  - The review did not include old invalid `ENAE201`, `ENAE302`, `ENAE371`, `ENAE451`, `ENAE452`, or `ENAE488` codes.
+  - There was no horizontal overflow.
+  - Browser console errors were clean.
+
+Next pass candidates:
+- Clean the remaining ARHU/BSOS templates with stale upper-level seminar/capstone placeholders.
+- Clean AGNR, public-health, and education templates still failing live PlanetTerp verification.
+- Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
+- Add official per-major citation links beside generated requirement groups.
