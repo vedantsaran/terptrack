@@ -941,3 +941,46 @@ Next pass candidates:
 - Add advisor-packet print presets for registrar/advisor vs student personal review.
 - Add Roadmap term-jump controls for plans with many more than eight semesters.
 - Add schedule output saved presets for advisor, registrar, and personal review exports.
+
+## 2026-06-30 Pass 25
+
+Focus: turn Schedule Output configuration into one-click handoff presets for personal review, advisor meetings, and registrar-style documentation.
+
+Planned changes:
+- Add saved Schedule Output presets that coordinate Include toggles and Advisor view.
+- Support Personal, Advisor, and Registrar modes.
+- Detect Custom state when a student manually changes the Advisor view or Include choices.
+- Persist the active preset through reloads, imports, share links, and snapshots.
+- Verify preset behavior, custom detection, reload persistence, mobile layout, and cleanup.
+
+Completed:
+- Added `scheduleOutputPreset` to state defaults and load migration.
+- Included `scheduleOutputPreset` in import, share payload/load, snapshot save, and snapshot restore.
+- Added preset definitions:
+  - Personal: All advisor view with preferences, warnings, unscheduled work, and recent changes included.
+  - Advisor: Blockers advisor view with all details included.
+  - Registrar: Remaining advisor view with warnings and unscheduled work included, but preference notes and recent edit history excluded.
+- Added preset inference so manual Advisor view or Include changes switch the UI to Custom when the mix no longer matches a saved preset.
+- Added a compact Preset segmented control above the Include controls in Schedule Output.
+- Styled the preset control for desktop, mobile wrapping, and print hiding.
+- Versioned `styles.css` to `v=26`, `js/state.js` to `v=7`, `js/schedule.js` to `v=21`, `js/io.js` to `v=7`, `js/share.js` to `v=7`, and `js/snapshots.js` to `v=7`.
+
+Verification:
+- Ran `node --check` on `js/schedule.js`, `js/state.js`, `js/io.js`, `js/share.js`, and `js/snapshots.js`.
+- Ran `git diff --check`.
+- Reloaded `http://localhost:5173/?pass25=...` in the in-app browser and confirmed all Pass 25 asset versions loaded.
+- Opened Schedule and confirmed Personal was active by default with Advisor view `All`, all Include options checked, and no Custom label.
+- Created a reversible CMSC 131 section change (`CMSC131-0202` to `CMSC131-0204` back to `CMSC131-0202`) so recent-change preset behavior could be verified with real history.
+- Clicked Advisor and confirmed it switched to Advisor view `Blockers`, heading `Registration Blockers`, all Include options checked, and warning/follow-up/recent-change sections visible.
+- Clicked Registrar and confirmed it switched to Advisor view `Remaining`, heading `Remaining Plan`, Preferences and Recent changes unchecked, warning/follow-up sections visible, and preference/recent text hidden.
+- Manually rechecked Preferences while Registrar was active and confirmed no saved preset stayed active, a Custom label appeared, and the mixed settings persisted through reload.
+- Restored Personal and confirmed Advisor view returned to `All`, all Include options checked, recent-change content returned, and Custom disappeared.
+- Checked a 390px-wide viewport: Preset panel stacked, three preset buttons fit in one row, Include controls still wrapped two per row, and document-wide horizontal overflow stayed at 0.
+- Cleared the temporary Recent Changes history from Action Timeline and confirmed Schedule Output no longer showed the recent digest.
+- Reset the browser viewport to desktop, confirmed CMSC 131 ended on `CMSC131-0202`, Personal preset remained active, Advisor view remained `All`, and current-page browser console errors were 0.
+
+Next pass candidates:
+- Start account/backend groundwork with a Supabase/Vercel-oriented plan: schema, auth states, saved plans, and local fallback strategy.
+- Add auto-generated full four-year schedule generation from selected major, GenEd gaps, course prerequisites, interests, and target credit load.
+- Add an optional interest/profile intake flow that informs recommendations, schedule generation, and elective picks.
+- Add a term-availability simulator/test fixture inside the app's dev diagnostics so auto-planning can be regression-tested without waiting for live UMD data to line up.

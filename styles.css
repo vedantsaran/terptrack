@@ -2154,6 +2154,53 @@ h1.hero-title em {
   justify-content: flex-end;
   gap: 7px;
 }
+.schedule-output-presets {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 76%, var(--cream));
+  padding: 8px;
+}
+.schedule-output-presets > span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-output-preset-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.schedule-output-preset {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--slate);
+  cursor: pointer;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 6px 10px;
+}
+.schedule-output-preset.active {
+  border-color: var(--maroon);
+  background: var(--maroon);
+  color: #FAF6EC;
+}
+.schedule-output-preset.custom {
+  cursor: default;
+  border-style: dashed;
+  color: var(--amber);
+}
 .schedule-output-options {
   display: flex;
   justify-content: space-between;
@@ -3233,6 +3280,7 @@ h1.hero-title em {
   }
   body.print-schedule .schedule-output-head,
   body.print-schedule .schedule-output-actions,
+  body.print-schedule .schedule-output-presets,
   body.print-schedule .schedule-output-options {
     display: none !important;
   }
@@ -3271,6 +3319,7 @@ h1.hero-title em {
   }
   body.print-advisor-packet .schedule-output-head,
   body.print-advisor-packet .schedule-output-actions,
+  body.print-advisor-packet .schedule-output-presets,
   body.print-advisor-packet .schedule-output-options {
     display: none !important;
   }
@@ -3924,16 +3973,24 @@ h1.hero-title em {
   }
   .schedule-output-actions,
   .schedule-print-meta,
+  .schedule-output-preset-group,
   .schedule-output-option-group {
     justify-content: flex-start;
   }
+  .schedule-output-presets,
   .schedule-output-options {
     align-items: stretch;
     flex-direction: column;
     gap: 7px;
   }
+  .schedule-output-presets > span,
   .schedule-output-options > span {
     white-space: normal;
+  }
+  .schedule-output-preset {
+    flex: 1 1 calc(33.333% - 6px);
+    min-width: 0;
+    text-align: center;
   }
   .schedule-output-option {
     flex: 1 1 calc(50% - 6px);

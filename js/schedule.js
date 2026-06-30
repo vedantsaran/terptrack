@@ -85,6 +85,29 @@ const SCHEDULE_OUTPUT_OPTION_DEFS = [
   { id: 'unscheduled', label: 'Unscheduled' },
   { id: 'recentChanges', label: 'Recent changes' },
 ];
+const SCHEDULE_OUTPUT_PRESET_DEFS = [
+  {
+    id: 'personal',
+    label: 'Personal',
+    advisorFilter: 'all',
+    description: 'Full schedule, full plan, preferences, warnings, unscheduled work, and recent changes.',
+    options: { preferences: true, warnings: true, unscheduled: true, recentChanges: true },
+  },
+  {
+    id: 'advisor',
+    label: 'Advisor',
+    advisorFilter: 'blockers',
+    description: 'Blocker-focused advisor packet with warnings, follow-up items, preferences, and recent changes.',
+    options: { preferences: true, warnings: true, unscheduled: true, recentChanges: true },
+  },
+  {
+    id: 'registrar',
+    label: 'Registrar',
+    advisorFilter: 'remaining',
+    description: 'Registration-ready facts without personal preference notes or edit history.',
+    options: { preferences: false, warnings: true, unscheduled: true, recentChanges: false },
+  },
+];
 
 let scheduleCurrentSemId = '';
 let schedulePostedTerms = null;
@@ -146,6 +169,7 @@ function setScheduleAdvisorFilter(value) {
   const next = normalizeScheduleAdvisorFilter(value);
   if (getScheduleAdvisorFilter() === next) return;
   state.scheduleAdvisorFilter = next;
+  state.scheduleOutputPreset = scheduleInferOutputPreset(getScheduleOutputOptions(), next);
   saveState();
   renderSchedule();
 }
@@ -169,6 +193,40 @@ function getScheduleOutputOptions() {
 function setScheduleOutputOption(id, checked) {
   if (!SCHEDULE_OUTPUT_OPTION_DEFS.some(def => def.id === id)) return;
   state.scheduleOutputOptions = { ...getScheduleOutputOptions(), [id]: Boolean(checked) };
+  state.scheduleOutputPreset = scheduleInferOutputPreset(state.scheduleOutputOptions, getScheduleAdvisorFilter());
+  saveState();
+  renderSchedule();
+}
+
+function schedulePresetDef(value) {
+  const id = String(value || '');
+  return SCHEDULE_OUTPUT_PRESET_DEFS.find(def => def.id === id) || null;
+}
+
+function scheduleOutputPresetMatches(def, options = getScheduleOutputOptions(), advisorFilter = getScheduleAdvisorFilter()) {
+  if (!def) return false;
+  const normalized = normalizeScheduleOutputOptions(options);
+  return normalizeScheduleAdvisorFilter(advisorFilter) === def.advisorFilter
+    && SCHEDULE_OUTPUT_OPTION_DEFS.every(option => normalized[option.id] === def.options[option.id]);
+}
+
+function scheduleInferOutputPreset(options = getScheduleOutputOptions(), advisorFilter = getScheduleAdvisorFilter()) {
+  const match = SCHEDULE_OUTPUT_PRESET_DEFS.find(def => scheduleOutputPresetMatches(def, options, advisorFilter));
+  return match ? match.id : 'custom';
+}
+
+function getScheduleOutputPreset(options = getScheduleOutputOptions(), advisorFilter = getScheduleAdvisorFilter()) {
+  const next = scheduleInferOutputPreset(options, advisorFilter);
+  if (state.scheduleOutputPreset !== next) state.scheduleOutputPreset = next;
+  return next;
+}
+
+function setScheduleOutputPreset(value) {
+  const def = schedulePresetDef(value);
+  if (!def) return;
+  state.scheduleOutputPreset = def.id;
+  state.scheduleAdvisorFilter = def.advisorFilter;
+  state.scheduleOutputOptions = normalizeScheduleOutputOptions(def.options);
   saveState();
   renderSchedule();
 }
@@ -1756,6 +1814,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const advisorFilter = getScheduleAdvisorFilter();
   const outputOptions = getScheduleOutputOptions();
+  const outputPreset = getScheduleOutputPreset(outputOptions, advisorFilter);
   const totalOpenSeats = selectedItems.reduce((sum, item) => {
     const open = parseInt(item.section.open_seats, 10);
     return sum + (Number.isFinite(open) ? open : 0);
@@ -1817,6 +1876,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     advisorHtml,
     advisorText,
     advisorFilter,
+    outputPreset,
     outputOptions,
     advisorFilename: scheduleAdvisorFilename(term),
     advisorDocument: buildScheduleAdvisorDocument(advisorTitle, scheduleHtml, advisorHtml),
@@ -1832,6 +1892,21 @@ function renderScheduleAdvisorFilterControls(activeFilter) {
         ${SCHEDULE_ADVISOR_FILTERS.map(filter => `
           <button class="schedule-advisor-filter ${filter.id === active ? 'active' : ''}" type="button" data-advisor-filter="${scheduleEscape(filter.id)}" aria-pressed="${filter.id === active ? 'true' : 'false'}" title="${scheduleEscape(filter.description)}">${scheduleEscape(filter.label)}</button>
         `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderScheduleOutputPresets(activePreset = getScheduleOutputPreset()) {
+  const isCustom = activePreset === 'custom';
+  return `
+    <div class="schedule-output-presets" aria-label="Schedule output preset">
+      <span>Preset</span>
+      <div class="schedule-output-preset-group">
+        ${SCHEDULE_OUTPUT_PRESET_DEFS.map(def => `
+          <button class="schedule-output-preset ${activePreset === def.id ? 'active' : ''}" type="button" data-schedule-output-preset="${scheduleEscape(def.id)}" aria-pressed="${activePreset === def.id ? 'true' : 'false'}" title="${scheduleEscape(def.description)}">${scheduleEscape(def.label)}</button>
+        `).join('')}
+        ${isCustom ? '<span class="schedule-output-preset custom">Custom</span>' : ''}
       </div>
     </div>
   `;
@@ -1873,6 +1948,7 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
           <button class="btn small primary" type="button" data-schedule-output="advisor-print">Print advisor PDF</button>
         </div>
       </div>
+      ${renderScheduleOutputPresets(scheduleOutputCache.outputPreset)}
       ${renderScheduleOutputOptions(scheduleOutputCache.outputOptions)}
       ${scheduleOutputCache.html}
       ${renderScheduleAdvisorFilterControls(scheduleOutputCache.advisorFilter)}
@@ -1890,6 +1966,12 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       if (action === 'print') printScheduleOutputSummary();
       if (action === 'advisor-download') downloadScheduleAdvisorPacket();
       if (action === 'advisor-print') printScheduleAdvisorPacket();
+    });
+  });
+  root.querySelectorAll('[data-schedule-output-preset]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      setScheduleOutputPreset(btn.dataset.scheduleOutputPreset);
     });
   });
   root.querySelectorAll('[data-schedule-output-option]').forEach(input => {
