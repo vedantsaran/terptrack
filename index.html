@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=56">
+<link rel="stylesheet" href="styles.css?v=57">
 </head>
 <body data-theme="dark">
 
@@ -625,7 +625,7 @@
         <button class="btn small" type="button" onclick="applySettingsPriorCredits()">Apply Prior Credits</button>
         <span id="set-prior-status"></span>
       </div>
-      <p class="profile-help">Confirm official UMD equivalencies with the Registrar before registration; this updates your local plan status.</p>
+      <div id="set-prior-source-note"></div>
     </div>
 
     <label>Footer Note (optional)</label>
@@ -786,7 +786,7 @@
       <textarea id="ob-transfer-codes" rows="4"
         style="width:100%;font-family:'JetBrains Mono', monospace;font-size:.85rem"
         placeholder="MATH140&#10;ENGL101&#10;CHEM131"></textarea>
-      <p style="font-size:.74rem;color:var(--slate);margin-top:6px">Presets follow UMD's 2023-2026 prior-learning charts where direct equivalents are stable; always confirm official credit before registration.</p>
+      <div id="ob-prior-source-note"></div>
     </div>
 
     <div id="ob-step-finish" style="display:none">
@@ -981,14 +981,14 @@
 <script src="js/api.js"></script>
 <script src="js/schedule.js?v=26"></script>
 <script src="js/courses.js"></script>
-<script src="js/settings.js?v=8"></script>
+<script src="js/settings.js?v=9"></script>
 <script src="js/semesters.js"></script>
 <script src="js/io.js?v=11"></script>
 <script src="js/import.js?v=8"></script>
 <script src="js/prereq-resolver.js"></script>
 <script src="js/recommendations.js?v=11"></script>
 <script src="js/major-builder.js"></script>
-<script src="js/onboarding.js?v=8"></script>
+<script src="js/onboarding.js?v=9"></script>
 <script src="js/browse.js?v=12"></script>
 <script src="js/dnd.js"></script>
 <script src="js/bulk.js"></script>

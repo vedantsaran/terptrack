@@ -1796,6 +1796,7 @@ async function testOnboardingPriorCredit(context) {
       });
       const customCodes = state.customCourses.map(course => course.code);
       const byCode = Object.fromEntries(state.customCourses.map(course => [course.code, course]));
+      const sourceNotice = onboardPriorSourceNoticeHtml();
       return {
         presetCount: ONBOARD_PRIOR_CREDIT_PRESETS.length,
         resolvedCodes: resolved.courses.map(course => course.code),
@@ -1809,6 +1810,7 @@ async function testOnboardingPriorCredit(context) {
         cmscState: state.courses['CMSC 131'],
         econState: state.courses['ECON 200'],
         recentChange: state.recentChanges[0],
+        sourceNotice,
       };
     })()
   `, context));
@@ -1829,6 +1831,9 @@ async function testOnboardingPriorCredit(context) {
   assert(result.cmscState.status === 'transfer' && result.econState.status === 'transfer', 'onboarding prior credit: added raw and preset courses should be marked transfer');
   assert(result.applied.applied.length === result.resolvedCodes.length, 'onboarding prior credit: applied count should match resolved deduped courses');
   assert(/prior-credit/.test(result.recentChange.type), 'onboarding prior credit: should record a recent change entry');
+  assert(/Official source check/.test(result.sourceNotice) && /June 30, 2026/.test(result.sourceNotice), 'onboarding prior credit: source notice should include checked date');
+  assert(result.sourceNotice.includes('registrar.umd.edu/transfer-credit/prior-learning-credit'), 'onboarding prior credit: source notice should link UMD prior learning credit');
+  assert(result.sourceNotice.includes('app.transfercredit.umd.edu'), 'onboarding prior credit: source notice should link transfer database search');
 
   return {
     id: 'ONBOARDING-PRIOR-CREDIT',
@@ -1892,6 +1897,7 @@ async function testSettingsPriorCreditEditor(context) {
         'set-prior-codes': { value: 'CMSC131 MATH140', dataset: {}, addEventListener() {} },
         'set-prior-summary': { textContent: '' },
         'set-prior-status': { textContent: '', style: {} },
+        'set-prior-source-note': { innerHTML: '' },
         'plan-change-history': { innerHTML: '' },
         'set-prior-grid': {
           innerHTML: '',
@@ -1910,6 +1916,8 @@ async function testSettingsPriorCreditEditor(context) {
         return originalQuery(selector);
       };
       const gridHtml = settingsPriorCreditGridHtml(['ap-calc-bc-4']);
+      onboardRenderPriorSourceNotice('set-prior-source-note');
+      const sourceNoticeHtml = elements['set-prior-source-note'].innerHTML;
       settingsRefreshPriorCreditSummary();
       const summaryBefore = elements['set-prior-summary'].textContent;
       await applySettingsPriorCredits();
@@ -1937,6 +1945,7 @@ async function testSettingsPriorCreditEditor(context) {
       const originalChangeAfterUndo = state.recentChanges.find(change => change.id === changeAfterApply.id) || null;
       return {
         gridHasPreset: /ap-calc-bc-4/.test(gridHtml) && /settings-prior-chip/.test(gridHtml),
+        sourceNoticeHtml,
         summaryBefore,
         statusAfter: elements['set-prior-status'].textContent,
         statusColor: elements['set-prior-status'].style.color,
@@ -1959,6 +1968,8 @@ async function testSettingsPriorCreditEditor(context) {
   `, context));
 
   assert(result.gridHasPreset, 'settings prior credit: grid should render AP/IB preset chips');
+  assert(/Official source check/.test(result.sourceNoticeHtml) && /Transfer Course Database/.test(result.sourceNoticeHtml), 'settings prior credit: source notice should render official links');
+  assert(/June 30, 2026/.test(result.sourceNoticeHtml) && result.sourceNoticeHtml.includes('app.transfercredit.umd.edu'), 'settings prior credit: source notice should include checked date and database search link');
   assert(/6 courses/.test(result.summaryBefore) && /20 credits/.test(result.summaryBefore), 'settings prior credit: live summary should count deduped preset and raw credits');
   assert(/Applied 6 prior-credit courses/.test(result.statusAfter), 'settings prior credit: status should report applied credits');
   assert(result.statusColor === 'var(--green)', 'settings prior credit: successful apply should show green status');

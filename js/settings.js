@@ -553,6 +553,9 @@ function renderSettingsPriorCreditControls() {
     status.textContent = '';
     status.style.color = 'var(--slate)';
   }
+  if (typeof onboardRenderPriorSourceNotice === 'function') {
+    onboardRenderPriorSourceNotice('set-prior-source-note');
+  }
   settingsRefreshPriorCreditSummary();
 }
 

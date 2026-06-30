@@ -9,6 +9,12 @@ const ONBOARD_STEPS = ['major', 'profile', 'year', 'schedule', 'transfer', 'fini
 const ONBOARD_CLOCK_OPTIONS = ['', '08:00', '09:00', '10:00', '11:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
 const ONBOARD_MODE_OPTIONS = ['balanced', 'compact', 'open-seats', 'mornings', 'afternoons'];
 const ONBOARD_DAY_OPTIONS = ['M', 'Tu', 'W', 'Th', 'F'];
+const PRIOR_CREDIT_SOURCE_CHECKED = 'June 30, 2026';
+const PRIOR_CREDIT_SOURCE_LINKS = [
+  { label: 'UMD Prior Learning Credit', url: 'https://registrar.umd.edu/transfer-credit/prior-learning-credit' },
+  { label: 'Transfer Course Database', url: 'https://registrar.umd.edu/transfer-credit/transfer-course-database' },
+  { label: 'Search transfer equivalencies', url: 'https://app.transfercredit.umd.edu/' },
+];
 const ONBOARD_PRIOR_CREDIT_PRESETS = [
   {
     id: 'ap-calc-ab-4',
@@ -218,6 +224,24 @@ function onboardEscape(value) {
   }[ch]));
 }
 
+function onboardPriorSourceNoticeHtml() {
+  const links = PRIOR_CREDIT_SOURCE_LINKS.map(link => `
+    <a href="${onboardEscape(link.url)}" target="_blank" rel="noopener noreferrer">${onboardEscape(link.label)}</a>
+  `).join('');
+  return `
+    <div class="prior-source-notice">
+      <strong>Official source check</strong>
+      <p>Presets are planning shortcuts, not a transcript decision. UMD says AP, IB, and other prior-learning credit is based on the exam year, departmental approval, official score reports, duplicate-credit rules, and current Registrar charts. Last checked ${onboardEscape(PRIOR_CREDIT_SOURCE_CHECKED)}.</p>
+      <div class="prior-source-links">${links}</div>
+    </div>
+  `;
+}
+
+function onboardRenderPriorSourceNotice(id) {
+  const root = document.getElementById(id);
+  if (root) root.innerHTML = onboardPriorSourceNoticeHtml();
+}
+
 function onboardNumber(id, fallback) {
   const value = Number(document.getElementById(id)?.value);
   return Number.isFinite(value) ? value : fallback;
@@ -397,6 +421,7 @@ function onboardRenderPriorCreditControls() {
     raw.dataset.priorBound = 'true';
     raw.addEventListener('input', onboardRefreshPriorCreditSummary);
   }
+  onboardRenderPriorSourceNotice('ob-prior-source-note');
   onboardRefreshPriorCreditSummary();
 }
 

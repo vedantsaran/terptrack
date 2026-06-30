@@ -4896,6 +4896,46 @@ h1.hero-title em {
   font-size: .76rem;
   line-height: 1.35;
 }
+.prior-source-notice {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 9px 10px;
+}
+.prior-source-notice strong {
+  color: var(--maroon);
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.prior-source-notice p {
+  margin: 4px 0 7px;
+  color: var(--slate);
+  font-size: .74rem;
+  line-height: 1.38;
+}
+.prior-source-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.prior-source-links a {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--blue);
+  font-size: .7rem;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 4px 8px;
+  text-decoration: none;
+}
+.prior-source-links a:hover {
+  border-color: var(--blue);
+  background: rgba(46, 92, 139, .08);
+}
 .onboard-plan-preview {
   max-height: min(430px, 46vh);
   overflow: auto;

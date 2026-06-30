@@ -2972,3 +2972,64 @@ Next pass candidates:
 - Add a safe stale-undo recovery affordance that jumps to the edited course or section.
 - Broaden prior-credit equivalency coverage with official-source mappings.
 - Add advisor packet quick links from audit issues into Browse or placeholder replacement.
+
+## 2026-06-30 Pass 61
+
+Focus: add official-source links and a dated verification notice to prior-credit planning.
+
+Planned changes:
+- Replace generic prior-credit caveats with a compact official-source notice.
+- Reuse the same notice in onboarding and Settings so students see it wherever they apply AP, IB, or transfer credit.
+- Include direct links to UMD's Registrar prior-learning page, transfer-course database page, and transfer equivalency search app.
+- Add deterministic coverage for the notice and source links.
+
+Completed:
+- Added reusable prior-credit source constants and render helpers in `js/onboarding.js`.
+- Added a dated `Official source check` notice that says presets are planning shortcuts, not transcript decisions, and notes that UMD credit depends on exam year, departmental approval, official score reports, duplicate-credit rules, and current Registrar charts.
+- Set the source checked date to `June 30, 2026`.
+- Rendered the notice in:
+  - onboarding transfer-credit step.
+  - Settings AP / IB / Transfer Credit editor.
+- Added compact notice and wrapped source-link styling.
+- Added regression assertions for onboarding and Settings source notice text and links.
+- Versioned changed browser assets:
+  - `styles.css?v=57`
+  - `js/settings.js?v=9`
+  - `js/onboarding.js?v=9`
+
+Verification:
+- Confirmed the official source URLs return HTTP 200:
+  - `https://registrar.umd.edu/transfer-credit/prior-learning-credit`
+  - `https://registrar.umd.edu/transfer-credit/transfer-course-database`
+  - `https://app.transfercredit.umd.edu/`
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `ONBOARDING-PRIOR-CREDIT` fixture confirms:
+  - source notice includes `Official source check`.
+  - source notice includes `June 30, 2026`.
+  - source notice links UMD Prior Learning Credit.
+  - source notice links the Transfer Credit Database search app.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - source notice renders in the Settings prior-credit editor.
+  - source notice includes Transfer Course Database, checked date, and search app links.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/`.
+- Chrome confirmed in the Settings editor:
+  - `styles.css?v=57`, `js/settings.js?v=9`, and `js/onboarding.js?v=9` loaded.
+  - source notice rendered with `Official source check` and `June 30, 2026`.
+  - all three official links rendered with `target="_blank"` and `rel="noopener noreferrer"`.
+  - there was no horizontal overflow.
+  - Chrome console warnings/errors were clean.
+- Chrome confirmed through a temporary local onboarding fixture using production assets:
+  - `styles.css?v=57` and `js/onboarding.js?v=9` loaded.
+  - the onboarding transfer-step notice rendered under `AP / IB / transfer credits?`.
+  - all three official links rendered with the expected attributes.
+  - there was no horizontal overflow.
+  - Chrome console warnings/errors were clean.
+- Removed the temporary onboarding QA fixture before commit.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add source-level notes per prior-credit preset.
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add a safe stale-undo recovery affordance that jumps to the edited course or section.
+- Add advisor packet quick links from audit issues into Browse or placeholder replacement.
