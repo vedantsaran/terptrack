@@ -21,6 +21,7 @@ const COMMON_DEPTS = [
 ];
 
 const BROWSE_ALL_GENEDS_VALUE = '__ALL_GENEDS__';
+const BROWSE_PROFILE_DEPTS_VALUE = '__PROFILE_DEPTS__';
 const BROWSE_GENED_TAGS = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','DVUP','DVCC','SCIS'];
 
 let browseDept = '';
@@ -54,6 +55,18 @@ function browseProfileDepartments() {
   return depts.filter(dept => allowed.has(dept)).slice(0, 8);
 }
 
+function browseIsProfileDeptMode() {
+  return browseDept === BROWSE_PROFILE_DEPTS_VALUE;
+}
+
+function browseDepartmentScope() {
+  if (browseIsProfileDeptMode()) {
+    const depts = browseProfileDepartments();
+    return { depts, label: depts.length ? `profile departments (${depts.slice(0, 5).join(', ')}${depts.length > 5 ? '…' : ''})` : 'profile departments' };
+  }
+  return { depts: browseDept ? [browseDept] : [], label: browseDept ? `${browseDept} courses` : '' };
+}
+
 function browseProfileSummaryText(depts) {
   const prefs = typeof getProfilePrefs === 'function' ? getProfilePrefs() : null;
   const interestLabels = typeof profileSelectedInterestDefs === 'function'
@@ -80,7 +93,7 @@ function applyBrowseProfileDefaults() {
   if (browseProfileDefaultsApplied || browseDept || browseGenEd || browseSearch) return;
   const depts = browseProfileDepartments();
   if (!depts.length) return;
-  browseDept = depts[0];
+  browseDept = BROWSE_PROFILE_DEPTS_VALUE;
   browseCache = [];
   browseCacheKey = '';
   browseProfileDefaultsApplied = true;
@@ -98,9 +111,12 @@ function renderBrowseProfileHints() {
     return;
   }
   root.hidden = false;
-  const deptButtons = depts.map(dept => `
-    <button type="button" class="browse-profile-chip ${browseDept === dept ? 'active' : ''}" data-br-profile-dept="${browseEscape(dept)}">${browseEscape(dept)}</button>
-  `).join('');
+  const deptButtons = [
+    `<button type="button" class="browse-profile-chip ${browseIsProfileDeptMode() ? 'active' : ''}" data-br-profile-dept="${BROWSE_PROFILE_DEPTS_VALUE}">All profile departments</button>`,
+    ...depts.map(dept => `
+      <button type="button" class="browse-profile-chip ${browseDept === dept ? 'active' : ''}" data-br-profile-dept="${browseEscape(dept)}">${browseEscape(dept)}</button>
+    `),
+  ].join('');
   root.innerHTML = `
     <span>Profile search</span>
     <strong>${browseEscape(summary)}</strong>
@@ -157,6 +173,39 @@ async function browseListCoursesByGenEdTags(tags, opts = {}) {
   return Array.from(byCode.values());
 }
 
+function browseMergeCourseRows(lists) {
+  const byCode = new Map();
+  (lists || []).flat().forEach(row => {
+    const key = normalizeCode(row?.course_id || '');
+    if (!key) return;
+    const existing = byCode.get(key) || {};
+    byCode.set(key, { ...existing, ...row });
+  });
+  return Array.from(byCode.values());
+}
+
+async function browseListCoursesForCurrentScope() {
+  const allGenEds = browseGenEd === BROWSE_ALL_GENEDS_VALUE;
+  const scope = browseDepartmentScope();
+  if (browseIsProfileDeptMode()) {
+    if (!scope.depts.length) return [];
+    if (allGenEds) {
+      const lists = await Promise.all(scope.depts.map(dept => browseListCoursesByGenEdTags(BROWSE_GENED_TAGS, { dept }).catch(() => [])));
+      return browseMergeCourseRows(lists);
+    }
+    if (browseGenEd) {
+      const lists = await Promise.all(scope.depts.map(dept => browseListCoursesByGenEdWithFallback(browseGenEd, dept).catch(() => [])));
+      return browseMergeCourseRows(lists);
+    }
+    const lists = await Promise.all(scope.depts.map(dept => umdioListCoursesByDept(dept).catch(() => [])));
+    return browseMergeCourseRows(lists);
+  }
+  if (allGenEds && !browseDept) return browseListCoursesByGenEdTags(BROWSE_GENED_TAGS).catch(() => []);
+  return browseGenEd && !allGenEds
+    ? browseListCoursesByGenEdWithFallback(browseGenEd, browseDept || '').catch(() => [])
+    : umdioListCoursesByDept(browseDept).catch(() => []);
+}
+
 async function renderBrowse() {
   const view = document.getElementById('view-browse');
   if (!view) return;
@@ -164,6 +213,10 @@ async function renderBrowse() {
   const sel = document.getElementById('br-dept');
   if (sel && sel.options.length <= 1) {
     sel.innerHTML = '<option value="">Pick a department…</option>';
+    const profileOption = document.createElement('option');
+    profileOption.value = BROWSE_PROFILE_DEPTS_VALUE;
+    profileOption.textContent = 'Profile departments';
+    sel.appendChild(profileOption);
     COMMON_DEPTS.forEach(d => {
       const o = document.createElement('option');
       o.value = d; o.textContent = d;
@@ -179,25 +232,26 @@ async function renderBrowse() {
     grid.innerHTML = '<p class="reco-empty">Pick a department, choose a Gen-Ed tag, or set interests in Settings so TerpTrack can start with your profile departments.</p>';
     return;
   }
+  const scope = browseDepartmentScope();
+  if (browseIsProfileDeptMode() && !scope.depts.length) {
+    grid.innerHTML = '<p class="reco-empty">Set interests or preferred Gen-Ed departments in Settings to use profile department search.</p>';
+    return;
+  }
 
-  const desiredCacheKey = `${browseDept || 'ALL'}:${browseGenEd || 'ANY'}`;
+  const desiredCacheKey = `${browseDept || 'ALL'}:${browseGenEd || 'ANY'}:${browseIsProfileDeptMode() ? scope.depts.join(',') : ''}`;
   if (browseCacheKey !== desiredCacheKey) {
     browseCache = [];
     browseCacheKey = desiredCacheKey;
   }
   if (!browseCache.length) {
     const allGenEds = browseGenEd === BROWSE_ALL_GENEDS_VALUE;
-    const scopeLabel = allGenEds && !browseDept
+    const scopeLabel = browseIsProfileDeptMode()
+      ? scope.label
+      : allGenEds && !browseDept
       ? 'all Gen-Ed courses'
       : browseGenEd && !browseDept ? `all ${browseGenEd} courses` : `${browseDept} courses`;
     grid.innerHTML = `<p class="reco-empty">Loading ${scopeLabel}…</p>`;
-    if (allGenEds && !browseDept) {
-      browseCache = await browseListCoursesByGenEdTags(BROWSE_GENED_TAGS).catch(() => []);
-    } else {
-      browseCache = browseGenEd && !allGenEds
-        ? await browseListCoursesByGenEdWithFallback(browseGenEd, browseDept || '').catch(() => [])
-        : await umdioListCoursesByDept(browseDept).catch(() => []);
-    }
+    browseCache = await browseListCoursesForCurrentScope();
   }
 
   let rows = browseCache;

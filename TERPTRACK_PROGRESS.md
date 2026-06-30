@@ -1507,3 +1507,55 @@ Next pass candidates:
 - Add real Supabase/Vercel setup instructions and validate a magic-link account round trip on deployment.
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Improve Browse with multi-department profile search and richer personalized class recommendations.
+
+## 2026-06-30 Pass 36
+
+Focus: make Browse search across the student's full profile department set instead of only the first preferred department.
+
+Planned changes:
+- Add an explicit "profile departments" Browse scope.
+- Default personalized Browse to all profile departments when profile preferences exist.
+- Fan out department and Gen-Ed discovery across the profile department set with course deduping.
+- Add regression coverage for the personalized Browse scope.
+
+Completed:
+- Added `BROWSE_PROFILE_DEPTS_VALUE` and profile-scope helpers in `js/browse.js`.
+- `applyBrowseProfileDefaults()` now starts personalized Browse in the all-profile-departments mode.
+- The profile hint row now includes an `All profile departments` chip alongside individual department chips.
+- The Browse department dropdown now includes a `Profile departments` option.
+- Browse loading, empty states, and cache keys now understand profile department scope.
+- `browseListCoursesForCurrentScope()` now fans out:
+  - all Gen-Ed searches across profile departments.
+  - specific Gen-Ed searches across profile departments.
+  - department course searches across profile departments.
+- Added `browseMergeCourseRows()` so shared courses are deduped across department results.
+- Versioned changed browser asset:
+  - `js/browse.js?v=3`
+- Extended `scripts/test-generated-plans.js` to load `js/browse.js`.
+- Added the `BROWSE-PROFILE` regression fixture.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the account/share fixture, the schedule timing/comparison fixture, and the new Browse profile fixture.
+- Browse profile fixture confirmed:
+  - profile defaults select `__PROFILE_DEPTS__`.
+  - profile scope includes `INST`, `PSYC`, and `GVPT`.
+  - Gen-Ed searches fan out across profile departments.
+  - department searches fan out across profile departments.
+  - shared courses dedupe to one row.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass36browse=1` from a temporary static server and confirmed:
+  - `js/browse.js?v=3` loaded.
+  - Browse tab opened successfully.
+  - the department dropdown contains `Profile departments`.
+  - the no-profile empty state explains how to start with profile departments.
+  - no console errors on load or Browse open.
+  - no horizontal overflow at the browser's 380px viewport.
+- Stopped the temporary static server.
+
+Next pass candidates:
+- Add the current-vs-alternate comparison details to the advisor packet/export when an alternate is applied.
+- Add a schedule diagnostics export section with timing fit insights in the advisor packet body, not only the header metrics.
+- Add real Supabase/Vercel setup instructions and validate a magic-link account round trip on deployment.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve Browse with saved profile searches and richer personalized class recommendations.

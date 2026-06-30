@@ -53,6 +53,7 @@ function buildContext() {
     'js/import.js',
     'js/share.js',
     'js/schedule.js',
+    'js/browse.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
   vm.runInContext(`
     state = loadState();
@@ -337,6 +338,70 @@ function testScheduleTimingFit(context) {
   };
 }
 
+async function testBrowseProfileDepartments(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const calls = [];
+      umdioListCoursesByDept = async dept => {
+        calls.push('dept:' + dept);
+        return [
+          { course_id: dept + '101', name: dept + ' profile course', description: 'profile fit', gen_ed: [] },
+          { course_id: 'INST201', name: 'Shared profile course', description: 'shared', gen_ed: [] }
+        ];
+      };
+      umdioListCoursesByGenEd = async (tag, opts = {}) => {
+        const dept = String(opts.dept || '');
+        calls.push('gened:' + tag + ':' + dept);
+        return [
+          { course_id: dept + '150', name: dept + ' GenEd', description: 'gened profile fit', gen_ed: [tag] },
+          { course_id: 'INST201', name: 'Shared GenEd', description: 'shared', gen_ed: [tag] }
+        ];
+      };
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['ai-data', 'policy-society'],
+        careerGoal: 'machine learning for public policy',
+        genEdDepts: 'INST, PSYC, GVPT'
+      });
+      browseDept = '';
+      browseSearch = '';
+      browseGenEd = '';
+      browseCache = [];
+      browseCacheKey = '';
+      browseProfileDefaultsApplied = false;
+      applyBrowseProfileDefaults();
+      const defaultDept = browseDept;
+      const defaultScope = browseDepartmentScope();
+      browseGenEd = 'DSHS';
+      const genEdRows = await browseListCoursesForCurrentScope();
+      browseGenEd = '';
+      const deptRows = await browseListCoursesForCurrentScope();
+      return {
+        defaultDept,
+        scope: defaultScope.depts.slice(0, 4),
+        genEdCodes: genEdRows.map(row => row.course_id).sort(),
+        deptCodes: deptRows.map(row => row.course_id).sort(),
+        callCount: calls.length,
+        calls,
+      };
+    })()
+  `, context));
+
+  assert(result.defaultDept === '__PROFILE_DEPTS__', 'browse profile: should default to profile department mode');
+  assert(result.scope.includes('INST') && result.scope.includes('PSYC') && result.scope.includes('GVPT'), 'browse profile: expected preferred departments in scope');
+  assert(result.genEdCodes.includes('INST150') && result.genEdCodes.includes('PSYC150'), 'browse profile: GenEd search should fan out across profile departments');
+  assert(result.deptCodes.includes('INST101') && result.deptCodes.includes('PSYC101'), 'browse profile: department search should fan out across profile departments');
+  assert(result.genEdCodes.filter(code => code === 'INST201').length === 1, 'browse profile: GenEd rows should dedupe shared courses');
+  assert(result.deptCodes.filter(code => code === 'INST201').length === 1, 'browse profile: department rows should dedupe shared courses');
+  assert(result.callCount >= 6, 'browse profile: expected multiple department calls');
+
+  return {
+    id: 'BROWSE-PROFILE',
+    scope: result.scope.join(','),
+    genEdCount: result.genEdCodes.length,
+    deptCount: result.deptCodes.length,
+  };
+}
+
 async function main() {
   const context = buildContext();
   const fixtures = [
@@ -355,12 +420,14 @@ async function main() {
   const prereq = testSyntheticPrerequisites(context);
   const account = testAccountAndShareState(context);
   const timing = testScheduleTimingFit(context);
+  const browse = await testBrowseProfileDepartments(context);
 
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + schedule timing).`);
+  console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows.`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + schedule timing + browse profile).`);
 }
 
 main().catch(error => {
