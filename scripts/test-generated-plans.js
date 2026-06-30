@@ -1894,6 +1894,8 @@ async function testOnboardingPriorCredit(context) {
       const econPreset = onboardPriorPresetById('ib-econ-hl-5');
       const calcDetailHtml = onboardPriorDetailHtml(calcPreset);
       const calcDetailLinks = onboardPriorPresetLinks(calcPreset).map(link => link.label);
+      const reviewHtml = onboardPriorReviewChecklistHtml(resolved, { startYear: 2026 });
+      const futureReviewHtml = onboardPriorReviewChecklistHtml(resolved, { startYear: 2028 });
       return {
         presetCount: ONBOARD_PRIOR_CREDIT_PRESETS.length,
         sourceNoteCount: ONBOARD_PRIOR_CREDIT_PRESETS.filter(preset => /chart 2023-2026/.test(onboardPriorPresetSourceNote(preset))).length,
@@ -1902,6 +1904,8 @@ async function testOnboardingPriorCredit(context) {
         calcChipHtml: onboardPriorChipHtml(calcPreset),
         calcDetailHtml,
         calcDetailLinks,
+        reviewHtml,
+        futureReviewHtml,
         resolvedCodes: resolved.courses.map(course => course.code),
         resolvedCredits: resolved.totalCredits,
         summary: onboardPriorSummaryText(resolved),
@@ -1927,6 +1931,12 @@ async function testOnboardingPriorCredit(context) {
   assert(/Verification drawer/.test(result.calcDetailHtml) && /MATH 141/.test(result.calcDetailHtml) && /Before relying on it/.test(result.calcDetailHtml), 'onboarding prior credit: detail drawer should render equivalent courses and verification caveats');
   assert(/AP Chart 2023-2026/.test(result.calcDetailHtml) && /June 30, 2026/.test(result.calcDetailHtml), 'onboarding prior credit: detail drawer should include source and checked date');
   assert(result.calcDetailLinks.includes('AP Chart 2023-2026') && !result.calcDetailLinks.includes('IB Chart 2023-2026'), 'onboarding prior credit: AP detail drawer should link AP chart without IB chart');
+  assert(/Prior Credit Review/.test(result.reviewHtml) && /Chart year check/.test(result.reviewHtml), 'onboarding prior credit: review checklist should render chart-year checks');
+  assert(/Fall 2026/.test(result.reviewHtml) && /AP exam year|IB exam date/.test(result.reviewHtml), 'onboarding prior credit: review checklist should compare start year to AP/IB verification');
+  assert(/Manual course lookup/.test(result.reviewHtml) && /Transfer Course Database/.test(result.reviewHtml), 'onboarding prior credit: review checklist should flag typed course lookup');
+  assert(/Plan placement/.test(result.reviewHtml) && /outside-plan/.test(result.reviewHtml), 'onboarding prior credit: review checklist should distinguish plan matches from outside-plan credits');
+  assert(/Duplicate-credit review/.test(result.reviewHtml), 'onboarding prior credit: review checklist should include duplicate-credit review');
+  assert(/Fall 2028/.test(result.futureReviewHtml) && /current Registrar chart/.test(result.futureReviewHtml), 'onboarding prior credit: review checklist should warn when start year is outside checked chart window');
   assert(result.resolvedCodes.filter(code => code === 'MATH 140').length === 1, 'onboarding prior credit: should dedupe preset and raw MATH 140');
   assert(result.resolvedCodes.includes('MATH 141'), 'onboarding prior credit: AP Calc BC should include MATH 141');
   assert(result.resolvedCodes.includes('AP FSAW Credit'), 'onboarding prior credit: AP English should map to FSAW prior credit');
@@ -2008,6 +2018,7 @@ async function testSettingsPriorCreditEditor(context) {
       const elements = {
         'set-prior-codes': { value: 'CMSC131 MATH140', dataset: {}, addEventListener() {} },
         'set-prior-summary': { textContent: '' },
+        'set-prior-review': { innerHTML: '', hidden: true },
         'set-prior-status': { textContent: '', style: {} },
         'set-prior-source-note': { innerHTML: '' },
         'set-prior-detail': { innerHTML: '', hidden: true, dataset: {}, addEventListener() {}, scrollIntoView() {} },
@@ -2036,6 +2047,8 @@ async function testSettingsPriorCreditEditor(context) {
       const sourceNoticeHtml = elements['set-prior-source-note'].innerHTML;
       settingsRefreshPriorCreditSummary();
       const summaryBefore = elements['set-prior-summary'].textContent;
+      const settingsReviewHtml = elements['set-prior-review'].innerHTML;
+      const settingsReviewHidden = elements['set-prior-review'].hidden;
       await applySettingsPriorCredits();
       const changeAfterApply = state.recentChanges[0] || null;
       const transferKeysAfterApply = Object.entries(state.courses || {}).filter(([, value]) => value.status === 'transfer').map(([key]) => key).sort();
@@ -2091,6 +2104,8 @@ async function testSettingsPriorCreditEditor(context) {
         settingsDetailHidden,
         sourceNoticeHtml,
         summaryBefore,
+        settingsReviewHtml,
+        settingsReviewHidden,
         statusAfter: elements['set-prior-status'].textContent,
         statusColor: elements['set-prior-status'].style.color,
         transferKeys: transferKeysAfterApply,
@@ -2130,6 +2145,9 @@ async function testSettingsPriorCreditEditor(context) {
   assert(/AP Chart 2023-2026/.test(result.sourceNoticeHtml) && /IB Chart 2023-2026/.test(result.sourceNoticeHtml), 'settings prior credit: source notice should include AP/IB chart links');
   assert(/June 30, 2026/.test(result.sourceNoticeHtml) && result.sourceNoticeHtml.includes('app.transfercredit.umd.edu'), 'settings prior credit: source notice should include checked date and database search link');
   assert(/6 courses/.test(result.summaryBefore) && /20 credits/.test(result.summaryBefore), 'settings prior credit: live summary should count deduped preset and raw credits');
+  assert(result.settingsReviewHidden === false && /Prior Credit Review/.test(result.settingsReviewHtml), 'settings prior credit: review checklist should render when credits are selected');
+  assert(/Chart year check/.test(result.settingsReviewHtml) && /Fall 2026/.test(result.settingsReviewHtml), 'settings prior credit: review checklist should infer plan start year');
+  assert(/Plan placement/.test(result.settingsReviewHtml) && /Manual course lookup/.test(result.settingsReviewHtml), 'settings prior credit: review checklist should include placement and manual lookup checks');
   assert(/Applied 6 prior-credit courses/.test(result.statusAfter), 'settings prior credit: status should report applied credits');
   assert(result.statusColor === 'var(--green)', 'settings prior credit: successful apply should show green status');
   assert(result.transferKeys.includes('MATH 140') && result.transferKeys.includes('CMSC 131'), 'settings prior credit: planned courses should be marked transfer');

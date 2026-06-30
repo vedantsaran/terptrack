@@ -520,6 +520,152 @@ function onboardPriorSummaryText(resolved) {
   return `${count} course${count === 1 ? '' : 's'} · ${credits} credit${credits === 1 ? '' : 's'} · ${codes}${extra}`;
 }
 
+function onboardInferPlanStartYear(fallback = new Date().getFullYear()) {
+  const appState = typeof state !== 'undefined' ? state : {};
+  const settings = typeof getSettings === 'function' ? getSettings() : {};
+  const candidates = [
+    appState?.activeSchedule?.[0]?.name,
+    appState?.activeSchedule?.[0]?.year,
+    settings?.eyebrow,
+  ];
+  for (const value of candidates) {
+    const match = String(value || '').match(/\b(20\d{2})\b/);
+    if (match) return Number(match[1]);
+  }
+  return Number(fallback) || new Date().getFullYear();
+}
+
+function onboardPriorSourceNames(resolved) {
+  return Array.from(new Set((resolved?.presets || [])
+    .map(preset => String(preset.source || '').toUpperCase())
+    .filter(Boolean)));
+}
+
+function onboardPriorManualCount(resolved) {
+  return (resolved?.courses || []).filter(course => course?._needsLookup).length;
+}
+
+function onboardPriorCourseGenEdTags(course) {
+  return Array.from(new Set([
+    ...(Array.isArray(course?.categories) ? course.categories : []),
+    course?.category,
+  ].filter(Boolean)))
+    .filter(category => String(category).startsWith('gened-'))
+    .map(category => onboardPriorCourseCategoryLabel({ category }));
+}
+
+function onboardPriorPlanMatches(resolved) {
+  const courses = resolved?.courses || [];
+  if (typeof findCourse !== 'function') return { planned: [], outside: courses.slice() };
+  const planned = [];
+  const outside = [];
+  courses.forEach(course => {
+    if (findCourse(course.code)) planned.push(course);
+    else outside.push(course);
+  });
+  return { planned, outside };
+}
+
+function onboardPriorReviewItems(resolved, opts = {}) {
+  const courses = resolved?.courses || [];
+  if (!courses.length) return [];
+  const startYear = Number(opts.startYear) || onboardInferPlanStartYear();
+  const sources = onboardPriorSourceNames(resolved);
+  const manualCount = onboardPriorManualCount(resolved);
+  const { planned, outside } = onboardPriorPlanMatches(resolved);
+  const genEdTags = Array.from(new Set(courses.flatMap(onboardPriorCourseGenEdTags))).sort();
+  const items = [];
+
+  const sourceLabels = sources.length ? sources.join(' + ') : (manualCount ? 'transfer database' : 'prior-credit');
+  const chartOutsideRange = startYear < 2023 || startYear > 2026;
+  items.push({
+    level: chartOutsideRange ? 'warn' : 'info',
+    title: 'Chart year check',
+    body: chartOutsideRange
+      ? `Your plan starts in Fall ${startYear}. These presets cite the 2023-2026 ${sourceLabels} chart window, so verify the current Registrar chart before relying on them.`
+      : `Your plan starts in Fall ${startYear}. Match each AP exam year or IB exam date against the 2023-2026 ${sourceLabels} chart before applying credits.`,
+  });
+
+  if (sources.includes('AP') || sources.includes('IB')) {
+    const parts = [];
+    if (sources.includes('AP')) parts.push('AP score report');
+    if (sources.includes('IB')) parts.push('IB transcript or score report');
+    items.push({
+      level: 'warn',
+      title: 'Official score report',
+      body: `Confirm ${parts.join(' and ')} delivery to UMD before treating these courses as transcript credit.`,
+    });
+  }
+
+  if (manualCount) {
+    items.push({
+      level: 'warn',
+      title: 'Manual course lookup',
+      body: `${manualCount} typed course${manualCount === 1 ? '' : 's'} should be checked in the Transfer Course Database for exact UMD equivalency and credit amount.`,
+    });
+  }
+
+  const plannedSentence = planned.length === 1
+    ? '1 selected credit already matches a planned course and will be marked transfer.'
+    : `${planned.length} selected credits already match planned courses and will be marked transfer.`;
+  const outsideSentence = outside.length === 1
+    ? '1 outside-plan credit will be added to Transfer / Outside Plan.'
+    : `${outside.length} outside-plan credits will be added to Transfer / Outside Plan.`;
+  items.push({
+    level: outside.length ? 'info' : 'ok',
+    title: 'Plan placement',
+    body: `${plannedSentence} ${outsideSentence}`,
+  });
+
+  if (genEdTags.length) {
+    items.push({
+      level: 'info',
+      title: 'Requirement coverage',
+      body: `Potential GenEd coverage: ${genEdTags.slice(0, 8).join(', ')}${genEdTags.length > 8 ? ` +${genEdTags.length - 8} more` : ''}. Degree Audit will still verify the full rule set after applying.`,
+    });
+  }
+
+  items.push({
+    level: 'warn',
+    title: 'Duplicate-credit review',
+    body: 'Check duplicate-credit restrictions with an advisor before replacing a planned UMD course or counting both exam and transfer credit for the same content.',
+  });
+
+  return items;
+}
+
+function onboardPriorReviewChecklistHtml(resolved, opts = {}) {
+  const items = onboardPriorReviewItems(resolved, opts);
+  if (!items.length) return '';
+  return `
+    <div class="prior-review-checklist">
+      <div class="prior-review-head">
+        <strong>Prior Credit Review</strong>
+        <span>${items.length} checks before applying</span>
+      </div>
+      <div class="prior-review-grid">
+        ${items.map(item => `
+          <div class="prior-review-item ${onboardEscape(item.level)}">
+            <b>${onboardEscape(item.level === 'ok' ? 'Ready' : item.level === 'warn' ? 'Verify' : 'Review')}</b>
+            <div>
+              <strong>${onboardEscape(item.title)}</strong>
+              <p>${onboardEscape(item.body)}</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function onboardRenderPriorReview(id, resolved, opts = {}) {
+  const root = document.getElementById(id);
+  if (!root) return;
+  const html = onboardPriorReviewChecklistHtml(resolved, opts);
+  root.innerHTML = html;
+  root.hidden = !html;
+}
+
 function onboardClonePlain(value) {
   if (value == null) return value;
   try {
@@ -544,9 +690,24 @@ function onboardRefreshPriorCreditSummary() {
     onboardSelectedPriorIds(),
   );
   summary.textContent = onboardPriorSummaryText(resolved);
+  onboardRenderPriorReview('ob-prior-review', resolved, {
+    startYear: onboardNumber('ob-start-year', onboardInferPlanStartYear()),
+    context: 'onboarding',
+  });
   document.querySelectorAll('.onboard-prior-chip').forEach(chip => {
     const input = chip.querySelector('input[type="checkbox"]');
     chip.classList.toggle('selected', !!input?.checked);
+  });
+}
+
+function onboardBindPriorReviewTimelineControls() {
+  ['ob-start-year', 'ob-grad-year', 'ob-grad-term', 'ob-current-year'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input && !input.dataset.priorReviewBound) {
+      input.dataset.priorReviewBound = '1';
+      input.addEventListener('input', onboardRefreshPriorCreditSummary);
+      input.addEventListener('change', onboardRefreshPriorCreditSummary);
+    }
   });
 }
 
@@ -796,6 +957,7 @@ function startOnboarding() {
   document.querySelectorAll('.onboard-day-prefs input[type="checkbox"]').forEach(input => { input.checked = false; });
   document.getElementById('ob-transfer-codes').value = '';
   onboardRenderPriorCreditControls();
+  onboardBindPriorReviewTimelineControls();
   if (typeof writeProfileForm === 'function') writeProfileForm('ob', getProfilePrefs());
 
   document.getElementById('onboard-modal').classList.add('open');
@@ -816,6 +978,7 @@ function showOnboardStep(i) {
   // Buttons
   document.getElementById('ob-back').style.visibility = i === 0 ? 'hidden' : 'visible';
   document.getElementById('ob-next').textContent = i === ONBOARD_STEPS.length - 1 ? 'Finish' : 'Next →';
+  if (ONBOARD_STEPS[i] === 'transfer') onboardRefreshPriorCreditSummary();
   if (ONBOARD_STEPS[i] === 'finish') renderOnboardingPreview();
 }
 

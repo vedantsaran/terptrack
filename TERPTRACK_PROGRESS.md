@@ -3555,3 +3555,69 @@ Next pass candidates:
 - Add Timeline recovery for stale prior-credit rows with multiple removed prior-credit entries and pluralized Settings labels.
 - Add a transfer/prior-credit review checklist that compares selected credits against a student's chosen start year.
 - Add an advisor packet import/open banner that explains when live deep links require the same browser profile state.
+
+## 2026-06-30 Pass 71
+
+Focus: add a transfer/prior-credit review checklist that compares selected credits against a student's chosen start year.
+
+Planned changes:
+- Reuse the existing prior-credit resolver for both onboarding and Settings.
+- Infer the plan start year from onboarding controls, active schedule, or plan settings.
+- Warn when selected AP/IB presets cite the 2023-2026 chart window but the plan start year falls outside that range.
+- Remind students to verify score reports, manual transfer equivalencies, plan placement, GenEd coverage, and duplicate-credit restrictions.
+- Keep the checklist compact enough for first-run onboarding and later Settings edits.
+
+Completed:
+- Added shared prior-credit review helpers in `js/onboarding.js`:
+  - start-year inference from active schedule and settings.
+  - AP/IB source detection.
+  - manual typed-course counting.
+  - GenEd tag extraction.
+  - planned-vs-outside-plan placement detection.
+  - checklist item generation and HTML rendering.
+- First-run onboarding now refreshes the checklist when the transfer step opens, prior-credit selections change, typed course codes change, or timeline year controls change.
+- Settings now renders the same checklist below the prior-credit summary whenever credits are selected.
+- The checklist covers:
+  - `Chart year check`.
+  - `Official score report`.
+  - `Manual course lookup`.
+  - `Plan placement`.
+  - `Requirement coverage`.
+  - `Duplicate-credit review`.
+- Added responsive checklist styles and singular/plural placement copy.
+- Versioned changed browser assets:
+  - `styles.css?v=66`
+  - `js/settings.js?v=12`
+  - `js/onboarding.js?v=13`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `ONBOARDING-PRIOR-CREDIT` fixture confirms:
+  - the review checklist renders chart-year checks.
+  - Fall 2026 copy tells students to compare AP exam year or IB exam date against the 2023-2026 chart.
+  - Fall 2028 copy warns students to verify the current Registrar chart.
+  - manual entries mention the Transfer Course Database.
+  - plan placement distinguishes matching planned credits from outside-plan credits.
+  - duplicate-credit review is always included when credits are selected.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - Settings renders the review checklist when credits are selected.
+  - Settings infers Fall 2026 from the active plan.
+  - placement and manual lookup checks render in the Settings path.
+- Used Chrome with the existing local server at `http://localhost:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed in first-run onboarding:
+  - `styles.css?v=66`, `js/settings.js?v=12`, and `js/onboarding.js?v=13` loaded.
+  - selecting AP Calc BC and typing `CMSC131` rendered a visible 6-item `Prior Credit Review`.
+  - the checklist showed Fall 2028, the current Registrar chart warning, manual Transfer Course Database lookup, plan placement, and duplicate-credit review.
+  - there was no horizontal page overflow.
+- Chrome confirmed in Settings:
+  - opening Settings from a seeded Fall 2026 plan rendered the review after selecting IB Economics HL and typing `CMSC131`.
+  - the checklist showed Fall 2026, `IB transcript or score report`, manual lookup, singular plan-match copy, two outside-plan credits, and duplicate-credit review.
+  - there was no horizontal page overflow.
+- Finalized the Chrome tab after restoring the original local app state.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add Timeline recovery for stale prior-credit rows with multiple removed prior-credit entries and pluralized Settings labels.
+- Add an advisor packet import/open banner that explains when live deep links require the same browser profile state.
+- Add per-major requirement-source citations to generated schedules.

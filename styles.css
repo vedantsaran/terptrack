@@ -5091,6 +5091,78 @@ h1.hero-title em {
   font-size: .76rem;
   line-height: 1.35;
 }
+.prior-review-region {
+  margin-top: 8px;
+}
+.prior-review-region[hidden] {
+  display: none;
+}
+.prior-review-checklist {
+  border: 1px solid rgba(46, 92, 139, .24);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 88%, rgba(46, 92, 139, .10));
+  padding: 10px;
+}
+.prior-review-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.prior-review-head strong {
+  color: var(--ink);
+  font-size: .82rem;
+}
+.prior-review-head span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.prior-review-grid {
+  display: grid;
+  gap: 6px;
+}
+.prior-review-item {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 8px;
+}
+.prior-review-item b {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.prior-review-item.warn b {
+  color: var(--amber);
+}
+.prior-review-item.info b {
+  color: var(--blue);
+}
+.prior-review-item.ok b {
+  color: var(--green);
+}
+.prior-review-item strong {
+  color: var(--ink);
+  display: block;
+  font-size: .76rem;
+  line-height: 1.25;
+}
+.prior-review-item p {
+  color: var(--slate);
+  font-size: .72rem;
+  line-height: 1.35;
+  margin: 3px 0 0;
+}
 .settings-prior-actions {
   display: flex;
   align-items: center;
@@ -6089,6 +6161,14 @@ h1.hero-title em {
   }
   .prior-detail-courses li small {
     grid-column: 1;
+  }
+  .prior-review-head {
+    flex-direction: column;
+    gap: 3px;
+  }
+  .prior-review-item {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
   .onboard-plan-preview {
     max-height: 360px;

@@ -529,6 +529,12 @@ function settingsRefreshPriorCreditSummary() {
   summary.textContent = typeof onboardPriorSummaryText === 'function'
     ? onboardPriorSummaryText(resolved)
     : `${(resolved.courses || []).length} course(s) selected`;
+  if (typeof onboardRenderPriorReview === 'function') {
+    onboardRenderPriorReview('set-prior-review', resolved, {
+      startYear: typeof onboardInferPlanStartYear === 'function' ? onboardInferPlanStartYear() : new Date().getFullYear(),
+      context: 'settings',
+    });
+  }
   document.querySelectorAll('.settings-prior-chip').forEach(chip => {
     const input = chip.querySelector('input[type="checkbox"]');
     chip.classList.toggle('selected', !!input?.checked);
