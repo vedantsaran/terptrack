@@ -4634,6 +4634,18 @@ h1.hero-title em {
   font-size: .76rem;
   line-height: 1.35;
 }
+.settings-prior-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.settings-prior-actions span {
+  color: var(--slate);
+  font-size: .76rem;
+  line-height: 1.35;
+}
 .onboard-plan-preview {
   max-height: min(430px, 46vh);
   overflow: auto;

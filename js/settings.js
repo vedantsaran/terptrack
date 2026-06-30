@@ -492,6 +492,115 @@ function writeProfileForm(prefix, prefs = getProfilePrefs()) {
   if (genEdDepts) genEdDepts.value = (prefs.genEdDepts || []).join(', ');
 }
 
+function settingsPriorCreditGridHtml(selectedIds = []) {
+  if (typeof ONBOARD_PRIOR_CREDIT_PRESETS === 'undefined') return '';
+  const selected = new Set(selectedIds || []);
+  return ONBOARD_PRIOR_CREDIT_PRESETS.map(preset => `
+    <label class="onboard-prior-chip settings-prior-chip ${selected.has(preset.id) ? 'selected' : ''}">
+      <input type="checkbox" data-prior-id="${settingsHtml(preset.id)}" ${selected.has(preset.id) ? 'checked' : ''}>
+      <span>
+        <strong>${settingsHtml(preset.label)}</strong>
+        <small>${settingsHtml(preset.detail)}</small>
+      </span>
+    </label>
+  `).join('');
+}
+
+function settingsPriorSelectedIds() {
+  return [...document.querySelectorAll('#set-prior-grid input[type="checkbox"]:checked')]
+    .map(input => input.dataset.priorId)
+    .filter(Boolean);
+}
+
+function settingsPriorResolved() {
+  if (typeof onboardResolvePriorCredits !== 'function') return { courses: [], totalCredits: 0, presets: [] };
+  return onboardResolvePriorCredits(
+    document.getElementById('set-prior-codes')?.value || '',
+    settingsPriorSelectedIds(),
+  );
+}
+
+function settingsRefreshPriorCreditSummary() {
+  const summary = document.getElementById('set-prior-summary');
+  if (!summary) return;
+  const resolved = settingsPriorResolved();
+  summary.textContent = typeof onboardPriorSummaryText === 'function'
+    ? onboardPriorSummaryText(resolved)
+    : `${(resolved.courses || []).length} course(s) selected`;
+  document.querySelectorAll('.settings-prior-chip').forEach(chip => {
+    const input = chip.querySelector('input[type="checkbox"]');
+    chip.classList.toggle('selected', !!input?.checked);
+  });
+}
+
+function renderSettingsPriorCreditControls() {
+  const grid = document.getElementById('set-prior-grid');
+  if (!grid) return;
+  grid.innerHTML = settingsPriorCreditGridHtml();
+  grid.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', settingsRefreshPriorCreditSummary);
+  });
+  const raw = document.getElementById('set-prior-codes');
+  if (raw) {
+    raw.value = '';
+    if (!raw.dataset.settingsPriorBound) {
+      raw.dataset.settingsPriorBound = '1';
+      raw.addEventListener('input', settingsRefreshPriorCreditSummary);
+    }
+  }
+  const status = document.getElementById('set-prior-status');
+  if (status) {
+    status.textContent = '';
+    status.style.color = 'var(--slate)';
+  }
+  settingsRefreshPriorCreditSummary();
+}
+
+async function applySettingsPriorCredits() {
+  const status = document.getElementById('set-prior-status');
+  const resolved = settingsPriorResolved();
+  if (!(resolved.courses || []).length) {
+    if (status) {
+      status.style.color = 'var(--amber)';
+      status.textContent = 'Select a preset or enter course codes first.';
+    }
+    return;
+  }
+  if (typeof onboardApplyPriorCredits !== 'function') {
+    if (status) {
+      status.style.color = 'var(--red)';
+      status.textContent = 'Prior-credit tools are still loading. Reopen Settings in a moment.';
+    }
+    return;
+  }
+  if (status) {
+    status.style.color = 'var(--slate)';
+    status.textContent = 'Applying prior credits...';
+  }
+  try {
+    const applied = await onboardApplyPriorCredits({
+      transferRaw: document.getElementById('set-prior-codes')?.value || '',
+      priorCreditIds: settingsPriorSelectedIds(),
+      source: 'settings',
+    });
+    saveState();
+    render();
+    renderSettingsPriorCreditControls();
+    const message = `Applied ${applied.applied.length} prior-credit course${applied.applied.length === 1 ? '' : 's'}${applied.added.length ? ` · ${applied.added.length} added outside plan` : ''}.`;
+    if (status) {
+      status.style.color = 'var(--green)';
+      status.textContent = message;
+    }
+    if (typeof toastSuccess === 'function') toastSuccess(message);
+  } catch (error) {
+    if (status) {
+      status.style.color = 'var(--red)';
+      status.textContent = 'Could not apply prior credits: ' + (error.message || error);
+    }
+    if (typeof toastError === 'function') toastError('Could not apply prior credits: ' + (error.message || error));
+  }
+}
+
 function openSettings() {
   const s = getSettings();
   const profile = getProfilePrefs();
@@ -504,6 +613,7 @@ function openSettings() {
   writeProfileForm('set', profile);
   const status = document.getElementById('set-major-status');
   if (status) status.textContent = '';
+  renderSettingsPriorCreditControls();
   document.getElementById('settings-modal').classList.add('open');
   bindProfileReviewUpdates();
   renderAutoPlanReview(document.getElementById('set-major')?.value);
@@ -619,6 +729,7 @@ if (typeof window !== 'undefined') {
     resetAllData,
     applySettings,
     applyMajorFromSettings,
+    applySettingsPriorCredits,
   });
 }
 

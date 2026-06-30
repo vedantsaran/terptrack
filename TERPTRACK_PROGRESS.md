@@ -2492,3 +2492,60 @@ Next pass candidates:
 - Add a degree-rule issue drawer that explains why each remaining placeholder exists and what course families can satisfy it.
 - Add section-aware replacement flow that previews real meeting times before replacing a placeholder.
 - Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
+
+## 2026-06-30 Pass 53
+
+Focus: make AP/IB/transfer-credit intake available after onboarding through Settings.
+
+Planned changes:
+- Add a Settings prior-credit editor for existing users.
+- Reuse the same AP/IB preset mappings and raw course-code parser from onboarding.
+- Apply selected credits to the current plan immediately.
+- Mark planned matches as transfer and add unplanned equivalents to Transfer / Outside Plan.
+- Add regression and Chrome coverage for the post-onboarding flow.
+
+Completed:
+- Added an `AP / IB / Transfer Credit` section to Settings.
+- Rendered the 20 existing AP/IB preset chips inside Settings with the same compact grid style used during onboarding.
+- Added a live Settings prior-credit summary using the shared prior-credit resolver.
+- Added an `Apply Prior Credits` action that:
+  - validates a preset or raw code selection exists.
+  - applies credits through the shared prior-credit helper.
+  - records the recent plan change with `source: settings`.
+  - saves state and re-renders the plan.
+  - clears the Settings prior-credit form after success.
+  - leaves the Settings modal open with a concise success/error status.
+- Kept planned courses from duplicating as custom courses.
+- Versioned changed browser assets:
+  - `styles.css?v=50`
+  - `js/settings.js?v=8`
+  - `js/onboarding.js?v=6`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all existing generated-plan fixtures plus the new `SETTINGS-PRIOR-CREDIT` fixture.
+- The new regression fixture confirms:
+  - Settings renders AP/IB preset chips.
+  - the live Settings summary counts de-duplicated preset plus raw credits.
+  - applying from Settings marks planned `MATH 140` and `CMSC 131` as transfer.
+  - applying from Settings adds unplanned equivalents such as `MATH 141` and `AP FSAW Credit` outside the plan.
+  - Settings avoids duplicating already-planned courses as custom courses.
+  - the recent-change source is `settings`.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=50`, `js/settings.js?v=8`, and `js/onboarding.js?v=6` loaded.
+  - Settings opened for an existing-user seeded plan.
+  - the Settings prior-credit editor rendered 20 preset checkboxes.
+  - selecting AP Calculus BC, AP English Language, IB Economics HL, and raw `CMSC131 MATH140` produced `6 courses · 20 credits · MATH 140, MATH 141, AP FSAW Credit, ECON 200, ECON 201, CMSC 131`.
+  - applying credits reported `Applied 6 prior-credit courses · 4 added outside plan.`
+  - the form cleared after success.
+  - `MATH 140` and `CMSC 131` were marked transfer in-place.
+  - `AP FSAW Credit` and `ECON 200` rendered in Transfer / Outside Plan.
+  - no horizontal overflow and no app-origin Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add a degree-rule issue drawer that explains why each remaining placeholder exists and what course families can satisfy it.
+- Add section-aware replacement flow that previews real meeting times before replacing a placeholder.
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
+- Add undo for bulk prior-credit applications through recent changes.

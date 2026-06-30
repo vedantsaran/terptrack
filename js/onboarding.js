@@ -419,7 +419,7 @@ async function onboardApplyPriorCredits(setup) {
   if (applied.length && typeof recordPlanChange === 'function') {
     recordPlanChange({
       type: 'prior-credit',
-      source: 'onboarding',
+      source: setup.source || 'onboarding',
       title: `Applied ${applied.length} prior-credit course${applied.length === 1 ? '' : 's'}`,
       detail: applied.slice(0, 8).join(', ') + (applied.length > 8 ? ` +${applied.length - 8} more` : ''),
       meta: added.length ? `${added.length} added outside plan` : 'All matched existing plan courses',

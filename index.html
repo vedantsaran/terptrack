@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=49">
+<link rel="stylesheet" href="styles.css?v=50">
 </head>
 <body data-theme="dark">
 
@@ -610,6 +610,20 @@
       <input type="text" id="set-gened-depts" placeholder="e.g., INST, PSYC, COMM">
     </div>
 
+    <div class="profile-section settings-prior-section">
+      <label>AP / IB / Transfer Credit</label>
+      <p class="profile-help">Apply common prior-learning credits after setup. Existing planned courses are marked transfer; unplanned equivalents go to Transfer / Outside Plan.</p>
+      <div id="set-prior-grid" class="onboard-prior-grid settings-prior-grid"></div>
+      <div id="set-prior-summary" class="onboard-prior-summary settings-prior-summary">No prior credits selected.</div>
+      <label>Other course codes</label>
+      <textarea id="set-prior-codes" rows="3" placeholder="CMSC131&#10;MATH140&#10;ENGL101"></textarea>
+      <div class="settings-prior-actions">
+        <button class="btn small" type="button" onclick="applySettingsPriorCredits()">Apply Prior Credits</button>
+        <span id="set-prior-status"></span>
+      </div>
+      <p class="profile-help">Confirm official UMD equivalencies with the Registrar before registration; this updates your local plan status.</p>
+    </div>
+
     <label>Footer Note (optional)</label>
     <input type="text" id="set-footer" placeholder="e.g., Confirm with your advisor before registration">
 
@@ -963,14 +977,14 @@
 <script src="js/api.js"></script>
 <script src="js/schedule.js?v=25"></script>
 <script src="js/courses.js"></script>
-<script src="js/settings.js?v=7"></script>
+<script src="js/settings.js?v=8"></script>
 <script src="js/semesters.js"></script>
 <script src="js/io.js?v=10"></script>
 <script src="js/import.js?v=8"></script>
 <script src="js/prereq-resolver.js"></script>
 <script src="js/recommendations.js?v=11"></script>
 <script src="js/major-builder.js"></script>
-<script src="js/onboarding.js?v=5"></script>
+<script src="js/onboarding.js?v=6"></script>
 <script src="js/browse.js?v=12"></script>
 <script src="js/dnd.js"></script>
 <script src="js/bulk.js"></script>

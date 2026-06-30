@@ -1520,6 +1520,110 @@ async function testOnboardingPriorCredit(context) {
   };
 }
 
+async function testSettingsPriorCreditEditor(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      state.activeSchedule = [{
+        id: 'F26',
+        name: 'Fall 2026',
+        year: 'Year 1',
+        courses: [{
+          code: 'MATH 140',
+          title: 'Calculus I',
+          cr: 4,
+          category: 'gened-fsma',
+          kind: 'core'
+        }, {
+          code: 'CMSC 131',
+          title: 'Object-Oriented Programming I',
+          cr: 4,
+          category: 'major-support',
+          kind: 'core'
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.recentChanges = [];
+      fetchCourseFull = async code => {
+        const id = normalizeCode(code);
+        if (id === 'CMSC131') {
+          return {
+            code: 'CMSC 131',
+            title: 'Object-Oriented Programming I',
+            cr: 4,
+            prereqs: [],
+            coreqs: [],
+            kind: 'core',
+            category: 'major-support',
+            categories: ['major-support']
+          };
+        }
+        return null;
+      };
+      const selectedInputs = [
+        { dataset: { priorId: 'ap-calc-bc-4' }, checked: true, addEventListener() {} },
+        { dataset: { priorId: 'ap-english-lang-4' }, checked: true, addEventListener() {} },
+        { dataset: { priorId: 'ib-econ-hl-5' }, checked: true, addEventListener() {} },
+      ];
+      const chips = selectedInputs.map(input => ({
+        selected: false,
+        querySelector() { return input; },
+        classList: { toggle(name, value) { if (name === 'selected') this.owner.selected = !!value; }, owner: null }
+      }));
+      chips.forEach(chip => { chip.classList.owner = chip; });
+      const elements = {
+        'set-prior-codes': { value: 'CMSC131 MATH140', dataset: {}, addEventListener() {} },
+        'set-prior-summary': { textContent: '' },
+        'set-prior-status': { textContent: '', style: {} },
+        'set-prior-grid': {
+          innerHTML: '',
+          querySelectorAll(selector) {
+            return selector === 'input[type="checkbox"]' ? selectedInputs : [];
+          }
+        }
+      };
+      const originalGet = document.getElementById.bind(document);
+      const originalQuery = document.querySelectorAll ? document.querySelectorAll.bind(document) : () => [];
+      document.getElementById = id => elements[id] || originalGet(id);
+      document.querySelectorAll = selector => {
+        if (selector === '#set-prior-grid input[type="checkbox"]:checked') return selectedInputs.filter(input => input.checked);
+        if (selector === '#set-prior-grid input[type="checkbox"]') return selectedInputs;
+        if (selector === '.settings-prior-chip') return chips;
+        return originalQuery(selector);
+      };
+      const gridHtml = settingsPriorCreditGridHtml(['ap-calc-bc-4']);
+      settingsRefreshPriorCreditSummary();
+      const summaryBefore = elements['set-prior-summary'].textContent;
+      await applySettingsPriorCredits();
+      return {
+        gridHasPreset: /ap-calc-bc-4/.test(gridHtml) && /settings-prior-chip/.test(gridHtml),
+        summaryBefore,
+        statusAfter: elements['set-prior-status'].textContent,
+        statusColor: elements['set-prior-status'].style.color,
+        transferKeys: Object.entries(state.courses || {}).filter(([, value]) => value.status === 'transfer').map(([key]) => key).sort(),
+        customCodes: state.customCourses.map(course => course.code).sort(),
+        recentChange: state.recentChanges[0],
+      };
+    })()
+  `, context));
+
+  assert(result.gridHasPreset, 'settings prior credit: grid should render AP/IB preset chips');
+  assert(/6 courses/.test(result.summaryBefore) && /20 credits/.test(result.summaryBefore), 'settings prior credit: live summary should count deduped preset and raw credits');
+  assert(/Applied 6 prior-credit courses/.test(result.statusAfter), 'settings prior credit: status should report applied credits');
+  assert(result.statusColor === 'var(--green)', 'settings prior credit: successful apply should show green status');
+  assert(result.transferKeys.includes('MATH 140') && result.transferKeys.includes('CMSC 131'), 'settings prior credit: planned courses should be marked transfer');
+  assert(result.transferKeys.includes('AP FSAW Credit') && result.transferKeys.includes('ECON 200') && result.transferKeys.includes('ECON 201'), 'settings prior credit: preset courses should be marked transfer');
+  assert(!result.customCodes.includes('MATH 140') && !result.customCodes.includes('CMSC 131'), 'settings prior credit: planned courses should not be duplicated as custom courses');
+  assert(result.customCodes.includes('MATH 141') && result.customCodes.includes('AP FSAW Credit'), 'settings prior credit: unplanned equivalents should be added outside plan');
+  assert(result.recentChange.source === 'settings', 'settings prior credit: recent change should record settings source');
+
+  return {
+    id: 'SETTINGS-PRIOR-CREDIT',
+    transfers: result.transferKeys.length,
+    added: result.customCodes.length,
+  };
+}
+
 async function main() {
   const context = buildContext();
   const fixtures = [
@@ -1550,6 +1654,7 @@ async function main() {
   const browseSlot = await testBrowseSlotSelection(context);
   const browseTypedSlots = await testBrowseTypedSlotMatching(context);
   const priorCredit = await testOnboardingPriorCredit(context);
+  const settingsPrior = await testSettingsPriorCreditEditor(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
 
   console.table(rows);
@@ -1568,8 +1673,9 @@ async function main() {
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
+  console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + browse typed slot matching + onboarding prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + browse typed slot matching + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
