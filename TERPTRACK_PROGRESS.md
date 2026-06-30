@@ -3498,3 +3498,60 @@ Next pass candidates:
 - Add advisor-packet deep links from downloaded HTML back into the live app when opened from the same origin.
 - Add Timeline recovery for stale prior-credit rows with multiple removed prior-credit entries and pluralized Settings labels.
 - Add a transfer/prior-credit review checklist that compares selected credits against a student's chosen start year.
+
+## 2026-06-30 Pass 70
+
+Focus: add live-app deep links from downloaded advisor packets back into TerpTrack actions.
+
+Planned changes:
+- Keep the existing in-app advisor packet quick links working without changing their behavior.
+- Make the same quick links usable from downloaded standalone advisor packet HTML.
+- Route downloaded packet links back into the live app with enough context to reopen Browse or placeholder replacement.
+- Preserve the existing `#plan=` share-link import path.
+
+Completed:
+- Converted advisor packet audit action controls from inert standalone buttons into styled anchors.
+- Added shared advisor deep-link helpers in `js/schedule.js`:
+  - hash generation for `primary` and `browse` actions.
+  - live app base URL generation from the current origin and path.
+  - hash parsing for `#advisor-action=...&issue=...`.
+  - startup/hashchange handling that resolves the current audit issue and opens the same live action as the packet button.
+  - hash cleanup after successful routing.
+- In-app packet action listeners still intercept clicks and call:
+  - `scheduleOpenAdvisorAuditPrimary`.
+  - `scheduleOpenAdvisorAuditBrowse`.
+- `js/main.js` now processes advisor-action hashes on first load unless the hash is a `#plan=` shared-plan import.
+- First-run onboarding is suppressed when an advisor-action hash is successfully handled.
+- Standalone advisor packet CSS now styles action anchors as buttons.
+- Versioned changed browser assets:
+  - `styles.css?v=65`
+  - `js/schedule.js?v=28`
+  - `js/main.js?v=3`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `AUDIT-ISSUES` fixture confirms:
+  - advisor packet HTML includes live-app `#advisor-action=primary` and `#advisor-action=browse` hrefs.
+  - standalone advisor packet HTML includes the same hrefs and quick-link CSS/markup.
+  - primary advisor hashes are recognized and reopen placeholder replacement.
+  - Browse advisor hashes are recognized and reopen the saved audit Browse target.
+  - existing direct Audit drawer primary and Browse handoffs still work.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=65`, `js/schedule.js?v=28`, and `js/main.js?v=3` loaded.
+  - the seeded Schedule Advisor Packet rendered a Degree Audit Snapshot.
+  - rendered packet audit links included absolute app URLs such as `http://127.0.0.1:5173/#advisor-action=browse&issue=gened-DSHU`.
+  - clicking the in-app DSHU Browse link was intercepted, switched to Browse, selected profile departments and DSHU, saved the audit search, and left `location.hash` empty.
+  - loading the app with `#advisor-action=primary&issue=slot-PASS54-0-GENEDDSHU` opened the placeholder replacement modal for `GenEd DSHU`, cleared the hash, and did not open onboarding.
+  - loading the app with `#advisor-action=browse&issue=gened-DSHU` opened Browse with profile departments and DSHU, saved the audit search, cleared the hash, and did not open onboarding.
+  - there was no horizontal page overflow in packet, primary-hash, browse-hash, or restored states.
+  - the restore URL returned to `/?pass70-restored=1` and the seeded advisor-link state was absent afterward.
+  - Chrome app-origin console warnings/errors were clean.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add Timeline recovery for stale prior-credit rows with multiple removed prior-credit entries and pluralized Settings labels.
+- Add a transfer/prior-credit review checklist that compares selected credits against a student's chosen start year.
+- Add an advisor packet import/open banner that explains when live deep links require the same browser profile state.

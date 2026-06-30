@@ -14,11 +14,14 @@ if (typeof initAccount === 'function') initAccount();
 
 // If the page was opened with a #plan=... share link, offer to load it.
 (async function maybeLoadSharedPlan() {
+  let handledAdvisorAction = false;
   if (location.hash.startsWith('#plan=')) {
     await loadSharedPlanFromHash();
+  } else if (typeof scheduleHandleAdvisorActionHash === 'function') {
+    handledAdvisorAction = scheduleHandleAdvisorActionHash();
   }
   // First-run onboarding (skipped if user already has progress or shared plan loaded)
-  if (typeof shouldShowOnboarding === 'function' && shouldShowOnboarding()) {
+  if (!handledAdvisorAction && typeof shouldShowOnboarding === 'function' && shouldShowOnboarding()) {
     startOnboarding();
   }
 })();

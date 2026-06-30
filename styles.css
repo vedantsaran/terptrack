@@ -3749,15 +3749,18 @@ h1.hero-title em {
   margin-top: 7px;
 }
 .schedule-advisor-audit-link {
+  align-items: center;
   border: 1px solid rgba(46,92,139,.34);
   border-radius: 999px;
   background: rgba(46,92,139,.08);
   color: var(--blue);
   cursor: pointer;
+  display: inline-flex;
   font-size: .66rem;
   font-weight: 800;
   line-height: 1.2;
   padding: 4px 8px;
+  text-decoration: none;
 }
 .schedule-advisor-audit-link.primary {
   border-color: var(--blue);

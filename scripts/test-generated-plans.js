@@ -1662,7 +1662,37 @@ function testAuditIssueDrawer(context) {
       state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: false };
       const advisorOutputNoAudit = buildScheduleOutput('PASS54', '202608', state.activeSchedule[0].courses, [], [], [], { ...DEFAULT_SCHEDULE_PREFS });
       auditOpenIssuePrimary(dshuSlot.key);
+      const directOpenedPlaceholder = openedPlaceholder ? { ...openedPlaceholder } : null;
       auditOpenIssueBrowse(genedGap.key);
+      const directBrowse = {
+        currentTab,
+        browseDept,
+        browseGenEd,
+        savedLabel: state.browseSavedSearches[0]?.label || '',
+      };
+      openedPlaceholder = null;
+      currentTab = 'audit';
+      browseDept = '';
+      browseGenEd = '';
+      browseSearch = '';
+      state.browseSavedSearches = [];
+      const primaryHash = scheduleAdvisorDeepLinkHash('primary', advisorDshuSlot.key);
+      const browseHash = scheduleAdvisorDeepLinkHash('browse', advisorDshuGap.key);
+      const handledPrimaryHash = scheduleHandleAdvisorActionHash(primaryHash, { clear: false });
+      const openedPlaceholderFromHash = openedPlaceholder ? { ...openedPlaceholder } : null;
+      openedPlaceholder = null;
+      currentTab = 'audit';
+      browseDept = '';
+      browseGenEd = '';
+      browseSearch = '';
+      state.browseSavedSearches = [];
+      const handledBrowseHash = scheduleHandleAdvisorActionHash(browseHash, { clear: false });
+      const browseFromHash = {
+        currentTab,
+        browseDept,
+        browseGenEd,
+        savedLabel: state.browseSavedSearches[0]?.label || '',
+      };
       return {
         count: issues.length,
         titles: issues.map(issue => issue.title),
@@ -1678,11 +1708,14 @@ function testAuditIssueDrawer(context) {
         advisorOptions: advisorOutput.outputOptions,
         advisorDshuSlot,
         advisorDshuGap,
-        openedPlaceholder,
-        currentTab,
-        browseDept,
-        browseGenEd,
-        savedLabel: state.browseSavedSearches[0]?.label || '',
+        primaryHash,
+        browseHash,
+        directOpenedPlaceholder,
+        directBrowse,
+        handledPrimaryHash,
+        openedPlaceholderFromHash,
+        handledBrowseHash,
+        browseFromHash,
       };
     })()
   `, context));
@@ -1701,21 +1734,28 @@ function testAuditIssueDrawer(context) {
   assert(/Audit issues/.test(result.advisorHtml) && /16 open items/.test(result.advisorHtml) && /showing top 6/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include full audit issue counts and compact top list');
   assert(/GenEd DSHU|GVPT 3xx Elective A|Free Elective/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include top audit issue titles');
   assert(/Next action|Browse target|data-schedule-audit-primary|data-schedule-audit-browse/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include quick-link actions and targets');
+  assert(/href="[^"]*#advisor-action=primary&amp;issue=/.test(result.advisorHtml) && /href="[^"]*#advisor-action=browse&amp;issue=/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include live-app deep links');
   assert(/Degree audit snapshot/.test(result.advisorText) && /Satisfies:/.test(result.advisorText), 'advisor audit export: advisor text should include audit snapshot details');
   assert(/Next action:|Browse target:/.test(result.advisorText), 'advisor audit export: advisor text should include quick-link action details');
   assert(/schedule-advisor-audit-link/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include audit quick-link CSS/markup');
+  assert(/#advisor-action=primary&amp;issue=/.test(result.advisorDocument) && /#advisor-action=browse&amp;issue=/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include live-app deep links');
   assert(!/Degree Audit Snapshot/.test(result.advisorHtmlNoAudit), 'advisor audit export: audit snapshot should hide when auditIssues option is off');
-  assert(result.openedPlaceholder.code === 'GenEd DSHU' && result.openedPlaceholder.semId === 'PASS54', 'audit issues: primary placeholder action should open the replacement modal for the exact slot');
-  assert(result.currentTab === 'browse', 'audit issues: Browse handoff should switch to Browse');
-  assert(result.browseDept === '__PROFILE_DEPTS__', 'audit issues: Browse handoff should use profile departments');
-  assert(result.browseGenEd === 'DSHU', 'audit issues: Browse handoff should preserve the GenEd tag');
-  assert(/Audit:/.test(result.savedLabel) && /DSHU|Humanities/.test(result.savedLabel), 'audit issues: Browse handoff should save an audit-labeled search');
+  assert(result.directOpenedPlaceholder.code === 'GenEd DSHU' && result.directOpenedPlaceholder.semId === 'PASS54', 'audit issues: primary placeholder action should open the replacement modal for the exact slot');
+  assert(result.directBrowse.currentTab === 'browse', 'audit issues: Browse handoff should switch to Browse');
+  assert(result.directBrowse.browseDept === '__PROFILE_DEPTS__', 'audit issues: Browse handoff should use profile departments');
+  assert(result.directBrowse.browseGenEd === 'DSHU', 'audit issues: Browse handoff should preserve the GenEd tag');
+  assert(/Audit:/.test(result.directBrowse.savedLabel) && /DSHU|Humanities/.test(result.directBrowse.savedLabel), 'audit issues: Browse handoff should save an audit-labeled search');
+  assert(result.handledPrimaryHash === true && /advisor-action=primary/.test(result.primaryHash), 'advisor audit deep link: primary hash should be recognized');
+  assert(result.openedPlaceholderFromHash?.code === 'GenEd DSHU' && result.openedPlaceholderFromHash?.semId === 'PASS54', 'advisor audit deep link: primary hash should reopen placeholder replacement');
+  assert(result.handledBrowseHash === true && /advisor-action=browse/.test(result.browseHash), 'advisor audit deep link: browse hash should be recognized');
+  assert(result.browseFromHash.currentTab === 'browse' && result.browseFromHash.browseDept === '__PROFILE_DEPTS__' && result.browseFromHash.browseGenEd === 'DSHU', 'advisor audit deep link: browse hash should reopen the saved audit Browse target');
+  assert(/Audit:/.test(result.browseFromHash.savedLabel) && /DSHU|Humanities/.test(result.browseFromHash.savedLabel), 'advisor audit deep link: browse hash should save the audit search label');
 
   return {
     id: 'AUDIT-ISSUES',
     count: result.count,
-    opened: result.openedPlaceholder.code,
-    browse: `${result.browseDept}/${result.browseGenEd}`,
+    opened: result.directOpenedPlaceholder.code,
+    browse: `${result.directBrowse.browseDept}/${result.directBrowse.browseGenEd}`,
   };
 }
 

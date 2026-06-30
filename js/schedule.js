@@ -1684,16 +1684,79 @@ function scheduleAuditIssueActionSummary(issue) {
   return `${issue?.actionLabel || 'Find courses'} in Browse`;
 }
 
+function scheduleAdvisorDeepLinkHash(action, key) {
+  const cleanAction = action === 'browse' ? 'browse' : 'primary';
+  const cleanKey = String(key || '').trim();
+  if (!cleanKey) return '';
+  return `#advisor-action=${encodeURIComponent(cleanAction)}&issue=${encodeURIComponent(cleanKey)}`;
+}
+
+function scheduleAdvisorLiveBaseUrl() {
+  try {
+    if (typeof location !== 'undefined' && location.origin && location.origin !== 'null') {
+      return `${location.origin}${location.pathname || '/'}`;
+    }
+  } catch {}
+  return '';
+}
+
+function scheduleAdvisorDeepLink(action, key) {
+  const hash = scheduleAdvisorDeepLinkHash(action, key);
+  if (!hash) return '#';
+  const base = scheduleAdvisorLiveBaseUrl();
+  return base ? `${base}${hash}` : hash;
+}
+
+function scheduleAdvisorActionFromHash(hashValue) {
+  const raw = String(hashValue || (typeof location !== 'undefined' ? location.hash : '') || '').replace(/^#/, '');
+  if (!raw || raw.startsWith('plan=')) return null;
+  const parsed = raw.split('&').reduce((acc, part) => {
+    const [key, ...rest] = part.split('=');
+    if (!key) return acc;
+    const value = rest.join('=');
+    try {
+      acc[decodeURIComponent(key)] = decodeURIComponent(value || '');
+    } catch {
+      acc[key] = value || '';
+    }
+    return acc;
+  }, {});
+  if (parsed['advisor-action'] !== 'primary' && parsed['advisor-action'] !== 'browse') return null;
+  if (!parsed.issue) return null;
+  return { action: parsed['advisor-action'], key: parsed.issue };
+}
+
+function scheduleClearAdvisorActionHash() {
+  try {
+    if (typeof history !== 'undefined' && typeof location !== 'undefined' && history.replaceState) {
+      history.replaceState(null, '', `${location.pathname || '/'}${location.search || ''}`);
+    }
+  } catch {}
+}
+
+function scheduleHandleAdvisorActionHash(hashValue, opts = {}) {
+  const parsed = scheduleAdvisorActionFromHash(hashValue);
+  if (!parsed) return false;
+  const issue = typeof auditFindIssue === 'function' ? auditFindIssue(parsed.key) : null;
+  if (!issue) return false;
+  if (parsed.action === 'browse') scheduleOpenAdvisorAuditBrowse(parsed.key);
+  else scheduleOpenAdvisorAuditPrimary(parsed.key);
+  if (opts.clear !== false) scheduleClearAdvisorActionHash();
+  return true;
+}
+
 function scheduleAuditIssueActionHtml(issue) {
   if (!issue?.key) return '';
+  const primaryHref = scheduleAdvisorDeepLink('primary', issue.key);
+  const browseHref = scheduleAdvisorDeepLink('browse', issue.key);
   return `
     <div class="schedule-advisor-audit-next">
       <span><strong>Next action</strong>${scheduleEscape(issue.actionSummary || 'Review in Terp Track')}</span>
       <span><strong>Browse target</strong>${scheduleEscape(issue.browseTarget || 'Browse course catalog')}</span>
     </div>
     <div class="schedule-advisor-audit-actions">
-      <button class="schedule-advisor-audit-link primary" type="button" data-schedule-audit-primary="${scheduleEscape(issue.key)}">${scheduleEscape(issue.actionLabel || 'Open')}</button>
-      <button class="schedule-advisor-audit-link" type="button" data-schedule-audit-browse="${scheduleEscape(issue.key)}">Open Browse</button>
+      <a class="schedule-advisor-audit-link primary" href="${scheduleEscape(primaryHref)}" data-schedule-audit-primary="${scheduleEscape(issue.key)}">${scheduleEscape(issue.actionLabel || 'Open')}</a>
+      <a class="schedule-advisor-audit-link" href="${scheduleEscape(browseHref)}" data-schedule-audit-browse="${scheduleEscape(issue.key)}">Open Browse</a>
     </div>
   `;
 }
@@ -1775,6 +1838,12 @@ function scheduleOpenAdvisorAuditBrowse(key) {
     return;
   }
   auditOpenIssueBrowse(key);
+}
+
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('hashchange', () => {
+    scheduleHandleAdvisorActionHash();
+  });
 }
 
 function scheduleCourseIsGenEd(course) {
@@ -2078,7 +2147,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-audit-next span{border:1px solid #d8cec0;border-radius:7px;background:#fbf7ef;padding:6px 7px}
     .schedule-advisor-audit-next strong{display:block;color:#8b0000;font-size:9px;text-transform:uppercase}
     .schedule-advisor-audit-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
-    .schedule-advisor-audit-link{border:1px solid #9fb4c8;border-radius:999px;background:#eef4fa;color:#2e5c8b;font-size:11px;font-weight:700;padding:4px 8px}
+    .schedule-advisor-audit-link{display:inline-flex;align-items:center;border:1px solid #9fb4c8;border-radius:999px;background:#eef4fa;color:#2e5c8b;font-size:11px;font-weight:700;padding:4px 8px;text-decoration:none}
     .schedule-advisor-audit-link.primary{border-color:#2e5c8b;background:#2e5c8b;color:#fff}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
