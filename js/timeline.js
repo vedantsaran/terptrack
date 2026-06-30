@@ -1100,14 +1100,7 @@ function plannerPriorCreditUndoAvailability(change) {
   if (!Array.isArray(undo.entries) || !undo.entries.length) {
     return { can: false, reason: 'Undo unavailable: this prior-credit change has no restore data.' };
   }
-  const changed = [];
-  undo.entries.forEach(entry => {
-    const expected = plannerHasOwn(entry, 'appliedCourseState')
-      ? entry.appliedCourseState
-      : { status: 'transfer', grade: '' };
-    const current = plannerCourseStateSnapshot(entry.code);
-    if (!current.had || !plannerValuesEqual(current.value, expected)) changed.push(entry.code);
-  });
+  const changed = plannerPriorCreditChangedCodes(change);
   if (changed.length) {
     return {
       can: false,
@@ -1121,6 +1114,90 @@ function plannerChangeUndoAvailability(change) {
   if (change?.undo?.kind === 'placeholder-replacement') return plannerPlaceholderUndoAvailability(change);
   if (change?.undo?.kind === 'prior-credit') return plannerPriorCreditUndoAvailability(change);
   return { can: false, reason: '' };
+}
+
+function plannerPriorCreditChangedCodes(change) {
+  const undo = change?.undo;
+  if (undo?.kind !== 'prior-credit' || !Array.isArray(undo.entries)) return [];
+  const changed = [];
+  undo.entries.forEach(entry => {
+    const expected = plannerHasOwn(entry, 'appliedCourseState')
+      ? entry.appliedCourseState
+      : { status: 'transfer', grade: '' };
+    const current = plannerCourseStateSnapshot(entry.code);
+    if (!current.had || !plannerValuesEqual(current.value, expected)) changed.push(entry.code);
+  });
+  return changed;
+}
+
+function plannerFindVisiblePlanCourse(code) {
+  const norm = normalizeCode(code || '');
+  if (!norm) return null;
+  return flatCourses().find(course => normalizeCode(course.code) === norm) || null;
+}
+
+function plannerChangeReviewTarget(change) {
+  const undo = change?.undo;
+  if (undo?.kind === 'placeholder-replacement' && !undo.appliedAt) {
+    const course = plannerFindVisiblePlanCourse(undo.replacementCode);
+    if (!course) return null;
+    return {
+      code: course.code,
+      label: 'Show edited course',
+    };
+  }
+  if (undo?.kind === 'prior-credit' && !undo.appliedAt) {
+    const changed = plannerPriorCreditChangedCodes(change);
+    const code = changed.find(item => plannerFindVisiblePlanCourse(item));
+    if (!code) return null;
+    const course = plannerFindVisiblePlanCourse(code);
+    return {
+      code: course?.code || code,
+      label: changed.length > 1 ? 'Show first edited course' : 'Show edited course',
+    };
+  }
+  return null;
+}
+
+function plannerResetPlanFilters() {
+  currentFilter = 'all';
+  searchQuery = '';
+  const input = document.getElementById('search-input');
+  if (input) input.value = '';
+  document.querySelectorAll('.filter-chip[data-filter]').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.filter === 'all');
+  });
+}
+
+function plannerJumpToPlanCourse(code) {
+  const norm = normalizeCode(code || '');
+  if (!norm) return false;
+  plannerResetPlanFilters();
+  if (typeof switchTab === 'function') switchTab('plan');
+  renderSemesters();
+  requestAnimationFrame(() => {
+    const row = Array.from(document.querySelectorAll('#semesters-container .course'))
+      .find(el => normalizeCode(el.dataset.code) === norm);
+    if (!row) {
+      if (typeof toastInfo === 'function') toastInfo('That course is not visible in the current Plan.');
+      return;
+    }
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    row.classList.add('roadmap-plan-focus');
+    clearTimeout(plannerJumpToPlanCourse._t);
+    plannerJumpToPlanCourse._t = setTimeout(() => row.classList.remove('roadmap-plan-focus'), 1800);
+  });
+  return true;
+}
+
+function plannerOpenChangeReviewTarget(changeId) {
+  const change = recentPlanChanges().find(item => item.id === String(changeId || ''));
+  const target = plannerChangeReviewTarget(change);
+  if (!target?.code) {
+    if (typeof toastInfo === 'function') toastInfo('That edited course is no longer in the Plan.');
+    return false;
+  }
+  return plannerJumpToPlanCourse(target.code);
 }
 
 function plannerApplyPlaceholderUndo(change) {
@@ -1239,6 +1316,7 @@ function renderPlanChangeHistory() {
       <div class="change-history-list">
         ${changes.slice(0, 8).map(change => {
           const undoStatus = plannerChangeUndoAvailability(change);
+          const reviewTarget = !undoStatus.can && undoStatus.reason ? plannerChangeReviewTarget(change) : null;
           return `
           <div class="change-history-row">
             <span class="change-history-icon">${timelineEscape(plannerChangeIcon(change.type))}</span>
@@ -1252,6 +1330,11 @@ function renderPlanChangeHistory() {
                 </div>
               ` : undoStatus.reason ? `
                 <div class="change-history-unavailable">${timelineEscape(undoStatus.reason)}</div>
+                ${reviewTarget ? `
+                  <div class="change-history-actions change-history-recovery">
+                    <button class="btn small" type="button" data-change-review="${timelineEscape(change.id)}">${timelineEscape(reviewTarget.label)}</button>
+                  </div>
+                ` : ''}
               ` : ''}
             </div>
           </div>
@@ -1349,6 +1432,11 @@ document.addEventListener('click', e => {
   const undoChange = e.target.closest('[data-change-undo]');
   if (undoChange) {
     undoPlanChange(undoChange.dataset.changeUndo);
+    return;
+  }
+  const reviewChange = e.target.closest('[data-change-review]');
+  if (reviewChange) {
+    plannerOpenChangeReviewTarget(reviewChange.dataset.changeReview);
     return;
   }
   const move = e.target.closest('[data-planner-move]');

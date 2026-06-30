@@ -1249,6 +1249,12 @@ h1.hero-title em {
   font-size: .7rem;
   line-height: 1.35;
 }
+.change-history-recovery {
+  margin-top: 5px;
+}
+.change-history-recovery .btn {
+  color: var(--blue);
+}
 .change-history-empty {
   margin: 0;
   color: var(--slate);

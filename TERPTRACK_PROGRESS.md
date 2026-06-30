@@ -3033,3 +3033,56 @@ Next pass candidates:
 - Broaden prior-credit equivalency coverage with official-source mappings.
 - Add a safe stale-undo recovery affordance that jumps to the edited course or section.
 - Add advisor packet quick links from audit issues into Browse or placeholder replacement.
+
+## 2026-06-30 Pass 62
+
+Focus: make stale Timeline undo rows actionable by jumping students to the edited course.
+
+Planned changes:
+- Keep stale undo protection in place when a later edit makes undo unsafe.
+- Add a compact recovery action to stale rows that can still locate the edited course.
+- Reuse Plan navigation and focus behavior so students land directly on the affected row.
+- Cover both stale placeholder replacements and stale prior-credit undo entries.
+
+Completed:
+- Added Timeline helpers that:
+  - identify edited prior-credit courses by comparing current state to the expected applied transfer state.
+  - find a stale placeholder replacement's edited replacement course.
+  - reset Plan filters/search before navigation.
+  - switch to the Plan tab, scroll the affected course into view, and flash the existing plan-focus style.
+- Recent Changes now renders `Show edited course` or `Show first edited course` for stale undo rows with a resolvable course target.
+- Unsafe stale rows still hide the `Undo` button and keep the explanatory `Undo unavailable` reason.
+- Added small recovery-action styling.
+- Versioned changed browser assets:
+  - `styles.css?v=58`
+  - `js/timeline.js?v=12`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `PLACEHOLDER-SECTIONS` fixture confirms:
+  - a stale section-pick undo still hides the Undo button.
+  - the stale row renders a recovery jump.
+  - the recovery target resolves to `GVPT 200`.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - a stale prior-credit undo still hides the Undo button.
+  - the stale row renders a recovery jump.
+  - the recovery target resolves to `MATH 140`.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=58` and `js/timeline.js?v=12` loaded.
+  - a seeded stale prior-credit row rendered `Undo unavailable: MATH 140 was changed after these credits were applied.`
+  - the stale row had zero Undo buttons and one `Show edited course` button.
+  - clicking `Show edited course` switched to the Plan tab.
+  - the Plan search/filter state reset to All with an empty search box.
+  - `MATH 140` was visible and received the plan-focus highlight.
+  - there was no horizontal overflow.
+  - Chrome console warnings/errors were clean.
+  - the restored app page no longer showed the seeded QA state.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add source-level notes per prior-credit preset.
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add advisor packet quick links from audit issues into Browse or placeholder replacement.
+- Add Schedule tab quick jump from Timeline stale section-pick rows to the affected term.
