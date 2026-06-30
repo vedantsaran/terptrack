@@ -3603,6 +3603,28 @@ h1.hero-title em {
 .schedule-advisor-view-note strong {
   color: var(--ink);
 }
+.schedule-advisor-live-note {
+  margin: 10px 0 0;
+  border: 1px solid rgba(46,92,139,.28);
+  border-radius: 8px;
+  background: rgba(46,92,139,.08);
+  padding: 9px 10px;
+}
+.schedule-advisor-live-note strong {
+  color: var(--blue);
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.schedule-advisor-live-note p {
+  color: var(--ink-soft);
+  font-size: .74rem;
+  line-height: 1.4;
+  margin: 4px 0 0;
+}
 .schedule-advisor-diagnostics,
 .schedule-advisor-audit {
   margin: 10px 0 0;

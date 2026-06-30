@@ -3674,3 +3674,56 @@ Next pass candidates:
 - Add an advisor packet import/open banner that explains when live deep links require the same browser profile state.
 - Add per-major requirement-source citations to generated schedules.
 - Add a course-equivalency conflict detector for overlapping AP, IB, transfer, and UMD course attempts.
+
+## 2026-06-30 Pass 73
+
+Focus: explain when advisor-packet live links require the same browser profile and local plan state.
+
+Planned changes:
+- Add a clear note to advisor packets when live audit-action links are present.
+- Include the same guidance in downloaded standalone advisor-packet HTML.
+- Include the same guidance in plain-text advisor packet output.
+- Keep packets without audit-action links free of irrelevant live-link copy.
+
+Completed:
+- Added shared schedule helpers in `js/schedule.js`:
+  - `scheduleAdvisorLiveLinkNoticeHtml()`.
+  - `scheduleAdvisorLiveLinkNoticeText()`.
+- Advisor packets now show a `Live TerpTrack links` note when exported audit issues include action links.
+- The note explains:
+  - action links reopen the exact plan in TerpTrack.
+  - links depend on the same browser profile/local plan state.
+  - if the packet is opened on another device or profile, the matching plan should be opened/imported there first.
+  - advisors can fall back to the visible `Next action` and `Browse target` text manually.
+- Downloaded standalone advisor packet CSS includes the same note styling.
+- Plain-text advisor packets include the same live-link guidance.
+- Versioned changed browser assets:
+  - `styles.css?v=68`
+  - `js/schedule.js?v=29`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `AUDIT-ISSUES` fixture confirms:
+  - rendered advisor HTML includes the live-link note.
+  - the note names the same browser profile/local plan state requirement.
+  - the note tells users to open/import the matching plan or use the Next action and Browse target text manually.
+  - advisor text output includes the same guidance.
+  - standalone advisor packet HTML includes `schedule-advisor-live-note` CSS/markup and the same guidance.
+  - the note hides when audit actions are turned off.
+- Used Chrome with the existing local server at `http://localhost:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=68` and `js/schedule.js?v=29` loaded.
+  - the Schedule advisor packet rendered `Live TerpTrack links`.
+  - the note included `same browser profile/local plan state`.
+  - the note included the open/import fallback and `Next action and Browse target` fallback.
+  - live advisor links were present in the packet.
+  - there was no horizontal page overflow.
+  - browser console errors were clean.
+- Finalized the Chrome tab after restoring the original local app state.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add per-major requirement-source citations to generated schedules.
+- Add a course-equivalency conflict detector for overlapping AP, IB, transfer, and UMD course attempts.
+- Add advisor-packet import/open affordances for loading shared plans before following packet action links.

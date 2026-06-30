@@ -1735,11 +1735,16 @@ function testAuditIssueDrawer(context) {
   assert(/GenEd DSHU|GVPT 3xx Elective A|Free Elective/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include top audit issue titles');
   assert(/Next action|Browse target|data-schedule-audit-primary|data-schedule-audit-browse/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include quick-link actions and targets');
   assert(/href="[^"]*#advisor-action=primary&amp;issue=/.test(result.advisorHtml) && /href="[^"]*#advisor-action=browse&amp;issue=/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include live-app deep links');
+  assert(/Live TerpTrack links/.test(result.advisorHtml) && /same browser profile\/local plan state/.test(result.advisorHtml), 'advisor audit export: advisor HTML should explain live-link browser-state requirements');
+  assert(/open\/import the matching plan/.test(result.advisorHtml) && /Next action and Browse target/.test(result.advisorHtml), 'advisor audit export: live-link notice should explain fallback review steps');
   assert(/Degree audit snapshot/.test(result.advisorText) && /Satisfies:/.test(result.advisorText), 'advisor audit export: advisor text should include audit snapshot details');
   assert(/Next action:|Browse target:/.test(result.advisorText), 'advisor audit export: advisor text should include quick-link action details');
+  assert(/Live TerpTrack links/.test(result.advisorText) && /same browser profile\/local plan state/.test(result.advisorText), 'advisor audit export: advisor text should include live-link browser-state guidance');
   assert(/schedule-advisor-audit-link/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include audit quick-link CSS/markup');
   assert(/#advisor-action=primary&amp;issue=/.test(result.advisorDocument) && /#advisor-action=browse&amp;issue=/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include live-app deep links');
+  assert(/schedule-advisor-live-note/.test(result.advisorDocument) && /same browser profile\/local plan state/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include live-link guidance CSS/markup');
   assert(!/Degree Audit Snapshot/.test(result.advisorHtmlNoAudit), 'advisor audit export: audit snapshot should hide when auditIssues option is off');
+  assert(!/Live TerpTrack links/.test(result.advisorHtmlNoAudit), 'advisor audit export: live-link notice should hide when audit actions are off');
   assert(result.directOpenedPlaceholder.code === 'GenEd DSHU' && result.directOpenedPlaceholder.semId === 'PASS54', 'audit issues: primary placeholder action should open the replacement modal for the exact slot');
   assert(result.directBrowse.currentTab === 'browse', 'audit issues: Browse handoff should switch to Browse');
   assert(result.directBrowse.browseDept === '__PROFILE_DEPTS__', 'audit issues: Browse handoff should use profile departments');
