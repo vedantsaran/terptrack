@@ -3197,3 +3197,58 @@ Next pass candidates:
 - Broaden prior-credit equivalency coverage with official-source mappings.
 - Add advisor packet quick links from audit issues into Browse or placeholder replacement.
 - Add actionable Timeline recovery for prior-credit rows whose courses were removed from the plan.
+
+## 2026-06-30 Pass 65
+
+Focus: add actionable Timeline recovery for prior-credit rows whose courses were removed from the plan.
+
+Planned changes:
+- Keep visible edited-course jumps for stale prior-credit rows when the affected course still appears in Plan.
+- Add a Settings recovery action when a stale prior-credit undo entry points at a course with no visible Plan row.
+- Open the AP / IB / Transfer Credit editor directly from Timeline and make the target obvious.
+- Keep prior-credit recovery separate from placeholder term and Schedule recovery actions.
+
+Completed:
+- Added prior-credit recovery target detection for stale undo rows whose changed course is no longer visible in the Plan.
+- Recent Changes now renders `Review prior credits` for those rows instead of a missing edited-course jump.
+- Added a Timeline click path that:
+  - opens Settings.
+  - scrolls to the AP / IB / Transfer Credit section.
+  - focuses the other-course-code textarea.
+  - briefly highlights the prior-credit editor with a Settings-specific focus style.
+- Added a stable Settings section anchor for the prior-credit editor.
+- Versioned changed browser assets:
+  - `styles.css?v=61`
+  - `js/timeline.js?v=15`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - removed prior-credit courses disable unsafe undo.
+  - removed prior-credit courses explain the stale undo with the changed course code.
+  - removed prior-credit courses hide the unsafe Undo button.
+  - removed prior-credit courses do not render a missing `Show edited course` Plan jump.
+  - removed prior-credit courses render `Review prior credits`.
+  - visible edited prior-credit courses still render `Show edited course` and do not show Settings recovery.
+  - stale prior-credit rows still do not render section Schedule jumps.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=61` and `js/timeline.js?v=15` loaded.
+  - a seeded stale prior-credit row rendered `Undo unavailable: AP FSAW Credit was changed after these credits were applied.`
+  - the stale row had zero Undo buttons, zero `Show edited course` buttons, zero Schedule/term recovery buttons, and one `Review prior credits` button.
+  - clicking `Review prior credits` opened Settings.
+  - the AP / IB / Transfer Credit section received the focus highlight.
+  - keyboard focus landed on `#set-prior-codes`.
+  - the prior-credit source note rendered.
+  - the prior-credit editor and textarea were visible in the viewport.
+  - there was no horizontal overflow.
+  - Chrome app-origin console warnings/errors were clean; unrelated extension warnings were ignored.
+  - the restored app page no longer showed the seeded QA state.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add source-level notes per prior-credit preset.
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add advisor packet quick links from audit issues into Browse or placeholder replacement.
+- Add Timeline recovery for stale prior-credit rows with multiple changed courses split between Plan-visible and removed items.

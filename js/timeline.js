@@ -1159,6 +1159,16 @@ function plannerChangeReviewTarget(change) {
   return null;
 }
 
+function plannerChangePriorCreditTarget(change) {
+  const undo = change?.undo;
+  if (undo?.kind !== 'prior-credit' || undo.appliedAt) return null;
+  const changed = plannerPriorCreditChangedCodes(change);
+  if (!changed.length) return null;
+  const hasMissingPlanCourse = changed.some(code => !plannerFindVisiblePlanCourse(code));
+  if (!hasMissingPlanCourse) return null;
+  return { label: 'Review prior credits' };
+}
+
 function plannerChangeScheduleTarget(change) {
   const undo = change?.undo;
   if (undo?.kind !== 'placeholder-replacement' || undo.appliedAt) return null;
@@ -1296,6 +1306,46 @@ function plannerOpenChangeTermTarget(changeId) {
   return plannerJumpToPlanSemester(target.semId);
 }
 
+function plannerFocusSettingsPriorCredit(attempt = 0) {
+  const section = document.getElementById('settings-prior-credit-section');
+  if (!section) {
+    if (attempt < 8) {
+      setTimeout(() => plannerFocusSettingsPriorCredit(attempt + 1), 80);
+      return true;
+    }
+    return false;
+  }
+  section.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  section.classList.add('timeline-settings-focus');
+  const raw = document.getElementById('set-prior-codes');
+  if (raw && typeof raw.focus === 'function') {
+    try {
+      raw.focus({ preventScroll: true });
+    } catch {
+      raw.focus();
+    }
+  }
+  clearTimeout(plannerFocusSettingsPriorCredit._t);
+  plannerFocusSettingsPriorCredit._t = setTimeout(() => section.classList.remove('timeline-settings-focus'), 1800);
+  return true;
+}
+
+function plannerOpenPriorCreditReview(changeId) {
+  const change = recentPlanChanges().find(item => item.id === String(changeId || ''));
+  const target = plannerChangePriorCreditTarget(change);
+  if (!target) {
+    if (typeof toastInfo === 'function') toastInfo('That prior-credit review is no longer needed.');
+    return false;
+  }
+  if (typeof openSettings !== 'function') {
+    if (typeof toastInfo === 'function') toastInfo('Settings are not available yet.');
+    return false;
+  }
+  openSettings();
+  plannerFocusSettingsPriorCredit();
+  return true;
+}
+
 function plannerApplyPlaceholderUndo(change) {
   const undo = change?.undo;
   const availability = plannerPlaceholderUndoAvailability(change);
@@ -1415,6 +1465,7 @@ function renderPlanChangeHistory() {
           const reviewTarget = !undoStatus.can && undoStatus.reason ? plannerChangeReviewTarget(change) : null;
           const scheduleTarget = !undoStatus.can && undoStatus.reason ? plannerChangeScheduleTarget(change) : null;
           const termTarget = !undoStatus.can && undoStatus.reason ? plannerChangeTermTarget(change) : null;
+          const priorCreditTarget = !undoStatus.can && undoStatus.reason ? plannerChangePriorCreditTarget(change) : null;
           return `
           <div class="change-history-row">
             <span class="change-history-icon">${timelineEscape(plannerChangeIcon(change.type))}</span>
@@ -1428,11 +1479,12 @@ function renderPlanChangeHistory() {
                 </div>
               ` : undoStatus.reason ? `
                 <div class="change-history-unavailable">${timelineEscape(undoStatus.reason)}</div>
-                ${reviewTarget || scheduleTarget || termTarget ? `
+                ${reviewTarget || scheduleTarget || termTarget || priorCreditTarget ? `
                   <div class="change-history-actions change-history-recovery">
                     ${reviewTarget ? `<button class="btn small" type="button" data-change-review="${timelineEscape(change.id)}">${timelineEscape(reviewTarget.label)}</button>` : ''}
                     ${scheduleTarget ? `<button class="btn small" type="button" data-change-schedule="${timelineEscape(change.id)}">${timelineEscape(scheduleTarget.label)}</button>` : ''}
                     ${termTarget ? `<button class="btn small" type="button" data-change-term="${timelineEscape(change.id)}">${timelineEscape(termTarget.label)}</button>` : ''}
+                    ${priorCreditTarget ? `<button class="btn small" type="button" data-change-prior-credit="${timelineEscape(change.id)}">${timelineEscape(priorCreditTarget.label)}</button>` : ''}
                   </div>
                 ` : ''}
               ` : ''}
@@ -1547,6 +1599,11 @@ document.addEventListener('click', e => {
   const termChange = e.target.closest('[data-change-term]');
   if (termChange) {
     plannerOpenChangeTermTarget(termChange.dataset.changeTerm);
+    return;
+  }
+  const priorCreditChange = e.target.closest('[data-change-prior-credit]');
+  if (priorCreditChange) {
+    plannerOpenPriorCreditReview(priorCreditChange.dataset.changePriorCredit);
     return;
   }
   const move = e.target.closest('[data-planner-move]');

@@ -1971,11 +1971,23 @@ async function testSettingsPriorCreditEditor(context) {
       renderPlanChangeHistory();
       const historyHtml = elements['plan-change-history'].innerHTML;
       const canUndoBefore = plannerChangeCanUndo(changeAfterApply);
+      const coursesAfterApplySnapshot = JSON.parse(JSON.stringify(state.courses || {}));
+      const customCoursesAfterApplySnapshot = JSON.parse(JSON.stringify(state.customCourses || []));
+      state.customCourses = (state.customCourses || []).filter(course => normalizeCode(course.code) !== 'APFSAWCREDIT');
+      delete state.courses['AP FSAW Credit'];
+      renderPlanChangeHistory();
+      const removedPriorHistoryHtml = elements['plan-change-history'].innerHTML;
+      const canUndoAfterRemovedPrior = plannerChangeCanUndo(changeAfterApply);
+      const removedPriorReviewTarget = plannerChangeReviewTarget(changeAfterApply);
+      const removedPriorCreditTarget = plannerChangePriorCreditTarget(changeAfterApply);
+      state.courses = JSON.parse(JSON.stringify(coursesAfterApplySnapshot));
+      state.customCourses = JSON.parse(JSON.stringify(customCoursesAfterApplySnapshot));
       state.courses['MATH 140'] = { status: 'passed', grade: 'A' };
       renderPlanChangeHistory();
       const staleHistoryHtml = elements['plan-change-history'].innerHTML;
       const canUndoAfterStatusEdit = plannerChangeCanUndo(changeAfterApply);
       const staleReviewTarget = plannerChangeReviewTarget(changeAfterApply);
+      const stalePriorCreditTarget = plannerChangePriorCreditTarget(changeAfterApply);
       let staleUndoApplied = null;
       let staleUndoMessage = '';
       const oldToastError = toastError;
@@ -1999,9 +2011,14 @@ async function testSettingsPriorCreditEditor(context) {
         recentChange: changeAfterApply,
         historyHtml,
         canUndoBefore,
+        removedPriorHistoryHtml,
+        canUndoAfterRemovedPrior,
+        removedPriorReviewTarget,
+        removedPriorCreditTarget,
         staleHistoryHtml,
         canUndoAfterStatusEdit,
         staleReviewTarget,
+        stalePriorCreditTarget,
         staleUndoApplied,
         staleUndoMessage,
         undoApplied,
@@ -2027,11 +2044,18 @@ async function testSettingsPriorCreditEditor(context) {
   assert(result.recentChange.undo?.kind === 'prior-credit', 'settings prior credit: recent change should include undo payload');
   assert(/data-change-undo/.test(result.historyHtml) && /Undo/.test(result.historyHtml), 'settings prior credit: recent changes should render undo action');
   assert(result.canUndoBefore === true, 'settings prior credit: change should be undoable before applying undo');
+  assert(result.canUndoAfterRemovedPrior === false, 'settings prior credit: removed prior-credit course should disable undo');
+  assert(/Undo unavailable/.test(result.removedPriorHistoryHtml) && /AP FSAW Credit was changed/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should explain stale undo');
+  assert(!/data-change-undo/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should hide undo button');
+  assert(!/data-change-review/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should not offer a missing plan-row jump');
+  assert(/data-change-prior-credit/.test(result.removedPriorHistoryHtml) && /Review prior credits/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should offer settings recovery');
+  assert(!result.removedPriorReviewTarget && result.removedPriorCreditTarget?.label === 'Review prior credits', 'settings prior credit: removed prior-credit target should open prior-credit review');
   assert(result.canUndoAfterStatusEdit === false, 'settings prior credit: edited course status should disable undo');
   assert(/Undo unavailable/.test(result.staleHistoryHtml) && /MATH 140 was changed/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should explain edited course status');
   assert(!/data-change-undo/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should hide undo button');
   assert(/data-change-review/.test(result.staleHistoryHtml) && /Show edited course/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should offer a recovery jump');
   assert(result.staleReviewTarget?.code === 'MATH 140', 'settings prior credit: recovery jump should target the edited course');
+  assert(!result.stalePriorCreditTarget, 'settings prior credit: visible edited course should not show settings recovery');
   assert(!/data-change-schedule/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should not show a section schedule jump');
   assert(result.staleUndoApplied === false && /MATH 140 was changed/.test(result.staleUndoMessage), 'settings prior credit: stale undo click should report edited course status');
   assert(result.undoApplied === true, 'settings prior credit: undo should apply successfully');
