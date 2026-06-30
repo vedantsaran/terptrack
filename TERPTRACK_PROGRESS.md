@@ -1225,3 +1225,49 @@ Next pass candidates:
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Expand Browse to support multi-department profile search rather than only first-department default plus chips.
 - Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
+
+## 2026-06-30 Pass 31
+
+Focus: add repeatable generated-plan regression fixtures so automatic four-year planning can be protected across future changes.
+
+Planned changes:
+- Add a repo-native Node regression runner with no package-manager dependency.
+- Load the app's browser scripts in a VM so tests exercise the real major templates and auto-scheduler.
+- Cover representative high-credit engineering, low-requirement BA, language BA, and STEM generated plans.
+- Assert invariant behavior: eight terms, target credits met, hard 18-credit cap, complete GenEd/I-Series coverage, unique generated placeholder codes, and profile-labeled free electives where applicable.
+- Add a synthetic prerequisite-chain fixture to prove prerequisite ordering still works when the filler generator adds GenEds/free electives.
+- Document the command in the README.
+
+Completed:
+- Added `scripts/test-generated-plans.js`.
+- The runner loads `js/data.js`, `js/major-schedules.js`, `js/majors.js`, `js/state.js`, `js/api.js`, and `js/import.js` in a Node VM with browser-like localStorage/document stubs.
+- Added generated major fixtures for:
+  - `ENAE` high-credit engineering.
+  - `BIOE` high-credit life science engineering.
+  - `AAST` low-requirement BA.
+  - `SPAN` BA language and culture.
+  - `AOSC` STEM science.
+  - `STAT` STEM data/math.
+- Added fixture assertions for credit target, credit overage, max term load, complete GenEd coverage, metadata fallback behavior, requirement counts, generated GenEd placeholders, free electives, duplicate generated codes, and profile-labeled electives.
+- Added a synthetic CMSC 131 -> 132 -> 216 -> 330 prerequisite-chain fixture.
+- Documented local check commands in `README.md`.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six major fixtures plus the prerequisite-chain fixture.
+- The generated-plan fixture output confirmed:
+  - ENAE: `126/125`, loads `15,15,18,15,18,15,15,15`, GenEd `13/13`.
+  - BIOE: `126/126`, loads `18,18,15,15,15,15,15,15`, GenEd `13/13`.
+  - AAST: `121/120`, loads `15,15,15,15,15,15,16,15`, GenEd `13/13`.
+  - SPAN: `121/120`, loads `15,15,15,15,15,16,15,15`, GenEd `13/13`.
+  - AOSC: `120/120`, loads `15,15,15,15,15,15,15,15`, GenEd `13/13`.
+  - STAT: `121/120`, loads `15,15,15,15,15,16,15,15`, GenEd `13/13`.
+  - Synthetic prerequisite chain placed terms `0 -> 1 -> 2 -> 3`.
+- Ran `node --check` on every file in `js/`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `git diff --check`.
+
+Next pass candidates:
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Expand Browse to support multi-department profile search rather than only first-department default plus chips.
+- Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
+- Start account/friends planning: schema for friend connections, shared plans, and privacy-safe read-only plan viewing.
