@@ -860,3 +860,44 @@ Next pass candidates:
 - Add a visible schedule-change digest to advisor packets or exported schedule summaries.
 - Add advisor-packet print presets for registrar/advisor vs student personal review.
 - Add Roadmap term-jump controls for plans with many more than eight semesters.
+
+## 2026-06-30 Pass 23
+
+Focus: carry recent schedule edits into the student/advisor handoff surfaces instead of leaving them only on Action Timeline.
+
+Planned changes:
+- Add a compact Recent Changes digest to Schedule Output.
+- Include the same digest in Advisor Packet HTML and standalone advisor downloads.
+- Append recent edits to the downloadable/plain-text schedule summary.
+- Style the digest for app, print, standalone advisor HTML, and mobile layouts.
+- Verify with a reversible CMSC 131 section swap, then clear local test history.
+
+Completed:
+- Added shared schedule digest helpers for recent changes, type labels, timestamps, HTML rows, and plain-text rows.
+- Rendered Recent Changes in the schedule print sheet when saved edits exist.
+- Rendered Recent Changes in the Advisor Packet before the advisor view note so reviewers see the latest plan context.
+- Included digest CSS in standalone advisor HTML so downloaded packets preserve the same layout.
+- Appended `Recent plan changes:` to the `.txt` schedule summary when recent edits exist.
+- Added responsive app styles for digest headers and rows, plus print border treatment.
+- Versioned `styles.css` to `v=24` and `js/schedule.js` to `v=19` in `index.html`.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `git diff --check`.
+- Reloaded `http://localhost:5173/?pass23=...` in the in-app browser and confirmed `styles.css?v=24` and `js/schedule.js?v=19` loaded.
+- Changed CMSC 131 from `CMSC131-0202` to `CMSC131-0204`, then restored it to `CMSC131-0202`.
+- Confirmed Schedule Output rendered a Recent Changes digest with `Picked CMSC 131 0202` and `Picked CMSC 131 0204`.
+- Confirmed Advisor Packet rendered the same two recent changes under `Advisor context`.
+- Confirmed the hidden schedule summary text included `Recent plan changes:` and the two CMSC 131 change details before clearing history.
+- Confirmed the advisor download source path builds `advisorDocument` from the same schedule/advisor fragments that rendered the digest; the in-app browser did not emit a native download event for the object-URL download.
+- Checked a 390px-wide viewport with the digest visible: headers stacked, rows stayed inside the panel, and document-wide horizontal overflow stayed at 0.
+- Cleared Recent Changes from Action Timeline and confirmed Schedule Output no longer showed digest blocks, the summary no longer contained `Recent plan changes:`, and CMSC 131 ended restored to `CMSC131-0202`.
+- Verified Select summary still reveals, focuses, and selects the full schedule textarea after cleanup.
+- Reset the browser viewport to the default layout after mobile verification.
+- Confirmed current-page browser console errors were 0 for the Pass 23 URL.
+
+Next pass candidates:
+- Add a term-availability simulator/test fixture inside the app's dev diagnostics so move suggestions can be regression-tested without waiting for live UMD data to line up.
+- Add advisor-packet print presets for registrar/advisor vs student personal review.
+- Add Roadmap term-jump controls for plans with many more than eight semesters.
+- Add schedule output include/exclude toggles for warnings, recent changes, unscheduled courses, and preference notes.

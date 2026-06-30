@@ -1196,6 +1196,60 @@ function scheduleAdvisorFilename(term) {
   return `terp-track-advisor-${program}-${label || 'term'}-${date}.html`;
 }
 
+function scheduleRecentChanges(limit = 5) {
+  return typeof recentPlanChanges === 'function' ? recentPlanChanges().slice(0, limit) : [];
+}
+
+function scheduleChangeIcon(type) {
+  if (type === 'term-move') return 'Move';
+  if (type === 'section-swap') return 'Swap';
+  if (type === 'auto-pick') return 'Auto';
+  if (type === 'section-pick') return 'Pick';
+  if (type === 'clear') return 'Clear';
+  return 'Edit';
+}
+
+function scheduleChangeTime(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function scheduleChangeDigestHtml(changes, sourceLabel = 'Plan') {
+  if (!changes.length) return '';
+  return `
+    <div class="schedule-change-digest">
+      <div class="schedule-change-head">
+        <strong>Recent Changes</strong>
+        <span>${scheduleEscape(sourceLabel)} · last ${changes.length} saved edit${changes.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="schedule-change-list">
+        ${changes.map(change => `
+          <div class="schedule-change-row">
+            <b>${scheduleEscape(scheduleChangeIcon(change.type))}</b>
+            <div>
+              <strong>${scheduleEscape(change.title)}</strong>
+              ${change.detail ? `<p>${scheduleEscape(change.detail)}</p>` : ''}
+              <span>${scheduleEscape([change.meta, scheduleChangeTime(change.at)].filter(Boolean).join(' · '))}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function scheduleRecentChangesText(changes) {
+  if (!changes.length) return [];
+  const lines = ['', 'Recent plan changes:'];
+  changes.forEach(change => {
+    const meta = [change.meta, scheduleChangeTime(change.at)].filter(Boolean).join(' · ');
+    lines.push(`- ${scheduleChangeIcon(change.type)}: ${change.title}${meta ? ` (${meta})` : ''}`);
+    if (change.detail) lines.push(`  ${change.detail}`);
+  });
+  return lines;
+}
+
 function scheduleCourseIsGenEd(course) {
   const category = String(course?.category || '').toLowerCase();
   return course?.kind === 'gened'
@@ -1469,6 +1523,15 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
     .schedule-output-block.blocked{background:#d7e2ed;color:#2e5c8b}
+    .schedule-change-digest{border-top:1px solid #d8cec0;margin-top:12px;padding-top:10px}
+    .schedule-change-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+    .schedule-change-head span{color:#5d5962;font-size:12px}
+    .schedule-change-list{display:grid;gap:6px;margin-top:8px}
+    .schedule-change-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
+    .schedule-change-row:first-child{border-top:none;padding-top:0}
+    .schedule-change-row b{font-size:10px;text-transform:uppercase;color:#8b0000}
+    .schedule-change-row p{margin:2px 0;color:#5d5962}
+    .schedule-change-row span{color:#5d5962;font-size:11px}
     table{width:100%;border-collapse:collapse;font-size:13px}
     th,td{border-top:1px solid #d8cec0;padding:8px 6px;text-align:left;vertical-align:top}
     th{font-size:11px;text-transform:uppercase;color:#5d5962}
@@ -1488,7 +1551,7 @@ function scheduleStandaloneAdvisorCss() {
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter()) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges()) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
@@ -1528,6 +1591,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       </div>
       ${unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
+      ${scheduleChangeDigestHtml(changes, 'Advisor context')}
       <p class="schedule-advisor-view-note"><strong>${scheduleEscape(filterDef.label)} view:</strong> ${scheduleEscape(filterDef.description)}</p>
       <div class="schedule-advisor-section-title">
         <h4>${scheduleEscape(filterDef.heading)}</h4>
@@ -1558,7 +1622,7 @@ ${advisorHtml}
 </html>`;
 }
 
-function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs) {
+function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges()) {
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const lines = [
@@ -1596,6 +1660,8 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
     warnings.slice(0, 12).forEach(warning => lines.push(`- ${warning}`));
     if (warnings.length > 12) lines.push(`- ${warnings.length - 12} more warning(s) in Terp Track.`);
   }
+
+  lines.push(...scheduleRecentChangesText(changes));
 
   return lines.join('\n');
 }
@@ -1651,7 +1717,8 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     ...scheduleBlockedBlocks(prefs),
     ...selectedItems.flatMap(item => sectionBlocks(item.section, item.course)),
   ];
-  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs);
+  const changes = scheduleRecentChanges();
+  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes);
   const courseRows = selectedItems
     .slice()
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
@@ -1689,9 +1756,10 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       </table>
       ${unscheduled.length ? `<div class="schedule-output-list"><strong>Unscheduled</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} ${scheduleEscape(course.title || '')}</span>`).join('')}</div>` : ''}
       ${warnings.length ? `<div class="schedule-output-list warn"><strong>Warnings</strong>${warnings.slice(0, 8).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
+      ${scheduleChangeDigestHtml(changes, 'Schedule summary')}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
   const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled);
 
