@@ -3625,6 +3625,20 @@ h1.hero-title em {
   line-height: 1.4;
   margin: 4px 0 0;
 }
+.schedule-advisor-import-link {
+  align-items: center;
+  border: 1px solid var(--blue);
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  display: inline-flex;
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-top: 8px;
+  padding: 5px 10px;
+  text-decoration: none;
+}
 .schedule-advisor-diagnostics,
 .schedule-advisor-audit {
   margin: 10px 0 0;

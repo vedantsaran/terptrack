@@ -1709,22 +1709,108 @@ function scheduleAdvisorDeepLink(action, key) {
   return base ? `${base}${hash}` : hash;
 }
 
-function scheduleAdvisorLiveLinkNoticeHtml() {
+function scheduleUtf8Bytes(value) {
+  const text = String(value || '');
+  if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(text);
+  const encoded = encodeURIComponent(text);
+  const bytes = [];
+  for (let i = 0; i < encoded.length; i += 1) {
+    if (encoded[i] === '%' && i + 2 < encoded.length) {
+      bytes.push(parseInt(encoded.slice(i + 1, i + 3), 16));
+      i += 2;
+    } else {
+      bytes.push(encoded.charCodeAt(i));
+    }
+  }
+  return bytes;
+}
+
+function scheduleBytesToB64Url(bytes) {
+  if (typeof _bytesToB64Url === 'function') {
+    try {
+      return _bytesToB64Url(bytes);
+    } catch {}
+  }
+  if (typeof btoa === 'function') {
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 1) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i];
+    const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+    const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    const triple = (a << 16) | (b << 8) | c;
+    out += alphabet[(triple >> 18) & 63];
+    out += alphabet[(triple >> 12) & 63];
+    out += i + 1 < bytes.length ? alphabet[(triple >> 6) & 63] : '=';
+    out += i + 2 < bytes.length ? alphabet[triple & 63] : '=';
+  }
+  return out.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function scheduleAdvisorPlanSharePayload() {
+  if (typeof _planSharePayload === 'function') return _planSharePayload();
+  const appState = typeof state !== 'undefined' ? state : {};
+  return {
+    v: 1,
+    courses: appState.courses || {},
+    customCourses: appState.customCourses || [],
+    customSemesters: appState.customSemesters || [],
+    customMajors: appState.customMajors || [],
+    activeSchedule: appState.activeSchedule || null,
+    selectedSections: appState.selectedSections || {},
+    schedulePrefs: appState.schedulePrefs || {},
+    scheduleAdvisorFilter: appState.scheduleAdvisorFilter,
+    scheduleOutputPreset: appState.scheduleOutputPreset,
+    scheduleOutputOptions: appState.scheduleOutputOptions,
+    roadmapPrefs: appState.roadmapPrefs,
+    browseSavedSearches: appState.browseSavedSearches || [],
+    recentChanges: appState.recentChanges || [],
+    majorId: appState.majorId || null,
+    profilePrefs: appState.profilePrefs || {},
+    settings: appState.settings || {},
+  };
+}
+
+function scheduleAdvisorPlanImportHash() {
+  try {
+    const json = JSON.stringify(scheduleAdvisorPlanSharePayload());
+    const encoded = scheduleBytesToB64Url(scheduleUtf8Bytes(json));
+    return encoded ? `#plan=${encoded}` : '';
+  } catch {
+    return '';
+  }
+}
+
+function scheduleAdvisorPlanImportUrl() {
+  const hash = scheduleAdvisorPlanImportHash();
+  if (!hash) return '';
+  const base = scheduleAdvisorLiveBaseUrl();
+  return base ? `${base}${hash}` : hash;
+}
+
+function scheduleAdvisorLiveLinkNoticeHtml(importUrl = scheduleAdvisorPlanImportUrl()) {
   return `
     <div class="schedule-advisor-live-note">
       <strong>Live TerpTrack links</strong>
       <p>Action links reopen this exact plan in the TerpTrack app and depend on the same browser profile/local plan state. If this packet is opened on another device or profile, open/import the matching plan there first, or use the Next action and Browse target text manually.</p>
+      ${importUrl ? `<a class="schedule-advisor-import-link" href="${scheduleEscape(importUrl)}">Open/import matching plan</a>` : ''}
     </div>
   `;
 }
 
-function scheduleAdvisorLiveLinkNoticeText() {
-  return [
+function scheduleAdvisorLiveLinkNoticeText(importUrl = scheduleAdvisorPlanImportUrl()) {
+  const lines = [
     '',
     'Live TerpTrack links:',
     '- Action links reopen this exact plan in the TerpTrack app and depend on the same browser profile/local plan state.',
     '- If this packet is opened on another device or profile, open/import the matching plan there first, or use the Next action and Browse target text manually.',
   ];
+  if (importUrl) lines.push(`- Open/import matching plan: ${importUrl}`);
+  return lines;
 }
 
 function scheduleAdvisorActionFromHash(hashValue) {
@@ -2151,6 +2237,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-live-note{border:1px solid #9fb4c8;border-radius:8px;background:#eef4fa;padding:9px 10px;color:#241f1f;font-size:12px;margin:10px 0}
     .schedule-advisor-live-note strong{display:block;color:#2e5c8b;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
     .schedule-advisor-live-note p{margin:3px 0 0;color:#5d5962;line-height:1.4}
+    .schedule-advisor-import-link{display:inline-flex;margin-top:7px;border:1px solid #2e5c8b;border-radius:999px;background:#2e5c8b;color:#fff;font-size:11px;font-weight:700;padding:5px 9px;text-decoration:none}
     .schedule-advisor-diagnostics,.schedule-advisor-audit{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-advisor-diagnostics-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-advisor-diagnostics-head h4{margin:0}

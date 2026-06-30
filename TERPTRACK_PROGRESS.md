@@ -3881,3 +3881,46 @@ Next pass candidates:
 - Add per-major requirement-source citations to generated schedules.
 - Add advisor-packet import/open affordances for loading shared plans before following packet action links.
 - Add a reviewed-prior-credit history filter or restore flow in Timeline.
+
+## 2026-06-30 Pass 77
+
+Focus: add advisor-packet import/open affordances for loading shared plans before following packet action links.
+
+Planned changes:
+- Build a synchronous same-format shared-plan import link for the current advisor packet.
+- Add the import link to the live-link notice in HTML, plain text, and standalone advisor packets.
+- Style the new affordance in-app and in exported standalone packet HTML.
+- Preserve existing Next action and Browse target links so advisor packets still support targeted follow-up.
+
+Completed:
+- Added synchronous `#plan=` helpers in `js/schedule.js` for advisor packet share payloads, UTF-8 bytes, base64url encoding, import hashes, and import URLs.
+- Updated the advisor live-link notice to include `Open/import matching plan` before the targeted action links.
+- Updated advisor plain-text exports to include the same import hash or full URL.
+- Updated standalone advisor packet output to render the styled import link.
+- Added in-app and standalone styles for `.schedule-advisor-import-link`.
+- Versioned changed browser assets:
+  - `styles.css?v=69`
+  - `js/schedule.js?v=31`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `ACCOUNT-FRIENDS` fixture confirms advisor import hash generation uses the same shared-plan hash format with no browser origin.
+- The updated `AUDIT-ISSUES` fixture confirms advisor HTML, plain text, and standalone packet HTML include the `Open/import matching plan` affordance.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/` and a temporary same-origin seed page, then removed the seed page and stopped the server before commit.
+- Chrome confirmed:
+  - `js/audit.js?v=3`, `js/schedule.js?v=31`, and `js/onboarding.js?v=15` loaded.
+  - `styles.css?v=69` loaded.
+  - the Advisor Packet output contained `Open/import matching plan`.
+  - the import link pointed to `http://127.0.0.1:8765/index.html#plan=...`.
+  - the import URL used the expected same-origin shared-plan hash format.
+  - existing audit links, Next action, Browse target, and prior-credit issue details still rendered.
+  - there was no horizontal overflow.
+  - browser console errors were clean.
+- Finalized the Chrome tab.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add per-major requirement-source citations to generated schedules.
+- Add a downloaded advisor-packet self-check that can verify its embedded plan hash against the live app.
+- Add a reviewed-prior-credit history filter or restore flow in Timeline.
