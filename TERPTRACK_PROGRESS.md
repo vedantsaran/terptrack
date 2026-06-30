@@ -2135,3 +2135,66 @@ Next pass candidates:
 - Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
 - Add a richer "why this course" drawer that explains profile, GenEd, prereq, and section-availability scoring.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 47
+
+Focus: let students replace a selected placeholder directly from Browse result cards.
+
+Planned changes:
+- Add a Browse handoff from the placeholder replacement modal.
+- Preserve the selected placeholder target while Browse is open.
+- Show replacement context in Browse.
+- Add one-click replacement actions on Browse course cards.
+- Add regression coverage and Chrome QA.
+
+Completed:
+- Added an `Open in Browse` action to the placeholder replacement modal.
+- Added `placeholderBrowseConfig` so placeholder searches map into Browse filters:
+  - profile departments become Browse profile-department mode.
+  - a single selected GenEd tag stays selected.
+  - multi-tag placeholders fall back to all GenEds.
+  - replacement searches are saved with a `Replace ...` label.
+- Added a Browse replacement banner showing the active placeholder, semester slot, and inferred GenEd tags.
+- Added `Replace <placeholder>` buttons to Browse cards whenever a placeholder target is active.
+- Kept `Add separately` available so students can still add a course without overwriting the placeholder.
+- Reused the existing `replacePlaceholderWithCourse` path, including duplicate prevention, GenEd category assignment, saved state, rendering, and target cleanup.
+- Added a `Clear target` action in Browse.
+- Added responsive styling for the replacement banner and multi-button Browse card actions.
+- Versioned changed browser assets:
+  - `styles.css?v=45`
+  - `js/browse.js?v=8`
+  - `js/placeholder-search.js?v=4`
+- Added the `BROWSE-PLACEHOLDER-REPLACE` regression fixture covering:
+  - placeholder-to-Browse config.
+  - saved replacement search creation.
+  - target preservation after the modal closes.
+  - replacement banner rendering.
+  - Browse card replacement actions.
+  - actual schedule mutation from a placeholder to a real UMD course.
+  - target cleanup after replacement.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the auto-plan diagnostics fixture with replacement actions, the account/share fixture, the account setup fixture, the schedule timing fixture, the planner checklist fixture, the planner questions fixture, the Browse profile saved-search fixture, the Browse sections fixture, the new Browse replacement fixture, and the personalized onboarding fixture.
+- Ran `git diff --check`.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=45`, `js/browse.js?v=8`, and `js/placeholder-search.js?v=4` loaded.
+  - a seeded `GenEd DSHS` placeholder opened the replacement modal.
+  - the modal inferred DSHS and profile departments.
+  - `Open in Browse` closed the modal and opened Browse.
+  - Browse selected `__PROFILE_DEPTS__` and `DSHS`.
+  - a saved replacement search chip appeared with `Replace GenEd DSHS`.
+  - Browse showed the replacement banner for `GenEd DSHS`.
+  - result cards showed `Replace GenEd DSHS` plus `Add separately`.
+  - filtering to `CCJS225` produced one direct full-result replacement button.
+  - clicking it replaced the placeholder with `CCJS 225`.
+  - the replacement banner cleared, the placeholder row disappeared, and the plan row showed `CCJS 225` with a replacement note and GenEd tags.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add a richer "why this course" drawer that explains profile, GenEd, prereq, and section-availability scoring.
+- Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
+- Add direct placeholder-slot selection from Browse when no placeholder is active.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

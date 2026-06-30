@@ -528,10 +528,80 @@ function browseAvailabilityTag(item) {
   return '';
 }
 
+function browseReplacementTarget() {
+  return (typeof placeholderSearchTarget !== 'undefined' && placeholderSearchTarget) ? placeholderSearchTarget : null;
+}
+
+function browseReplacementTargetLabel(target = browseReplacementTarget()) {
+  return target ? String(target.code || 'placeholder') : '';
+}
+
+function browseReplacementBannerHtml() {
+  const target = browseReplacementTarget();
+  if (!target) return '';
+  const tags = typeof inferPlaceholderTags === 'function' ? inferPlaceholderTags(target) : [];
+  return `
+    <div class="browse-replace-banner">
+      <div>
+        <strong>Replacing ${browseEscape(browseReplacementTargetLabel(target))}</strong>
+        <span>${browseEscape([target.title || 'Placeholder slot', target.semId ? `Semester ${target.semId}` : '', tags.length ? tags.join(' + ') : ''].filter(Boolean).join(' · '))}</span>
+      </div>
+      <button class="btn small" type="button" onclick="browseClearReplacementTarget()">Clear target</button>
+    </div>
+  `;
+}
+
+function browseClearReplacementTarget() {
+  if (typeof placeholderSearchTarget !== 'undefined') placeholderSearchTarget = null;
+  if (typeof renderBrowse === 'function') renderBrowse();
+  if (typeof toastInfo === 'function') toastInfo('Browse replacement target cleared.');
+}
+
+function browseRowToReplacementCourse(row) {
+  if (!row) return null;
+  if (row._full) return row._full;
+  if (typeof candidateToCourse === 'function') return candidateToCourse(row);
+  const tags = browseCourseGenEdTags(row);
+  const category = tags.length ? `gened-${tags[0].toLowerCase()}` : 'major-core';
+  return {
+    code: displayCode(row.course_id || ''),
+    title: row.name || displayCode(row.course_id || ''),
+    cr: parseInt(row.credits || '3', 10) || 3,
+    kind: category.startsWith('gened') ? 'gened' : 'core',
+    category,
+    categories: tags.map(tag => `gened-${tag.toLowerCase()}`),
+    gen_ed: row.gen_ed || tags.map(tag => [tag]),
+    prereqs: [],
+    coreqs: [],
+    description: row.description || '',
+  };
+}
+
+function browseFindCachedRow(code) {
+  const norm = normalizeCode(code);
+  return (browseCache || []).find(row => normalizeCode(row?.course_id || row?.code || '') === norm) || null;
+}
+
+async function browseReplacePlaceholder(code) {
+  const target = browseReplacementTarget();
+  if (!target || typeof replacePlaceholderWithCourse !== 'function') {
+    toastError('Open a placeholder first, then choose a Browse result.');
+    return;
+  }
+  const row = browseFindCachedRow(code);
+  const prefetched = browseRowToReplacementCourse(row);
+  await replacePlaceholderWithCourse(code, prefetched);
+  browseCache = [];
+  browseCacheKey = '';
+  if (currentTab === 'browse') renderBrowse();
+}
+
 function browseCourseCardHtml(item, opts = {}) {
   const r = item.row || item;
   const code = item.code || r.course_id || '';
   const inPlan = !!item.inPlan;
+  const replacementTarget = browseReplacementTarget();
+  const canReplace = !!replacementTarget && !inPlan && typeof replacePlaceholderWithCourse === 'function';
   const ge = item.genEdTags || browseCourseGenEdTags(r);
   const gapHits = item.gapHits || [];
   const gpa = typeof item.gpa === 'number' ? item.gpa.toFixed(2) : '';
@@ -561,7 +631,9 @@ function browseCourseCardHtml(item, opts = {}) {
       <div class="br-actions">
         ${inPlan
           ? `<span class="br-pill">In your plan${item.plannedInfo?.semName ? ` · ${browseEscape(item.plannedInfo.semName)}` : ''}</span>`
-          : `<button class="btn small" onclick="browseAddCourse('${browseEscape(code)}')">Add to plan</button>`}
+          : canReplace
+            ? `<button class="btn small primary" onclick="browseReplacePlaceholder('${browseEscape(code)}')">Replace ${browseEscape(browseReplacementTargetLabel(replacementTarget))}</button><button class="btn small" onclick="browseAddCourse('${browseEscape(code)}')">Add separately</button>`
+            : `<button class="btn small" onclick="browseAddCourse('${browseEscape(code)}')">Add to plan</button>`}
       </div>
     </div>
   `;
@@ -718,6 +790,7 @@ async function renderBrowse() {
 
   const sections = browseBuildResultSections(decoratedRows, nextTerm);
   grid.innerHTML = `
+    ${browseReplacementBannerHtml()}
     ${browseHighlightsHtml(sections)}
     <div class="browse-results-head">
       <strong>Full results</strong>

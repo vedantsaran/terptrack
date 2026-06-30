@@ -4774,6 +4774,37 @@ h1.hero-title em {
   background: rgba(176, 0, 32, .08);
   color: var(--red);
 }
+.browse-replace-banner {
+  align-items: center;
+  background: rgba(139,0,0,.07);
+  border: 1px solid rgba(139,0,0,.22);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+.browse-replace-banner > div {
+  min-width: 0;
+}
+.browse-replace-banner strong,
+.browse-replace-banner span {
+  display: block;
+  min-width: 0;
+}
+.browse-replace-banner strong {
+  color: var(--maroon);
+  font-size: .86rem;
+  line-height: 1.2;
+}
+.browse-replace-banner span {
+  color: var(--slate);
+  font-size: .74rem;
+  line-height: 1.35;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
 .browse-highlights {
   grid-column: 1 / -1;
   display: grid;
@@ -4915,7 +4946,12 @@ h1.hero-title em {
 .br-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .br-gpa { font-size: .72rem; color: var(--green); font-weight: 600; }
 .br-desc { font-size: .76rem; color: var(--slate); line-height: 1.5; }
-.br-actions { margin-top: 4px; }
+.br-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
 .br-pill {
   font-size: .72rem;
   background: var(--green);
@@ -5276,6 +5312,13 @@ h1.hero-title em {
   }
 
   .br-grid { grid-template-columns: 1fr; }
+  .browse-replace-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .browse-replace-banner .btn {
+    width: 100%;
+  }
   .browse-highlights-head,
   .browse-results-head {
     align-items: flex-start;

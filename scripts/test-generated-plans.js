@@ -58,6 +58,8 @@ function buildContext() {
     'js/schedule.js',
     'js/timeline.js',
     'js/browse.js',
+    'js/gened.js',
+    'js/placeholder-search.js',
     'js/onboarding.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
   vm.runInContext(`
@@ -842,6 +844,87 @@ async function testBrowseResultSections(context) {
   };
 }
 
+async function testBrowsePlaceholderReplacement(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      state.activeSchedule = [{
+        id: 'PASS47',
+        name: 'Pass 47 Fall',
+        year: 'Year 1',
+        courses: [{
+          code: 'GenEd DSHS',
+          title: 'History and Social Sciences placeholder',
+          cr: 3,
+          kind: 'gened',
+          category: 'gened-dshs',
+          note: 'Auto-generated DSHS placeholder'
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.browseSavedSearches = [];
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['policy-society'],
+        careerGoal: 'public policy',
+        genEdDepts: 'GVPT'
+      });
+      placeholderSearchTarget = { ...state.activeSchedule[0].courses[0], semId: 'PASS47' };
+      placeholderSearchSelectedTags = ['DSHS'];
+      placeholderSearchMode = 'all';
+      currentTab = 'plan';
+      switchTab = tab => { currentTab = tab; };
+      const config = placeholderBrowseConfig(placeholderSearchTarget);
+      openPlaceholderBrowseSearch();
+      const targetAfterOpen = placeholderSearchTarget ? placeholderSearchTarget.code : '';
+      browseCache = [{
+        course_id: 'GVPT200',
+        name: 'International Political Relations',
+        credits: '3',
+        description: 'A public policy and international relations course.',
+        gen_ed: ['DSHS', 'DVUP']
+      }];
+      const decorated = browseDecorateRows(browseCache, {
+        nextTerm: { term: '202608', termLabel: 'Fall 2026' }
+      }).sort(browseCompareRows);
+      const cardHtml = browseCourseCardHtml(decorated[0]);
+      const bannerHtml = browseReplacementBannerHtml();
+      await browseReplacePlaceholder('GVPT200');
+      const replaced = state.activeSchedule[0].courses[0];
+      return {
+        config,
+        currentTab,
+        targetAfterOpen,
+        savedLabel: state.browseSavedSearches[0]?.label || '',
+        cardHtml,
+        bannerHtml,
+        replaced,
+        targetAfterReplace: placeholderSearchTarget,
+        courseStateKeys: Object.keys(state.courses),
+      };
+    })()
+  `, context));
+
+  assert(result.config.dept === '__PROFILE_DEPTS__', 'browse placeholder replacement: handoff should use profile departments');
+  assert(result.config.genEd === 'DSHS', 'browse placeholder replacement: handoff should keep selected GenEd tag');
+  assert(result.currentTab === 'browse', 'browse placeholder replacement: handoff should switch to Browse');
+  assert(result.targetAfterOpen === 'GenEd DSHS', 'browse placeholder replacement: Browse handoff should preserve selected target');
+  assert(/Replace GenEd DSHS/.test(result.savedLabel), 'browse placeholder replacement: handoff should save replacement search');
+  assert(/Replacing GenEd DSHS/.test(result.bannerHtml), 'browse placeholder replacement: Browse should render replacement banner');
+  assert(/Replace GenEd DSHS/.test(result.cardHtml), 'browse placeholder replacement: card should render replacement action');
+  assert(/Add separately/.test(result.cardHtml), 'browse placeholder replacement: card should keep separate add option');
+  assert(result.replaced.code === 'GVPT 200', 'browse placeholder replacement: should replace placeholder with selected course');
+  assert(result.replaced.category === 'gened-dshs', 'browse placeholder replacement: should preserve matching GenEd category');
+  assert(result.replaced.kind === 'gened', 'browse placeholder replacement: replacement should stay GenEd kind');
+  assert(/Replaced GenEd DSHS/.test(result.replaced.note || ''), 'browse placeholder replacement: replacement note should mention original placeholder');
+  assert(result.targetAfterReplace === null, 'browse placeholder replacement: target should clear after successful replacement');
+
+  return {
+    id: 'BROWSE-PLACEHOLDER-REPLACE',
+    search: `${result.config.dept}/${result.config.genEd}`,
+    replaced: result.replaced.code,
+  };
+}
+
 async function testOnboardingPersonalizedSetup(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -945,6 +1028,7 @@ async function main() {
   const questions = testPlannerAdvisorQuestions(context);
   const browse = await testBrowseProfileDepartments(context);
   const browseSections = await testBrowseResultSections(context);
+  const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
 
   console.table(rows);
@@ -957,8 +1041,9 @@ async function main() {
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
+  console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse replacement + personalized onboarding).`);
 }
 
 main().catch(error => {

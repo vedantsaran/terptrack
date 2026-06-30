@@ -123,6 +123,50 @@ function closePlaceholderSearch() {
   placeholderSearchResults = [];
 }
 
+function placeholderBrowseConfig(target = placeholderSearchTarget) {
+  if (!target) return null;
+  const tags = placeholderSearchSelectedTags.length ? placeholderSearchSelectedTags : inferPlaceholderTags(target);
+  const suggestedDept = suggestedDeptForPlaceholder(target);
+  let dept = '';
+  if (suggestedDept === PLACEHOLDER_PROFILE_DEPTS_VALUE && typeof BROWSE_PROFILE_DEPTS_VALUE !== 'undefined') {
+    dept = BROWSE_PROFILE_DEPTS_VALUE;
+  } else if (suggestedDept && suggestedDept !== PLACEHOLDER_ALL_DEPTS_VALUE) {
+    dept = suggestedDept;
+  } else if (typeof browseProfileDepartments === 'function' && browseProfileDepartments().length && typeof BROWSE_PROFILE_DEPTS_VALUE !== 'undefined') {
+    dept = BROWSE_PROFILE_DEPTS_VALUE;
+  }
+  let genEd = '';
+  if (tags.length === 1) {
+    genEd = tags[0];
+  } else if (tags.length > 1 && typeof BROWSE_ALL_GENEDS_VALUE !== 'undefined') {
+    genEd = BROWSE_ALL_GENEDS_VALUE;
+  }
+  return {
+    dept,
+    genEd,
+    search: '',
+    label: `Replace ${target.code || 'placeholder'}${tags.length ? ` · ${tags.join(' + ')}` : ''}`,
+  };
+}
+
+function openPlaceholderBrowseSearch() {
+  if (!placeholderSearchTarget) {
+    toastError('Pick a placeholder first.');
+    return;
+  }
+  if (typeof browseOpenSearch !== 'function') {
+    toastError('Browse is still loading. Try again in a moment.');
+    return;
+  }
+  const config = placeholderBrowseConfig(placeholderSearchTarget);
+  placeholderSearchRequestSeq++;
+  const modal = document.getElementById('placeholder-search-modal');
+  if (modal) modal.classList.remove('open');
+  placeholderSearchResults = [];
+  browseOpenSearch({ ...config, save: true });
+  toastSuccess(`Opened Browse to replace ${placeholderSearchTarget.code}.`);
+}
+
 function openPlaceholderSearch(courseCode, semId = '') {
   const course = flatCourses().find(c => c.code === courseCode && (!semId || c.semId === semId)) || findCourse(courseCode);
   if (!course) { toastError(`Course ${courseCode} not found.`); return; }
@@ -614,6 +658,8 @@ function initPlaceholderSearch() {
   if (lookup) lookup.addEventListener('click', lookupPlaceholderTypedCourse);
   const clear = document.getElementById('ps-clear');
   if (clear) clear.addEventListener('click', clearPlaceholderFilters);
+  const browse = document.getElementById('ps-browse');
+  if (browse) browse.addEventListener('click', openPlaceholderBrowseSearch);
   const missing = document.getElementById('ps-missing');
   if (missing) missing.addEventListener('click', applyMissingPlaceholderFilters);
   const search = document.getElementById('ps-search');
