@@ -649,6 +649,19 @@ function placeholderSectionPreviewCacheKey(courseId, context = placeholderSchedu
   return `${context.term || 'no-term'}:${placeholderPreviewNorm(courseId)}`;
 }
 
+function placeholderCachedPreviewSections(courseId, context = placeholderScheduleContext()) {
+  const key = placeholderSectionPreviewCacheKey(courseId, context);
+  const cached = placeholderSectionPreviewCache[key];
+  return Array.isArray(cached?.sections) ? cached.sections : [];
+}
+
+function placeholderPreviewSectionById(courseId, sectionId, context = placeholderScheduleContext()) {
+  const target = String(sectionId || '').trim();
+  if (!target) return null;
+  return placeholderCachedPreviewSections(courseId, context)
+    .find(section => String(section.section_id || section.number || '') === target) || null;
+}
+
 function placeholderSectionPreviewState(row) {
   const context = placeholderScheduleContext(row);
   const key = placeholderSectionPreviewCacheKey(row.course_id || row.code, context);
@@ -708,10 +721,15 @@ function placeholderSectionPreviewHtml(row, overrideState = null) {
             : item.blockedCount
               ? `${item.blockedCount} blocked-time overlap${item.blockedCount === 1 ? '' : 's'}`
               : 'No conflicts with picked sections';
+          const sectionId = item.section.section_id || item.section.number || '';
+          const sectionLabel = item.section.number || item.section.section_id || 'section';
           return `
             <div class="ps-section-option ${placeholderEscape(item.level)}">
-              <strong>${placeholderEscape(item.summary)}</strong>
-              <span>${placeholderEscape([seats + wait, item.timingLabel ? `${item.timingLabel} (${item.timingScore}/100)` : '', conflict].filter(Boolean).join(' · '))}</span>
+              <div class="ps-section-option-main">
+                <strong>${placeholderEscape(item.summary)}</strong>
+                <span>${placeholderEscape([seats + wait, item.timingLabel ? `${item.timingLabel} (${item.timingScore}/100)` : '', conflict].filter(Boolean).join(' · '))}</span>
+              </div>
+              ${sectionId ? `<button class="btn small ${item.level === 'ok' ? 'primary' : ''}" type="button" data-ps-use-section="${placeholderEscape(sectionId)}" title="Replace and pin ${placeholderEscape(sectionLabel)}">Use + pin</button>` : ''}
             </div>
           `;
         }).join('')}
@@ -831,6 +849,12 @@ function renderPlaceholderResults() {
     if (previewBtn) previewBtn.addEventListener('click', () => togglePlaceholderSectionPreview(r.course_id));
     const useBtn = card.querySelector('[data-ps-use]');
     if (useBtn) useBtn.addEventListener('click', () => replacePlaceholderWithCourse(r.course_id, r._full || null));
+    card.querySelectorAll('[data-ps-use-section]').forEach(btn => {
+      btn.addEventListener('click', () => replacePlaceholderWithCourse(r.course_id, r._full || null, {
+        sectionId: btn.dataset.psUseSection,
+        pin: true,
+      }));
+    });
     grid.appendChild(card);
   });
 }
@@ -849,8 +873,17 @@ function renderPlaceholderVerification(candidate) {
   root.innerHTML = `<strong>${placeholderEscape(selectedText)}</strong><span>${placeholderEscape(missingText)}</span>`;
 }
 
-async function replacePlaceholderWithCourse(courseId, prefetched = null) {
+async function replacePlaceholderWithCourse(courseId, prefetched = null, options = {}) {
   if (!placeholderSearchTarget) return;
+  const selectionOptions = typeof options === 'string' ? { sectionId: options } : (options || {});
+  const row = placeholderSearchResults.find(item => placeholderPreviewNorm(item.course_id || item.code) === placeholderPreviewNorm(courseId))
+    || (prefetched ? { ...prefetched, course_id: prefetched.course_id || prefetched.code } : { course_id: courseId });
+  const replacementContext = placeholderScheduleContext(row);
+  const selectedPreviewSection = placeholderPreviewSectionById(courseId, selectionOptions.sectionId, replacementContext);
+  if (selectionOptions.sectionId && !selectedPreviewSection) {
+    toastError('Could not find that previewed section. Reopen the meeting preview and try again.');
+    return;
+  }
   const status = document.getElementById('ps-status');
   if (status) status.textContent = `Fetching ${displayCode(courseId)} details…`;
   const full = prefetched || await fetchCourseFull(courseId);
@@ -910,12 +943,43 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null) {
     state.courses[updated.code] = state.courses[placeholderSearchTarget.code];
     delete state.courses[placeholderSearchTarget.code];
   }
+  const oldCode = placeholderSearchTarget.code;
+  let pinnedSectionLabel = '';
+  if (replacementContext.semId && typeof setSelectedSection === 'function') {
+    setSelectedSection(replacementContext.semId, oldCode, null);
+  } else if (replacementContext.semId && state.selectedSections?.[replacementContext.semId]) {
+    delete state.selectedSections[replacementContext.semId][normalizeCode(oldCode)];
+  }
+  if (selectedPreviewSection && replacementContext.semId && typeof setSelectedSection === 'function') {
+    const sectionForSave = {
+      ...selectedPreviewSection,
+      course: normalizeCode(updated.code),
+      semester: selectedPreviewSection.semester || replacementContext.term || '',
+    };
+    setSelectedSection(replacementContext.semId, updated.code, sectionForSave);
+    if (selectionOptions.pin !== false && typeof setSelectedSectionPinned === 'function') {
+      setSelectedSectionPinned(replacementContext.semId, updated.code, true);
+    }
+    pinnedSectionLabel = typeof scheduleSectionShortLabel === 'function'
+      ? scheduleSectionShortLabel(sectionForSave)
+      : (sectionForSave.number || sectionForSave.section_id || 'section');
+  }
+  if (typeof recordPlanChange === 'function') {
+    recordPlanChange({
+      type: selectedPreviewSection ? 'placeholder-section-replacement' : 'placeholder-replacement',
+      source: 'Placeholder Search',
+      title: `Replaced ${oldCode} with ${updated.code}`,
+      detail: selectedPreviewSection
+        ? `${oldCode} changed to ${updated.code}; ${pinnedSectionLabel} was picked and pinned for ${replacementContext.semName}.`
+        : `${oldCode} changed to ${updated.code} in ${replacementContext.semName}.`,
+      meta: tags.length ? tags.join(' + ') : (category || 'Course replacement'),
+    }, { save: false });
+  }
   saveState();
   const verification = getGenEdRequirementStatus(updated);
-  const oldCode = placeholderSearchTarget.code;
   closePlaceholderSearch();
   render();
-  toastSuccess(`${oldCode} → ${updated.code}. ${verification.complete ? 'Gen-Ed plan is complete.' : `${verification.missing.length} Gen-Ed requirement gap(s) still need courses.`}`);
+  toastSuccess(`${oldCode} → ${updated.code}.${pinnedSectionLabel ? ` Picked and pinned ${pinnedSectionLabel}.` : ''} ${verification.complete ? 'Gen-Ed plan is complete.' : `${verification.missing.length} Gen-Ed requirement gap(s) still need courses.`}`);
 }
 
 function initPlaceholderSearch() {

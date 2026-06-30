@@ -2670,3 +2670,63 @@ Next pass candidates:
 - Add undo for bulk prior-credit applications through recent changes.
 - Add a compact advisor-export summary of open audit issues.
 - Add one-click section pinning from the placeholder preview when a replacement is selected.
+
+## 2026-06-30 Pass 56
+
+Focus: let students replace a placeholder and keep the exact section they previewed.
+
+Planned changes:
+- Add a one-click action inside placeholder meeting previews for posted sections.
+- Replace the placeholder with the chosen course while saving that specific section to the target semester.
+- Pin the saved section so later auto-pick runs preserve the student's explicit time choice.
+- Clear stale placeholder section picks and record the replacement in recent plan changes.
+- Add deterministic regression and Chrome coverage.
+
+Completed:
+- Added preview-cache helpers to resolve a clicked posted section from the active placeholder preview.
+- Added `Use + pin` buttons to each previewed section option:
+  - non-conflicting options render as the primary action.
+  - conflicting options remain available but visually secondary.
+- Extended `replacePlaceholderWithCourse()` to accept an optional section selection.
+- When a preview section is selected, replacement now:
+  - swaps the placeholder course for the real UMD course.
+  - clears any stale selected-section state under the placeholder code.
+  - saves the selected posted section under the replacement course code.
+  - pins the section for future auto-pick preservation.
+  - records a `placeholder-section-replacement` recent-change entry.
+- Added compact row styling for preview section actions.
+- Versioned changed browser assets:
+  - `styles.css?v=53`
+  - `js/placeholder-search.js?v=7`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `PLACEHOLDER-SECTIONS` fixture confirms:
+  - `0201` remains the first ranked non-conflicting section.
+  - preview HTML renders `Use + pin`.
+  - applying `GVPT200-0201` replaces `GenEd DSHS` with `GVPT 200`.
+  - the selected section is persisted under `GVPT200`.
+  - the selected section is pinned.
+  - the selected section keeps term `202608`.
+  - stale placeholder section state is cleared.
+  - the modal target clears after replacement.
+  - a `placeholder-section-replacement` recent-change entry is recorded.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=53` and `js/placeholder-search.js?v=7` loaded.
+  - seeded plan rendered `GenEd DSHS` and a picked `ENGL 101`.
+  - opening the placeholder showed the cached `GVPT 200` replacement result.
+  - `Preview times` expanded to show `0201` first with `18 open`, `Excellent timing (100/100)`, and `No conflicts with picked sections`.
+  - both previewed sections rendered `Use + pin`, with `0201` as the primary action.
+  - clicking `Use + pin` for `0201` closed the modal and replaced the plan row with `GVPT 200`.
+  - the Plan row showed `0201 · TuTh 2:00pm-3:15pm · TYD 2101`.
+  - the Schedule tab showed `GVPT 200` as picked, pinned, ranked `1/2`, and carrying `18 open` seats.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add undo for placeholder replacements with pinned section picks.
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
+- Add undo for bulk prior-credit applications through recent changes.
+- Add a compact advisor-export summary of open audit issues.

@@ -1042,9 +1042,9 @@ async function testBrowseImpactPreview(context) {
   };
 }
 
-function testPlaceholderSectionPreview(context) {
-  const result = clone(vm.runInContext(`
-    (() => {
+async function testPlaceholderSectionPreview(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
       state.activeSchedule = [{
         id: 'PASS55',
         name: 'Pass 55 Fall 2026',
@@ -1108,11 +1108,32 @@ function testPlaceholderSectionPreview(context) {
       }];
       const context = placeholderScheduleContext(row);
       const preview = placeholderBuildSectionPreview(row, sections, context);
+      placeholderSectionPreviewCache[placeholderSectionPreviewCacheKey(row.course_id, context)] = { status: 'ready', context, sections };
       const html = placeholderSectionPreviewHtml(row, { status: 'ready', context, sections });
       const emptyHtml = placeholderSectionPreviewHtml(row, { status: 'ready', context, sections: [] });
       const loadingHtml = placeholderSectionPreviewHtml(row, { status: 'loading', context, sections: [] });
       const conflict = preview.samples.find(item => item.section.number === '0101');
       const clear = preview.samples.find(item => item.section.number === '0201');
+      placeholderSearchResults = [row];
+      await replacePlaceholderWithCourse('GVPT200', {
+        code: 'GVPT 200',
+        course_id: 'GVPT200',
+        title: 'International Political Relations',
+        name: 'International Political Relations',
+        cr: 3,
+        credits: '3',
+        kind: 'gened',
+        category: 'gened-dshs',
+        categories: ['gened-dshs', 'gened-dvup'],
+        gen_ed: ['DSHS', 'DVUP'],
+        description: 'A public policy and international relations course.',
+        prereqs: [],
+        prereqGroups: [],
+        coreqs: []
+      }, { sectionId: 'GVPT200-0201', pin: true });
+      const selected = state.selectedSections.PASS55?.GVPT200 || null;
+      const staleSelected = state.selectedSections.PASS55?.GENEDDSHS || null;
+      const replaced = state.activeSchedule[0].courses[0];
       return {
         context: preview.context,
         firstNumber: preview.samples[0]?.section.number || '',
@@ -1123,6 +1144,11 @@ function testPlaceholderSectionPreview(context) {
         html,
         emptyHtml,
         loadingHtml,
+        selected,
+        staleSelected,
+        replaced,
+        targetAfterReplace: placeholderSearchTarget,
+        recentChange: state.recentChanges[0] || null,
       };
     })()
   `, context));
@@ -1140,12 +1166,21 @@ function testPlaceholderSectionPreview(context) {
   assert(/No conflicts with picked sections/.test(result.html), 'placeholder section preview: html should render clear conflict status');
   assert(/Conflicts with ENGL 101/.test(result.html), 'placeholder section preview: html should render conflict status');
   assert(/2 posted sections checked/.test(result.html), 'placeholder section preview: html should render checked-section count');
+  assert(/Use \+ pin/.test(result.html), 'placeholder section preview: html should render one-click section pinning');
   assert(/No posted sections found/.test(result.emptyHtml), 'placeholder section preview: empty state should explain missing sections');
   assert(/Loading posted sections/.test(result.loadingHtml), 'placeholder section preview: loading state should render');
+  assert(result.replaced.code === 'GVPT 200', 'placeholder section preview: section action should replace the placeholder');
+  assert(result.selected && result.selected.section_id === 'GVPT200-0201', 'placeholder section preview: section action should persist selected section under the replacement course');
+  assert(result.selected.pinned === true, 'placeholder section preview: section action should pin the selected section');
+  assert(result.selected.semester === '202608', 'placeholder section preview: selected section should keep the target term');
+  assert(!result.staleSelected, 'placeholder section preview: stale placeholder section picks should be cleared');
+  assert(result.targetAfterReplace === null, 'placeholder section preview: target should clear after replacement');
+  assert(result.recentChange?.type === 'placeholder-section-replacement', 'placeholder section preview: replacement with section should record a recent change');
 
   return {
     id: 'PLACEHOLDER-SECTIONS',
     first: result.firstNumber,
+    pinned: result.selected?.number || '',
     load: `${result.context.currentCredits}->${result.context.afterCredits}`,
   };
 }
@@ -1848,7 +1883,7 @@ async function main() {
   const browseSections = await testBrowseResultSections(context);
   const browseWhy = await testBrowseExplanationPanel(context);
   const browseImpact = await testBrowseImpactPreview(context);
-  const placeholderSections = testPlaceholderSectionPreview(context);
+  const placeholderSections = await testPlaceholderSectionPreview(context);
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
   const browseTypedSlots = await testBrowseTypedSlotMatching(context);
@@ -1869,7 +1904,7 @@ async function main() {
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
   console.log(`Browse impact fixture ${browseImpact.id}: ${browseImpact.mode}; load ${browseImpact.load}.`);
-  console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; load ${placeholderSections.load}.`);
+  console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; pinned ${placeholderSections.pinned}; load ${placeholderSections.load}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
