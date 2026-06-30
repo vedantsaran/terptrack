@@ -11,6 +11,7 @@ function _snapshotPayload() {
     activeSchedule: state.activeSchedule ? JSON.parse(JSON.stringify(state.activeSchedule)) : null,
     selectedSections: JSON.parse(JSON.stringify(state.selectedSections || {})),
     schedulePrefs: JSON.parse(JSON.stringify(state.schedulePrefs || {})),
+    roadmapPrefs: JSON.parse(JSON.stringify(state.roadmapPrefs || { filter: 'all', query: '' })),
     majorId: state.majorId,
     settings: JSON.parse(JSON.stringify(state.settings || {})),
   };
@@ -43,6 +44,7 @@ function loadSnapshot(id) {
     activeSchedule: snap.payload.activeSchedule,
     selectedSections: snap.payload.selectedSections || {},
     schedulePrefs: snap.payload.schedulePrefs || {},
+    roadmapPrefs: { filter: 'all', query: '', ...(snap.payload.roadmapPrefs || {}) },
     majorId: snap.payload.majorId,
     settings: { ...DEFAULT_SETTINGS, ...(snap.payload.settings || {}) },
   });

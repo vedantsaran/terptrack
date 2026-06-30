@@ -15,6 +15,7 @@ function _planSharePayload() {
     activeSchedule: state.activeSchedule,
     selectedSections: state.selectedSections,
     schedulePrefs: state.schedulePrefs,
+    roadmapPrefs: state.roadmapPrefs,
     majorId: state.majorId,
     settings: state.settings,
   };
@@ -97,6 +98,7 @@ async function loadSharedPlanFromHash() {
       settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) },
       selectedSections: data.selectedSections || {},
       schedulePrefs: data.schedulePrefs || {},
+      roadmapPrefs: { filter: 'all', query: '', ...(data.roadmapPrefs || {}) },
       onboardingComplete: true,
     };
     saveState();

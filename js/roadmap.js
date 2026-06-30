@@ -6,6 +6,8 @@
 let roadmapLastGraph = null;
 let roadmapFullGraph = null;
 let roadmapFilter = 'all';
+let roadmapQuery = '';
+let roadmapPrefsSaveTimer = null;
 const ROADMAP_FILTERS = [
   { id: 'all', label: 'All planned' },
   { id: 'blockers', label: 'Blockers' },
@@ -25,6 +27,48 @@ function roadmapIsUmdCode(code) {
 
 function roadmapDisplayCode(code) {
   return typeof displayCode === 'function' ? displayCode(code) : String(code || '');
+}
+
+function roadmapValidFilter(filter) {
+  return ROADMAP_FILTERS.some(item => item.id === filter) ? filter : 'all';
+}
+
+function roadmapStatePrefs() {
+  const saved = state.roadmapPrefs || {};
+  return {
+    filter: roadmapValidFilter(saved.filter || 'all'),
+    query: String(saved.query || '').slice(0, 80),
+  };
+}
+
+function roadmapSyncPrefs() {
+  const prefs = roadmapStatePrefs();
+  roadmapFilter = prefs.filter;
+  roadmapQuery = prefs.query;
+  state.roadmapPrefs = prefs;
+  return prefs;
+}
+
+function roadmapPersistPrefs(patch, opts = {}) {
+  const next = {
+    ...roadmapStatePrefs(),
+    ...patch,
+  };
+  next.filter = roadmapValidFilter(next.filter);
+  next.query = String(next.query || '').slice(0, 80);
+  state.roadmapPrefs = next;
+  roadmapFilter = next.filter;
+  roadmapQuery = next.query;
+  clearTimeout(roadmapPrefsSaveTimer);
+  if (opts.defer) {
+    roadmapPrefsSaveTimer = setTimeout(() => {
+      roadmapPrefsSaveTimer = null;
+      saveState();
+    }, 350);
+  } else {
+    roadmapPrefsSaveTimer = null;
+    saveState();
+  }
 }
 
 function roadmapCourseItems() {
@@ -207,6 +251,39 @@ function roadmapFilterTitle(filter = roadmapFilter) {
   return ROADMAP_FILTERS.find(item => item.id === filter)?.label || 'All planned';
 }
 
+function roadmapSearchTokens(query = roadmapQuery) {
+  return String(query || '')
+    .toLowerCase()
+    .split(/\s+/)
+    .map(token => token.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function roadmapSearchText(node) {
+  const groups = roadmapPrereqGroups(node.course)
+    .flat()
+    .map(roadmapDisplayCode)
+    .join(' ');
+  return [
+    node.code,
+    node.norm,
+    node.title,
+    node.semName,
+    node.status,
+    node.course?.kind,
+    node.course?.category,
+    node.course?.note,
+    groups,
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function roadmapNodeMatchesSearch(node, tokens) {
+  if (!tokens.length) return true;
+  const text = roadmapSearchText(node);
+  return tokens.every(token => text.includes(token) || text.includes(token.replace(/\s+/g, '')));
+}
+
 function roadmapFilteredGraph(graph, filter = roadmapFilter) {
   if (filter === 'all') return roadmapRecomputeGraphStats({ ...graph.nodes }, graph.edges.slice());
   const selected = new Set();
@@ -237,6 +314,41 @@ function roadmapFilteredGraph(graph, filter = roadmapFilter) {
   return roadmapRecomputeGraphStats(nodes, edges);
 }
 
+function roadmapSearchGraph(graph, query = roadmapQuery) {
+  const tokens = roadmapSearchTokens(query);
+  const normalizedQuery = String(query || '').trim();
+  if (!tokens.length) {
+    const copy = roadmapRecomputeGraphStats({ ...graph.nodes }, graph.edges.slice());
+    copy.search = { query: '', matches: null, context: Object.keys(copy.nodes).length };
+    return copy;
+  }
+  const matched = new Set();
+  Object.values(graph.nodes).forEach(node => {
+    if (roadmapNodeMatchesSearch(node, tokens)) matched.add(node.norm);
+  });
+  const selected = new Set(matched);
+  graph.edges.forEach(edge => {
+    if (matched.has(edge.from) || matched.has(edge.to)) {
+      selected.add(edge.from);
+      selected.add(edge.to);
+    }
+  });
+  const nodes = {};
+  selected.forEach(code => {
+    if (!graph.nodes[code]) return;
+    nodes[code] = { ...graph.nodes[code], searchMatch: matched.has(code) };
+  });
+  const edges = graph.edges.filter(edge => nodes[edge.from] && nodes[edge.to]);
+  Object.values(nodes).forEach(node => { node.unlocks = edges.filter(edge => edge.from === node.norm).length; });
+  const result = roadmapRecomputeGraphStats(nodes, edges);
+  result.search = {
+    query: normalizedQuery,
+    matches: matched.size,
+    context: Object.keys(nodes).length,
+  };
+  return result;
+}
+
 function roadmapNodeClass(node) {
   const classes = ['node-rect'];
   if (node.missing) classes.push('missing');
@@ -246,12 +358,17 @@ function roadmapNodeClass(node) {
   else if (node.ready) classes.push('available');
   else classes.push('blocked');
   if (node.goal) classes.push('goal');
+  if (node.searchMatch) classes.push('search-match');
   return classes.join(' ');
 }
 
 function roadmapRenderSvg(graph) {
   if (!Object.keys(graph.nodes).length) {
-    return '<div class="roadmap-empty">No courses match this Roadmap filter.</div>';
+    const query = graph.search?.query || '';
+    const text = query
+      ? `No Roadmap courses match "${query}" inside ${roadmapFilterTitle()}.`
+      : 'No courses match this Roadmap filter.';
+    return `<div class="roadmap-empty">${roadmapEscape(text)}</div>`;
   }
   const nodeW = 138;
   const nodeH = 54;
@@ -331,14 +448,16 @@ function roadmapDefaultDetails(graph) {
   }).join('');
   return `
     <div class="roadmap-detail-card">
-      <h3>${roadmapEscape(roadmapFilterTitle())} Health</h3>
+      <h3>${roadmapEscape(roadmapFilterTitle())}${graph.search?.query ? ' Search' : ''} Health</h3>
       <div class="roadmap-detail-stats">
         <span>${Object.keys(graph.nodes).length} nodes</span>
         <span>${graph.edges.length} edges</span>
         <span>${graph.ready.length} ready</span>
         <span>${graph.blockers.length} blocked</span>
         <span>${graph.missing.length} missing</span>
+        ${graph.search?.query ? `<span>${graph.search.matches} matching node${graph.search.matches === 1 ? '' : 's'}</span>` : ''}
       </div>
+      ${graph.search?.query ? `<p class="roadmap-search-note">Search results include matching nodes plus connected prerequisites and unlocks for context.</p>` : ''}
       <div class="roadmap-blockers">
         ${blockerRows || '<p>No blocked planned courses found in the current graph.</p>'}
       </div>
@@ -384,17 +503,34 @@ function roadmapRenderDetail(code) {
   `;
 }
 
-function renderRoadmap() {
+function roadmapCountText(graph, filteredGraph, fullCount) {
+  const shown = Object.keys(graph.nodes).length;
+  const filtered = Object.keys(filteredGraph.nodes).length;
+  if (graph.search?.query) {
+    return `${graph.search.matches}/${filtered} matches - ${shown} shown with context`;
+  }
+  return roadmapFilter === 'all' ? `${shown}/${fullCount} shown` : `${shown}/${fullCount} shown in ${roadmapFilterTitle()}`;
+}
+
+function renderRoadmap(opts = {}) {
   const root = document.getElementById('roadmap-container');
   if (!root) return;
+  roadmapSyncPrefs();
   roadmapFullGraph = roadmapBuildGraph();
-  const graph = roadmapFilteredGraph(roadmapFullGraph, roadmapFilter);
+  const filteredGraph = roadmapFilteredGraph(roadmapFullGraph, roadmapFilter);
+  const graph = roadmapSearchGraph(filteredGraph, roadmapQuery);
   roadmapLastGraph = graph;
   const fullCount = Object.keys(roadmapFullGraph.nodes).length;
+  const countText = roadmapCountText(graph, filteredGraph, fullCount);
   root.innerHTML = `
     <div class="roadmap-toolbar" role="group" aria-label="Roadmap filter">
       ${ROADMAP_FILTERS.map(filter => `<button class="roadmap-filter ${roadmapFilter === filter.id ? 'active' : ''}" type="button" data-roadmap-filter="${roadmapEscape(filter.id)}">${roadmapEscape(filter.label)}</button>`).join('')}
-      <span>${Object.keys(graph.nodes).length}/${fullCount} shown</span>
+      <label class="roadmap-search">
+        <span>Search</span>
+        <input type="search" data-roadmap-search value="${roadmapEscape(roadmapQuery)}" placeholder="Code, title, term, prereq...">
+      </label>
+      ${roadmapQuery ? '<button class="roadmap-clear" type="button" data-roadmap-clear-search>Clear</button>' : ''}
+      <span class="roadmap-count">${roadmapEscape(countText)}</span>
     </div>
     <div class="roadmap-summary">
       <div><strong>${Object.keys(graph.nodes).length}</strong><span>courses and prereqs</span></div>
@@ -412,18 +548,40 @@ function renderRoadmap() {
     <div class="roadmap-canvas">${roadmapRenderSvg(graph)}</div>
     <div id="roadmap-detail" class="roadmap-detail">${roadmapDefaultDetails(graph)}</div>
   `;
+  if (opts.focusSearch) {
+    const input = root.querySelector('[data-roadmap-search]');
+    if (input) {
+      const caret = Number.isFinite(opts.caret) ? opts.caret : input.value.length;
+      input.focus();
+      input.setSelectionRange(Math.min(caret, input.value.length), Math.min(caret, input.value.length));
+    }
+  }
 }
 
 document.addEventListener('click', e => {
   const filter = e.target.closest('[data-roadmap-filter]');
   if (filter) {
-    roadmapFilter = filter.dataset.roadmapFilter || 'all';
+    roadmapPersistPrefs({ filter: filter.dataset.roadmapFilter || 'all' });
     renderRoadmap();
+    return;
+  }
+  const clearSearch = e.target.closest('[data-roadmap-clear-search]');
+  if (clearSearch) {
+    roadmapPersistPrefs({ query: '' });
+    renderRoadmap({ focusSearch: true, caret: 0 });
     return;
   }
   const node = e.target.closest('[data-roadmap-code]');
   if (!node) return;
   roadmapRenderDetail(node.dataset.roadmapCode);
+});
+
+document.addEventListener('input', e => {
+  const search = e.target.closest && e.target.closest('[data-roadmap-search]');
+  if (!search) return;
+  const caret = search.selectionStart;
+  roadmapPersistPrefs({ query: search.value }, { defer: true });
+  renderRoadmap({ focusSearch: true, caret });
 });
 
 document.addEventListener('keydown', e => {

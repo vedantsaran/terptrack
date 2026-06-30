@@ -32,6 +32,7 @@ document.getElementById('import-file').addEventListener('change', (e) => {
           customSemesters: data.customSemesters || state.customSemesters || [],
           selectedSections: data.selectedSections || {},
           schedulePrefs: data.schedulePrefs || {},
+          roadmapPrefs: { filter: 'all', query: '', ...(data.roadmapPrefs || {}) },
         };
         saveState();
         applyTheme();

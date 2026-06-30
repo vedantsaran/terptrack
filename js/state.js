@@ -12,6 +12,7 @@ function loadState() {
     activeSchedule: null,
     selectedSections: {},
     schedulePrefs: {},
+    roadmapPrefs: { filter: 'all', query: '' },
     majorId: null,
     onboardingComplete: false,
     settings: { ...DEFAULT_SETTINGS },
@@ -29,6 +30,7 @@ function loadState() {
         customSemesters: parsed.customSemesters || [],
         selectedSections: parsed.selectedSections || {},
         schedulePrefs: parsed.schedulePrefs || {},
+        roadmapPrefs: { filter: 'all', query: '', ...(parsed.roadmapPrefs || {}) },
       };
     }
   } catch {}

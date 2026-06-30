@@ -1256,7 +1256,46 @@ h1.hero-title em {
   border-color: var(--maroon);
   color: #FAF6EC;
 }
-.roadmap-toolbar > span {
+.roadmap-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: min(320px, 100%);
+  margin-left: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  padding: 4px 8px 4px 10px;
+}
+.roadmap-search span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.roadmap-search input {
+  width: 100%;
+  min-width: 120px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: .78rem;
+}
+.roadmap-clear {
+  border: 1px solid rgba(46,92,139,.34);
+  border-radius: 999px;
+  background: rgba(46,92,139,.10);
+  color: var(--blue);
+  padding: 5px 10px;
+  font-size: .72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.roadmap-count {
   margin-left: auto;
   color: var(--slate);
   font-size: .76rem;
@@ -1352,6 +1391,11 @@ h1.hero-title em {
   stroke: var(--gold);
   filter: drop-shadow(0 2px 4px rgba(232,185,35,.4));
 }
+.node-rect.search-match {
+  stroke: var(--blue);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 5px rgba(46,92,139,.28));
+}
 .node-text {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
@@ -1433,6 +1477,12 @@ h1.hero-title em {
 .roadmap-blockers span {
   color: var(--slate);
   font-size: .76rem;
+}
+.roadmap-search-note {
+  margin: 0 0 10px;
+  color: var(--slate);
+  font-size: .78rem;
+  line-height: 1.4;
 }
 
 /* ===========================================================
@@ -3672,7 +3722,16 @@ h1.hero-title em {
   .roadmap-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .roadmap-toolbar > span {
+  .roadmap-search {
+    order: 2;
+    width: 100%;
+    margin-left: 0;
+  }
+  .roadmap-clear {
+    order: 3;
+  }
+  .roadmap-count {
+    order: 4;
     width: 100%;
     margin-left: 0;
   }

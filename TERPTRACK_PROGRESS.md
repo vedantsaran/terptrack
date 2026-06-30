@@ -683,3 +683,49 @@ Next pass candidates:
 - Add Roadmap filter persistence or a search box when the graph grows beyond the current sample plan size.
 - Add advisor packet filters for only remaining courses, only GenEds, or only registration-blocking issues.
 - Add a compact change history panel for recent schedule moves, section swaps, and term moves.
+
+## 2026-06-30 Pass 19
+
+Focus: make the Roadmap usable for larger majors by adding persistent search and filter preferences.
+
+Planned changes:
+- Persist the active Roadmap filter and search query in saved state.
+- Carry Roadmap preferences through JSON import/export, share links, and snapshots.
+- Add a Roadmap search field that can find courses by code, title, term, status, category, note, or prerequisite text.
+- Show matching nodes with connected prerequisite/unlock context instead of isolating a course.
+- Highlight matching nodes and show match/context counts.
+- Add clear-search behavior and a helpful no-results empty state.
+- Verify filter/search persistence, no-results behavior, current-page console state, and mobile layout.
+
+Completed:
+- Added `roadmapPrefs` to state defaults and load migration.
+- Included `roadmapPrefs` in JSON import, share payloads/shared-plan load, snapshot save, and snapshot restore.
+- Added Roadmap preference sync/persistence helpers with debounced search saving.
+- Added search token matching across code, normalized code, title, semester, status, kind, category, note, and prerequisite text.
+- Added `roadmapSearchGraph()` to keep matching nodes plus one-hop connected prerequisites and unlocks.
+- Added search match highlighting to Roadmap node styling.
+- Added a Roadmap search input, clear button, and count text to the toolbar.
+- Updated default Roadmap details to show search health and matching-node counts.
+- Added mobile toolbar wrapping rules for Roadmap search, clear, and count controls.
+- Versioned `styles.css`, `js/roadmap.js`, `js/state.js`, `js/io.js`, `js/share.js`, and `js/snapshots.js` in `index.html`.
+
+Verification:
+- Ran `node --check` across every file in `js/`.
+- Ran `git diff --check`.
+- Reloaded `http://localhost:5173` in the in-app browser and confirmed `styles.css?v=20`, `js/roadmap.js?v=5`, `js/state.js?v=2`, `js/io.js?v=2`, `js/share.js?v=2`, and `js/snapshots.js?v=2` loaded.
+- Opened Roadmap and confirmed the default state remained `All planned`, empty search, 37/37 shown, 37 nodes, 32 dependency links, and no highlighted search matches.
+- Searched `CMSC 351` and confirmed the toolbar showed `5/37 matches - 9 shown with context`, 9 nodes rendered, and 5 matching nodes highlighted.
+- Confirmed search details rendered `All planned Search Health`, search stats, and the note that results include matching nodes plus connected prerequisites/unlocks.
+- Switched to the `Major` filter with the same query and confirmed `5/33 matches - 9 shown with context`.
+- Reloaded the app, reopened Roadmap, and confirmed both `Major` and `CMSC 351` persisted.
+- Cleared search and confirmed the Roadmap returned to `33/37 shown in Major`, 33 nodes, no highlighted matches, and no clear button.
+- Searched `zzzz-no-course` and confirmed the empty state `No Roadmap courses match "zzzz-no-course" inside Major.` plus 0 nodes and 0 matching nodes.
+- Checked a 390px-wide viewport with `CMSC 351` search active: search input and count expanded to full width, clear/control order wrapped correctly, summary stayed two columns, graph used internal horizontal scrolling, no text was clipped, and document-wide horizontal overflow stayed at 0.
+- Reset the browser viewport and Roadmap state to `All planned`, empty search, 37/37 shown before finishing.
+- Confirmed current-page browser console errors were 0 for the Pass 19 URL.
+
+Next pass candidates:
+- Add a term-availability simulator/test fixture inside the app's dev diagnostics so move suggestions can be regression-tested without waiting for live UMD data to line up.
+- Add advisor packet filters for only remaining courses, only GenEds, or only registration-blocking issues.
+- Add a compact change history panel for recent schedule moves, section swaps, and term moves.
+- Add Roadmap jump-to-semester or selected-node centering for very large plans.
