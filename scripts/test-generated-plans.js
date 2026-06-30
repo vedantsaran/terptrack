@@ -1852,12 +1852,16 @@ async function testOnboardingPriorCredit(context) {
       const sourceNotice = onboardPriorSourceNoticeHtml();
       const calcPreset = onboardPriorPresetById('ap-calc-bc-4');
       const econPreset = onboardPriorPresetById('ib-econ-hl-5');
+      const calcDetailHtml = onboardPriorDetailHtml(calcPreset);
+      const calcDetailLinks = onboardPriorPresetLinks(calcPreset).map(link => link.label);
       return {
         presetCount: ONBOARD_PRIOR_CREDIT_PRESETS.length,
         sourceNoteCount: ONBOARD_PRIOR_CREDIT_PRESETS.filter(preset => /chart 2023-2026/.test(onboardPriorPresetSourceNote(preset))).length,
         calcSourceNote: onboardPriorPresetSourceNote(calcPreset),
         econSourceNote: onboardPriorPresetSourceNote(econPreset),
         calcChipHtml: onboardPriorChipHtml(calcPreset),
+        calcDetailHtml,
+        calcDetailLinks,
         resolvedCodes: resolved.courses.map(course => course.code),
         resolvedCredits: resolved.totalCredits,
         summary: onboardPriorSummaryText(resolved),
@@ -1879,6 +1883,10 @@ async function testOnboardingPriorCredit(context) {
   assert(/AP chart 2023-2026/.test(result.calcSourceNote) && /2 UMD courses/.test(result.calcSourceNote), 'onboarding prior credit: AP presets should name the AP chart and course count');
   assert(/IB chart 2023-2026/.test(result.econSourceNote) && /verify by exam date/.test(result.econSourceNote), 'onboarding prior credit: IB presets should name the IB chart and exam-date caveat');
   assert(/prior-chip-source/.test(result.calcChipHtml) && /verify by exam year/.test(result.calcChipHtml), 'onboarding prior credit: preset chips should render source notes');
+  assert(/data-prior-detail="ap-calc-bc-4"/.test(result.calcChipHtml) && /Details/.test(result.calcChipHtml), 'onboarding prior credit: preset chips should expose a verification drawer trigger');
+  assert(/Verification drawer/.test(result.calcDetailHtml) && /MATH 141/.test(result.calcDetailHtml) && /Before relying on it/.test(result.calcDetailHtml), 'onboarding prior credit: detail drawer should render equivalent courses and verification caveats');
+  assert(/AP Chart 2023-2026/.test(result.calcDetailHtml) && /June 30, 2026/.test(result.calcDetailHtml), 'onboarding prior credit: detail drawer should include source and checked date');
+  assert(result.calcDetailLinks.includes('AP Chart 2023-2026') && !result.calcDetailLinks.includes('IB Chart 2023-2026'), 'onboarding prior credit: AP detail drawer should link AP chart without IB chart');
   assert(result.resolvedCodes.filter(code => code === 'MATH 140').length === 1, 'onboarding prior credit: should dedupe preset and raw MATH 140');
   assert(result.resolvedCodes.includes('MATH 141'), 'onboarding prior credit: AP Calc BC should include MATH 141');
   assert(result.resolvedCodes.includes('AP FSAW Credit'), 'onboarding prior credit: AP English should map to FSAW prior credit');
@@ -1962,6 +1970,7 @@ async function testSettingsPriorCreditEditor(context) {
         'set-prior-summary': { textContent: '' },
         'set-prior-status': { textContent: '', style: {} },
         'set-prior-source-note': { innerHTML: '' },
+        'set-prior-detail': { innerHTML: '', hidden: true, dataset: {}, addEventListener() {}, scrollIntoView() {} },
         'plan-change-history': { innerHTML: '' },
         'set-prior-grid': {
           innerHTML: '',
@@ -1980,6 +1989,9 @@ async function testSettingsPriorCreditEditor(context) {
         return originalQuery(selector);
       };
       const gridHtml = settingsPriorCreditGridHtml(['ap-calc-bc-4']);
+      const detailOpened = onboardShowPriorPresetDetail('ap-calc-bc-4', 'set-prior-detail');
+      const settingsDetailHtml = elements['set-prior-detail'].innerHTML;
+      const settingsDetailHidden = elements['set-prior-detail'].hidden;
       onboardRenderPriorSourceNotice('set-prior-source-note');
       const sourceNoticeHtml = elements['set-prior-source-note'].innerHTML;
       settingsRefreshPriorCreditSummary();
@@ -2033,6 +2045,10 @@ async function testSettingsPriorCreditEditor(context) {
       return {
         gridHasPreset: /ap-calc-bc-4/.test(gridHtml) && /settings-prior-chip/.test(gridHtml),
         gridHasSourceNote: /prior-chip-source/.test(gridHtml) && /AP chart 2023-2026/.test(gridHtml) && /verify by exam year/.test(gridHtml),
+        gridHasDetailButton: /data-prior-detail="ap-calc-bc-4"/.test(gridHtml),
+        detailOpened,
+        settingsDetailHtml,
+        settingsDetailHidden,
         sourceNoticeHtml,
         summaryBefore,
         statusAfter: elements['set-prior-status'].textContent,
@@ -2067,6 +2083,9 @@ async function testSettingsPriorCreditEditor(context) {
 
   assert(result.gridHasPreset, 'settings prior credit: grid should render AP/IB preset chips');
   assert(result.gridHasSourceNote, 'settings prior credit: grid should render per-preset source notes');
+  assert(result.gridHasDetailButton, 'settings prior credit: grid should expose detail buttons');
+  assert(result.detailOpened === true && result.settingsDetailHidden === false, 'settings prior credit: detail drawer should open into settings panel');
+  assert(/AP Calc BC 4\+/.test(result.settingsDetailHtml) && /MATH 141/.test(result.settingsDetailHtml) && /AP Chart 2023-2026/.test(result.settingsDetailHtml), 'settings prior credit: detail drawer should show selected preset source and equivalents');
   assert(/Official source check/.test(result.sourceNoticeHtml) && /Transfer Course Database/.test(result.sourceNoticeHtml), 'settings prior credit: source notice should render official links');
   assert(/AP Chart 2023-2026/.test(result.sourceNoticeHtml) && /IB Chart 2023-2026/.test(result.sourceNoticeHtml), 'settings prior credit: source notice should include AP/IB chart links');
   assert(/June 30, 2026/.test(result.sourceNoticeHtml) && result.sourceNoticeHtml.includes('app.transfercredit.umd.edu'), 'settings prior credit: source notice should include checked date and database search link');

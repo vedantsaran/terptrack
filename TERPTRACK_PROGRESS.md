@@ -3430,3 +3430,71 @@ Next pass candidates:
 - Add a source/verification drawer for a selected prior-credit preset.
 - Add advisor-packet deep links from downloaded HTML back into the live app when opened from the same origin.
 - Add Timeline recovery for stale prior-credit rows with multiple removed prior-credit entries and pluralized Settings labels.
+
+## 2026-06-30 Pass 69
+
+Focus: add a source/verification drawer for selected prior-credit presets in onboarding and Settings.
+
+Planned changes:
+- Let students inspect AP/IB preset equivalencies before selecting them.
+- Reuse the existing prior-credit preset metadata instead of duplicating mappings.
+- Show source-specific official links so AP presets do not show IB chart links and IB presets do not show AP chart links.
+- Keep the drawer available both during first-run onboarding and later from Settings.
+
+Completed:
+- Added shared prior-credit verification helpers in `js/onboarding.js`:
+  - category labels for GenEd and major-support credit.
+  - source-specific official link filtering.
+  - equivalent-course detail rendering.
+  - open/close helpers for a reusable inline drawer.
+  - grid binding for `Details` actions.
+- Every AP/IB preset chip now includes a compact `Details` action alongside the checkbox.
+- Added prior-credit detail regions to:
+  - first-run onboarding transfer-credit step.
+  - Settings AP / IB / Transfer Credit section.
+- The drawer shows:
+  - preset name and detail.
+  - checked source and checked date.
+  - UMD equivalent course rows with credit counts and requirement tags.
+  - a verification caveat for exam year/date, duplicate-credit rules, score reports, and transfer records.
+  - AP-only or IB-only official chart links plus UMD prior-learning and transfer database links.
+- Settings reuses the shared onboarding drawer binding instead of maintaining a separate implementation.
+- Styled the drawer, details buttons, course rows, source links, and mobile single-column layout.
+- Versioned changed browser assets:
+  - `styles.css?v=64`
+  - `js/settings.js?v=11`
+  - `js/onboarding.js?v=11`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `ONBOARDING-PRIOR-CREDIT` fixture confirms:
+  - preset chips expose `data-prior-detail` `Details` actions.
+  - AP Calc BC detail HTML renders the drawer, `MATH 141`, verification caveats, AP Chart 2023-2026, and the June 30, 2026 checked date.
+  - AP detail links include the AP chart and exclude the IB chart.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - Settings prior-credit chips expose details actions.
+  - opening AP Calc BC details in the Settings panel renders the selected source and equivalents.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed in first-run onboarding:
+  - `styles.css?v=64`, `js/settings.js?v=11`, and `js/onboarding.js?v=11` loaded.
+  - the transfer-credit step showed 20 prior-credit chips.
+  - clicking `Details` for AP Calc BC opened the verification drawer.
+  - the drawer showed AP Calc BC, `MATH 141`, AP Chart 2023-2026, and source links excluding IB Chart 2023-2026.
+  - clicking `Details` did not select the AP Calc BC checkbox.
+  - there was no page or onboarding-modal horizontal overflow.
+- Chrome confirmed in Settings:
+  - clicking `Details` for IB Economics HL opened the reused Settings drawer.
+  - the drawer showed `ECON 200`, `ECON 201`, IB Chart 2023-2026, and source links excluding AP Chart 2023-2026.
+  - clicking `Details` did not select the IB Economics checkbox.
+  - the drawer close button hid and cleared the Settings detail region.
+  - there was no page, Settings-modal, or prior-credit-section horizontal overflow.
+  - the restore URL returned to `/?pass69-restored=1` and seeded drawer text was absent afterward.
+  - Chrome app-origin console warnings/errors were clean.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add advisor-packet deep links from downloaded HTML back into the live app when opened from the same origin.
+- Add Timeline recovery for stale prior-credit rows with multiple removed prior-credit entries and pluralized Settings labels.
+- Add a transfer/prior-credit review checklist that compares selected credits against a student's chosen start year.

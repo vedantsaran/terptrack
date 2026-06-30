@@ -542,6 +542,9 @@ function renderSettingsPriorCreditControls() {
   grid.querySelectorAll('input[type="checkbox"]').forEach(input => {
     input.addEventListener('change', settingsRefreshPriorCreditSummary);
   });
+  if (typeof onboardBindPriorDetailControls === 'function') {
+    onboardBindPriorDetailControls(grid, 'set-prior-detail');
+  }
   const raw = document.getElementById('set-prior-codes');
   if (raw) {
     raw.value = '';

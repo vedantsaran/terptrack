@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=63">
+<link rel="stylesheet" href="styles.css?v=64">
 </head>
 <body data-theme="dark">
 
@@ -618,6 +618,7 @@
       <label>AP / IB / Transfer Credit</label>
       <p class="profile-help">Apply common prior-learning credits after setup. Existing planned courses are marked transfer; unplanned equivalents go to Transfer / Outside Plan.</p>
       <div id="set-prior-grid" class="onboard-prior-grid settings-prior-grid"></div>
+      <div id="set-prior-detail" class="prior-detail-region" hidden></div>
       <div id="set-prior-summary" class="onboard-prior-summary settings-prior-summary">No prior credits selected.</div>
       <label>Other course codes</label>
       <textarea id="set-prior-codes" rows="3" placeholder="CMSC131&#10;MATH140&#10;ENGL101"></textarea>
@@ -781,6 +782,7 @@
       <p style="color:var(--slate);font-size:.88rem;margin-top:-4px">Select common prior-learning credits or paste exact UMD course codes. Skip if none.</p>
       <label>Common AP / IB results</label>
       <div id="ob-prior-grid" class="onboard-prior-grid"></div>
+      <div id="ob-prior-detail" class="prior-detail-region" hidden></div>
       <div id="ob-prior-summary" class="onboard-prior-summary">No prior credits selected.</div>
       <label>Other course codes (one per line, or comma-separated)</label>
       <textarea id="ob-transfer-codes" rows="4"
@@ -981,14 +983,14 @@
 <script src="js/api.js"></script>
 <script src="js/schedule.js?v=27"></script>
 <script src="js/courses.js"></script>
-<script src="js/settings.js?v=10"></script>
+<script src="js/settings.js?v=11"></script>
 <script src="js/semesters.js"></script>
 <script src="js/io.js?v=11"></script>
 <script src="js/import.js?v=8"></script>
 <script src="js/prereq-resolver.js"></script>
 <script src="js/recommendations.js?v=11"></script>
 <script src="js/major-builder.js"></script>
-<script src="js/onboarding.js?v=10"></script>
+<script src="js/onboarding.js?v=11"></script>
 <script src="js/browse.js?v=12"></script>
 <script src="js/dnd.js"></script>
 <script src="js/bulk.js"></script>

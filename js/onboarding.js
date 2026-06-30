@@ -27,6 +27,19 @@ const PRIOR_CREDIT_SOURCE_META = {
     note: 'verify by exam date',
   },
 };
+const PRIOR_CREDIT_CATEGORY_LABELS = {
+  'gened-fsaw': 'FSAW',
+  'gened-fspw': 'FSPW',
+  'gened-fsma': 'FSMA',
+  'gened-fsar': 'FSAR',
+  'gened-fsoc': 'FSOC',
+  'gened-dshs': 'DSHS',
+  'gened-dshu': 'DSHU',
+  'gened-dsns': 'DSNS',
+  'gened-dsnl': 'DSNL',
+  'gened-dssp': 'DSSP',
+  'major-support': 'Major support',
+};
 const ONBOARD_PRIOR_CREDIT_PRESETS = [
   {
     id: 'ap-calc-ab-4',
@@ -257,6 +270,65 @@ function onboardPriorPresetSourceNote(preset) {
   return `${meta.label} · ${courseText} · ${meta.note}`;
 }
 
+function onboardPriorPresetLinks(preset) {
+  const source = String(preset?.source || '').toUpperCase();
+  return PRIOR_CREDIT_SOURCE_LINKS.filter(link => {
+    if (/AP Chart/.test(link.label)) return source === 'AP';
+    if (/IB Chart/.test(link.label)) return source === 'IB';
+    return /Prior Learning|Transfer Course Database|Search transfer/.test(link.label);
+  });
+}
+
+function onboardPriorCourseCategoryLabel(course) {
+  const categories = Array.from(new Set([
+    ...(Array.isArray(course?.categories) ? course.categories : []),
+    course?.category,
+  ].filter(Boolean)));
+  if (!categories.length) return 'Elective credit';
+  return categories
+    .map(category => PRIOR_CREDIT_CATEGORY_LABELS[category] || String(category).replace(/^gened-/, '').toUpperCase())
+    .join(' + ');
+}
+
+function onboardPriorDetailHtml(preset) {
+  if (!preset) return '';
+  const source = String(preset.source || 'Credit').toUpperCase();
+  const meta = PRIOR_CREDIT_SOURCE_META[source] || { label: `${source} source`, note: 'verify official equivalency' };
+  const courses = preset.courses || [];
+  const totalCredits = courses.reduce((sum, course) => sum + (Number(course.cr) || 0), 0);
+  const courseRows = courses.map(course => `
+    <li>
+      <strong>${onboardEscape(onboardPriorDisplayCode(course.code))}</strong>
+      <span>${onboardEscape(course.title || onboardPriorDisplayCode(course.code))}</span>
+      <small>${Number(course.cr) || 0} cr · ${onboardEscape(onboardPriorCourseCategoryLabel(course))}</small>
+    </li>
+  `).join('');
+  const links = onboardPriorPresetLinks(preset).map(link => `
+    <a href="${onboardEscape(link.url)}" target="_blank" rel="noopener noreferrer">${onboardEscape(link.label)}</a>
+  `).join('');
+  return `
+    <div class="prior-detail-drawer" data-prior-detail-active="${onboardEscape(preset.id)}">
+      <div class="prior-detail-head">
+        <span>Verification drawer</span>
+        <button class="btn small" type="button" data-prior-detail-close>Close</button>
+      </div>
+      <h4>${onboardEscape(preset.label)}</h4>
+      <p>${onboardEscape(preset.detail)} · ${onboardEscape(meta.label)} · last checked ${onboardEscape(PRIOR_CREDIT_SOURCE_CHECKED)}.</p>
+      <div class="prior-detail-stats">
+        <span><strong>${courses.length || 1}</strong>UMD course${courses.length === 1 ? '' : 's'}</span>
+        <span><strong>${totalCredits}</strong>planned credit${totalCredits === 1 ? '' : 's'}</span>
+        <span><strong>${onboardEscape(source || 'Credit')}</strong>${onboardEscape(meta.note)}</span>
+      </div>
+      <ul class="prior-detail-courses">${courseRows}</ul>
+      <div class="prior-detail-check">
+        <strong>Before relying on it</strong>
+        <p>Match the chart to the student's exam year or exam date, confirm duplicate-credit rules, and use official score reports or transfer records for the final transcript decision.</p>
+      </div>
+      <div class="prior-source-links">${links}</div>
+    </div>
+  `;
+}
+
 function onboardPriorChipHtml(preset, options = {}) {
   const checked = !!options.checked;
   const extraClass = options.extraClass || '';
@@ -268,6 +340,7 @@ function onboardPriorChipHtml(preset, options = {}) {
         <small>${onboardEscape(preset.detail)}</small>
         <small class="prior-chip-source">${onboardEscape(onboardPriorPresetSourceNote(preset))}</small>
       </span>
+      <button class="prior-chip-detail" type="button" data-prior-detail="${onboardEscape(preset.id)}" aria-label="Show verification details for ${onboardEscape(preset.label)}">Details</button>
     </label>
   `;
 }
@@ -275,6 +348,47 @@ function onboardPriorChipHtml(preset, options = {}) {
 function onboardRenderPriorSourceNotice(id) {
   const root = document.getElementById(id);
   if (root) root.innerHTML = onboardPriorSourceNoticeHtml();
+}
+
+function onboardShowPriorPresetDetail(id, rootId = 'ob-prior-detail') {
+  const root = document.getElementById(rootId);
+  const preset = onboardPriorPresetById(id);
+  if (!root || !preset) return false;
+  root.innerHTML = onboardPriorDetailHtml(preset);
+  root.hidden = false;
+  root.dataset.activePriorDetail = preset.id;
+  if (typeof root.scrollIntoView === 'function') root.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  return true;
+}
+
+function onboardHidePriorPresetDetail(rootId = 'ob-prior-detail') {
+  const root = document.getElementById(rootId);
+  if (!root) return false;
+  root.hidden = true;
+  root.innerHTML = '';
+  delete root.dataset.activePriorDetail;
+  return true;
+}
+
+function onboardBindPriorDetailControls(grid, rootId) {
+  if (!grid) return;
+  grid.querySelectorAll('[data-prior-detail]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      onboardShowPriorPresetDetail(button.dataset.priorDetail, rootId);
+    });
+  });
+  const detail = document.getElementById(rootId);
+  if (detail && !detail.dataset.priorDetailBound) {
+    detail.dataset.priorDetailBound = '1';
+    detail.addEventListener('click', event => {
+      if (event.target.closest('[data-prior-detail-close]')) {
+        event.preventDefault();
+        onboardHidePriorPresetDetail(rootId);
+      }
+    });
+  }
 }
 
 function onboardNumber(id, fallback) {
@@ -443,6 +557,7 @@ function onboardRenderPriorCreditControls() {
   root.querySelectorAll('input[type="checkbox"]').forEach(input => {
     input.addEventListener('change', onboardRefreshPriorCreditSummary);
   });
+  onboardBindPriorDetailControls(root, 'ob-prior-detail');
   const raw = document.getElementById('ob-transfer-codes');
   if (raw && !raw.dataset.priorBound) {
     raw.dataset.priorBound = 'true';

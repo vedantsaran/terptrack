@@ -4896,7 +4896,7 @@ h1.hero-title em {
 }
 .onboard-prior-chip {
   display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   gap: 8px;
   margin: 0 !important;
@@ -4938,6 +4938,145 @@ h1.hero-title em {
 .onboard-prior-chip.selected {
   border-color: rgba(46,107,63,.45);
   background: var(--green-soft);
+}
+.prior-chip-detail {
+  align-self: start;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cream) 72%, var(--paper));
+  color: var(--blue);
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+.prior-chip-detail:hover,
+.prior-chip-detail:focus-visible {
+  border-color: var(--blue);
+  background: rgba(46, 92, 139, .09);
+  outline: none;
+}
+.prior-detail-region {
+  margin-top: 8px;
+}
+.prior-detail-region[hidden] {
+  display: none;
+}
+.prior-detail-drawer {
+  border: 1px solid rgba(46, 92, 139, .26);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 86%, rgba(46, 92, 139, .12));
+  box-shadow: var(--shadow-sm);
+  padding: 11px;
+}
+.prior-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.prior-detail-head span {
+  color: var(--blue);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.prior-detail-drawer h4 {
+  color: var(--ink);
+  font-size: .98rem;
+  line-height: 1.2;
+  margin: 0;
+}
+.prior-detail-drawer p {
+  color: var(--slate);
+  font-size: .76rem;
+  line-height: 1.38;
+  margin: 5px 0 9px;
+}
+.prior-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 8px 0;
+}
+.prior-detail-stats span {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--slate);
+  font-size: .67rem;
+  line-height: 1.25;
+  padding: 7px;
+  overflow-wrap: anywhere;
+}
+.prior-detail-stats strong {
+  display: block;
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+.prior-detail-courses {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 9px 0;
+  padding: 0;
+}
+.prior-detail-courses li {
+  display: grid;
+  grid-template-columns: minmax(76px, .35fr) minmax(0, 1fr);
+  gap: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 8px;
+}
+.prior-detail-courses li strong {
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  line-height: 1.25;
+}
+.prior-detail-courses li span {
+  color: var(--ink);
+  font-size: .76rem;
+  line-height: 1.25;
+  min-width: 0;
+}
+.prior-detail-courses li small {
+  grid-column: 2;
+  color: var(--slate);
+  font-size: .68rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.prior-detail-check {
+  border: 1px solid rgba(191, 126, 52, .32);
+  border-radius: 8px;
+  background: rgba(191, 126, 52, .08);
+  margin: 9px 0;
+  padding: 8px;
+}
+.prior-detail-check strong {
+  color: var(--amber);
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.prior-detail-check p {
+  margin: 4px 0 0;
 }
 .onboard-prior-summary {
   margin-top: 8px;
@@ -5940,6 +6079,13 @@ h1.hero-title em {
   .onboard-prior-grid,
   .onboard-preview-summary {
     grid-template-columns: 1fr;
+  }
+  .prior-detail-stats,
+  .prior-detail-courses li {
+    grid-template-columns: 1fr;
+  }
+  .prior-detail-courses li small {
+    grid-column: 1;
   }
   .onboard-plan-preview {
     max-height: 360px;
