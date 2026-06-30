@@ -4139,3 +4139,69 @@ Next pass candidates:
 - Clean AGNR, public-health, and education templates still failing live PlanetTerp verification.
 - Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
 - Add official per-major citation links beside generated requirement groups.
+
+## 2026-06-30 Pass 82
+
+Focus: clean ARHU/BSOS generated templates with stale seminar, capstone, and topic-course codes against live PlanetTerp.
+
+Planned changes:
+- Target the remaining ARHU/BSOS generated templates from the Pass 81 all-major failure list.
+- Prefer exact live topic variants, then same-department live replacements where the old generic number no longer resolves.
+- Keep generated schedules duplicate-free, target-credit complete, and fully covered by live metadata.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Replaced stale ARHU/BSOS generated-template codes with live PlanetTerp-resolving courses:
+  - SOCY: `SOCY498`, `SOCY423`, and `SOCY425` -> `SOCY498C`, `SOCY424`, and `SOCY428`; goal now uses `SOCY498C`.
+  - ANTH: `ANTH298`, `ANTH401`, `ANTH497`, and `ANTH445` -> `ANTH305`, `ANTH411`, `ANTH498Y`, and `ANTH447`; goal now uses `ANTH498Y`.
+  - ENGL: `ENGL379` and `ENGL488` -> `ENGL379M` and `ENGL489P`.
+  - HIST: `HIST208`, `HIST209`, `HIST408`, `HIST319`, and `HIST429` -> `HIST208B`, `HIST205`, `HIST408B`, `HIST319L`, and `HIST429F`; goal now uses `HIST408B`.
+  - PHIL: `PHIL330`, `PHIL498`, and `PHIL427` -> `PHIL332`, `PHIL408R`, and `PHIL428A`; goal now uses `PHIL408R`.
+  - ARTH: `ARTH100`, `ARTH488`, `ARTH489`, `ARTH354`, and `ARTH443` -> `ARTH221`, `ARTH488K`, `ARTH489K`, `ARTH351`, and `ARTH465`; goal now uses `ARTH489K`.
+  - LING: `LING422`, `LING488`, and `LING412` -> `LING420`, `LING444`, and `LING419B`; goal now uses `LING444`.
+  - SPAN: `SPAN488` and `SPAN345` -> `SPAN408K` and `SPAN363`; goal now uses `SPAN408K`.
+  - THET: dead lower/core/topic Theatre codes -> `THET116`, `THET222`, `THET223`, `THET274`, `THET371`, `THET489P`, `THET408W`, and `THET477`; goal now uses `THET489P`.
+  - MUSC: `MUSC110`, `MUSC331`, `MUSC419`, and generic `MUSC448` -> `MUSC210`, `MUSC310`, `MUSC448C`, and `MUSC443`.
+  - ARTT: `ARTT250` and `ARTT489` -> `ARTT255` and `ARTT489C`; goal now uses `ARTT489C`.
+  - CINE: dead generic Cinema sequence -> live `CINE245`, `CINE280`, `CINE301`, `CINE302`, `CINE411`, `CINE469M`, and `CINE385`; goal now uses `CINE469M`.
+  - WMST: `WMST301`, `WMST488`, `WMST498`, `WMST450`, and `WMST463` -> `WMST300`, `WMST488B`, `WMST498Q`, `WMST452`, and `WMST471`; goal now uses `WMST498Q`.
+  - AMST: `AMST201`, `AMST330`, `AMST498`, `AMST329`, and `AMST428` -> `AMST202`, `AMST340`, `AMST498A`, `AMST328C`, and `AMST428P`; goal now uses `AMST498A`.
+
+Verification:
+- Ran direct PlanetTerp department-list and course-endpoint checks for replacement AMST, ANTH, ARTH, ARTT, CINE, ENGL, HIST, LING, MUSC, PHIL, SOCY, SPAN, THET, and WMST courses before and during editing.
+- Ran `node scripts/verify-random-schedules.js --majors AMST,ANTH,ARTH,ARTT,CINE,ENGL,HIST,LING,MUSC,PHIL,SOCY,SPAN,THET,WMST --keep-going --seed pass82-arhu-bsos`; it passed:
+  - `AMST`: 122 credits, 11 required courses verified in PlanetTerp.
+  - `ANTH`: 121 credits, 10 required courses verified in PlanetTerp.
+  - `ARTH`: 121 credits, 10 required courses verified in PlanetTerp.
+  - `ARTT`: 122 credits, 12 required courses verified in PlanetTerp.
+  - `CINE`: 121 credits, 9 required courses verified in PlanetTerp.
+  - `ENGL`: 121 credits, 12 required courses verified in PlanetTerp.
+  - `HIST`: 121 credits, 10 required courses verified in PlanetTerp.
+  - `LING`: 121 credits, 13 required courses verified in PlanetTerp.
+  - `MUSC`: 120 credits, 11 required courses verified in PlanetTerp.
+  - `PHIL`: 121 credits, 10 required courses verified in PlanetTerp.
+  - `SOCY`: 120 credits, 11 required courses verified in PlanetTerp.
+  - `SPAN`: 122 credits, 11 required courses verified in PlanetTerp.
+  - `THET`: 121 credits, 13 required courses verified in PlanetTerp.
+  - `WMST`: 121 credits, 10 required courses verified in PlanetTerp.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass82-all`.
+  - Confirmed all 14 ARHU/BSOS targets now pass and dropped out of the failure summary.
+  - Remaining generated-template failure count is now 9:
+    `ANSC`, `AREC`, `EDUC`, `FMSC`, `HLTH`, `JOUR`, `KNES`, `NFSC`, `PLSC`.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/`, then finalized Chrome and stopped the server before commit.
+- Chrome confirmed:
+  - Settings opened normally.
+  - Selecting Theatre showed the generated-major note.
+  - The Theatre auto-plan review rendered `13/13 live course records`.
+  - The Theatre review rendered full tracked GenEd coverage.
+  - The rendered review included the live Theatre replacements shown in the metadata sample and did not include old invalid `THET170`, `THET171`, `THET220`, `THET279`, `THET355`, `THET490`, `THET418`, or `THET479` codes.
+  - There was no horizontal overflow.
+  - Browser console errors were clean.
+
+Next pass candidates:
+- Clean the remaining AGNR templates: `ANSC`, `AREC`, `NFSC`, and `PLSC`.
+- Clean the remaining public-health and education templates: `FMSC`, `HLTH`, `KNES`, and `EDUC`.
+- Clean the remaining Journalism template: `JOUR`.
+- Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.

@@ -363,11 +363,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Sociology · BA',
     totalCredits: 120,
     coreCodes: [
-      'SOCY100','SOCY105','SOCY201','SOCY202','SOCY441','SOCY498',
+      'SOCY100','SOCY105','SOCY201','SOCY202','SOCY441','SOCY498C',
     ],
-    upperElectiveCodes: ['SOCY410','SOCY423','SOCY425','SOCY465'],
+    upperElectiveCodes: ['SOCY410','SOCY424','SOCY428','SOCY465'],
     supportCodes: ['STAT100'],
-    goals: ['SOCY498'],
+    goals: ['SOCY498C'],
     notes: 'BA Sociology. SOCY 201 (stats) + 202 (methods) gateway must be passed before 4xx work.',
   },
   ANTH: {
@@ -377,11 +377,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Anthropology · BA',
     totalCredits: 120,
     coreCodes: [
-      'ANTH220','ANTH240','ANTH260','ANTH298','ANTH401','ANTH497',
+      'ANTH220','ANTH240','ANTH260','ANTH305','ANTH411','ANTH498Y',
     ],
-    upperElectiveCodes: ['ANTH415','ANTH445','ANTH462'],
+    upperElectiveCodes: ['ANTH415','ANTH447','ANTH462'],
     supportCodes: ['STAT100'],
-    goals: ['ANTH497'],
+    goals: ['ANTH498Y'],
     notes: 'BA Anthropology. Four-field intro covers cultural, archaeology, biological, linguistic.',
   },
 
@@ -395,7 +395,7 @@ const MAJOR_TEMPLATES = {
     coreCodes: [
       'ENGL201','ENGL301','ENGL311','ENGL312','ENGL313','ENGL402','ENGL498',
     ],
-    upperElectiveCodes: ['ENGL379','ENGL433','ENGL437','ENGL488'],
+    upperElectiveCodes: ['ENGL379M','ENGL433','ENGL437','ENGL489P'],
     supportCodes: ['ENGL101'],
     goals: ['ENGL498'],
     notes: 'BA English. Lots of choice; pre-fills survey + period sequence and a senior seminar.',
@@ -407,11 +407,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · History · BA',
     totalCredits: 120,
     coreCodes: [
-      'HIST200','HIST201','HIST208','HIST209','HIST407','HIST408',
+      'HIST200','HIST201','HIST208B','HIST205','HIST407','HIST408B',
     ],
-    upperElectiveCodes: ['HIST319','HIST405','HIST429','HIST462'],
+    upperElectiveCodes: ['HIST319L','HIST405','HIST429F','HIST462'],
     supportCodes: [],
-    goals: ['HIST408'],
+    goals: ['HIST408B'],
     notes: 'BA History. HIST 200/201 are the methods gateway; HIST 408 is senior research seminar.',
   },
   PHIL: {
@@ -421,11 +421,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Philosophy · BA',
     totalCredits: 120,
     coreCodes: [
-      'PHIL170','PHIL250','PHIL310','PHIL320','PHIL330','PHIL370','PHIL498',
+      'PHIL170','PHIL250','PHIL310','PHIL320','PHIL332','PHIL370','PHIL408R',
     ],
-    upperElectiveCodes: ['PHIL360','PHIL427','PHIL456'],
+    upperElectiveCodes: ['PHIL360','PHIL428A','PHIL456'],
     supportCodes: [],
-    goals: ['PHIL498'],
+    goals: ['PHIL408R'],
     notes: 'BA Philosophy. Logic + ancient + modern + ethics is the typical core sweep.',
   },
   COMM: {
@@ -450,11 +450,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Art History · BA',
     totalCredits: 120,
     coreCodes: [
-      'ARTH100','ARTH200','ARTH201','ARTH250','ARTH320','ARTH488','ARTH489',
+      'ARTH221','ARTH200','ARTH201','ARTH250','ARTH320','ARTH488K','ARTH489K',
     ],
-    upperElectiveCodes: ['ARTH354','ARTH418','ARTH443'],
+    upperElectiveCodes: ['ARTH351','ARTH418','ARTH465'],
     supportCodes: [],
-    goals: ['ARTH489'],
+    goals: ['ARTH489K'],
     notes: 'BA Art History. Survey (ancient → modern) + non-Western course + senior seminar.',
   },
 
@@ -751,11 +751,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Linguistics · BA',
     totalCredits: 120,
     coreCodes: [
-      'LING200','LING240','LING311','LING321','LING322','LING330','LING422','LING488',
+      'LING200','LING240','LING311','LING321','LING322','LING330','LING420','LING444',
     ],
-    upperElectiveCodes: ['LING410','LING412','LING440'],
+    upperElectiveCodes: ['LING410','LING419B','LING440'],
     supportCodes: ['PHIL170','STAT100'],
-    goals: ['LING488'],
+    goals: ['LING444'],
     notes: 'BA Linguistics. Strong overlap with cognitive science + computer science.',
   },
   SPAN: {
@@ -765,11 +765,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Spanish · BA',
     totalCredits: 120,
     coreCodes: [
-      'SPAN203','SPAN204','SPAN301','SPAN303','SPAN325','SPAN401','SPAN488',
+      'SPAN203','SPAN204','SPAN301','SPAN303','SPAN325','SPAN401','SPAN408K',
     ],
-    upperElectiveCodes: ['SPAN345','SPAN450','SPAN470'],
+    upperElectiveCodes: ['SPAN363','SPAN450','SPAN470'],
     supportCodes: ['ENGL101'],
-    goals: ['SPAN488'],
+    goals: ['SPAN408K'],
     notes: 'BA Spanish. Heritage / non-heritage tracks differ in lower-division placement.',
   },
   THET: {
@@ -779,11 +779,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Theatre · BA',
     totalCredits: 120,
     coreCodes: [
-      'THET110','THET120','THET170','THET171','THET220','THET279','THET330','THET355','THET490',
+      'THET110','THET120','THET116','THET222','THET223','THET274','THET330','THET371','THET489P',
     ],
-    upperElectiveCodes: ['THET418','THET447','THET479'],
+    upperElectiveCodes: ['THET408W','THET447','THET477'],
     supportCodes: ['ENGL101'],
-    goals: ['THET490'],
+    goals: ['THET489P'],
     notes: 'BA Theatre. Performance / design / stage management tracks share most of the core.',
   },
   MUSC: {
@@ -793,9 +793,9 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Music · BA',
     totalCredits: 120,
     coreCodes: [
-      'MUSC110','MUSC150','MUSC151','MUSC250','MUSC251','MUSC330','MUSC331','MUSC450',
+      'MUSC210','MUSC150','MUSC151','MUSC250','MUSC251','MUSC330','MUSC310','MUSC450',
     ],
-    upperElectiveCodes: ['MUSC419','MUSC448'],
+    upperElectiveCodes: ['MUSC448C','MUSC443'],
     supportCodes: ['ENGL101'],
     goals: ['MUSC450'],
     notes: 'BA Music — non-performance track. Music Education / Performance are separate BMus paths.',
@@ -807,11 +807,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Studio Art · BA',
     totalCredits: 120,
     coreCodes: [
-      'ARTT100','ARTT110','ARTT150','ARTT200','ARTT210','ARTT250','ARTT320','ARTT489',
+      'ARTT100','ARTT110','ARTT150','ARTT200','ARTT210','ARTT255','ARTT320','ARTT489C',
     ],
     upperElectiveCodes: ['ARTT418','ARTT428','ARTT458'],
     supportCodes: ['ARTH200'],
-    goals: ['ARTT489'],
+    goals: ['ARTT489C'],
     notes: 'BA Studio Art. Concentrations: drawing, painting, sculpture, digital media, printmaking.',
   },
   CINE: {
@@ -821,11 +821,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Cinema & Media Studies · BA',
     totalCredits: 120,
     coreCodes: [
-      'CINE110','CINE220','CINE330','CINE395','CINE427','CINE498',
+      'CINE245','CINE280','CINE301','CINE302','CINE411','CINE469M',
     ],
-    upperElectiveCodes: ['CINE344','CINE389'],
+    upperElectiveCodes: ['CINE344','CINE385'],
     supportCodes: ['ENGL101'],
-    goals: ['CINE498'],
+    goals: ['CINE469M'],
     notes: 'BA Cinema & Media Studies. Critical / production hybrid; less focused on filmmaking than peer programs.',
   },
   WMST: {
@@ -835,11 +835,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Women, Gender, & Sexuality Studies · BA',
     totalCredits: 120,
     coreCodes: [
-      'WMST200','WMST250','WMST301','WMST488','WMST498',
+      'WMST200','WMST250','WMST300','WMST488B','WMST498Q',
     ],
-    upperElectiveCodes: ['WMST314','WMST450','WMST463'],
+    upperElectiveCodes: ['WMST314','WMST452','WMST471'],
     supportCodes: ['SOCY100','PSYC100'],
-    goals: ['WMST498'],
+    goals: ['WMST498Q'],
     notes: 'BA WGSS. Highly interdisciplinary; courses cross-list with HIST, SOCY, ENGL, AASP.',
   },
   AMST: {
@@ -849,11 +849,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · American Studies · BA',
     totalCredits: 120,
     coreCodes: [
-      'AMST201','AMST205','AMST260','AMST330','AMST450','AMST498',
+      'AMST202','AMST205','AMST260','AMST340','AMST450','AMST498A',
     ],
-    upperElectiveCodes: ['AMST329','AMST398','AMST428'],
+    upperElectiveCodes: ['AMST328C','AMST398','AMST428P'],
     supportCodes: ['ENGL101','HIST200'],
-    goals: ['AMST498'],
+    goals: ['AMST498A'],
     notes: 'BA American Studies. Material culture, popular culture, and US history strands.',
   },
 
