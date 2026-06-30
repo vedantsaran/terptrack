@@ -512,15 +512,116 @@ function auditPlaceholderBrowseConfig(course, info) {
   };
 }
 
+function auditFormatList(values = [], limit = 4) {
+  const clean = values.map(value => String(value || '').trim()).filter(Boolean);
+  if (!clean.length) return '';
+  return clean.slice(0, limit).join(', ') + (clean.length > limit ? ` +${clean.length - limit} more` : '');
+}
+
+function auditRecentPriorCreditChanges(limit = 5) {
+  const appState = typeof state !== 'undefined' ? state : {};
+  const changes = typeof recentPlanChanges === 'function'
+    ? recentPlanChanges()
+    : (Array.isArray(appState.recentChanges) ? appState.recentChanges : []);
+  return (changes || [])
+    .filter(change => change?.undo?.kind === 'prior-credit' && !change.undo.appliedAt)
+    .slice(0, limit);
+}
+
+function auditPriorCreditEvidence(change) {
+  const review = change?.undo?.review || {};
+  const overlaps = (Array.isArray(review.overlaps) ? review.overlaps : [])
+    .map(overlap => ({
+      code: String(overlap?.code || '').trim(),
+      sources: Array.from(new Set(overlap?.sources || [])).map(source => String(source || '').trim()).filter(Boolean),
+    }))
+    .filter(overlap => overlap.code && overlap.sources.length);
+  const existingAttempts = (Array.isArray(review.existingAttempts) ? review.existingAttempts : [])
+    .map(item => ({
+      code: String(item?.code || '').trim(),
+      status: String(item?.status || '').trim(),
+      grade: String(item?.grade || '').trim(),
+    }))
+    .filter(item => item.code && item.status);
+  return { overlaps, existingAttempts };
+}
+
+function auditPriorCreditAttemptLabel(item) {
+  const status = String(item?.status || '').replace('-', ' ');
+  const grade = item?.grade ? ` (${item.grade})` : '';
+  return `${item.code} was already marked ${status}${grade}`;
+}
+
+function auditPriorCreditOverlapLabel(overlap) {
+  const sources = auditFormatList(overlap.sources || [], 3);
+  return sources ? `${overlap.code} via ${sources}` : overlap.code;
+}
+
+function auditPriorCreditIssueSummary(evidence) {
+  const parts = [];
+  if (evidence.overlaps.length) {
+    parts.push(auditFormatList(evidence.overlaps.map(auditPriorCreditOverlapLabel), 2));
+  }
+  if (evidence.existingAttempts.length) {
+    parts.push(auditFormatList(evidence.existingAttempts.map(auditPriorCreditAttemptLabel), 2));
+  }
+  return parts.filter(Boolean).join(' · ') || 'Prior-credit conflicts need advisor review before these credits are final.';
+}
+
+function auditPriorCreditIssueDetail(evidence) {
+  const detail = [];
+  if (evidence.overlaps.length) {
+    detail.push(`Overlapping selected sources: ${auditFormatList(evidence.overlaps.map(auditPriorCreditOverlapLabel), 4)}.`);
+  }
+  if (evidence.existingAttempts.length) {
+    detail.push(`Existing UMD attempts: ${auditFormatList(evidence.existingAttempts.map(auditPriorCreditAttemptLabel), 4)}.`);
+  }
+  detail.push('Confirm the official source that should count before treating these AP, IB, transfer, or repeated-course credits as final.');
+  return detail.join(' ');
+}
+
+function auditPriorCreditConflictIssues() {
+  return auditRecentPriorCreditChanges()
+    .map(change => {
+      const evidence = auditPriorCreditEvidence(change);
+      if (!evidence.overlaps.length && !evidence.existingAttempts.length) return null;
+      const affectedCodes = Array.from(new Set([
+        ...evidence.overlaps.map(item => item.code),
+        ...evidence.existingAttempts.map(item => item.code),
+      ].filter(Boolean)));
+      const changedId = String(change.id || affectedCodes.join('-') || 'latest').replace(/[^A-Za-z0-9_-]/g, '-');
+      return {
+        key: `prior-credit-${changedId}`,
+        type: 'prior-credit',
+        level: 'warn',
+        title: 'Prior credit conflicts need review',
+        eyebrow: 'Prior credit review',
+        status: `${affectedCodes.length || 1} course${affectedCodes.length === 1 ? '' : 's'}`,
+        summary: auditPriorCreditIssueSummary(evidence),
+        detail: auditPriorCreditIssueDetail(evidence),
+        satisfies: 'Duplicate-credit, transfer-credit, AP/IB, and repeat-attempt rules',
+        actionLabel: 'Review prior credits',
+        actionType: 'prior-credit',
+        courseCode: affectedCodes[0] || 'Prior credit',
+        changeId: change.id || '',
+        tags: ['Prior credit', 'Duplicate credit'],
+      };
+    })
+    .filter(Boolean);
+}
+
 function auditDegreeIssues() {
   const all = flatCourses();
   const issues = [
+    ...auditPriorCreditConflictIssues(),
     ...auditGenEdGapIssues(all),
     ...auditPlaceholderIssues(all),
   ];
   return issues.sort((a, b) => {
     const order = { danger: 0, warn: 1, info: 2 };
+    const typeOrder = { 'prior-credit': 0, placeholder: 1, gened: 2 };
     return (order[a.level] ?? 9) - (order[b.level] ?? 9)
+      || (typeOrder[a.type] ?? 9) - (typeOrder[b.type] ?? 9)
       || String(a.type).localeCompare(String(b.type))
       || String(a.title).localeCompare(String(b.title));
   });
@@ -541,11 +642,14 @@ function auditIssuesHtml() {
     acc[issue.type] = (acc[issue.type] || 0) + 1;
     return acc;
   }, {});
+  const priorCount = counts['prior-credit'] || 0;
+  const placeholderCount = counts.placeholder || 0;
+  const genedCount = counts.gened || 0;
   return `
     <div class="audit-issue-toolbar">
       <div>
         <strong>${issues.length} open item${issues.length === 1 ? '' : 's'}</strong>
-        <span>${counts.placeholder || 0} placeholders · ${counts.gened || 0} GenEd gaps</span>
+        <span>${priorCount} prior-credit review${priorCount === 1 ? '' : 's'} · ${placeholderCount} placeholder${placeholderCount === 1 ? '' : 's'} · ${genedCount} GenEd gap${genedCount === 1 ? '' : 's'}</span>
       </div>
       <button type="button" class="btn small" onclick="auditOpenNextIssueBrowse()">Start With Top Item</button>
     </div>
@@ -558,6 +662,7 @@ function auditIssuesHtml() {
 function auditIssueCardHtml(issue) {
   const open = auditIssueKey === issue.key;
   const tags = (issue.tags || []).map(tag => `<span>${auditEscape(tag)}</span>`).join('');
+  const secondaryLabel = issue.actionType === 'prior-credit' ? 'Open Settings' : 'Open Browse';
   return `
     <div class="audit-issue ${auditEscape(issue.level)} ${open ? 'open' : ''}">
       <button type="button" class="audit-issue-main" onclick="auditToggleIssue('${auditEscape(issue.key)}')" aria-expanded="${open ? 'true' : 'false'}">
@@ -582,7 +687,7 @@ function auditIssueCardHtml(issue) {
           </div>
           <div class="audit-issue-actions">
             <button type="button" class="btn small primary" onclick="auditOpenIssuePrimary('${auditEscape(issue.key)}')">${auditEscape(issue.actionLabel || 'Open')}</button>
-            <button type="button" class="btn small" onclick="auditOpenIssueBrowse('${auditEscape(issue.key)}')">Open Browse</button>
+            <button type="button" class="btn small" onclick="auditOpenIssueBrowse('${auditEscape(issue.key)}')">${auditEscape(secondaryLabel)}</button>
           </div>
         </div>
       ` : ''}
@@ -602,6 +707,10 @@ function auditToggleIssue(key) {
 function auditOpenIssuePrimary(key) {
   const issue = auditFindIssue(key);
   if (!issue) return;
+  if (issue.actionType === 'prior-credit') {
+    auditOpenPriorCreditReview(issue);
+    return;
+  }
   if (issue.actionType === 'placeholder' && typeof openPlaceholderSearch === 'function') {
     openPlaceholderSearch(issue.courseCode, issue.semId || '');
     return;
@@ -620,6 +729,10 @@ function auditOpenNextIssueBrowse() {
 function auditOpenIssueBrowse(key) {
   const issue = auditFindIssue(key);
   if (!issue) return;
+  if (issue.actionType === 'prior-credit') {
+    auditOpenPriorCreditReview(issue);
+    return;
+  }
   if (typeof browseOpenSearch !== 'function') {
     toastError('Browse is still loading. Try again in a moment.');
     return;
@@ -627,4 +740,26 @@ function auditOpenIssueBrowse(key) {
   const config = issue.browse || { dept: '', genEd: '', search: '', label: `Audit: ${issue.title}` };
   browseOpenSearch({ ...config, save: true });
   if (typeof toastSuccess === 'function') toastSuccess(`Opened Browse for ${issue.title}.`);
+}
+
+function auditOpenPriorCreditReview(issue) {
+  if (typeof openSettings !== 'function') {
+    if (typeof toastError === 'function') toastError('Settings are still loading. Try again in a moment.');
+    return false;
+  }
+  openSettings();
+  const doc = typeof document !== 'undefined' ? document : null;
+  const status = doc?.getElementById ? doc.getElementById('set-prior-status') : null;
+  if (status) {
+    status.style.color = 'var(--amber)';
+    status.textContent = issue?.summary || 'Review prior-credit conflicts before treating these credits as final.';
+  }
+  if (typeof plannerFocusSettingsPriorCredit === 'function') {
+    plannerFocusSettingsPriorCredit();
+  } else {
+    const section = doc?.getElementById ? doc.getElementById('settings-prior-credit-section') : null;
+    if (section?.scrollIntoView) section.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  if (typeof toastInfo === 'function') toastInfo('Opened Settings prior-credit review.');
+  return true;
 }

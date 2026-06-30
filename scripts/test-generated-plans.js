@@ -1314,6 +1314,7 @@ async function testBrowsePlaceholderReplacement(context) {
       }];
       state.customCourses = [];
       state.courses = {};
+      state.recentChanges = [];
       state.browseSavedSearches = [];
       state.profilePrefs = normalizeProfilePrefs({
         interests: ['policy-society'],
@@ -1635,6 +1636,30 @@ function testAuditIssueDrawer(context) {
       }];
       state.customCourses = [];
       state.courses = {};
+      state.recentChanges = [{
+        id: 'prior-conflict-1',
+        type: 'prior-credit',
+        source: 'settings',
+        title: 'Applied 2 prior-credit courses',
+        detail: 'MATH 140, CMSC 131',
+        at: '2026-06-30T12:00:00.000Z',
+        undo: {
+          kind: 'prior-credit',
+          source: 'settings',
+          entries: [{
+            code: 'MATH 140',
+            hadCourseState: true,
+            courseState: { status: 'passed', grade: 'A' },
+            appliedCourseState: { status: 'transfer', grade: '' },
+            addedCustomCourse: false,
+            customCourse: null
+          }],
+          review: {
+            overlaps: [{ code: 'MATH 140', sources: ['AP Calc BC 4+', 'Manual entry'] }],
+            existingAttempts: [{ code: 'MATH 140', status: 'passed', grade: 'A' }]
+          }
+        }
+      }];
       state.browseSavedSearches = [];
       state.profilePrefs = normalizeProfilePrefs({
         interests: ['policy-society'],
@@ -1645,15 +1670,34 @@ function testAuditIssueDrawer(context) {
       switchTab = tab => { currentTab = tab; };
       let openedPlaceholder = null;
       openPlaceholderSearch = (code, semId) => { openedPlaceholder = { code, semId }; };
+      let priorCreditSettingsOpened = 0;
+      let priorCreditFocused = 0;
+      const originalOpenSettings = openSettings;
+      const originalPlannerFocusSettingsPriorCredit = plannerFocusSettingsPriorCredit;
+      openSettings = () => { priorCreditSettingsOpened += 1; };
+      plannerFocusSettingsPriorCredit = () => {
+        priorCreditFocused += 1;
+        return true;
+      };
 
       const issues = auditDegreeIssues();
+      const priorCreditIssue = issues.find(issue => issue.type === 'prior-credit');
       const dshuSlot = issues.find(issue => issue.courseCode === 'GenEd DSHU');
       const gvptSlot = issues.find(issue => issue.courseCode === 'GVPT 3xx Elective A');
       const freeSlot = issues.find(issue => issue.courseCode === 'Free Elective #1');
       const genedGap = issues.find(issue => issue.key === 'gened-DSHU');
       auditIssueKey = dshuSlot.key;
       const html = auditIssuesHtml();
+      auditIssueKey = priorCreditIssue.key;
+      const priorCreditHtml = auditIssuesHtml();
+      auditOpenIssuePrimary(priorCreditIssue.key);
+      const priorCreditPrimaryOpened = priorCreditSettingsOpened;
+      const priorCreditPrimaryFocused = priorCreditFocused;
+      auditOpenIssueBrowse(priorCreditIssue.key);
+      const priorCreditBrowseOpened = priorCreditSettingsOpened - priorCreditPrimaryOpened;
+      const priorCreditBrowseFocused = priorCreditFocused - priorCreditPrimaryFocused;
       const advisorIssues = scheduleAdvisorAuditIssues(20);
+      const advisorPriorCredit = advisorIssues.find(issue => issue.type === 'prior-credit');
       const advisorDshuSlot = advisorIssues.find(issue => issue.courseCode === 'GenEd DSHU');
       const advisorDshuGap = advisorIssues.find(issue => issue.key === 'gened-DSHU');
       state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true };
@@ -1693,9 +1737,18 @@ function testAuditIssueDrawer(context) {
         browseGenEd,
         savedLabel: state.browseSavedSearches[0]?.label || '',
       };
+      openSettings = originalOpenSettings;
+      plannerFocusSettingsPriorCredit = originalPlannerFocusSettingsPriorCredit;
       return {
         count: issues.length,
         titles: issues.map(issue => issue.title),
+        priorCreditIssue,
+        priorCreditHtml,
+        advisorPriorCredit,
+        priorCreditPrimaryOpened,
+        priorCreditPrimaryFocused,
+        priorCreditBrowseOpened,
+        priorCreditBrowseFocused,
         dshuSlot,
         gvptSlot,
         freeSlot,
@@ -1727,11 +1780,19 @@ function testAuditIssueDrawer(context) {
   assert(result.freeSlot && /elective|personal/i.test(result.freeSlot.summary + result.freeSlot.detail), 'audit issues: free elective should explain personalization');
   assert(result.genedGap && result.genedGap.type === 'gened', 'audit issues: should include a DSHU requirement gap');
   assert(/Degree|open item|Why it remains|What can satisfy it|Choose Replacement|Open Browse/.test(result.html), 'audit issues: expanded drawer should render explanatory copy and actions');
+  assert(result.priorCreditIssue?.actionType === 'prior-credit', 'audit issues: should create a prior-credit review action from saved conflict evidence');
+  assert(/MATH 140 via AP Calc BC 4\+/.test(result.priorCreditIssue.summary) && /already marked passed/.test(result.priorCreditIssue.summary + result.priorCreditIssue.detail), 'audit issues: prior-credit item should summarize overlaps and existing attempts');
+  assert(/Review prior credits/.test(result.priorCreditHtml) && /Open Settings/.test(result.priorCreditHtml) && /Duplicate-credit/.test(result.priorCreditHtml), 'audit issues: prior-credit drawer should render Settings review actions and rules');
+  assert(result.priorCreditPrimaryOpened === 1 && result.priorCreditPrimaryFocused === 1, 'audit issues: prior-credit primary action should open and focus Settings');
+  assert(result.priorCreditBrowseOpened === 1 && result.priorCreditBrowseFocused === 1, 'audit issues: prior-credit Browse action should reuse the Settings review path');
   assert(result.advisorOptions.auditIssues === true, 'advisor audit export: audit issues should default into schedule output options');
+  assert(result.advisorPriorCredit?.actionSummary === 'Review prior-credit conflicts in Settings', 'advisor audit export: prior-credit item should describe the Settings review action');
+  assert(result.advisorPriorCredit?.browseTarget === 'Settings · AP / IB / Transfer Credit', 'advisor audit export: prior-credit item should target Settings instead of Browse');
   assert(/Replace GenEd DSHU in Pass 54 Fall/.test(result.advisorDshuSlot?.actionSummary || ''), 'advisor audit export: placeholder issue should include replacement quick-link action text');
   assert(/Profile departments/.test(result.advisorDshuGap?.browseTarget || '') && /DSHU/.test(result.advisorDshuGap?.browseTarget || ''), 'advisor audit export: GenEd issue should include Browse target quick-link context');
   assert(/Degree Audit Snapshot/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include audit snapshot section');
-  assert(/Audit issues/.test(result.advisorHtml) && /16 open items/.test(result.advisorHtml) && /showing top 6/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include full audit issue counts and compact top list');
+  assert(/Audit issues/.test(result.advisorHtml) && /17 open items/.test(result.advisorHtml) && /1 prior-credit review/.test(result.advisorHtml) && /showing top 6/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include full audit issue counts and compact top list');
+  assert(/Prior credit conflicts need review/.test(result.advisorHtml) && /Settings · AP \/ IB \/ Transfer Credit/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include prior-credit conflict action context');
   assert(/GenEd DSHU|GVPT 3xx Elective A|Free Elective/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include top audit issue titles');
   assert(/Next action|Browse target|data-schedule-audit-primary|data-schedule-audit-browse/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include quick-link actions and targets');
   assert(/href="[^"]*#advisor-action=primary&amp;issue=/.test(result.advisorHtml) && /href="[^"]*#advisor-action=browse&amp;issue=/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include live-app deep links');
@@ -1995,7 +2056,7 @@ async function testSettingsPriorCreditEditor(context) {
         }]
       }];
       state.customCourses = [];
-      state.courses = {};
+      state.courses = { 'MATH 140': { status: 'passed', grade: 'A' } };
       state.recentChanges = [];
       fetchCourseFull = async code => {
         const id = normalizeCode(code);
@@ -2207,6 +2268,8 @@ async function testSettingsPriorCreditEditor(context) {
   assert(result.customCodes.includes('MATH 141') && result.customCodes.includes('AP FSAW Credit'), 'settings prior credit: unplanned equivalents should be added outside plan');
   assert(result.recentChange.source === 'settings', 'settings prior credit: recent change should record settings source');
   assert(result.recentChange.undo?.kind === 'prior-credit', 'settings prior credit: recent change should include undo payload');
+  assert(result.recentChange.undo?.review?.overlaps?.some(item => item.code === 'MATH 140' && item.sources.includes('AP Calc BC 4+') && item.sources.includes('Manual entry')), 'settings prior credit: recent change should preserve selected-credit overlap evidence');
+  assert(result.recentChange.undo?.review?.existingAttempts?.some(item => item.code === 'MATH 140' && item.status === 'passed' && item.grade === 'A'), 'settings prior credit: recent change should preserve existing-attempt conflict evidence');
   assert(/data-change-undo/.test(result.historyHtml) && /Undo/.test(result.historyHtml), 'settings prior credit: recent changes should render undo action');
   assert(result.canUndoBefore === true, 'settings prior credit: change should be undoable before applying undo');
   assert(result.canUndoAfterRemovedPrior === false, 'settings prior credit: removed prior-credit course should disable undo');

@@ -606,6 +606,20 @@ function onboardPriorExistingAttemptConflicts(resolved) {
   }).filter(Boolean);
 }
 
+function onboardPriorCreditReviewEvidence(resolved) {
+  return {
+    overlaps: (resolved?.overlaps || []).map(overlap => ({
+      code: onboardPriorDisplayCode(overlap.code || ''),
+      sources: Array.from(new Set(overlap.sources || [])).filter(Boolean),
+    })).filter(overlap => overlap.code && overlap.sources.length),
+    existingAttempts: onboardPriorExistingAttemptConflicts(resolved).map(item => ({
+      code: onboardPriorDisplayCode(item.code || ''),
+      status: item.status || '',
+      grade: item.grade || '',
+    })).filter(item => item.code && item.status),
+  };
+}
+
 function onboardPriorReviewItems(resolved, opts = {}) {
   const courses = resolved?.courses || [];
   if (!courses.length) return [];
@@ -789,6 +803,7 @@ function onboardRenderPriorCreditControls() {
 
 async function onboardApplyPriorCredits(setup) {
   const resolved = onboardResolvePriorCredits(setup.transferRaw, setup.priorCreditIds);
+  const priorCreditReview = onboardPriorCreditReviewEvidence(resolved);
   const applied = [];
   const added = [];
   const undoEntries = [];
@@ -843,6 +858,7 @@ async function onboardApplyPriorCredits(setup) {
         kind: 'prior-credit',
         source: setup.source || 'onboarding',
         entries: undoEntries,
+        review: priorCreditReview,
       },
     }, { save: false });
   }

@@ -3777,3 +3777,55 @@ Next pass candidates:
 - Add per-major requirement-source citations to generated schedules.
 - Add advisor-packet import/open affordances for loading shared plans before following packet action links.
 - Add an audit panel that summarizes unresolved prior-credit conflicts after credits are applied.
+
+## 2026-06-30 Pass 75
+
+Focus: add an audit panel item that summarizes unresolved prior-credit conflicts after credits are applied.
+
+Planned changes:
+- Preserve prior-credit overlap and existing-attempt evidence in the recent change record created by applying prior credits.
+- Add a Degree Audit issue source for recent prior-credit changes with unresolved overlap or existing-attempt review evidence.
+- Route the audit issue action to Settings, focused on AP / IB / Transfer Credit, with the conflict summary visible there.
+- Include the same issue in advisor packet audit snapshots with Settings-oriented action and target copy.
+
+Completed:
+- Added `onboardPriorCreditReviewEvidence()` and stored its `overlaps` and `existingAttempts` payload on prior-credit undo records.
+- Added prior-credit audit issue helpers in `js/audit.js` that summarize:
+  - selected-source overlaps such as `MATH 140 via AP Calc BC 4+, Manual entry`.
+  - existing UMD attempts such as `MATH 140 was already marked passed (A)`.
+- The Degree Audit issue drawer now shows `Prior credit conflicts need review`, duplicate-credit/transfer/AP/IB/repeat-attempt rules, and Settings-focused actions.
+- The issue opens Settings, focuses the prior-credit section, and writes the amber conflict summary into `set-prior-status`.
+- Advisor audit snapshots now count prior-credit reviews, label the action as `Review prior-credit conflicts in Settings`, and use `Settings · AP / IB / Transfer Credit` as the target.
+- Versioned changed browser assets:
+  - `js/audit.js?v=2`
+  - `js/schedule.js?v=30`
+  - `js/onboarding.js?v=15`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `AUDIT-ISSUES` fixture confirms:
+  - saved prior-credit conflict evidence creates a `prior-credit` audit issue.
+  - the issue summarizes both selected-credit overlap evidence and existing-attempt evidence.
+  - the drawer renders `Review prior credits`, `Open Settings`, and duplicate-credit rules.
+  - both primary and secondary actions open/focus Settings.
+  - advisor audit exports include the prior-credit issue, Settings action summary, Settings target, and the updated 17-item count.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - applying Settings prior credits preserves selected-credit overlap evidence on the recent change.
+  - applying Settings prior credits preserves existing-attempt conflict evidence on the recent change.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/` and a temporary same-origin seed page, then removed the seed page and stopped the server before commit.
+- Chrome confirmed:
+  - `js/audit.js?v=2`, `js/schedule.js?v=30`, and `js/onboarding.js?v=15` loaded.
+  - the Degree Audit toolbar rendered `1 prior-credit review` with no horizontal overflow.
+  - the prior-credit issue rendered at the top with the overlap and existing-attempt summary.
+  - expanding the issue showed duplicate-credit, transfer-credit, AP/IB, and repeat-attempt rules.
+  - the secondary action label was `Open Settings`, not Browse.
+  - clicking `Review prior credits` opened Settings, focused `set-prior-codes`, and displayed the amber conflict summary.
+  - no app-origin console errors appeared; Chrome logged only an unrelated extension message-port error.
+- Finalized the Chrome tab.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add per-major requirement-source citations to generated schedules.
+- Add a resolution/dismissal flow for reviewed prior-credit conflict audit items.
+- Add advisor-packet import/open affordances for loading shared plans before following packet action links.

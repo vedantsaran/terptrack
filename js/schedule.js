@@ -1638,7 +1638,7 @@ function scheduleAuditIssueCounts(issues) {
     acc[issue.type] = (acc[issue.type] || 0) + 1;
     acc[issue.level] = (acc[issue.level] || 0) + 1;
     return acc;
-  }, { total: 0, placeholder: 0, gened: 0, danger: 0, warn: 0, info: 0 });
+  }, { total: 0, placeholder: 0, gened: 0, 'prior-credit': 0, danger: 0, warn: 0, info: 0 });
 }
 
 function scheduleAuditIssueLevelLabel(issue) {
@@ -1665,6 +1665,7 @@ function scheduleAuditBrowseGenEdLabel(genEd) {
 }
 
 function scheduleAuditIssueBrowseTarget(issue) {
+  if (issue?.actionType === 'prior-credit') return 'Settings · AP / IB / Transfer Credit';
   const browse = issue?.browse || {};
   const parts = [
     scheduleAuditBrowseDeptLabel(browse.dept),
@@ -1677,6 +1678,7 @@ function scheduleAuditIssueBrowseTarget(issue) {
 }
 
 function scheduleAuditIssueActionSummary(issue) {
+  if (issue?.actionType === 'prior-credit') return 'Review prior-credit conflicts in Settings';
   if (issue?.actionType === 'placeholder') {
     const semName = scheduleAuditIssueSemesterName(issue.semId);
     return `Replace ${issue.courseCode || issue.title || 'placeholder'}${semName ? ` in ${semName}` : ''}`;
@@ -1767,6 +1769,7 @@ function scheduleAuditIssueActionHtml(issue) {
   if (!issue?.key) return '';
   const primaryHref = scheduleAdvisorDeepLink('primary', issue.key);
   const browseHref = scheduleAdvisorDeepLink('browse', issue.key);
+  const browseLabel = issue.actionType === 'prior-credit' ? 'Open Settings' : 'Open Browse';
   return `
     <div class="schedule-advisor-audit-next">
       <span><strong>Next action</strong>${scheduleEscape(issue.actionSummary || 'Review in Terp Track')}</span>
@@ -1774,7 +1777,7 @@ function scheduleAuditIssueActionHtml(issue) {
     </div>
     <div class="schedule-advisor-audit-actions">
       <a class="schedule-advisor-audit-link primary" href="${scheduleEscape(primaryHref)}" data-schedule-audit-primary="${scheduleEscape(issue.key)}">${scheduleEscape(issue.actionLabel || 'Open')}</a>
-      <a class="schedule-advisor-audit-link" href="${scheduleEscape(browseHref)}" data-schedule-audit-browse="${scheduleEscape(issue.key)}">Open Browse</a>
+      <a class="schedule-advisor-audit-link" href="${scheduleEscape(browseHref)}" data-schedule-audit-browse="${scheduleEscape(issue.key)}">${scheduleEscape(browseLabel)}</a>
     </div>
   `;
 }
@@ -1789,7 +1792,7 @@ function scheduleAdvisorAuditSummaryHtml(issues) {
         <div class="schedule-advisor-diagnostics-head">
           <div>
             <h4>Degree Audit Snapshot</h4>
-            <span>No open placeholders or GenEd gaps detected in the current plan.</span>
+            <span>No open placeholders, GenEd gaps, or prior-credit conflicts detected in the current plan.</span>
           </div>
           <strong>Clear</strong>
         </div>
@@ -1801,7 +1804,7 @@ function scheduleAdvisorAuditSummaryHtml(issues) {
       <div class="schedule-advisor-diagnostics-head">
         <div>
           <h4>Degree Audit Snapshot</h4>
-          <span>${counts.total} open item${counts.total === 1 ? '' : 's'} · ${counts.placeholder || 0} placeholder${counts.placeholder === 1 ? '' : 's'} · ${counts.gened || 0} GenEd gap${counts.gened === 1 ? '' : 's'}${shownNote}</span>
+          <span>${counts.total} open item${counts.total === 1 ? '' : 's'} · ${counts['prior-credit'] || 0} prior-credit review${counts['prior-credit'] === 1 ? '' : 's'} · ${counts.placeholder || 0} placeholder${counts.placeholder === 1 ? '' : 's'} · ${counts.gened || 0} GenEd gap${counts.gened === 1 ? '' : 's'}${shownNote}</span>
         </div>
         <strong>${counts.danger ? 'Fix first' : 'Review'}</strong>
       </div>
@@ -1824,13 +1827,13 @@ function scheduleAdvisorAuditSummaryHtml(issues) {
 
 function scheduleAdvisorAuditSummaryText(issues) {
   const list = Array.isArray(issues) ? issues : [];
-  if (!list.length) return ['', 'Degree audit snapshot:', '- No open placeholders or GenEd gaps detected.'];
+  if (!list.length) return ['', 'Degree audit snapshot:', '- No open placeholders, GenEd gaps, or prior-credit conflicts detected.'];
   const counts = scheduleAuditIssueCounts(list);
   const shownNote = counts.total > list.length ? `; top ${list.length} shown` : '';
   const lines = [
     '',
     'Degree audit snapshot:',
-    `- ${counts.total} open item${counts.total === 1 ? '' : 's'} (${counts.placeholder || 0} placeholders / ${counts.gened || 0} GenEd gaps${shownNote})`,
+    `- ${counts.total} open item${counts.total === 1 ? '' : 's'} (${counts['prior-credit'] || 0} prior-credit reviews / ${counts.placeholder || 0} placeholders / ${counts.gened || 0} GenEd gaps${shownNote})`,
   ];
   list.forEach(issue => {
     lines.push(`- ${scheduleAuditIssueLevelLabel(issue)}: ${issue.title}${issue.status ? ` (${issue.status})` : ''}`);
