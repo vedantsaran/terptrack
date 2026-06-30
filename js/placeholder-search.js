@@ -31,7 +31,7 @@ function genEdLabel(tag) {
 
 function getGenEdNeed(tag) {
   const def = (typeof GENED_DEFS !== 'undefined' ? GENED_DEFS : []).find(d => d.id === tag);
-  return def ? d.need : 1;
+  return def ? def.need : 1;
 }
 
 function courseGenEdTags(course) {

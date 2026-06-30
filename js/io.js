@@ -30,6 +30,8 @@ document.getElementById('import-file').addEventListener('change', (e) => {
           ...data,
           settings: { ...DEFAULT_SETTINGS, ...(data.settings || state.settings || {}) },
           customSemesters: data.customSemesters || state.customSemesters || [],
+          selectedSections: data.selectedSections || {},
+          schedulePrefs: data.schedulePrefs || {},
         };
         saveState();
         applyTheme();
@@ -49,4 +51,3 @@ function dismissWelcome() {
   saveState();
   render();
 }
-

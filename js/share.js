@@ -13,6 +13,8 @@ function _planSharePayload() {
     customSemesters: state.customSemesters,
     customMajors: state.customMajors,
     activeSchedule: state.activeSchedule,
+    selectedSections: state.selectedSections,
+    schedulePrefs: state.schedulePrefs,
     majorId: state.majorId,
     settings: state.settings,
   };
@@ -93,6 +95,8 @@ async function loadSharedPlanFromHash() {
       ...state,
       ...data,
       settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) },
+      selectedSections: data.selectedSections || {},
+      schedulePrefs: data.schedulePrefs || {},
       onboardingComplete: true,
     };
     saveState();

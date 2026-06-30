@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body data-theme="dark">
 
@@ -58,6 +58,7 @@
 
 <div class="tabs" role="tablist">
   <button class="tab active" data-tab="plan">📋 Plan</button>
+  <button class="tab" data-tab="schedule">▦ Schedule</button>
   <button class="tab" data-tab="audit">✓ Degree Audit</button>
   <button class="tab" data-tab="table">⊞ All Courses</button>
   <button class="tab" data-tab="timeline">⏰ Action Timeline</button>
@@ -163,6 +164,162 @@
     </div>
   </div>
 
+  <div class="view" id="view-schedule">
+    <div class="section-rule">
+      <span class="badge">Weekly Schedule Builder</span>
+      <span class="line"></span>
+    </div>
+    <div class="schedule-toolbar">
+      <label>
+        Plan semester
+        <select id="schedule-semester"></select>
+      </label>
+      <label>
+        Posted UMD term
+        <select id="schedule-term"></select>
+      </label>
+      <button class="btn primary" id="schedule-auto" type="button">Auto-pick no-conflict sections</button>
+      <button class="btn" id="schedule-alternatives-btn" type="button">Generate alternatives</button>
+      <button class="btn" id="schedule-refresh" type="button">Refresh sections</button>
+      <button class="btn" id="schedule-clear" type="button">Clear picks</button>
+    </div>
+    <div class="schedule-preferences">
+      <label>
+        Start after
+        <select id="schedule-pref-earliest">
+          <option value="">No limit</option>
+          <option value="08:00">8:00am</option>
+          <option value="09:00">9:00am</option>
+          <option value="10:00">10:00am</option>
+          <option value="11:00">11:00am</option>
+        </select>
+      </label>
+      <label>
+        End before
+        <select id="schedule-pref-latest">
+          <option value="">No limit</option>
+          <option value="15:00">3:00pm</option>
+          <option value="16:00">4:00pm</option>
+          <option value="17:00">5:00pm</option>
+          <option value="18:00">6:00pm</option>
+          <option value="19:00">7:00pm</option>
+        </select>
+      </label>
+      <label>
+        Breaks
+        <select id="schedule-pref-break">
+          <option value="0">No minimum</option>
+          <option value="15">15 min</option>
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+          <option value="60">60 min</option>
+        </select>
+      </label>
+      <label>
+        Optimize for
+        <select id="schedule-pref-mode">
+          <option value="balanced">Balanced</option>
+          <option value="compact">Compact day</option>
+          <option value="open-seats">Open seats</option>
+          <option value="mornings">Mornings</option>
+          <option value="afternoons">Afternoons</option>
+        </select>
+      </label>
+      <fieldset class="schedule-day-prefs" aria-label="Avoid weekdays">
+        <legend>Avoid</legend>
+        <label><input type="checkbox" value="M"> Mon</label>
+        <label><input type="checkbox" value="Tu"> Tue</label>
+        <label><input type="checkbox" value="W"> Wed</label>
+        <label><input type="checkbox" value="Th"> Thu</label>
+        <label><input type="checkbox" value="F"> Fri</label>
+      </fieldset>
+    </div>
+    <div class="schedule-location-prefs">
+      <div class="schedule-location-title">
+        <h3>Campus Fit</h3>
+      </div>
+      <label>
+        Preferred area
+        <select id="schedule-pref-campus-zone">
+          <option value="">Any campus area</option>
+          <option value="north">North campus/STEM</option>
+          <option value="science">Engineering + sciences</option>
+          <option value="central">Central mall</option>
+          <option value="library">McKeldin/Library</option>
+          <option value="south">South campus/arts</option>
+        </select>
+      </label>
+      <label>
+        First class from
+        <select id="schedule-pref-commute-start">
+          <option value="">No anchor</option>
+          <option value="north-dorms">North residence halls</option>
+          <option value="south-dorms">South residence halls</option>
+          <option value="stamp">Stamp transit center</option>
+          <option value="mowatt">Mowatt/Regents garages</option>
+          <option value="metro">College Park Metro shuttle</option>
+        </select>
+      </label>
+      <label>
+        Last class near
+        <select id="schedule-pref-commute-end">
+          <option value="">No anchor</option>
+          <option value="north-dorms">North residence halls</option>
+          <option value="south-dorms">South residence halls</option>
+          <option value="stamp">Stamp transit center</option>
+          <option value="mowatt">Mowatt/Regents garages</option>
+          <option value="metro">College Park Metro shuttle</option>
+        </select>
+      </label>
+      <label>
+        Location priority
+        <select id="schedule-pref-location-weight">
+          <option value="light">Light</option>
+          <option value="normal">Normal</option>
+          <option value="strong">Strong</option>
+        </select>
+      </label>
+    </div>
+    <div class="schedule-blocks-editor" id="schedule-blocks-editor">
+      <div class="schedule-blocks-head">
+        <div>
+          <h3>Unavailable Time</h3>
+          <p>Block work, commute, practice, lab, or care windows before auto-picking.</p>
+        </div>
+        <div class="schedule-block-form">
+          <select id="schedule-block-day" aria-label="Blocked day">
+            <option value="M">Mon</option>
+            <option value="Tu">Tue</option>
+            <option value="W">Wed</option>
+            <option value="Th">Thu</option>
+            <option value="F">Fri</option>
+          </select>
+          <input id="schedule-block-start" type="time" value="09:00" aria-label="Blocked start time">
+          <input id="schedule-block-end" type="time" value="10:00" aria-label="Blocked end time">
+          <input id="schedule-block-label" type="text" placeholder="Work, commute…" aria-label="Blocked time label">
+          <button class="btn small" id="schedule-block-add" type="button">Add block</button>
+        </div>
+      </div>
+      <div id="schedule-block-list" class="schedule-block-list"></div>
+    </div>
+    <div id="schedule-status" class="schedule-status"></div>
+    <div id="schedule-undo" class="schedule-undo" aria-live="polite"></div>
+    <div id="schedule-summary" class="schedule-summary"></div>
+    <div id="schedule-warnings" class="schedule-warnings"></div>
+    <div id="schedule-output" class="schedule-output"></div>
+    <div id="schedule-alternatives" class="schedule-alternatives"></div>
+    <div class="schedule-layout">
+      <div class="schedule-board">
+        <div id="schedule-week"></div>
+      </div>
+      <div class="schedule-sections">
+        <h3>Section Picks</h3>
+        <p class="lead">Choose real UMD sections, then Terp Track checks overlaps instantly.</p>
+        <div id="schedule-section-list"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="view" id="view-audit">
     <div class="audit-summary">
       <div>
@@ -252,6 +409,7 @@
       <span class="badge">Critical Action Items</span>
       <span class="line"></span>
     </div>
+    <div id="timeline-plan-advisor" class="planner-advisor"></div>
     <div class="timeline-rail" id="timeline-rail"></div>
   </div>
 
@@ -260,7 +418,6 @@
       <span class="badge">Prerequisite Dependency Map</span>
       <span class="line"></span>
     </div>
-    <p style="color:var(--slate);font-size:.9rem;margin-bottom:18px">Visual prerequisite chain to your three goal courses. Green = passed, gold = available now, red dashed = blocked.</p>
     <div class="roadmap-svg" id="roadmap-container"></div>
   </div>
 
@@ -666,19 +823,20 @@
 <script src="js/state.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/tabs.js"></script>
-<script src="js/render.js"></script>
+<script src="js/render.js?v=2"></script>
 <script src="js/audit.js"></script>
-<script src="js/timeline.js"></script>
-<script src="js/roadmap.js"></script>
+<script src="js/timeline.js?v=5"></script>
+<script src="js/roadmap.js?v=4"></script>
 <script src="js/planetterp.js"></script>
 <script src="js/api.js"></script>
+<script src="js/schedule.js?v=16"></script>
 <script src="js/courses.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/semesters.js"></script>
 <script src="js/io.js"></script>
 <script src="js/import.js"></script>
 <script src="js/prereq-resolver.js"></script>
-<script src="js/recommendations.js"></script>
+<script src="js/recommendations.js?v=10"></script>
 <script src="js/major-builder.js"></script>
 <script src="js/onboarding.js"></script>
 <script src="js/browse.js"></script>
@@ -686,7 +844,7 @@
 <script src="js/bulk.js"></script>
 <script src="js/share.js"></script>
 <script src="js/gened.js"></script>
-<script src="js/placeholder-search.js"></script>
+<script src="js/placeholder-search.js?v=2"></script>
 <script src="js/gpa-sim.js"></script>
 <script src="js/snapshots.js"></script>
 <script src="js/events.js"></script>

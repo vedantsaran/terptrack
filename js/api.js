@@ -6,6 +6,22 @@
 const UMDIO_BASE = 'https://api.umd.io/v1';
 const UMDIO_CACHE_KEY = 'terp-track-umdio-cache-v2';
 const UMDIO_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+const UMDIO_SECTION_CACHE_TTL_MS = 1000 * 60 * 15; // 15 minutes; seats change quickly
+const UMDIO_FETCH_TIMEOUT_MS = 6500;
+
+async function fetchWithTimeout(url, opts = {}, timeoutMs = UMDIO_FETCH_TIMEOUT_MS) {
+  let timer = null;
+  try {
+    return await Promise.race([
+      fetch(url, opts),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('request timed out')), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function umdioCacheLoad() {
   try { return JSON.parse(localStorage.getItem(UMDIO_CACHE_KEY) || '{}'); }
@@ -17,11 +33,11 @@ function umdioCacheSave(c) {
 // Returns the cached value (which may be null for known-404s) or undefined
 // if there's no fresh entry. Lets callers distinguish "cache hit, no such
 // course" from "cache miss".
-function umdioCacheGet(key) {
+function umdioCacheGet(key, ttlMs) {
   const cache = umdioCacheLoad();
   const e = cache[key];
   if (!e) return undefined;
-  if (Date.now() - e.t > UMDIO_CACHE_TTL_MS) return undefined;
+  if (Date.now() - e.t > (ttlMs || UMDIO_CACHE_TTL_MS)) return undefined;
   return e.v;
 }
 function umdioCachePut(key, value) {
@@ -40,7 +56,7 @@ async function umdioFetchCourse(code) {
   const url = `${UMDIO_BASE}/courses/${encodeURIComponent(id)}`;
   _umdioInflight[id] = (async () => {
     let resp;
-    try { resp = await fetch(url); }
+    try { resp = await fetchWithTimeout(url); }
     catch (e) { return null; }
     if (!resp.ok) {
       if (resp.status === 404) { umdioCachePut(cacheKey, null); return null; }
@@ -64,7 +80,7 @@ async function umdioFetchPagedCourses(params, cacheKey, maxPages = 12) {
     pageParams.set('per_page', '100');
     pageParams.set('page', String(page));
     let resp;
-    try { resp = await fetch(`${UMDIO_BASE}/courses?${pageParams}`); }
+    try { resp = await fetchWithTimeout(`${UMDIO_BASE}/courses?${pageParams}`); }
     catch (e) { return all; }
     if (!resp.ok) return all;
     const data = await resp.json();
@@ -93,6 +109,43 @@ async function umdioListCoursesByGenEd(tag, opts = {}) {
   if (opts.semester) params.set('semester', opts.semester);
   const key = `gened:${cleanTag}:${cleanDept || 'all'}:${opts.semester || 'any'}:paged`;
   return umdioFetchPagedCourses(params, key);
+}
+
+async function umdioFetchSemesters() {
+  const key = 'semesters';
+  const cached = umdioCacheGet(key, UMDIO_CACHE_TTL_MS);
+  if (cached !== undefined) return cached;
+  let resp;
+  try { resp = await fetchWithTimeout(`${UMDIO_BASE}/courses/semesters`); }
+  catch (e) { return []; }
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  const semesters = Array.isArray(data) ? data.map(String) : [];
+  umdioCachePut(key, semesters);
+  return semesters;
+}
+
+async function umdioFetchSections(courseCode, semester) {
+  const id = normalizeCode(courseCode);
+  const term = String(semester || '').trim();
+  if (!id || !term || !/^[A-Z]{3,4}\d{3}[A-Z]?$/.test(id)) return [];
+  const cacheKey = `sections:${term}:${id}`;
+  const cached = umdioCacheGet(cacheKey, UMDIO_SECTION_CACHE_TTL_MS);
+  if (cached !== undefined) return cached || [];
+  let resp;
+  try {
+    resp = await fetchWithTimeout(`${UMDIO_BASE}/courses/${encodeURIComponent(id)}/sections?semester=${encodeURIComponent(term)}`, {}, 5000);
+  } catch (e) {
+    return [];
+  }
+  if (!resp.ok) {
+    if (resp.status === 404) umdioCachePut(cacheKey, []);
+    return [];
+  }
+  const data = await resp.json();
+  const sections = Array.isArray(data) ? data : [];
+  umdioCachePut(cacheKey, sections);
+  return sections;
 }
 
 // Display form: "CMSC 131" — UMD-style with space before number

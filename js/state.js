@@ -10,6 +10,8 @@ function loadState() {
     customMajors: [],
     snapshots: [],
     activeSchedule: null,
+    selectedSections: {},
+    schedulePrefs: {},
     majorId: null,
     onboardingComplete: false,
     settings: { ...DEFAULT_SETTINGS },
@@ -25,6 +27,8 @@ function loadState() {
         ...parsed,
         settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
         customSemesters: parsed.customSemesters || [],
+        selectedSections: parsed.selectedSections || {},
+        schedulePrefs: parsed.schedulePrefs || {},
       };
     }
   } catch {}

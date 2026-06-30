@@ -14,6 +14,7 @@ function switchTab(tab) {
   if (tab === 'timeline') renderTimeline();
   if (tab === 'roadmap') renderRoadmap();
   if (tab === 'table') renderTable();
+  if (tab === 'schedule' && typeof renderSchedule === 'function') renderSchedule();
   if (tab === 'browse' && typeof renderBrowse === 'function') renderBrowse();
   if (tab === 'gened' && typeof renderGenEdMatrix === 'function') renderGenEdMatrix();
 }

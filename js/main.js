@@ -7,6 +7,7 @@ applyTheme();
 applySettings();
 render();
 initTableEvents();
+if (typeof initScheduleEvents === 'function') initScheduleEvents();
 if (typeof initBrowse === 'function') initBrowse();
 if (typeof initPlaceholderSearch === 'function') initPlaceholderSearch();
 

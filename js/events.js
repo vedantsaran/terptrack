@@ -29,6 +29,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     searchInput.focus();
   } else if (e.key.toLowerCase() === 'p') switchTab('plan');
+  else if (e.key.toLowerCase() === 's') switchTab('schedule');
   else if (e.key.toLowerCase() === 'a') switchTab('audit');
   else if (e.key.toLowerCase() === 'x') switchTab('table');
   else if (e.key.toLowerCase() === 't') switchTab('timeline');

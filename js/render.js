@@ -8,11 +8,15 @@ function render() {
   renderNextUp();
   renderGoals();
   renderAlerts();
-  if (typeof renderRecommendations === 'function') renderRecommendations();
+  const recommendationRenderer = window.renderRecommendations
+    || (typeof renderRecommendations === 'function' ? renderRecommendations : null);
+  if (typeof recommendationRenderer === 'function') recommendationRenderer();
   if (typeof attachDndHandlers === 'function') attachDndHandlers();
   if (currentTab === 'audit') renderAudit();
   if (currentTab === 'roadmap') renderRoadmap();
   if (currentTab === 'table') renderTable();
+  if (currentTab === 'timeline') renderTimeline();
+  if (currentTab === 'schedule' && typeof renderSchedule === 'function') renderSchedule();
   // welcome card visibility — hide after onboarding completes too
   const welcome = document.getElementById('welcome-card');
   const hasAnyCourseMarked = Object.keys(state.courses).length > 0;
@@ -171,6 +175,7 @@ function renderCourse(course, semId, isCustom = false) {
   }
   const metaItems = [
     ...tags,
+    (typeof scheduleCourseSummary === 'function' && semId) ? scheduleCourseSummary(semId, course.code) : '',
     prereqText ? `<span>Prereqs: ${prereqText}</span>` : '',
     course.note || ''
   ].filter(Boolean);
@@ -460,4 +465,3 @@ function renderAlerts() {
     cont.appendChild(el);
   });
 }
-

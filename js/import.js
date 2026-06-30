@@ -111,6 +111,8 @@ async function applyMajorTemplate(majorId, opts) {
   if (!tpl) throw new Error('Unknown major: ' + majorId);
   if (tpl.useDefaultSchedule) {
     state.activeSchedule = null;
+    state.selectedSections = {};
+    state.schedulePrefs = {};
     state.majorId = majorId;
     state.settings = { ...state.settings,
       programName: tpl.programName, eyebrow: tpl.eyebrow,
@@ -139,6 +141,8 @@ async function applyMajorTemplate(majorId, opts) {
       if (c.isGoal) goalsFromSchedule.push(c.code);
     }));
     state.activeSchedule = cloned;
+    state.selectedSections = {};
+    state.schedulePrefs = {};
     state.majorId = majorId;
     // Union template goals with isGoal-flagged rows in the schedule
     const goalSet = new Set([...(tpl.goals || []), ...goalsFromSchedule]);
@@ -201,6 +205,8 @@ async function applyMajorTemplate(majorId, opts) {
   });
 
   state.activeSchedule = schedule;
+  state.selectedSections = {};
+  state.schedulePrefs = {};
   state.majorId = majorId;
   state.settings = { ...state.settings,
     programName: tpl.programName, eyebrow: tpl.eyebrow,

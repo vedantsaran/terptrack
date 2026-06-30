@@ -9,6 +9,8 @@ function _snapshotPayload() {
     customCourses: JSON.parse(JSON.stringify(state.customCourses || [])),
     customSemesters: JSON.parse(JSON.stringify(state.customSemesters || [])),
     activeSchedule: state.activeSchedule ? JSON.parse(JSON.stringify(state.activeSchedule)) : null,
+    selectedSections: JSON.parse(JSON.stringify(state.selectedSections || {})),
+    schedulePrefs: JSON.parse(JSON.stringify(state.schedulePrefs || {})),
     majorId: state.majorId,
     settings: JSON.parse(JSON.stringify(state.settings || {})),
   };
@@ -39,6 +41,8 @@ function loadSnapshot(id) {
     customCourses: snap.payload.customCourses,
     customSemesters: snap.payload.customSemesters,
     activeSchedule: snap.payload.activeSchedule,
+    selectedSections: snap.payload.selectedSections || {},
+    schedulePrefs: snap.payload.schedulePrefs || {},
     majorId: snap.payload.majorId,
     settings: { ...DEFAULT_SETTINGS, ...(snap.payload.settings || {}) },
   });
