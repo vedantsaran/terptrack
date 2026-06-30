@@ -10,6 +10,7 @@ initTableEvents();
 if (typeof initScheduleEvents === 'function') initScheduleEvents();
 if (typeof initBrowse === 'function') initBrowse();
 if (typeof initPlaceholderSearch === 'function') initPlaceholderSearch();
+if (typeof initAccount === 'function') initAccount();
 
 // If the page was opened with a #plan=... share link, offer to load it.
 (async function maybeLoadSharedPlan() {

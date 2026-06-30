@@ -18,6 +18,7 @@ function loadState() {
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '' },
     recentChanges: [],
     majorId: null,
+    accountPrefs: { planName: 'Primary TerpTrack plan', lastCloudSaveAt: '', lastCloudLoadAt: '' },
     onboardingComplete: false,
     settings: { ...DEFAULT_SETTINGS },
     welcomeDismissed: false,
@@ -39,6 +40,7 @@ function loadState() {
         scheduleOutputOptions: { ...fallback.scheduleOutputOptions, ...(parsed.scheduleOutputOptions || {}) },
         roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(parsed.roadmapPrefs || {}) },
         recentChanges: Array.isArray(parsed.recentChanges) ? parsed.recentChanges.slice(0, 12) : [],
+        accountPrefs: { ...fallback.accountPrefs, ...(parsed.accountPrefs || {}) },
       };
     }
   } catch {}

@@ -137,6 +137,15 @@ input, select { font-family: inherit; }
 }
 .icon-btn:hover { background: rgba(255,255,255,.22); }
 .icon-btn svg { width: 14px; height: 14px; }
+.account-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.52);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.3);
+}
+.account-status-dot.ready { background: var(--gold); }
+.account-status-dot.signed { background: #7BC892; }
 @media (max-width: 600px) {
   .icon-btn .label { display: none; }
 }
@@ -1641,7 +1650,7 @@ h1.hero-title em {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-.modal input[type="text"], .modal input[type="number"], .modal select, .modal textarea {
+.modal input[type="text"], .modal input[type="number"], .modal input[type="email"], .modal input[type="url"], .modal input[type="password"], .modal select, .modal textarea {
   width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--line);
@@ -1684,6 +1693,134 @@ h1.hero-title em {
   color: white;
   border-color: var(--red);
 }
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+.account-head,
+.account-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+.account-head h3 {
+  margin-bottom: 3px;
+}
+.account-head p {
+  color: var(--slate);
+  font-size: .84rem;
+  margin: 0;
+}
+.account-mode-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.account-mode-pill.ready {
+  color: var(--amber);
+  border-color: rgba(245,158,11,.45);
+}
+.account-mode-pill.signed {
+  color: var(--green);
+  border-color: rgba(46,107,63,.4);
+}
+.account-body {
+  display: grid;
+  gap: 12px;
+}
+.account-loading,
+.account-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--cream);
+  padding: 12px;
+}
+.account-card.muted {
+  opacity: .78;
+}
+.account-card-head strong {
+  color: var(--ink);
+  font-family: 'Fraunces', serif;
+  font-size: .98rem;
+}
+.account-card-head span {
+  color: var(--slate);
+  font-size: .74rem;
+  text-align: right;
+}
+.account-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.account-stats div {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--cream);
+  padding: 10px;
+  min-width: 0;
+}
+.account-stats strong,
+.account-stats span {
+  display: block;
+}
+.account-stats strong {
+  color: var(--maroon);
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+.account-stats span {
+  color: var(--slate);
+  font-size: .68rem;
+  margin-top: 2px;
+}
+.account-kv {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 5px 10px;
+  margin-top: 10px;
+  font-size: .76rem;
+}
+.account-kv.compact {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+.account-kv span {
+  color: var(--slate);
+}
+.account-kv strong {
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .7rem;
+  overflow-wrap: anywhere;
+}
+.account-config-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  gap: 10px;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.account-status {
+  min-height: 1em;
+  margin: 10px 0 0;
+  color: var(--slate);
+  font-size: .82rem;
+}
+.account-status.ok { color: var(--green); }
+.account-status.warn { color: var(--red); }
 
 /* ===========================================================
    ONBOARDING
@@ -3934,6 +4071,21 @@ h1.hero-title em {
     overflow-y: auto;
   }
   .modal-actions { flex-wrap: wrap; gap: 8px; }
+  .account-head,
+  .account-card-head {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .account-card-head span {
+    text-align: left;
+  }
+  .account-stats,
+  .account-config-grid {
+    grid-template-columns: 1fr;
+  }
+  .account-actions .btn {
+    flex: 1 1 160px;
+  }
 
   .br-grid { grid-template-columns: 1fr; }
   .schedule-toolbar {

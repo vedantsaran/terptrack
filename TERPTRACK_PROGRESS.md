@@ -984,3 +984,44 @@ Next pass candidates:
 - Add auto-generated full four-year schedule generation from selected major, GenEd gaps, course prerequisites, interests, and target credit load.
 - Add an optional interest/profile intake flow that informs recommendations, schedule generation, and elective picks.
 - Add a term-availability simulator/test fixture inside the app's dev diagnostics so auto-planning can be regression-tested without waiting for live UMD data to line up.
+
+## 2026-06-30 Pass 26
+
+Focus: add Supabase/Vercel account groundwork while keeping TerpTrack local-first and usable without cloud configuration.
+
+Planned changes:
+- Add an Account entry point with clear local, cloud-ready, and signed-in states.
+- Detect Supabase config from Vercel env, runtime globals, or manual dev config.
+- Keep the Supabase SDK lazy-loaded so the default local app does not depend on cloud services.
+- Add magic-link auth hooks plus save/load hooks for a primary cloud plan.
+- Provide the Supabase schema, RLS policies, Vercel config route, and environment template needed for deployment.
+- Verify local fallback, modal validation, close behavior, and mobile layout.
+
+Completed:
+- Added an Account topbar button with a status dot and an Account modal.
+- Rendered local/cloud/signed account modes, plan stats, cloud config details, manual dev config controls, disabled local-mode sign-in controls, and signed-in cloud plan actions.
+- Added config discovery from `window.TERPTRACK_SUPABASE_URL`, `window.TERPTRACK_SUPABASE_ANON_KEY`, `/api/config`, and a local manual dev config fallback.
+- Added lazy Supabase SDK loading only when a real config exists.
+- Added magic-link sign-in, sign-out, profile upsert, primary plan save, and primary plan load hooks.
+- Added `accountPrefs` state migration for plan name plus last cloud save/load timestamps.
+- Added `api/config.js`, `vercel.json`, `.env.example`, `.gitignore`, and `supabase/schema.sql` with `profiles`, `plans`, RLS policies, and updated-at triggers.
+- Versioned `styles.css` to `v=27`, `js/state.js` to `v=8`, `js/account.js` to `v=1`, `js/events.js` to `v=2`, and `js/main.js` to `v=2`.
+
+Verification:
+- Ran `node --check` on `js/account.js`, `js/state.js`, `js/events.js`, `js/main.js`, and `api/config.js`.
+- Parsed `vercel.json` with Node.
+- Ran `git diff --check`.
+- Reloaded `http://localhost:5173/?pass26b=...` in the in-app browser and confirmed `styles.css?v=27`, `js/state.js?v=8`, `js/account.js?v=1`, `js/events.js?v=2`, and `js/main.js?v=2` loaded.
+- Confirmed the Account button rendered with a local status dot and opened the Account modal.
+- Confirmed local mode showed `Local`, `Local mode`, `Local only`, `Not configured`, four plan stats, disabled email/sign-in controls, and no Supabase SDK script.
+- Clicked Save dev config with blank fields and confirmed the warning `URL and anon key are required.` without loading the Supabase SDK or leaving local mode.
+- Confirmed the Account modal closes through the Close button and through Escape.
+- Checked a 390px-wide viewport: the account modal stayed within the viewport, stats and config grids became one column, card headers stacked, buttons fit, and document-wide horizontal overflow stayed at 0.
+- Reset the browser viewport to the default layout after mobile verification.
+- Confirmed current-page browser console errors were 0 for the Pass 26 URL.
+
+Next pass candidates:
+- Add auto-generated full four-year schedule generation from selected major, GenEd gaps, course prerequisites, interests, and target credit load.
+- Add an optional interest/profile intake flow that feeds recommendations, schedule generation, and elective picks.
+- Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
+- Add a term-availability simulator/test fixture inside the app's dev diagnostics so auto-planning can be regression-tested without waiting for live UMD data to line up.

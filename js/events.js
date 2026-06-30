@@ -45,6 +45,7 @@ document.addEventListener('keydown', (e) => {
     if (typeof closeResolver === 'function') closeResolver();
     if (typeof closeGpaSim === 'function') closeGpaSim();
     if (typeof closeSnapshots === 'function') closeSnapshots();
+    if (typeof closeAccountModal === 'function') closeAccountModal();
   }
 });
 
