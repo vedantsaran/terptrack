@@ -521,6 +521,11 @@ h1.hero-title em {
   font-weight: bold;
   box-shadow: var(--shadow-sm);
 }
+.course.roadmap-plan-focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(46,92,139,.22), var(--shadow-md);
+  background: color-mix(in srgb, var(--paper) 70%, rgba(46,92,139,.16));
+}
 
 .code {
   font-family: 'JetBrains Mono', monospace;
@@ -1427,7 +1432,8 @@ h1.hero-title em {
 .roadmap-canvas svg {
   display: block;
   min-width: 760px;
-  width: 100%;
+  width: max(100%, var(--roadmap-width, 760px));
+  max-width: none;
 }
 .roadmap-empty {
   border: 1px dashed var(--line);
@@ -1439,6 +1445,14 @@ h1.hero-title em {
 }
 .roadmap-node {
   cursor: pointer;
+}
+.roadmap-node.selected .node-rect {
+  stroke: var(--blue);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 7px rgba(46,92,139,.35));
+}
+.roadmap-node.center-flash .node-rect {
+  animation: roadmap-node-pulse .85s ease-out;
 }
 .roadmap-node:focus {
   outline: none;
@@ -1470,6 +1484,20 @@ h1.hero-title em {
   stroke-width: 3;
   filter: drop-shadow(0 0 5px rgba(46,92,139,.28));
 }
+.node-rect.selected {
+  stroke: var(--blue);
+  stroke-width: 4;
+}
+@keyframes roadmap-node-pulse {
+  0% {
+    stroke-width: 5;
+    filter: drop-shadow(0 0 12px rgba(46,92,139,.55));
+  }
+  100% {
+    stroke-width: 4;
+    filter: drop-shadow(0 0 7px rgba(46,92,139,.35));
+  }
+}
 .node-text {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
@@ -1496,6 +1524,19 @@ h1.hero-title em {
   border-radius: 10px;
   background: var(--paper);
   padding: 14px;
+}
+.roadmap-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.roadmap-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .roadmap-detail-card h3 {
   margin: 0 0 4px;
@@ -3882,6 +3923,12 @@ h1.hero-title em {
     order: 4;
     width: 100%;
     margin-left: 0;
+  }
+  .roadmap-detail-head {
+    flex-direction: column;
+  }
+  .roadmap-detail-actions {
+    justify-content: flex-start;
   }
   .roadmap-canvas {
     padding: 10px;

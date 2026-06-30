@@ -7,6 +7,7 @@ let roadmapLastGraph = null;
 let roadmapFullGraph = null;
 let roadmapFilter = 'all';
 let roadmapQuery = '';
+let roadmapSelectedCode = '';
 let roadmapPrefsSaveTimer = null;
 const ROADMAP_FILTERS = [
   { id: 'all', label: 'All planned' },
@@ -38,6 +39,7 @@ function roadmapStatePrefs() {
   return {
     filter: roadmapValidFilter(saved.filter || 'all'),
     query: String(saved.query || '').slice(0, 80),
+    selectedCode: normalizeCode(saved.selectedCode || ''),
   };
 }
 
@@ -45,6 +47,7 @@ function roadmapSyncPrefs() {
   const prefs = roadmapStatePrefs();
   roadmapFilter = prefs.filter;
   roadmapQuery = prefs.query;
+  roadmapSelectedCode = prefs.selectedCode;
   state.roadmapPrefs = prefs;
   return prefs;
 }
@@ -56,9 +59,11 @@ function roadmapPersistPrefs(patch, opts = {}) {
   };
   next.filter = roadmapValidFilter(next.filter);
   next.query = String(next.query || '').slice(0, 80);
+  next.selectedCode = normalizeCode(next.selectedCode || '');
   state.roadmapPrefs = next;
   roadmapFilter = next.filter;
   roadmapQuery = next.query;
+  roadmapSelectedCode = next.selectedCode;
   clearTimeout(roadmapPrefsSaveTimer);
   if (opts.defer) {
     roadmapPrefsSaveTimer = setTimeout(() => {
@@ -359,6 +364,7 @@ function roadmapNodeClass(node) {
   else classes.push('blocked');
   if (node.goal) classes.push('goal');
   if (node.searchMatch) classes.push('search-match');
+  if (node.norm === roadmapSelectedCode) classes.push('selected');
   return classes.join(' ');
 }
 
@@ -403,7 +409,7 @@ function roadmapRenderSvg(graph) {
     });
   });
 
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" role="img" aria-label="Dynamic prerequisite roadmap">
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" style="--roadmap-width:${svgW}px" viewBox="0 0 ${svgW} ${svgH}" role="img" aria-label="Dynamic prerequisite roadmap">
     <defs>
       <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
         <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--line-strong)"/>
@@ -428,7 +434,8 @@ function roadmapRenderSvg(graph) {
     const sub = node.missing ? 'not planned'
       : node.semName ? roadmapTruncate(node.semName, 18)
         : `${node.cr} cr`;
-    svg += `<g class="roadmap-node" data-roadmap-code="${roadmapEscape(node.norm)}" tabindex="0" role="button" aria-label="${roadmapEscape(node.code)} ${roadmapEscape(node.title)}">`;
+    const selected = node.norm === roadmapSelectedCode;
+    svg += `<g class="roadmap-node${selected ? ' selected' : ''}" data-roadmap-code="${roadmapEscape(node.norm)}" tabindex="0" role="button" aria-pressed="${selected ? 'true' : 'false'}" aria-label="${roadmapEscape(node.code)} ${roadmapEscape(node.title)}">`;
     svg += `<rect class="${roadmapNodeClass(node)}" x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}"/>`;
     svg += `<text class="node-text" x="${p.x + nodeW / 2}" y="${p.y + 21}" text-anchor="middle">${roadmapEscape(node.code)}</text>`;
     svg += `<text class="node-text muted" x="${p.x + nodeW / 2}" y="${p.y + 38}" text-anchor="middle">${roadmapEscape(sub)}${node.goal ? ' ★' : ''}</text>`;
@@ -465,32 +472,40 @@ function roadmapDefaultDetails(graph) {
   `;
 }
 
-function roadmapRenderDetail(code) {
-  const root = document.getElementById('roadmap-detail');
-  if (!root || !roadmapLastGraph) return;
-  const node = roadmapLastGraph.nodes[normalizeCode(code)];
+function roadmapDetailHtml(code, graph = roadmapLastGraph) {
+  if (!graph) return '';
+  const node = graph.nodes[normalizeCode(code)];
   if (!node) {
-    root.innerHTML = roadmapDefaultDetails(roadmapLastGraph);
-    return;
+    return roadmapDefaultDetails(graph);
   }
-  const prereqEdges = roadmapLastGraph.edges.filter(edge => edge.to === node.norm);
-  const unlockEdges = roadmapLastGraph.edges.filter(edge => edge.from === node.norm);
+  const prereqEdges = graph.edges.filter(edge => edge.to === node.norm);
+  const unlockEdges = graph.edges.filter(edge => edge.from === node.norm);
   const prereqs = prereqEdges.length
     ? prereqEdges.map(edge => {
-      const from = roadmapLastGraph.nodes[edge.from];
+      const from = graph.nodes[edge.from];
       return `<span class="${roadmapEscape(edge.cls)}">${roadmapEscape(from?.code || edge.from)}</span>`;
     }).join('')
     : '<span>None in graph</span>';
   const unlocks = unlockEdges.length
     ? unlockEdges.map(edge => {
-      const to = roadmapLastGraph.nodes[edge.to];
+      const to = graph.nodes[edge.to];
       return `<span class="${roadmapEscape(edge.cls)}">${roadmapEscape(to?.code || edge.to)}</span>`;
     }).join('')
     : '<span>No dependent planned courses</span>';
-  root.innerHTML = `
+  const planAction = node.item ? `<button class="btn small" type="button" data-roadmap-plan-jump="${roadmapEscape(node.norm)}">Show in Plan</button>` : '';
+  return `
     <div class="roadmap-detail-card">
-      <h3>${roadmapEscape(node.code)}</h3>
-      <p>${roadmapEscape(node.title || '')}</p>
+      <div class="roadmap-detail-head">
+        <div>
+          <h3>${roadmapEscape(node.code)}</h3>
+          <p>${roadmapEscape(node.title || '')}</p>
+        </div>
+        <div class="roadmap-detail-actions">
+          <button class="btn small" type="button" data-roadmap-center="${roadmapEscape(node.norm)}">Center</button>
+          ${planAction}
+          <button class="btn small" type="button" data-roadmap-clear-selection>Clear</button>
+        </div>
+      </div>
       <div class="roadmap-detail-stats">
         <span>${roadmapEscape(node.semName)}</span>
         <span>${node.cr} cr</span>
@@ -501,6 +516,72 @@ function roadmapRenderDetail(code) {
       <div class="roadmap-pills"><strong>Unlocks</strong>${unlocks}</div>
     </div>
   `;
+}
+
+function roadmapRenderDetail(code) {
+  const root = document.getElementById('roadmap-detail');
+  if (!root || !roadmapLastGraph) return;
+  root.innerHTML = roadmapDetailHtml(code, roadmapLastGraph);
+}
+
+function roadmapCenterNode(code, opts = {}) {
+  const norm = normalizeCode(code);
+  if (!norm) return false;
+  const canvas = document.querySelector('#roadmap-container .roadmap-canvas');
+  if (!canvas) return false;
+  const node = Array.from(canvas.querySelectorAll('[data-roadmap-code]'))
+    .find(el => el.dataset.roadmapCode === norm);
+  if (!node) return false;
+  const canvasRect = canvas.getBoundingClientRect();
+  const nodeRect = node.getBoundingClientRect();
+  const dx = (nodeRect.left + nodeRect.width / 2) - (canvasRect.left + canvas.clientWidth / 2);
+  const dy = (nodeRect.top + nodeRect.height / 2) - (canvasRect.top + canvas.clientHeight / 2);
+  canvas.scrollLeft += dx;
+  if (canvas.scrollHeight > canvas.clientHeight) canvas.scrollTop += dy;
+  if (typeof node.focus === 'function') node.focus({ preventScroll: true });
+  if (opts.flash) {
+    node.classList.add('center-flash');
+    clearTimeout(roadmapCenterNode._t);
+    roadmapCenterNode._t = setTimeout(() => node.classList.remove('center-flash'), 900);
+  }
+  return true;
+}
+
+function roadmapSelectNode(code, opts = {}) {
+  const norm = normalizeCode(code);
+  if (!norm) return;
+  roadmapPersistPrefs({ selectedCode: norm });
+  renderRoadmap({ centerSelected: opts.center !== false, flashCenter: !!opts.flash });
+}
+
+function roadmapResetPlanFilters() {
+  currentFilter = 'all';
+  searchQuery = '';
+  const input = document.getElementById('search-input');
+  if (input) input.value = '';
+  document.querySelectorAll('.filter-chip[data-filter]').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.filter === 'all');
+  });
+}
+
+function roadmapJumpToPlanCourse(code) {
+  const norm = normalizeCode(code);
+  if (!norm) return;
+  roadmapResetPlanFilters();
+  switchTab('plan');
+  renderSemesters();
+  requestAnimationFrame(() => {
+    const row = Array.from(document.querySelectorAll('#semesters-container .course'))
+      .find(el => normalizeCode(el.dataset.code) === norm);
+    if (!row) {
+      toastInfo('That Roadmap course is not visible in the current Plan.');
+      return;
+    }
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    row.classList.add('roadmap-plan-focus');
+    clearTimeout(roadmapJumpToPlanCourse._t);
+    roadmapJumpToPlanCourse._t = setTimeout(() => row.classList.remove('roadmap-plan-focus'), 1800);
+  });
 }
 
 function roadmapCountText(graph, filteredGraph, fullCount) {
@@ -520,6 +601,7 @@ function renderRoadmap(opts = {}) {
   const filteredGraph = roadmapFilteredGraph(roadmapFullGraph, roadmapFilter);
   const graph = roadmapSearchGraph(filteredGraph, roadmapQuery);
   roadmapLastGraph = graph;
+  const selectedCode = roadmapSelectedCode && graph.nodes[roadmapSelectedCode] ? roadmapSelectedCode : '';
   const fullCount = Object.keys(roadmapFullGraph.nodes).length;
   const countText = roadmapCountText(graph, filteredGraph, fullCount);
   root.innerHTML = `
@@ -546,7 +628,7 @@ function renderRoadmap(opts = {}) {
       <span class="goal">Goal</span>
     </div>
     <div class="roadmap-canvas">${roadmapRenderSvg(graph)}</div>
-    <div id="roadmap-detail" class="roadmap-detail">${roadmapDefaultDetails(graph)}</div>
+    <div id="roadmap-detail" class="roadmap-detail">${selectedCode ? roadmapDetailHtml(selectedCode, graph) : roadmapDefaultDetails(graph)}</div>
   `;
   if (opts.focusSearch) {
     const input = root.querySelector('[data-roadmap-search]');
@@ -555,6 +637,9 @@ function renderRoadmap(opts = {}) {
       input.focus();
       input.setSelectionRange(Math.min(caret, input.value.length), Math.min(caret, input.value.length));
     }
+  }
+  if (opts.centerSelected && selectedCode) {
+    roadmapCenterNode(selectedCode, { flash: opts.flashCenter });
   }
 }
 
@@ -571,9 +656,25 @@ document.addEventListener('click', e => {
     renderRoadmap({ focusSearch: true, caret: 0 });
     return;
   }
+  const center = e.target.closest('[data-roadmap-center]');
+  if (center) {
+    roadmapSelectNode(center.dataset.roadmapCenter, { center: true, flash: true });
+    return;
+  }
+  const planJump = e.target.closest('[data-roadmap-plan-jump]');
+  if (planJump) {
+    roadmapJumpToPlanCourse(planJump.dataset.roadmapPlanJump);
+    return;
+  }
+  const clearSelection = e.target.closest('[data-roadmap-clear-selection]');
+  if (clearSelection) {
+    roadmapPersistPrefs({ selectedCode: '' });
+    renderRoadmap();
+    return;
+  }
   const node = e.target.closest('[data-roadmap-code]');
   if (!node) return;
-  roadmapRenderDetail(node.dataset.roadmapCode);
+  roadmapSelectNode(node.dataset.roadmapCode, { center: true, flash: false });
 });
 
 document.addEventListener('input', e => {
@@ -589,5 +690,5 @@ document.addEventListener('keydown', e => {
   const node = e.target.closest && e.target.closest('[data-roadmap-code]');
   if (!node) return;
   e.preventDefault();
-  roadmapRenderDetail(node.dataset.roadmapCode);
+  roadmapSelectNode(node.dataset.roadmapCode, { center: true, flash: true });
 });

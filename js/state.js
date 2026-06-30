@@ -13,7 +13,7 @@ function loadState() {
     selectedSections: {},
     schedulePrefs: {},
     scheduleAdvisorFilter: 'all',
-    roadmapPrefs: { filter: 'all', query: '' },
+    roadmapPrefs: { filter: 'all', query: '', selectedCode: '' },
     recentChanges: [],
     majorId: null,
     onboardingComplete: false,
@@ -33,7 +33,7 @@ function loadState() {
         selectedSections: parsed.selectedSections || {},
         schedulePrefs: parsed.schedulePrefs || {},
         scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(parsed.scheduleAdvisorFilter) ? parsed.scheduleAdvisorFilter : 'all',
-        roadmapPrefs: { filter: 'all', query: '', ...(parsed.roadmapPrefs || {}) },
+        roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(parsed.roadmapPrefs || {}) },
         recentChanges: Array.isArray(parsed.recentChanges) ? parsed.recentChanges.slice(0, 12) : [],
       };
     }

@@ -101,7 +101,7 @@ async function loadSharedPlanFromHash() {
       selectedSections: data.selectedSections || {},
       schedulePrefs: data.schedulePrefs || {},
       scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(data.scheduleAdvisorFilter) ? data.scheduleAdvisorFilter : 'all',
-      roadmapPrefs: { filter: 'all', query: '', ...(data.roadmapPrefs || {}) },
+      roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(data.roadmapPrefs || {}) },
       recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],
       onboardingComplete: true,
     };

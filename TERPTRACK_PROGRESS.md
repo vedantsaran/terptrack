@@ -816,3 +816,47 @@ Next pass candidates:
 - Add Roadmap jump-to-semester or selected-node centering for very large plans.
 - Add a visible schedule-change digest to advisor packets or exported schedule summaries.
 - Add advisor-packet print presets for registrar/advisor vs student personal review.
+
+## 2026-06-30 Pass 22
+
+Focus: make the Roadmap easier to navigate in large plans by persisting selected nodes, centering them in the graph, and jumping back to the matching Plan row.
+
+Planned changes:
+- Persist the selected Roadmap node in `roadmapPrefs`.
+- Render selected-node styling and accessible selected state in the SVG graph.
+- Give selected-node details quick actions for Center, Show in Plan, and Clear.
+- Make the SVG use its real graph width so large Roadmaps can scroll instead of compressing.
+- Center selected nodes inside the horizontal graph scroller.
+- Let Show in Plan reset Plan filters/search, switch to Plan, scroll to the course row, and briefly highlight it.
+- Verify desktop selection, reload persistence, mobile centering, Plan jump behavior, neutral reset, and local checks.
+
+Completed:
+- Added `selectedCode` to Roadmap preference defaults and load migration.
+- Added Roadmap selected-code synchronization and persistence through the existing `roadmapPrefs` share/import/snapshot paths.
+- Added selected-node SVG state with `aria-pressed`, `.selected` styling, and a brief centering pulse.
+- Updated Roadmap SVG sizing to use `--roadmap-width` with horizontal scrolling for larger graphs.
+- Refactored Roadmap details into reusable HTML so selected details persist across rerenders.
+- Added Center, Show in Plan, and Clear actions to selected-node details.
+- Added `roadmapCenterNode()` to scroll the canvas until the selected node is visible and focused.
+- Added `roadmapJumpToPlanCourse()` to reset Plan filters/search, switch tabs, scroll to the matching row, and apply a short landing highlight.
+- Added mobile wrapping styles for detail actions and a Plan-row highlight style.
+- Versioned `styles.css`, `js/state.js`, `js/roadmap.js`, `js/io.js`, `js/share.js`, and `js/snapshots.js` in `index.html`.
+
+Verification:
+- Ran `node --check` across every file in `js/`.
+- Ran `git diff --check`.
+- Reloaded `http://localhost:5173/?pass22=...` in the in-app browser and confirmed `styles.css?v=23`, `js/state.js?v=5`, `js/roadmap.js?v=6`, `js/io.js?v=5`, `js/share.js?v=5`, and `js/snapshots.js?v=5` loaded.
+- Opened Roadmap and confirmed the neutral state showed `37/37 shown`, 37 nodes, no selected node, and the default `All planned Health` panel.
+- Selected `CMSC 351` and confirmed one selected node, `aria-pressed="true"`, selected rect class, focus on the node, and detail actions `Center`, `Show in Plan`, and `Clear`.
+- Reloaded the app, reopened Roadmap, and confirmed `CMSC 351` remained selected with its detail panel and actions.
+- Checked a 390px-wide viewport: the Roadmap canvas had internal horizontal overflow, `CMSC 351` started off-canvas, clicking Center scrolled the canvas to make it visible, detail actions wrapped, and document-wide horizontal overflow stayed at 0.
+- Clicked Show in Plan and confirmed the app switched to Plan, Plan filter reset to All, search cleared, CMSC 351 row was scrolled into view, and the row received the temporary Roadmap highlight.
+- Returned to Roadmap, clicked Clear, and confirmed selected count returned to 0, details returned to `All planned Health`, search stayed empty, and filter stayed `All planned`.
+- Reset the browser viewport to the default 1280px-wide size after mobile verification.
+- Confirmed current-page browser console errors were 0 for the Pass 22 URL.
+
+Next pass candidates:
+- Add a term-availability simulator/test fixture inside the app's dev diagnostics so move suggestions can be regression-tested without waiting for live UMD data to line up.
+- Add a visible schedule-change digest to advisor packets or exported schedule summaries.
+- Add advisor-packet print presets for registrar/advisor vs student personal review.
+- Add Roadmap term-jump controls for plans with many more than eight semesters.
