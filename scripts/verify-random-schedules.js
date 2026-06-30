@@ -25,6 +25,7 @@ function parseArgs(argv) {
     count: Number(process.env.TERPTRACK_RANDOM_COUNT || 6),
     all: false,
     keepGoing: false,
+    majors: [],
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -32,6 +33,16 @@ function parseArgs(argv) {
       opts.all = true;
     } else if (arg === '--keep-going') {
       opts.keepGoing = true;
+    } else if (arg === '--major') {
+      const value = argv[++i] || '';
+      if (value) opts.majors.push(...value.split(','));
+    } else if (arg.startsWith('--major=')) {
+      opts.majors.push(...arg.slice('--major='.length).split(','));
+    } else if (arg === '--majors') {
+      const value = argv[++i] || '';
+      if (value) opts.majors.push(...value.split(','));
+    } else if (arg.startsWith('--majors=')) {
+      opts.majors.push(...arg.slice('--majors='.length).split(','));
     } else if (arg === '--seed') {
       opts.seed = argv[++i] || opts.seed;
     } else if (arg.startsWith('--seed=')) {
@@ -45,6 +56,7 @@ function parseArgs(argv) {
     }
   }
   opts.count = Number.isFinite(opts.count) && opts.count > 0 ? Math.floor(opts.count) : 6;
+  opts.majors = Array.from(new Set(opts.majors.map(item => String(item || '').trim().toUpperCase()).filter(Boolean)));
   return opts;
 }
 
@@ -273,7 +285,9 @@ async function main() {
       .map(major => ({ id: major.id, name: major.name, college: major.college }))
       .sort((a, b) => a.id.localeCompare(b.id))
   `, context));
-  const sample = opts.all ? majors : shuffle(majors, rand).slice(0, Math.min(opts.count, majors.length));
+  const sample = opts.majors.length
+    ? opts.majors.map(id => majors.find(major => major.id === id) || fail(`Unknown generated major for verification: ${id}`))
+    : (opts.all ? majors : shuffle(majors, rand).slice(0, Math.min(opts.count, majors.length)));
   assert(sample.length, 'No generated majors available for random schedule verification.');
   console.log(`Random schedule verifier seed=${opts.seed} count=${sample.length}/${majors.length}`);
   const rows = [];

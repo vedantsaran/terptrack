@@ -3981,3 +3981,55 @@ Next pass candidates:
 - Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
 - Add a CI-friendly offline fixture for the new random verifier, plus an opt-in live PlanetTerp check for release passes.
 - Add official per-major citation links beside generated requirement groups.
+
+## 2026-06-30 Pass 79
+
+Focus: clean Smith Business generated templates against live PlanetTerp and make the verifier support targeted major batches.
+
+Planned changes:
+- Fix the Smith-generated templates that failed the all-major PlanetTerp verifier.
+- Add targeted-major selection to the random schedule verifier so cleanup batches can be verified directly.
+- Keep the all-major audit as the source of truth for remaining template debt.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `--major`, `--major=...`, `--majors`, and `--majors=...` support to `scripts/verify-random-schedules.js`.
+- Replaced stale Smith Business template codes with live PlanetTerp-resolving courses:
+  - Shared generated Smith core: `BMGT289` -> `BMGT289B`.
+  - Accounting: `BMGT322` -> `BMGT310`; `BMGT421` -> `BMGT422`; goal `BMGT322` -> `BMGT310`.
+  - Marketing: `BMGT458` / `BMGT459` -> `BMGT458A` / `BMGT458B`.
+  - Information Systems: dead `BUSI430`, `BUSI431`, `BUSI432`, `BUSI433`, `BUSI434`, and `BUSI446` -> live `BMGT301`, `BMGT403`, `BMGT407`, `BMGT431`, `BMGT430`, and `BMGT434`; goal `BUSI432` -> `BMGT407`.
+  - Management: `BMGT460` -> `BMGT463`; `BMGT462` -> `BMGT468Z`.
+  - Supply Chain Management: `BMGT289` -> `BMGT289B`.
+  - Finance curated template metadata: `BMGT289` -> `BMGT289B`; invalid `BMGT449` -> `BMGT441`.
+
+Verification:
+- Ran direct PlanetTerp checks for the replacement BMGT/BUSI course codes before editing.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- Ran `node scripts/verify-random-schedules.js --majors ACCOUNTING,MARKETING,MGMT,SCM,IS --keep-going --seed pass79-smith`; it passed:
+  - `ACCOUNTING`: 122 credits, 21 required courses verified in PlanetTerp.
+  - `MARKETING`: 122 credits, 20 required courses verified in PlanetTerp.
+  - `MGMT`: 122 credits, 19 required courses verified in PlanetTerp.
+  - `SCM`: 122 credits, 19 required courses verified in PlanetTerp.
+  - `IS`: 120 credits, 21 required courses verified in PlanetTerp.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass79-all`.
+  - Confirmed `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM` now pass and dropped out of the failure summary.
+  - Remaining generated-template failure count is now 38:
+    `AMST`, `ANSC`, `ANTH`, `AOSC`, `AREC`, `ARTH`, `ARTT`, `ASTR`, `BIOE`, `CHEM`, `CINE`, `EDUC`, `ENAE`, `ENCE`, `ENCH`, `ENEE`, `ENFP`, `ENGL`, `ENMA`, `FMSC`, `GEOG`, `GEOL`, `HIST`, `HLTH`, `JOUR`, `KNES`, `LING`, `MUSC`, `NEUR`, `NFSC`, `PHIL`, `PHYS`, `PLSC`, `SOCY`, `SPAN`, `STAT`, `THET`, `WMST`.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/`, then finalized Chrome and stopped the server before commit.
+- Chrome confirmed:
+  - `js/majors.js` loaded from the local server.
+  - Settings opened normally.
+  - Selecting Information Systems showed the generated-major note.
+  - The IS auto-plan review rendered `21/21 live course records`.
+  - The IS review rendered `13/13 GenEd coverage`.
+  - The rendered review did not include old `BUSI43x` codes or generic dead `BMGT289`.
+  - There was no horizontal overflow.
+  - Browser console errors were clean.
+
+Next pass candidates:
+- Clean the remaining CMNS/STEM generated templates that fail the all-major verifier.
+- Clean ARHU/BSOS templates with stale upper-level seminar/capstone placeholders.
+- Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
+- Add official per-major citation links beside generated requirement groups.
