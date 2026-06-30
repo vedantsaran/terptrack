@@ -844,6 +844,83 @@ async function testBrowseResultSections(context) {
   };
 }
 
+async function testBrowseExplanationPanel(context) {
+  const result = clone(await vm.runInContext(`
+    (() => {
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['ai-data', 'policy-society'],
+        careerGoal: 'machine learning for public policy',
+        genEdDepts: 'INST, PSYC, GVPT'
+      });
+      recoGenEdGaps = () => [{ id: 'DSHS', label: 'History and Social Sciences', have: 0, need: 1 }];
+      const nextTerm = { term: '202608', termLabel: 'Fall 2026' };
+      const availability = {};
+      availability[browseAvailabilityKey(nextTerm.term, 'INST150')] = {
+        term: nextTerm.term,
+        termLabel: nextTerm.termLabel,
+        sectionCount: 3,
+        openSeats: 18
+      };
+      const rows = [{
+        course_id: 'INST150',
+        name: 'Data, Policy, and Society',
+        description: 'Data analytics and public policy for civic technology.',
+        credits: '3',
+        gen_ed: ['DSHS'],
+        average_gpa: 3.42,
+        relationships: {
+          prereqs: 'Minimum grade of C- in STAT100 or MATH115.'
+        }
+      }];
+      const item = browseDecorateRows(rows, {
+        availability,
+        nextTerm,
+        plannedMap: new Map()
+      }).sort(browseCompareRows)[0];
+      const reasons = browseExplanationItems(item, nextTerm);
+      browseWhyCode = '';
+      const closedHtml = browseCourseCardHtml(item, { nextTerm });
+      browseToggleWhy('INST150');
+      const openedCode = browseWhyCode;
+      const openHtml = browseCourseCardHtml(item, { nextTerm });
+      browseToggleWhy('INST150');
+      const closedCode = browseWhyCode;
+      return {
+        titles: reasons.map(reason => reason.title),
+        detailText: reasons.map(reason => reason.detail).join(' | '),
+        score: item.score,
+        closedHtml,
+        openHtml,
+        openedCode,
+        closedCode
+      };
+    })()
+  `, context));
+
+  assert(result.openedCode === 'INST150', 'browse why: toggle should open selected course explanation');
+  assert(result.closedCode === '', 'browse why: second toggle should close selected course explanation');
+  assert(!/browse-why-panel/.test(result.closedHtml), 'browse why: closed card should not render explanation panel');
+  assert(/browse-why-panel/.test(result.openHtml), 'browse why: open card should render explanation panel');
+  assert(/Why this course/.test(result.openHtml) && /Rank score/.test(result.openHtml), 'browse why: panel should show score header');
+  assert(result.titles.includes('Ranking'), 'browse why: should include ranking explanation');
+  assert(result.titles.includes('GenEd gap'), 'browse why: should include GenEd gap explanation');
+  assert(result.titles.includes('Profile fit'), 'browse why: should include profile explanation');
+  assert(result.titles.includes('Sections'), 'browse why: should include section availability explanation');
+  assert(result.titles.includes('Prereqs'), 'browse why: should include prerequisite explanation');
+  assert(result.titles.includes('GPA signal'), 'browse why: should include GPA explanation');
+  assert(/DSHS/.test(result.detailText), 'browse why: GenEd detail should name the matched gap');
+  assert(/profile fit/i.test(result.detailText), 'browse why: ranking detail should include profile contribution');
+  assert(/3 posted sections/.test(result.detailText) && /18 open seats/.test(result.detailText), 'browse why: section detail should include posted sections and seats');
+  assert(/STAT 100/.test(result.detailText) && /MATH 115/.test(result.detailText), 'browse why: prerequisite detail should extract course codes');
+  assert(/Average GPA 3.42/.test(result.detailText), 'browse why: GPA detail should show average GPA');
+
+  return {
+    id: 'BROWSE-WHY',
+    score: result.score,
+    reasons: result.titles.join(','),
+  };
+}
+
 async function testBrowsePlaceholderReplacement(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -1028,6 +1105,7 @@ async function main() {
   const questions = testPlannerAdvisorQuestions(context);
   const browse = await testBrowseProfileDepartments(context);
   const browseSections = await testBrowseResultSections(context);
+  const browseWhy = await testBrowseExplanationPanel(context);
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
 
@@ -1041,9 +1119,10 @@ async function main() {
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
+  console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse replacement + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse replacement + personalized onboarding).`);
 }
 
 main().catch(error => {

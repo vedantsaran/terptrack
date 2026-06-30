@@ -2198,3 +2198,57 @@ Next pass candidates:
 - Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
 - Add direct placeholder-slot selection from Browse when no placeholder is active.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 48
+
+Focus: explain why Browse recommends each course instead of only ranking cards.
+
+Planned changes:
+- Add a per-card Browse explanation panel.
+- Explain ranking score contributions from profile fit, GenEd gaps, posted sections, plan status, and GPA.
+- Surface prerequisite context from catalog metadata when available.
+- Keep the explanation usable in highlights, full results, and replacement-mode cards.
+- Add regression coverage and Chrome QA.
+
+Completed:
+- Added a `Why` action to every Browse course card.
+- Added inline explanation panels with:
+  - total rank score.
+  - score contribution breakdown.
+  - GenEd gap or GenEd coverage context.
+  - profile-fit labels and neutral profile states.
+  - next-term posted-section/open-seat detail.
+  - prerequisite text/code extraction with a clear metadata-fetch fallback.
+  - GPA signal wording when a GPA value is available.
+- Scoped the open-panel state by card context, so a course appearing in multiple highlight sections and full results only expands the clicked card instance.
+- Kept the existing replacement actions intact, with `Why` available beside `Replace`, `Add separately`, and `Add to plan`.
+- Added compact panel styling that works inside highlight cards and full Browse cards without introducing horizontal overflow.
+- Versioned changed browser assets:
+  - `styles.css?v=46`
+  - `js/browse.js?v=9`
+- Added the `BROWSE-WHY` regression fixture covering:
+  - explanation item generation.
+  - score header rendering.
+  - GenEd gap, profile, section, prereq, and GPA reasons.
+  - prerequisite course-code extraction.
+  - open/close toggle behavior.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the auto-plan diagnostics fixture with replacement actions, the account/share fixture, the account setup fixture, the schedule timing fixture, the planner checklist fixture, the planner questions fixture, the Browse profile saved-search fixture, the Browse sections fixture, the new Browse explanation fixture, the Browse replacement fixture, and the personalized onboarding fixture.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=46` and `js/browse.js?v=9` loaded.
+  - Browse opened with profile departments from profile preferences.
+  - live Browse rendered 557 profile-department matches, 212 visible cards, and three highlight sections.
+  - every visible Browse card had a `Why` action.
+  - expanding the top `INST 466` card showed ranking, GenEd gap, profile fit, posted sections/open seats, and prerequisite context.
+  - the duplicate-course state fix left exactly one expanded panel for the clicked card instance.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
+- Add direct placeholder-slot selection from Browse when no placeholder is active.
+- Add a side-by-side schedule impact preview before adding/replacing a Browse course.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

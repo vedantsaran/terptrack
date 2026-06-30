@@ -4952,6 +4952,69 @@ h1.hero-title em {
   gap: 6px;
   margin-top: 4px;
 }
+.browse-why-panel {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 9px;
+}
+.browse-why-head {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+.browse-why-head strong {
+  color: var(--ink);
+  font-size: .78rem;
+  font-weight: 760;
+}
+.browse-why-head span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  font-weight: 750;
+  text-align: right;
+}
+.browse-why-list {
+  display: grid;
+  gap: 6px;
+}
+.browse-why-item {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-left: 3px solid rgba(139,0,0,.5);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+}
+.browse-why-item strong {
+  color: var(--maroon);
+  display: block;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.browse-why-item span {
+  color: var(--ink-soft);
+  display: block;
+  font-size: .72rem;
+  line-height: 1.38;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+.br-card.compact .browse-why-head {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+.br-card.compact .browse-why-head span {
+  text-align: left;
+}
 .br-pill {
   font-size: .72rem;
   background: var(--green);

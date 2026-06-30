@@ -33,6 +33,8 @@ let browseCacheKey = '';
 let browseProfileDefaultsApplied = false;
 let browseRenderSeq = 0;
 let browseAvailabilityCache = {};
+let browseWhyCode = '';
+let browseWhyKey = '';
 
 function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
@@ -518,6 +520,166 @@ function browseBuildResultSections(items, nextTerm = browseNextTermContext()) {
   ].filter(Boolean);
 }
 
+function browseScoreBreakdown(item) {
+  const pieces = [];
+  if (item.inPlan) {
+    pieces.push('already planned (-420)');
+  } else {
+    pieces.push('catalog match (+40)');
+  }
+  if ((item.gapHits || []).length) pieces.push(`${item.gapHits.length} GenEd gap${item.gapHits.length === 1 ? '' : 's'} (+${item.gapHits.length * 175})`);
+  const profileScore = Number(item.profileMatch?.score) || 0;
+  if (item.profileActive && profileScore) pieces.push(`profile fit (+${Math.round(profileScore)})`);
+  const sectionCount = Number(item.availability?.sectionCount) || 0;
+  if (sectionCount) {
+    const openSeats = Number(item.availability?.openSeats) || 0;
+    pieces.push(`posted sections (+${90 + Math.min(140, sectionCount * 12 + openSeats * 3)})`);
+  }
+  if (typeof item.gpa === 'number') pieces.push(`GPA signal (+${Math.round(item.gpa * 10)})`);
+  return pieces.join(' · ');
+}
+
+function browsePrereqText(row) {
+  const rel = row?.relationships || {};
+  const candidates = [
+    rel.prereqs,
+    rel.prerequisites,
+    row?.prereqs,
+    row?.prereqGroups,
+    row?.prerequisites,
+    row?.prereq,
+  ];
+  const value = candidates.find(item => {
+    if (!item) return false;
+    return Array.isArray(item) ? item.flat(2).filter(Boolean).length : String(item).trim();
+  });
+  if (!value) return '';
+  if (Array.isArray(value)) return value.flat(2).filter(Boolean).join('; ');
+  return String(value).trim();
+}
+
+function browsePrereqCodes(text) {
+  const raw = typeof extractCourseCodes === 'function'
+    ? extractCourseCodes(text)
+    : Array.from(String(text || '').matchAll(/\b([A-Z]{3,4})\s*(\d{3}[A-Z]?)\b/g)).map(match => `${match[1]}${match[2]}`);
+  return Array.from(new Set(raw.map(code => displayCode(code)))).slice(0, 5);
+}
+
+function browseExplanationItems(item, nextTerm = browseNextTermContext()) {
+  const row = item.row || item;
+  const ge = item.genEdTags || browseCourseGenEdTags(row);
+  const gapHits = item.gapHits || [];
+  const profileScore = Number(item.profileMatch?.score) || 0;
+  const profileLabels = item.profileMatch?.labels || [];
+  const available = item.availability || null;
+  const sectionCount = Number(available?.sectionCount) || 0;
+  const openSeats = Number(available?.openSeats) || 0;
+  const prereqText = browsePrereqText(row);
+  const prereqCodes = browsePrereqCodes(prereqText);
+  const items = [{
+    title: 'Ranking',
+    detail: browseScoreBreakdown(item),
+  }];
+
+  if (item.inPlan) {
+    items.push({
+      title: 'Plan status',
+      detail: `Already in your plan${item.plannedInfo?.semName ? ` for ${item.plannedInfo.semName}` : ''}, so Browse keeps it below new options.`,
+    });
+  }
+  if (gapHits.length) {
+    items.push({
+      title: 'GenEd gap',
+      detail: `Covers ${gapHits.join(', ')} still missing from the tracked GenEd requirements in your plan.`,
+    });
+  } else if (ge.length) {
+    items.push({
+      title: 'GenEd coverage',
+      detail: `Carries ${ge.join(', ')} tags, but none are currently marked as missing gaps.`,
+    });
+  }
+  if (item.profileActive && profileScore) {
+    items.push({
+      title: 'Profile fit',
+      detail: `Matches ${profileLabels.length ? profileLabels.join(', ') : 'your saved interests and career goal'}.`,
+    });
+  } else if (item.profileActive) {
+    items.push({
+      title: 'Profile fit',
+      detail: 'No strong profile keyword, department, or career-goal match was found for this card.',
+    });
+  } else {
+    items.push({
+      title: 'Profile fit',
+      detail: 'No active profile preferences are set, so profile fit is neutral for this card.',
+    });
+  }
+  if (available) {
+    items.push({
+      title: 'Sections',
+      detail: sectionCount
+        ? `${sectionCount} posted section${sectionCount === 1 ? '' : 's'}${openSeats ? ` with ${openSeats} open seat${openSeats === 1 ? '' : 's'}` : ''} for ${available.termLabel || nextTerm.termLabel || 'the checked term'}.`
+        : `Checked ${available.termLabel || nextTerm.termLabel || 'the selected term'}; no posted sections were found yet.`,
+    });
+  } else if (nextTerm.term) {
+    items.push({
+      title: 'Sections',
+      detail: `Section availability has not been checked yet for ${nextTerm.termLabel || nextTerm.term}; top matches are checked automatically.`,
+    });
+  }
+  items.push({
+    title: 'Prereqs',
+    detail: prereqText
+      ? `Catalog prerequisite text mentions ${prereqCodes.length ? prereqCodes.join(', ') : 'requirements to review'}; adding the course fetches full metadata before scheduling.`
+      : 'This catalog result did not include prerequisite text; adding the course fetches full metadata before scheduling.',
+  });
+  if (typeof item.gpa === 'number') {
+    items.push({
+      title: 'GPA signal',
+      detail: `Average GPA ${item.gpa.toFixed(2)} is used as a light planning signal, not a requirement.`,
+    });
+  }
+  return items;
+}
+
+function browseExplanationHtml(item, nextTerm = browseNextTermContext(), panelId = '') {
+  const id = panelId || `browse-why-${item.norm || normalizeCode(item.code || '')}`;
+  const score = Math.round(Number(item.score) || 0);
+  const items = browseExplanationItems(item, nextTerm);
+  return `
+    <div class="browse-why-panel" id="${browseEscape(id)}" role="region" aria-label="Why ${browseEscape(displayCode(item.code || 'this course'))}">
+      <div class="browse-why-head">
+        <strong>Why this course</strong>
+        <span>Rank score ${browseEscape(score)}</span>
+      </div>
+      <div class="browse-why-list">
+        ${items.map(reason => `
+          <div class="browse-why-item">
+            <strong>${browseEscape(reason.title)}</strong>
+            <span>${browseEscape(reason.detail)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function browseToggleWhy(code, key = '') {
+  const norm = normalizeCode(code);
+  if (!norm) return;
+  const scopedKey = String(key || '');
+  if (scopedKey) {
+    const isOpen = browseWhyKey === scopedKey;
+    browseWhyCode = isOpen ? '' : norm;
+    browseWhyKey = isOpen ? '' : scopedKey;
+  } else {
+    const isOpen = !browseWhyKey && browseWhyCode === norm;
+    browseWhyCode = isOpen ? '' : norm;
+    browseWhyKey = '';
+  }
+  if (typeof renderBrowse === 'function') renderBrowse();
+}
+
 function browseAvailabilityTag(item) {
   const available = item.availability;
   if (!available) return '';
@@ -599,6 +761,7 @@ async function browseReplacePlaceholder(code) {
 function browseCourseCardHtml(item, opts = {}) {
   const r = item.row || item;
   const code = item.code || r.course_id || '';
+  const actionCode = normalizeCode(code);
   const inPlan = !!item.inPlan;
   const replacementTarget = browseReplacementTarget();
   const canReplace = !!replacementTarget && !inPlan && typeof replacePlaceholderWithCourse === 'function';
@@ -613,6 +776,10 @@ function browseCourseCardHtml(item, opts = {}) {
     : '';
   const availabilityTag = browseAvailabilityTag(item);
   const desc = r.description ? `${r.description.slice(0, opts.compact ? 130 : 200)}${r.description.length > (opts.compact ? 130 : 200) ? '...' : ''}` : '';
+  const whyScope = String(opts.whyScope || 'browse').replace(/[^A-Za-z0-9_-]/g, '-');
+  const whyKey = `${whyScope}:${item.norm || actionCode}`;
+  const whyId = `browse-why-${whyKey.replace(/[^A-Za-z0-9_-]/g, '-')}`;
+  const whyOpen = browseWhyKey ? browseWhyKey === whyKey : browseWhyCode === item.norm;
   return `
     <div class="br-card ${inPlan ? 'in-plan' : ''}${opts.compact ? ' compact' : ''}">
       <div class="br-head">
@@ -632,14 +799,16 @@ function browseCourseCardHtml(item, opts = {}) {
         ${inPlan
           ? `<span class="br-pill">In your plan${item.plannedInfo?.semName ? ` · ${browseEscape(item.plannedInfo.semName)}` : ''}</span>`
           : canReplace
-            ? `<button class="btn small primary" onclick="browseReplacePlaceholder('${browseEscape(code)}')">Replace ${browseEscape(browseReplacementTargetLabel(replacementTarget))}</button><button class="btn small" onclick="browseAddCourse('${browseEscape(code)}')">Add separately</button>`
-            : `<button class="btn small" onclick="browseAddCourse('${browseEscape(code)}')">Add to plan</button>`}
+            ? `<button class="btn small primary" onclick="browseReplacePlaceholder('${browseEscape(actionCode)}')">Replace ${browseEscape(browseReplacementTargetLabel(replacementTarget))}</button><button class="btn small" onclick="browseAddCourse('${browseEscape(actionCode)}')">Add separately</button>`
+            : `<button class="btn small" onclick="browseAddCourse('${browseEscape(actionCode)}')">Add to plan</button>`}
+        <button class="btn small" type="button" aria-expanded="${whyOpen ? 'true' : 'false'}" aria-controls="${browseEscape(whyId)}" onclick="browseToggleWhy('${browseEscape(actionCode)}', '${browseEscape(whyKey)}')">${whyOpen ? 'Hide why' : 'Why'}</button>
       </div>
+      ${whyOpen ? browseExplanationHtml(item, opts.nextTerm || browseNextTermContext(), whyId) : ''}
     </div>
   `;
 }
 
-function browseHighlightsHtml(sections) {
+function browseHighlightsHtml(sections, nextTerm = browseNextTermContext()) {
   if (!sections.length) return '';
   return `
     <div class="browse-highlights">
@@ -655,7 +824,7 @@ function browseHighlightsHtml(sections) {
               <span>${browseEscape(section.detail)}</span>
             </div>
             <div class="browse-highlight-cards">
-              ${section.items.map(item => browseCourseCardHtml(item, { compact: true })).join('')}
+              ${section.items.map(item => browseCourseCardHtml(item, { compact: true, nextTerm, whyScope: `highlight-${section.id}` })).join('')}
             </div>
           </section>
         `).join('')}
@@ -791,12 +960,12 @@ async function renderBrowse() {
   const sections = browseBuildResultSections(decoratedRows, nextTerm);
   grid.innerHTML = `
     ${browseReplacementBannerHtml()}
-    ${browseHighlightsHtml(sections)}
+    ${browseHighlightsHtml(sections, nextTerm)}
     <div class="browse-results-head">
       <strong>Full results</strong>
       <span>${browseEscape(decoratedRows.length)} match${decoratedRows.length === 1 ? '' : 'es'} shown by plan fit</span>
     </div>
-    ${decoratedRows.slice(0, 200).map(item => browseCourseCardHtml(item)).join('')}
+    ${decoratedRows.slice(0, 200).map(item => browseCourseCardHtml(item, { nextTerm, whyScope: 'full' })).join('')}
   `;
   browseHydrateAvailability(decoratedRows, nextTerm, seq);
 }
