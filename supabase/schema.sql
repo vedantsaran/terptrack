@@ -64,12 +64,25 @@ alter table public.friend_requests enable row level security;
 alter table public.shared_plans enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
+drop policy if exists "profiles_select_visible" on public.profiles;
 drop policy if exists "profiles_insert_own" on public.profiles;
 drop policy if exists "profiles_update_own" on public.profiles;
 
-create policy "profiles_select_own"
+create policy "profiles_select_visible"
   on public.profiles for select
-  using (auth.uid() = user_id);
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1
+      from public.friend_requests fr
+      where fr.status = 'accepted'
+        and fr.recipient_id is not null
+        and (
+          (fr.requester_id = public.profiles.user_id and fr.recipient_id = auth.uid())
+          or (fr.recipient_id = public.profiles.user_id and fr.requester_id = auth.uid())
+        )
+    )
+  );
 
 create policy "profiles_insert_own"
   on public.profiles for insert

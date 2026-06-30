@@ -1334,3 +1334,48 @@ Next pass candidates:
 - Add account/friend VM tests around cloud payload construction without requiring a live Supabase project.
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Expand Browse to support multi-department profile search rather than only first-department default plus chips.
+
+## 2026-06-30 Pass 33
+
+Focus: enrich friend/account displays with profile context for accepted friends and shared plans.
+
+Planned changes:
+- Preserve friend user IDs from synced requests so account rows can join to profiles.
+- Fetch readable friend profiles after request and shared-plan sync.
+- Show display name and major where RLS allows it, while falling back to email/local labels in local mode.
+- Update profile RLS so accepted friends can read each other's profile rows.
+- Keep local-mode account rendering unchanged.
+
+Completed:
+- Added `userId` to normalized friend invite rows in `js/state.js`.
+- Added a runtime `accountFriendProfiles` cache in `js/account.js`.
+- Added `accountLoadProfilesForUsers()` to fetch readable `profiles` rows for synced friend request users and shared-plan owners.
+- Added `accountProfileLabel()` fallback logic: display name + major, display name, email + major, email, or short owner id.
+- Account profile saves now update the local profile cache immediately for signed-in users.
+- Friend request sync now selects `recipient_id`, stores the opposite user's id where available, and loads profiles before rendering.
+- Friend shared-plan loading now fetches owner profiles before rendering friend plan rows.
+- Friend request rows and friend plan rows now prefer profile labels over raw emails/owner IDs.
+- Updated Supabase profile select RLS from owner-only to owner-or-accepted-friend visibility.
+- Versioned changed browser assets:
+  - `js/state.js?v=11`
+  - `js/account.js?v=4`
+- Extended the account/share regression fixture to assert normalized invite `userId` persistence.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, and the account/share fixture.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass33profiles=1` from a temporary static server and confirmed:
+  - `js/state.js?v=11` and `js/account.js?v=4` loaded.
+  - No console errors on load or account modal open.
+  - The account modal still renders Cloud config, Student profile, Sign in, and Friends & shared plans.
+  - Local friend invite rows still render with email fallback.
+  - Cloud-only friend buttons remain disabled in local mode.
+  - No account modal horizontal overflow at the browser's 380px viewport.
+
+Next pass candidates:
+- Add cloud payload construction tests around profile save, friend invite payloads, and shared-plan publish payloads without a live Supabase project.
+- Build a real friend/profile drawer once remote profile rows can be tested against a Supabase project.
+- Add Vercel/Supabase environment setup notes and test magic-link sign-in on a real deployment.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve schedule timing intelligence: conflict explanations, compact-day preferences, and time-window scoring.

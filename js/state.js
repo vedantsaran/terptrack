@@ -196,6 +196,7 @@ function normalizeAccountFriendInvite(invite, index = 0) {
   return {
     id: rawId || cloudId || `friend-${index + 1}`,
     cloudId,
+    userId: String(invite?.userId || invite?.user_id || invite?.friendUserId || invite?.requester_id || invite?.recipient_id || '').trim(),
     email,
     note: String(invite?.note || '').trim().slice(0, 180),
     status,

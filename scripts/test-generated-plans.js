@@ -187,7 +187,7 @@ function testAccountAndShareState(context) {
       friendInviteEmail: 'Friend@UMD.edu ',
       friendInviteNote: ' compare schedules ',
       friendInvites: [
-        { email: 'Pal@umd.edu', note: 'bioe track', status: 'accepted', direction: 'received', source: 'cloud', id: 'abc', cloudId: 'abc' },
+        { email: 'Pal@umd.edu', userId: 'user-pal-1', note: 'bioe track', status: 'accepted', direction: 'received', source: 'cloud', id: 'abc', cloudId: 'abc' },
         { email: 'not-an-email', note: 'bad' }
       ],
       lastFriendSyncAt: '2026-06-30T10:00:00.000Z'
@@ -227,6 +227,7 @@ function testAccountAndShareState(context) {
       inviteCount: prefs.friendInvites.length,
       inviteDirection: prefs.friendInvites[0].direction,
       inviteStatus: prefs.friendInvites[0].status,
+      inviteUserId: prefs.friendInvites[0].userId,
       stateHasMath: Boolean(state.courses['MATH 140']),
       selectedSection: state.selectedSections['MATH 140'],
       profileInterest: state.profilePrefs.interests[0],
@@ -242,6 +243,7 @@ function testAccountAndShareState(context) {
   assert(result.inviteCount === 1, 'account prefs: invalid friend invite should be removed');
   assert(result.inviteDirection === 'received', 'account prefs: invite direction should persist');
   assert(result.inviteStatus === 'accepted', 'account prefs: invite status should persist');
+  assert(result.inviteUserId === 'user-pal-1', 'account prefs: invite user id should persist');
   assert(result.applied, 'shared plan: friend plan payload should apply');
   assert(result.stateHasMath, 'shared plan: course state should be replaced');
   assert(result.selectedSection === '0101', 'shared plan: selected section should persist');

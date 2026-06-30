@@ -11,6 +11,7 @@ let accountSession = null;
 let accountAuthListenerReady = false;
 let accountConfig = { source: 'none', supabaseUrl: '', supabaseAnonKey: '' };
 let accountFriendPlans = [];
+let accountFriendProfiles = {};
 
 function accountEscape(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
@@ -67,6 +68,38 @@ function accountProfilePayload() {
     major_name: major.name,
     profile_prefs: typeof getProfilePrefs === 'function' ? getProfilePrefs() : (state.profilePrefs || {}),
   };
+}
+
+function accountShortId(value) {
+  return String(value || '').slice(0, 8);
+}
+
+function accountProfileLabel(userId, fallbackEmail = 'friend') {
+  const profile = accountFriendProfiles[userId] || null;
+  const name = String(profile?.display_name || '').trim();
+  const major = String(profile?.major_name || profile?.major_id || '').trim();
+  if (name && major) return `${name} · ${major}`;
+  if (name) return name;
+  if (major && fallbackEmail) return `${fallbackEmail} · ${major}`;
+  return fallbackEmail || (userId ? `friend ${accountShortId(userId)}` : 'friend');
+}
+
+async function accountLoadProfilesForUsers(client, userIds) {
+  const ids = Array.from(new Set((userIds || []).map(id => String(id || '').trim()).filter(Boolean)));
+  if (!client || !ids.length) return;
+  try {
+    const { data, error } = await client.from('profiles')
+      .select('user_id,email,display_name,major_id,major_name,updated_at')
+      .in('user_id', ids);
+    if (error) throw error;
+    const next = { ...accountFriendProfiles };
+    (data || []).forEach(profile => {
+      next[profile.user_id] = profile;
+    });
+    accountFriendProfiles = next;
+  } catch {
+    // Profiles are a helpful enhancement; friend requests still work without them.
+  }
 }
 
 function accountReadManualConfig() {
@@ -327,8 +360,20 @@ async function accountLoadCloudPlan() {
 async function accountSaveProfile() {
   const prefs = getAccountPrefs();
   const now = new Date().toISOString();
+  const payload = accountProfilePayload();
   state.accountPrefs = { ...prefs, displayName: accountDisplayNameInput() };
   saveState();
+  if (accountSession?.user?.id) {
+    accountFriendProfiles = {
+      ...accountFriendProfiles,
+      [accountSession.user.id]: {
+        user_id: accountSession.user.id,
+        email: accountSession.user.email || '',
+        ...payload,
+        updated_at: now,
+      },
+    };
+  }
   try {
     const client = await accountEnsureClient();
     if (!client || !accountSession?.user) {
@@ -339,7 +384,7 @@ async function accountSaveProfile() {
     const { error } = await client.from('profiles').upsert({
       user_id: accountSession.user.id,
       email: accountSession.user.email || '',
-      ...accountProfilePayload(),
+      ...payload,
       updated_at: now,
     }, { onConflict: 'user_id' });
     if (error) throw error;
@@ -473,12 +518,12 @@ async function accountSyncFriends() {
     const email = accountNormalizeEmail(accountSession.user.email);
     const [sentResult, receivedResult] = await Promise.all([
       client.from('friend_requests')
-        .select('id,requester_id,requester_email,recipient_email,note,status,created_at,updated_at')
+        .select('id,requester_id,requester_email,recipient_email,recipient_id,note,status,created_at,updated_at')
         .eq('requester_id', userId)
         .order('updated_at', { ascending: false }),
       email
         ? client.from('friend_requests')
-          .select('id,requester_id,requester_email,recipient_email,note,status,created_at,updated_at')
+          .select('id,requester_id,requester_email,recipient_email,recipient_id,note,status,created_at,updated_at')
           .ilike('recipient_email', email)
           .order('updated_at', { ascending: false })
         : Promise.resolve({ data: [], error: null }),
@@ -489,6 +534,7 @@ async function accountSyncFriends() {
       ...(sentResult.data || []).map(row => ({
         id: row.id,
         cloudId: row.id,
+        userId: row.recipient_id || '',
         email: row.recipient_email,
         note: row.note,
         status: row.status,
@@ -502,6 +548,7 @@ async function accountSyncFriends() {
         .map(row => ({
           id: row.id,
           cloudId: row.id,
+          userId: row.requester_id,
           email: row.requester_email,
           note: row.note,
           status: row.status,
@@ -511,6 +558,7 @@ async function accountSyncFriends() {
           updatedAt: row.updated_at,
         })),
     ].map((invite, index) => normalizeAccountFriendInvite(invite, index)).filter(Boolean);
+    await accountLoadProfilesForUsers(client, cloudInvites.map(invite => invite.userId));
     const localOnly = (getAccountPrefs().friendInvites || []).filter(invite => invite.source !== 'cloud');
     state.accountPrefs = {
       ...getAccountPrefs(),
@@ -599,6 +647,7 @@ async function accountLoadFriendPlans() {
       .limit(20);
     if (error) throw error;
     accountFriendPlans = (data || []).filter(row => row.owner_id !== accountSession.user.id);
+    await accountLoadProfilesForUsers(client, accountFriendPlans.map(row => row.owner_id));
     state.accountPrefs = { ...getAccountPrefs(), lastFriendPlanLoadAt: new Date().toISOString() };
     saveState();
     accountSetStatus(accountFriendPlans.length ? 'Friend plans loaded.' : 'No friend plans available yet.', accountFriendPlans.length ? 'ok' : 'warn');
@@ -661,7 +710,8 @@ function accountStatsHtml() {
 function accountFriendStatusText(invite) {
   const direction = invite.direction === 'received' ? 'from' : 'to';
   const source = invite.source === 'cloud' ? 'cloud' : 'local';
-  return `${direction} ${invite.email} · ${invite.status} · ${source}`;
+  const person = accountProfileLabel(invite.userId, invite.email);
+  return `${direction} ${person} · ${invite.status} · ${source}`;
 }
 
 function accountFriendInvitesHtml() {
@@ -702,18 +752,21 @@ function accountFriendPlansHtml() {
   }
   return `
     <div class="account-friend-list">
-      ${accountFriendPlans.map(plan => `
-        <div class="account-friend-row">
-          <div class="account-friend-info">
-            <strong>${accountEscape(plan.name || 'Friend plan')}</strong>
-            <span>Updated ${accountEscape(accountTime(plan.updated_at))}</span>
-            <small>${accountEscape(plan.owner_id ? `owner ${plan.owner_id.slice(0, 8)}` : 'friend')}</small>
+      ${accountFriendPlans.map(plan => {
+        const owner = accountProfileLabel(plan.owner_id, plan.owner_id ? `friend ${accountShortId(plan.owner_id)}` : 'friend');
+        return `
+          <div class="account-friend-row">
+            <div class="account-friend-info">
+              <strong>${accountEscape(plan.name || 'Friend plan')}</strong>
+              <span>${accountEscape(owner)}</span>
+              <small>Updated ${accountEscape(accountTime(plan.updated_at))}</small>
+            </div>
+            <div class="account-friend-actions">
+              <button class="btn small" type="button" onclick="accountOpenFriendPlan('${accountEscape(plan.id)}')">Open</button>
+            </div>
           </div>
-          <div class="account-friend-actions">
-            <button class="btn small" type="button" onclick="accountOpenFriendPlan('${accountEscape(plan.id)}')">Open</button>
-          </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
   `;
 }
