@@ -60,6 +60,7 @@ function buildContext() {
     'js/browse.js',
     'js/gened.js',
     'js/placeholder-search.js',
+    'js/audit.js',
     'js/onboarding.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
   vm.runInContext(`
@@ -1349,6 +1350,95 @@ async function testBrowseTypedSlotMatching(context) {
   };
 }
 
+function testAuditIssueDrawer(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      state.activeSchedule = [{
+        id: 'PASS54',
+        name: 'Pass 54 Fall',
+        year: 'Year 1',
+        courses: [{
+          code: 'GenEd DSHU',
+          title: 'Humanities placeholder',
+          cr: 3,
+          kind: 'gened',
+          category: 'gened-dshu',
+          categories: ['gened-dshu'],
+          note: 'Auto-generated DSHU placeholder'
+        }, {
+          code: 'GVPT 3xx Elective A',
+          title: 'Upper-Division GVPT Elective',
+          cr: 3,
+          category: 'major-upper'
+        }, {
+          code: 'Free Elective #1',
+          title: 'Free Elective 1',
+          cr: 3,
+          kind: 'tech',
+          category: 'elective',
+          note: 'Auto-generated credit placeholder'
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.browseSavedSearches = [];
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['policy-society'],
+        careerGoal: 'public policy',
+        genEdDepts: 'GVPT'
+      });
+      currentTab = 'audit';
+      switchTab = tab => { currentTab = tab; };
+      let openedPlaceholder = null;
+      openPlaceholderSearch = (code, semId) => { openedPlaceholder = { code, semId }; };
+
+      const issues = auditDegreeIssues();
+      const dshuSlot = issues.find(issue => issue.courseCode === 'GenEd DSHU');
+      const gvptSlot = issues.find(issue => issue.courseCode === 'GVPT 3xx Elective A');
+      const freeSlot = issues.find(issue => issue.courseCode === 'Free Elective #1');
+      const genedGap = issues.find(issue => issue.key === 'gened-DSHU');
+      auditIssueKey = dshuSlot.key;
+      const html = auditIssuesHtml();
+      auditOpenIssuePrimary(dshuSlot.key);
+      auditOpenIssueBrowse(genedGap.key);
+      return {
+        count: issues.length,
+        titles: issues.map(issue => issue.title),
+        dshuSlot,
+        gvptSlot,
+        freeSlot,
+        genedGap,
+        html,
+        openedPlaceholder,
+        currentTab,
+        browseDept,
+        browseGenEd,
+        savedLabel: state.browseSavedSearches[0]?.label || '',
+      };
+    })()
+  `, context));
+
+  assert(result.count >= 4, 'audit issues: should include gaps and placeholder rows');
+  assert(result.dshuSlot && result.dshuSlot.actionType === 'placeholder', 'audit issues: should create a replace action for GenEd placeholders');
+  assert(/Humanities|DSHU/.test(result.dshuSlot.satisfies), 'audit issues: GenEd placeholder should explain acceptable GenEd tags');
+  assert(result.gvptSlot && /GVPT/.test(result.gvptSlot.satisfies) && /300/.test(result.gvptSlot.satisfies), 'audit issues: typed major elective should expose department and level requirements');
+  assert(result.freeSlot && /elective|personal/i.test(result.freeSlot.summary + result.freeSlot.detail), 'audit issues: free elective should explain personalization');
+  assert(result.genedGap && result.genedGap.type === 'gened', 'audit issues: should include a DSHU requirement gap');
+  assert(/Degree|open item|Why it remains|What can satisfy it|Choose Replacement|Open Browse/.test(result.html), 'audit issues: expanded drawer should render explanatory copy and actions');
+  assert(result.openedPlaceholder.code === 'GenEd DSHU' && result.openedPlaceholder.semId === 'PASS54', 'audit issues: primary placeholder action should open the replacement modal for the exact slot');
+  assert(result.currentTab === 'browse', 'audit issues: Browse handoff should switch to Browse');
+  assert(result.browseDept === '__PROFILE_DEPTS__', 'audit issues: Browse handoff should use profile departments');
+  assert(result.browseGenEd === 'DSHU', 'audit issues: Browse handoff should preserve the GenEd tag');
+  assert(/Audit:/.test(result.savedLabel) && /DSHU|Humanities/.test(result.savedLabel), 'audit issues: Browse handoff should save an audit-labeled search');
+
+  return {
+    id: 'AUDIT-ISSUES',
+    count: result.count,
+    opened: result.openedPlaceholder.code,
+    browse: `${result.browseDept}/${result.browseGenEd}`,
+  };
+}
+
 async function testOnboardingPersonalizedSetup(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -1653,6 +1743,7 @@ async function main() {
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
   const browseTypedSlots = await testBrowseTypedSlotMatching(context);
+  const auditIssues = testAuditIssueDrawer(context);
   const priorCredit = await testOnboardingPriorCredit(context);
   const settingsPrior = await testSettingsPriorCreditEditor(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
@@ -1672,10 +1763,11 @@ async function main() {
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
+  console.log(`Audit issue fixture ${auditIssues.id}: ${auditIssues.count} issues; opened ${auditIssues.opened}; browse ${auditIssues.browse}.`);
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + browse typed slot matching + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

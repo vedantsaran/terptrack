@@ -925,6 +925,195 @@ h1.hero-title em {
   color: var(--slate);
   flex-shrink: 0;
 }
+.audit-issues-card {
+  grid-column: 1 / -1;
+}
+.audit-issue-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--cream);
+}
+.audit-issue-toolbar div {
+  display: grid;
+  gap: 1px;
+}
+.audit-issue-toolbar strong {
+  font-size: .9rem;
+  color: var(--ink);
+}
+.audit-issue-toolbar span {
+  font-size: .78rem;
+  color: var(--slate);
+}
+.audit-issue-list {
+  display: grid;
+  gap: 8px;
+}
+.audit-issue {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.audit-issue.open {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+.audit-issue-main {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  padding: 12px;
+  color: var(--ink);
+  text-align: left;
+}
+.audit-issue-main:hover {
+  background: var(--cream);
+}
+.audit-issue-severity {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+.audit-issue.warn .audit-issue-severity { background: var(--amber); }
+.audit-issue.danger .audit-issue-severity { background: var(--red); }
+.audit-issue.info .audit-issue-severity { background: var(--blue); }
+.audit-issue-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.audit-issue-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.audit-issue-copy strong {
+  font-size: .94rem;
+  line-height: 1.25;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.audit-issue-copy small {
+  font-size: .8rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+.audit-issue-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  color: var(--slate);
+  white-space: nowrap;
+}
+.audit-issue-drawer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 14px;
+  border-top: 1px solid var(--line);
+  padding: 12px;
+  background: var(--cream);
+}
+.audit-issue-drawer span {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 3px;
+}
+.audit-issue-drawer p {
+  margin: 0;
+  font-size: .82rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+.audit-issue-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+.audit-issue-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--paper);
+  color: var(--maroon);
+  font-size: .68rem;
+  margin: 0;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.audit-issue-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 210px;
+}
+.audit-issue-actions .btn {
+  white-space: nowrap;
+}
+.audit-issue-empty {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--green-soft);
+}
+.audit-issue-empty strong {
+  color: var(--green);
+  font-size: .9rem;
+}
+.audit-issue-empty span {
+  color: var(--ink-soft);
+  font-size: .82rem;
+}
+@media (max-width: 900px) {
+  .audit-issue-drawer {
+    grid-template-columns: 1fr;
+  }
+  .audit-issue-actions {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 640px) {
+  .audit-issue-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .audit-issue-toolbar .btn {
+    width: 100%;
+  }
+  .audit-issue-main {
+    grid-template-columns: 12px minmax(0, 1fr);
+  }
+  .audit-issue-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .audit-issue-actions .btn {
+    flex: 1 1 140px;
+  }
+}
 
 .audit-summary {
   background: linear-gradient(135deg, var(--maroon-deep) 0%, var(--maroon) 100%);

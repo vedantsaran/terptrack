@@ -2549,3 +2549,66 @@ Next pass candidates:
 - Add section-aware replacement flow that previews real meeting times before replacing a placeholder.
 - Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
 - Add undo for bulk prior-credit applications through recent changes.
+
+## 2026-06-30 Pass 54
+
+Focus: add a degree-rule issue drawer that explains unresolved placeholders and requirement gaps with direct replacement actions.
+
+Planned changes:
+- Add a full-width Degree Issues card inside Degree Audit.
+- Detect open GenEd gaps and planned placeholder families.
+- Explain why each issue remains and what course family can satisfy it.
+- Add direct actions to open placeholder replacement or saved Browse searches.
+- Add regression and Chrome coverage for the new audit workflow.
+
+Completed:
+- Added a `Degree Issues` audit card that spans the audit grid.
+- Added audit issue helpers that detect:
+  - missing GenEd requirements, including composite Diversity coverage.
+  - GenEd placeholders.
+  - free elective placeholders.
+  - typed major electives such as `GVPT 3xx`.
+  - technical, language, and support-course placeholders through the existing Browse slot classifier when available.
+- Added expandable issue drawers with:
+  - issue type, status, and short summary.
+  - `Why it remains` explanation.
+  - `What can satisfy it` explanation.
+  - tag chips for GenEd-driven slots.
+  - primary `Choose Replacement` / `Find Courses` action.
+  - secondary `Open Browse` action.
+- Reused existing replacement/search flows:
+  - placeholder issues call `openPlaceholderSearch(courseCode, semId)`.
+  - GenEd gaps and Browse actions call `browseOpenSearch(..., save: true)`.
+  - profile department filtering is used when student profile preferences are available.
+- Added responsive audit issue styling with stacked mobile drawers and fixed action sizing.
+- Versioned changed browser assets:
+  - `styles.css?v=51`
+  - `js/audit.js?v=1`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures plus the new `AUDIT-ISSUES` fixture.
+- The new regression fixture confirms:
+  - audit issues include GenEd gaps and placeholder rows.
+  - GenEd placeholders explain matching GenEd tags.
+  - typed major electives expose department and level requirements.
+  - free electives explain personalized elective handling.
+  - the expanded drawer renders explanatory copy and actions.
+  - the primary placeholder action opens the exact slot replacement flow.
+  - the Browse handoff switches to Browse, preserves the GenEd filter, uses profile departments, and saves an audit-labeled search.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=51` and `js/audit.js?v=1` loaded.
+  - seeded plan rendered `GenEd DSHU`, `GVPT 3xx Elective A`, and `Free Elective #1`.
+  - Degree Audit rendered a full-width `Degree Issues` card with `16 open items`, `3 placeholders`, and `13 GenEd gaps`.
+  - the `GenEd DSHU` drawer expanded with `Why it remains`, `What can satisfy it`, `Choose Replacement`, and `Open Browse`.
+  - `Choose Replacement` opened the placeholder modal for `Replace GenEd DSHU` with `DSHU` selected.
+  - `Open Browse` switched to Browse with department `__PROFILE_DEPTS__`, GenEd `DSHU`, and saved search `Audit: replace GenEd DSHU`.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add section-aware replacement flow that previews real meeting times before replacing a placeholder.
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
+- Add undo for bulk prior-credit applications through recent changes.
+- Add a compact advisor-export summary of open audit issues.

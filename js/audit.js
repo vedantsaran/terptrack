@@ -2,6 +2,8 @@
 /* ============================================================
    AUDIT VIEW
    ============================================================ */
+let auditIssueKey = '';
+
 function renderAudit() {
   const all = flatCourses();
   const totalRequired = Number(getSettings().totalCredits) || 125;
@@ -183,6 +185,9 @@ function renderAudit() {
   if (goalCodes.length === 0) {
     goalsEl.innerHTML = '<p style="color:var(--slate);font-size:.85rem;font-style:italic;margin:0">No goal courses configured.</p>';
   }
+
+  const issuesEl = document.getElementById('audit-issues');
+  if (issuesEl) issuesEl.innerHTML = auditIssuesHtml();
 }
 
 function auditLine(course) {
@@ -201,3 +206,425 @@ function auditLine(course) {
   return el;
 }
 
+function auditEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
+
+function auditCourseNorm(code) {
+  return typeof normalizeCode === 'function'
+    ? normalizeCode(code)
+    : String(code || '').toUpperCase().replace(/\s+/g, '');
+}
+
+function auditIsCatalogCourseCode(code) {
+  return /^[A-Z]{3,4}\s*\d{3}[A-Z]?$/i.test(String(code || '').trim());
+}
+
+function auditCourseGenEdTags(course) {
+  if (typeof courseGenEdTags === 'function') return courseGenEdTags(course);
+  const tags = new Set();
+  if (course?.category && String(course.category).startsWith('gened-')) {
+    tags.add(String(course.category).replace('gened-', '').toUpperCase());
+  }
+  (Array.isArray(course?.categories) ? course.categories : [])
+    .filter(cat => String(cat || '').startsWith('gened-'))
+    .forEach(cat => tags.add(String(cat).replace('gened-', '').toUpperCase()));
+  return Array.from(tags).filter(Boolean);
+}
+
+function auditInferPlaceholderTags(course) {
+  if (typeof inferPlaceholderTags === 'function') return inferPlaceholderTags(course);
+  const tags = new Set(auditCourseGenEdTags(course));
+  const hay = [course?.code, course?.title, course?.note, course?.category].join(' ').toUpperCase();
+  ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','DVUP','DVCC','SCIS']
+    .forEach(tag => { if (hay.includes(tag)) tags.add(tag); });
+  if (hay.includes('HUMANITIES')) tags.add('DSHU');
+  if (hay.includes('HISTORY') || hay.includes('SOCIAL')) tags.add('DSHS');
+  if (hay.includes('SCHOLARSHIP')) tags.add('DSSP');
+  return Array.from(tags).filter(Boolean);
+}
+
+function auditSlotText(course) {
+  return [
+    course?.code,
+    course?.title,
+    course?.note,
+    course?.category,
+    course?.kind,
+    ...(Array.isArray(course?.categories) ? course.categories : []),
+  ].join(' ').toUpperCase();
+}
+
+function auditIsSlotPlaceholder(course) {
+  if (!course || auditIsCatalogCourseCode(course.code)) return false;
+  if (typeof browseIsSlotPlaceholder === 'function') return browseIsSlotPlaceholder(course);
+  const hay = auditSlotText(course);
+  return /^GENED\s/i.test(course.code || '')
+    || /^FREE ELECTIVE/i.test(course.code || '')
+    || /\bELECTIVE\b/.test(hay)
+    || hay.includes('FOREIGN LANGUAGE')
+    || hay.includes('LANGUAGE SEQUENCE')
+    || hay.includes('SPECIALIZATION')
+    || hay.includes('SUPPORT')
+    || hay.includes('PLACEHOLDER')
+    || hay.includes('AUTO-GENERATED')
+    || hay.includes('3XX')
+    || hay.includes('4XX')
+    || String(course.category || '').startsWith('gened-')
+    || ['major-upper', 'major-support'].includes(String(course.category || ''));
+}
+
+function auditSlotRequiredDept(course) {
+  if (typeof browseSlotRequiredDept === 'function') return browseSlotRequiredDept(course);
+  const text = auditSlotText(course);
+  const codeMatch = String(course?.code || '').toUpperCase().match(/\b([A-Z]{3,4})\s*(?:[1-4]XX|ELECTIVE|SPECIALIZATION|SUPPORT|TECH)/);
+  if (codeMatch) return codeMatch[1];
+  const titleMatch = String(course?.title || '').toUpperCase().match(/\b([A-Z]{3,4})\s+(?:UPPER|SPECIALIZATION|ELECTIVE|SUPPORTING|SUPPORT|TECH)/);
+  if (titleMatch) return titleMatch[1];
+  return '';
+}
+
+function auditSlotRequiredLevel(course) {
+  if (typeof browseSlotRequiredLevel === 'function') return browseSlotRequiredLevel(course);
+  const text = auditSlotText(course);
+  if (/\b4XX\b|400-LEVEL|400 LEVEL/.test(text)) return 400;
+  if (/\b3XX\b|300-LEVEL|300 LEVEL|UPPER-DIVISION|UPPER DIVISION|ADVANCED/.test(text)) return 300;
+  if (/\b2XX\b|200-LEVEL|200 LEVEL/.test(text)) return 200;
+  if (/\b1XX\b|100-LEVEL|100 LEVEL/.test(text)) return 100;
+  return 0;
+}
+
+function auditSlotKind(course) {
+  if (typeof browseSlotKind === 'function') return browseSlotKind(course);
+  const text = auditSlotText(course);
+  const tags = auditInferPlaceholderTags(course);
+  if (tags.length) return 'gened';
+  if (/^FREE ELECTIVE/i.test(course?.code || '') || String(course?.category || '') === 'elective') return 'free-elective';
+  if (text.includes('FOREIGN LANGUAGE') || text.includes('LANGUAGE SEQUENCE')) return 'language';
+  if (text.includes('TECH ELECTIVE') || text.includes('TECHNICAL ELECTIVE') || String(course?.category || '').startsWith('tech-')) return 'technical-elective';
+  if (String(course?.category || '') === 'major-support' || text.includes('SUPPORT')) return 'major-support';
+  if (String(course?.category || '') === 'major-upper' || text.includes('UPPER-DIVISION') || text.includes('UPPER DIVISION') || text.includes('SPECIALIZATION') || text.includes('4XX') || text.includes('3XX')) return 'major-elective';
+  return 'placeholder';
+}
+
+function auditSlotKindLabel(kind) {
+  if (typeof browseSlotKindLabel === 'function') return browseSlotKindLabel(kind);
+  return {
+    gened: 'GenEd slot',
+    'free-elective': 'Free elective',
+    language: 'Language sequence',
+    'technical-elective': 'Technical elective',
+    'major-elective': 'Major elective',
+    'major-support': 'Supporting course',
+    placeholder: 'Placeholder',
+  }[kind] || 'Placeholder';
+}
+
+function auditRequirementDefs() {
+  const defs = (typeof GENED_DEFS !== 'undefined' ? GENED_DEFS : [
+    { id: 'FSAW', name: 'Academic Writing', need: 1 },
+    { id: 'FSPW', name: 'Professional Writing', need: 1 },
+    { id: 'FSOC', name: 'Oral Communication', need: 1 },
+    { id: 'FSMA', name: 'Math Foundation', need: 1 },
+    { id: 'FSAR', name: 'Analytic Reasoning', need: 1 },
+    { id: 'DSHS', name: 'History/Social Sciences', need: 2 },
+    { id: 'DSHU', name: 'Humanities', need: 2 },
+    { id: 'DSNS', name: 'Natural Sciences', need: 1 },
+    { id: 'DSNL', name: 'Natural Sciences w/ Lab', need: 1 },
+    { id: 'DSSP', name: 'Scholarship in Practice', need: 2 },
+    { id: 'SCIS', name: 'I-Series', need: 1 },
+    { id: 'DVUP', name: 'Understanding Plural Societies', need: 1 },
+  ]).filter(def => def.id !== 'DVCC');
+  return [
+    ...defs.map(def => ({ ...def, composite: false })),
+    { id: 'DIVERSITY-2', name: 'Second Diversity (DVUP or DVCC)', need: 2, composite: true, tags: ['DVUP', 'DVCC'] },
+  ];
+}
+
+function auditGenEdLabel(id) {
+  if (id === 'DIVERSITY-2') return 'Second Diversity (DVUP or DVCC)';
+  if (typeof genEdLabel === 'function') return genEdLabel(id);
+  const def = auditRequirementDefs().find(item => item.id === id);
+  return def ? `${def.id} · ${def.name}` : id;
+}
+
+function auditGenEdCounts(all = flatCourses()) {
+  const counts = {};
+  all.forEach(course => {
+    auditCourseGenEdTags(course).forEach(tag => {
+      counts[tag] = counts[tag] || [];
+      counts[tag].push(course);
+    });
+  });
+  return counts;
+}
+
+function auditGenEdGapIssues(all = flatCourses()) {
+  const counts = auditGenEdCounts(all);
+  return auditRequirementDefs()
+    .map(def => {
+      const matched = def.composite
+        ? [
+            ...(counts.DVUP || []),
+            ...(counts.DVCC || []).filter(course => !(counts.DVUP || []).some(item => auditCourseNorm(item.code) === auditCourseNorm(course.code))),
+          ]
+        : (counts[def.id] || []);
+      const have = matched.length;
+      if (have >= def.need) return null;
+      const tags = def.tags || [def.id];
+      const label = auditGenEdLabel(def.id);
+      return {
+        key: `gened-${def.id}`,
+        type: 'gened',
+        level: 'warn',
+        title: `${label} gap`,
+        eyebrow: 'GenEd requirement',
+        status: `${have}/${def.need} planned`,
+        summary: `This requirement still needs ${def.need - have} course${def.need - have === 1 ? '' : 's'} in the plan.`,
+        detail: def.composite
+          ? 'UMD diversity coverage needs two diversity-tagged courses, with at least one DVUP course. A second DVUP or a DVCC course can satisfy this slot.'
+          : `Add or replace a planned course with a real UMD course carrying the ${def.id} GenEd tag.`,
+        satisfies: tags.map(tag => auditGenEdLabel(tag)).join(' or '),
+        actionLabel: 'Find Courses',
+        actionType: 'browse',
+        browse: {
+          dept: auditPreferredBrowseDept(),
+          genEd: tags.length === 1 ? tags[0] : (typeof BROWSE_ALL_GENEDS_VALUE !== 'undefined' ? BROWSE_ALL_GENEDS_VALUE : ''),
+          search: '',
+          label: `Audit: ${label}`,
+        },
+        tags,
+      };
+    })
+    .filter(Boolean);
+}
+
+function auditSemesterName(semId) {
+  const sem = (typeof getAllSemesters === 'function' ? getAllSemesters() : []).find(item => item.id === semId);
+  return sem?.name || semId || 'Unassigned';
+}
+
+function auditPlaceholderIssues(all = flatCourses()) {
+  return all
+    .filter(course => auditIsSlotPlaceholder(course))
+    .map((course, index) => {
+      const tags = auditInferPlaceholderTags(course);
+      const kind = auditSlotKind(course);
+      const dept = auditSlotRequiredDept(course);
+      const level = auditSlotRequiredLevel(course);
+      const semName = auditSemesterName(course.semId);
+      const key = `slot-${course.semId || 'none'}-${index}-${auditCourseNorm(course.code)}`.replace(/[^A-Za-z0-9_-]/g, '-');
+      const browse = auditPlaceholderBrowseConfig(course, { tags, kind, dept, level });
+      return {
+        key,
+        type: 'placeholder',
+        level: kind === 'free-elective' ? 'info' : 'warn',
+        title: course.code || auditSlotKindLabel(kind),
+        eyebrow: auditSlotKindLabel(kind),
+        status: semName,
+        summary: auditPlaceholderSummary(course, { tags, kind, dept, level }),
+        detail: auditPlaceholderDetail(course, { tags, kind, dept, level }),
+        satisfies: auditPlaceholderSatisfies(course, { tags, kind, dept, level }),
+        actionLabel: tags.length || kind !== 'free-elective' ? 'Choose Replacement' : 'Find Courses',
+        actionType: 'placeholder',
+        browse,
+        tags,
+        courseCode: course.code,
+        semId: course.semId || '',
+      };
+    });
+}
+
+function auditPlaceholderSummary(course, info) {
+  if (info.tags.length) return `This ${course.cr || 3}-credit slot is still a category placeholder, not a real registered course.`;
+  if (info.kind === 'free-elective') return 'This open elective is still unassigned and can be personalized around a minor, certificate, career interest, or credit balance.';
+  if (info.kind === 'major-elective') return 'This major elective slot needs a real upper-level course that your department accepts.';
+  if (info.kind === 'technical-elective') return 'This technical elective slot needs a real approved technical course.';
+  if (info.kind === 'language') return 'This language sequence slot needs a real language course at the right level.';
+  if (info.kind === 'major-support') return 'This supporting-course slot needs a concrete department-approved course.';
+  return 'This generated slot still needs a real UMD course before registration planning is complete.';
+}
+
+function auditPlaceholderDetail(course, info) {
+  if (info.tags.length) {
+    return `Search for real courses tagged ${info.tags.join(' or ')} and replace this placeholder before building a final schedule.`;
+  }
+  if (info.kind === 'free-elective') {
+    const depts = typeof profilePreferredDepartments === 'function' ? profilePreferredDepartments().slice(0, 5) : [];
+    return depts.length
+      ? `Your profile points to ${depts.join(', ')} first. Browse those departments, then use the slot picker to place the course into this elective.`
+      : 'Browse any department, minor, certificate, or interest area, then use the slot picker to place the course into this elective.';
+  }
+  if (info.kind === 'major-elective') return 'Confirm the course family with your department rules, then replace the placeholder with a real catalog course.';
+  if (info.kind === 'technical-elective') return 'Use the course family and level shown here to narrow Browse before confirming the course counts toward your program.';
+  if (info.kind === 'language') return 'Pick the next course in the intended language sequence and verify placement rules.';
+  if (info.kind === 'major-support') return 'Use the required department or support-course family as the starting filter.';
+  return 'Use Browse to find a real course that matches the slot, then replace it from the placeholder search or Browse slot picker.';
+}
+
+function auditPlaceholderSatisfies(course, info) {
+  if (info.tags.length) return info.tags.map(tag => auditGenEdLabel(tag)).join(' or ');
+  const parts = [];
+  if (info.dept) parts.push(`${info.dept} course`);
+  if (info.level) parts.push(`${info.level}-level or higher`);
+  if (info.kind === 'free-elective') parts.push('any degree-applicable elective');
+  if (info.kind === 'language') parts.push('approved language sequence course');
+  if (!parts.length) parts.push(course.title || auditSlotKindLabel(info.kind));
+  return parts.join(' · ');
+}
+
+function auditPreferredBrowseDept() {
+  if (typeof browseProfileDepartments === 'function' && browseProfileDepartments().length && typeof BROWSE_PROFILE_DEPTS_VALUE !== 'undefined') {
+    return BROWSE_PROFILE_DEPTS_VALUE;
+  }
+  if (typeof profilePreferredDepartments === 'function') {
+    const first = profilePreferredDepartments()[0];
+    if (first) return first;
+  }
+  return '';
+}
+
+function auditPlaceholderBrowseConfig(course, info) {
+  if (typeof placeholderBrowseConfig === 'function') {
+    const previousTarget = typeof placeholderSearchTarget !== 'undefined' ? placeholderSearchTarget : null;
+    const previousTags = typeof placeholderSearchSelectedTags !== 'undefined' ? placeholderSearchSelectedTags.slice() : [];
+    try {
+      if (typeof placeholderSearchTarget !== 'undefined') placeholderSearchTarget = { ...course, semId: course.semId || '' };
+      if (typeof placeholderSearchSelectedTags !== 'undefined') placeholderSearchSelectedTags = info.tags.slice();
+      const config = placeholderBrowseConfig({ ...course, semId: course.semId || '' });
+      if (config) return { ...config, label: `Audit: replace ${course.code || 'placeholder'}` };
+    } finally {
+      if (typeof placeholderSearchTarget !== 'undefined') placeholderSearchTarget = previousTarget;
+      if (typeof placeholderSearchSelectedTags !== 'undefined') placeholderSearchSelectedTags = previousTags;
+    }
+  }
+  return {
+    dept: info.dept || auditPreferredBrowseDept(),
+    genEd: info.tags.length === 1 ? info.tags[0] : '',
+    search: '',
+    label: `Audit: replace ${course.code || 'placeholder'}`,
+  };
+}
+
+function auditDegreeIssues() {
+  const all = flatCourses();
+  const issues = [
+    ...auditGenEdGapIssues(all),
+    ...auditPlaceholderIssues(all),
+  ];
+  return issues.sort((a, b) => {
+    const order = { danger: 0, warn: 1, info: 2 };
+    return (order[a.level] ?? 9) - (order[b.level] ?? 9)
+      || String(a.type).localeCompare(String(b.type))
+      || String(a.title).localeCompare(String(b.title));
+  });
+}
+
+function auditIssuesHtml() {
+  const issues = auditDegreeIssues();
+  if (!issues.some(issue => issue.key === auditIssueKey)) auditIssueKey = '';
+  if (!issues.length) {
+    return `
+      <div class="audit-issue-empty">
+        <strong>No open degree issues.</strong>
+        <span>All planned requirements are represented by real courses or completed requirement rows.</span>
+      </div>
+    `;
+  }
+  const counts = issues.reduce((acc, issue) => {
+    acc[issue.type] = (acc[issue.type] || 0) + 1;
+    return acc;
+  }, {});
+  return `
+    <div class="audit-issue-toolbar">
+      <div>
+        <strong>${issues.length} open item${issues.length === 1 ? '' : 's'}</strong>
+        <span>${counts.placeholder || 0} placeholders · ${counts.gened || 0} GenEd gaps</span>
+      </div>
+      <button type="button" class="btn small" onclick="auditOpenNextIssueBrowse()">Start With Top Item</button>
+    </div>
+    <div class="audit-issue-list">
+      ${issues.map(issue => auditIssueCardHtml(issue)).join('')}
+    </div>
+  `;
+}
+
+function auditIssueCardHtml(issue) {
+  const open = auditIssueKey === issue.key;
+  const tags = (issue.tags || []).map(tag => `<span>${auditEscape(tag)}</span>`).join('');
+  return `
+    <div class="audit-issue ${auditEscape(issue.level)} ${open ? 'open' : ''}">
+      <button type="button" class="audit-issue-main" onclick="auditToggleIssue('${auditEscape(issue.key)}')" aria-expanded="${open ? 'true' : 'false'}">
+        <span class="audit-issue-severity" aria-hidden="true"></span>
+        <span class="audit-issue-copy">
+          <span class="audit-issue-eyebrow">${auditEscape(issue.eyebrow || issue.type)}</span>
+          <strong>${auditEscape(issue.title)}</strong>
+          <small>${auditEscape(issue.summary)}</small>
+        </span>
+        <span class="audit-issue-status">${auditEscape(issue.status || '')}</span>
+      </button>
+      ${open ? `
+        <div class="audit-issue-drawer">
+          <div>
+            <span>Why it remains</span>
+            <p>${auditEscape(issue.detail)}</p>
+          </div>
+          <div>
+            <span>What can satisfy it</span>
+            <p>${auditEscape(issue.satisfies || 'A real approved UMD course for this slot.')}</p>
+            ${tags ? `<div class="audit-issue-tags">${tags}</div>` : ''}
+          </div>
+          <div class="audit-issue-actions">
+            <button type="button" class="btn small primary" onclick="auditOpenIssuePrimary('${auditEscape(issue.key)}')">${auditEscape(issue.actionLabel || 'Open')}</button>
+            <button type="button" class="btn small" onclick="auditOpenIssueBrowse('${auditEscape(issue.key)}')">Open Browse</button>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function auditFindIssue(key) {
+  return auditDegreeIssues().find(issue => issue.key === key) || null;
+}
+
+function auditToggleIssue(key) {
+  auditIssueKey = auditIssueKey === key ? '' : key;
+  renderAudit();
+}
+
+function auditOpenIssuePrimary(key) {
+  const issue = auditFindIssue(key);
+  if (!issue) return;
+  if (issue.actionType === 'placeholder' && typeof openPlaceholderSearch === 'function') {
+    openPlaceholderSearch(issue.courseCode, issue.semId || '');
+    return;
+  }
+  auditOpenIssueBrowse(key);
+}
+
+function auditOpenNextIssueBrowse() {
+  const issues = auditDegreeIssues();
+  if (!issues.length) return;
+  auditIssueKey = issues[0].key;
+  auditOpenIssuePrimary(issues[0].key);
+  renderAudit();
+}
+
+function auditOpenIssueBrowse(key) {
+  const issue = auditFindIssue(key);
+  if (!issue) return;
+  if (typeof browseOpenSearch !== 'function') {
+    toastError('Browse is still loading. Try again in a moment.');
+    return;
+  }
+  const config = issue.browse || { dept: '', genEd: '', search: '', label: `Audit: ${issue.title}` };
+  browseOpenSearch({ ...config, save: true });
+  if (typeof toastSuccess === 'function') toastSuccess(`Opened Browse for ${issue.title}.`);
+}
