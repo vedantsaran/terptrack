@@ -33,6 +33,7 @@ document.getElementById('import-file').addEventListener('change', (e) => {
           selectedSections: data.selectedSections || {},
           schedulePrefs: data.schedulePrefs || {},
           scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(data.scheduleAdvisorFilter) ? data.scheduleAdvisorFilter : 'all',
+          scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(data.scheduleOutputOptions || {}) },
           roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(data.roadmapPrefs || {}) },
           recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],
         };

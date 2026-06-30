@@ -73,6 +73,18 @@ const SCHEDULE_ADVISOR_FILTERS = [
   { id: 'gened', label: 'Gen-Eds', heading: 'GenEd Plan', description: 'Only courses counting toward General Education coverage.' },
   { id: 'blockers', label: 'Blockers', heading: 'Registration Blockers', description: 'Locked courses, unscheduled current-term courses, conflicts, warnings, and repeats.' },
 ];
+const DEFAULT_SCHEDULE_OUTPUT_OPTIONS = {
+  preferences: true,
+  warnings: true,
+  unscheduled: true,
+  recentChanges: true,
+};
+const SCHEDULE_OUTPUT_OPTION_DEFS = [
+  { id: 'preferences', label: 'Preferences' },
+  { id: 'warnings', label: 'Warnings' },
+  { id: 'unscheduled', label: 'Unscheduled' },
+  { id: 'recentChanges', label: 'Recent changes' },
+];
 
 let scheduleCurrentSemId = '';
 let schedulePostedTerms = null;
@@ -134,6 +146,29 @@ function setScheduleAdvisorFilter(value) {
   const next = normalizeScheduleAdvisorFilter(value);
   if (getScheduleAdvisorFilter() === next) return;
   state.scheduleAdvisorFilter = next;
+  saveState();
+  renderSchedule();
+}
+
+function normalizeScheduleOutputOptions(value) {
+  const saved = value && typeof value === 'object' ? value : {};
+  return Object.fromEntries(SCHEDULE_OUTPUT_OPTION_DEFS.map(def => [
+    def.id,
+    saved[def.id] === undefined ? DEFAULT_SCHEDULE_OUTPUT_OPTIONS[def.id] : saved[def.id] !== false,
+  ]));
+}
+
+function getScheduleOutputOptions() {
+  const next = normalizeScheduleOutputOptions(state.scheduleOutputOptions);
+  const changed = !state.scheduleOutputOptions
+    || SCHEDULE_OUTPUT_OPTION_DEFS.some(def => state.scheduleOutputOptions[def.id] !== next[def.id]);
+  if (changed) state.scheduleOutputOptions = next;
+  return next;
+}
+
+function setScheduleOutputOption(id, checked) {
+  if (!SCHEDULE_OUTPUT_OPTION_DEFS.some(def => def.id === id)) return;
+  state.scheduleOutputOptions = { ...getScheduleOutputOptions(), [id]: Boolean(checked) };
   saveState();
   renderSchedule();
 }
@@ -1457,11 +1492,19 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
   return { html, totalCourses, shownCourses, totalCredits, shownCredits };
 }
 
-function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = []) {
+function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions()) {
   const stats = scheduleAdvisorStats();
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
-  const context = scheduleAdvisorFilterContext(sem?.id || '', selectedItems, conflicts, warnings, unscheduled, filter);
+  const outputOptions = normalizeScheduleOutputOptions(options);
+  const context = scheduleAdvisorFilterContext(
+    sem?.id || '',
+    selectedItems,
+    conflicts,
+    outputOptions.warnings ? warnings : [],
+    outputOptions.unscheduled ? unscheduled : [],
+    filter
+  );
   const lines = [
     scheduleText,
     '',
@@ -1473,10 +1516,9 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
     `Credits: ${stats.earnedCredits} earned / ${stats.plannedCredits} planned / ${stats.totalRequired} required`,
     `GPA: ${stats.gpa}`,
     `Goal courses: ${stats.goalDone}/${stats.goalTotal}`,
-    `Preferences: ${schedulePreferenceSummary(prefs)}`,
-    '',
-    `${filterDef.heading}:`,
   ];
+  if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
+  lines.push('', `${filterDef.heading}:`);
 
   getAllSemesters().forEach(planSem => {
     const semCourses = [
@@ -1551,12 +1593,16 @@ function scheduleStandaloneAdvisorCss() {
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges()) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions()) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
-  const filterContext = scheduleAdvisorFilterContext(sem?.id || '', selectedItems, conflicts, warnings, unscheduled, filter);
+  const outputOptions = normalizeScheduleOutputOptions(options);
+  const visibleWarnings = outputOptions.warnings ? warnings : [];
+  const visibleUnscheduled = outputOptions.unscheduled ? unscheduled : [];
+  const visibleChanges = outputOptions.recentChanges ? changes : [];
+  const filterContext = scheduleAdvisorFilterContext(sem?.id || '', selectedItems, conflicts, visibleWarnings, visibleUnscheduled, filter);
   const plan = scheduleAdvisorPlanHtml(sem?.id || '', selectedItems, filterContext);
   const generated = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   return `
@@ -1579,7 +1625,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         <div class="schedule-advisor-stat"><span>Conflicts</span><strong>${conflicts.length}</strong><em>${warnings.length} warning${warnings.length === 1 ? '' : 's'}</em></div>
         <div class="schedule-advisor-stat"><span>Goal courses</span><strong>${stats.goalDone}/${stats.goalTotal}</strong><em>GPA ${scheduleEscape(stats.gpa)}</em></div>
       </div>
-      <p class="schedule-advisor-note">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>
+      ${outputOptions.preferences ? `<p class="schedule-advisor-note">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       <div class="schedule-advisor-metrics">
         <span>${stats.inProgressCredits} in-progress credits</span>
         <span>${stats.remainingCredits} remaining planned credits</span>
@@ -1587,11 +1633,11 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         <span>${totalOpenSeats} open seats in picked sections</span>
         <span>${plan.shownCourses}/${plan.totalCourses} courses shown</span>
         <span>${plan.shownCredits}/${plan.totalCredits} credits shown</span>
-        ${unscheduled.length ? `<span>${unscheduled.length} unscheduled course${unscheduled.length === 1 ? '' : 's'}</span>` : '<span>All current-term courses scheduled</span>'}
+        ${outputOptions.unscheduled ? (unscheduled.length ? `<span>${unscheduled.length} unscheduled course${unscheduled.length === 1 ? '' : 's'}</span>` : '<span>All current-term courses scheduled</span>') : ''}
       </div>
-      ${unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
-      ${warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
-      ${scheduleChangeDigestHtml(changes, 'Advisor context')}
+      ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
+      ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
+      ${scheduleChangeDigestHtml(visibleChanges, 'Advisor context')}
       <p class="schedule-advisor-view-note"><strong>${scheduleEscape(filterDef.label)} view:</strong> ${scheduleEscape(filterDef.description)}</p>
       <div class="schedule-advisor-section-title">
         <h4>${scheduleEscape(filterDef.heading)}</h4>
@@ -1622,7 +1668,8 @@ ${advisorHtml}
 </html>`;
 }
 
-function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges()) {
+function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions()) {
+  const outputOptions = normalizeScheduleOutputOptions(options);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const lines = [
@@ -1632,10 +1679,9 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
     `Sections picked: ${selectedItems.length}/${courses.length}`,
     `Conflicts: ${conflicts.length}`,
     `Warnings: ${warnings.length}`,
-    `Preferences: ${schedulePreferenceSummary(prefs)}`,
-    '',
-    'Picked sections:',
   ];
+  if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
+  lines.push('', 'Picked sections:');
 
   if (!selectedItems.length) lines.push('- No picked sections yet.');
   selectedItems
@@ -1650,18 +1696,18 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
       lines.push(`  Seats: ${risk.detail}`);
     });
 
-  if (unscheduled.length) {
+  if (outputOptions.unscheduled && unscheduled.length) {
     lines.push('', 'Unscheduled courses:');
     unscheduled.forEach(course => lines.push(`- ${course.code} ${course.title || ''}`));
   }
 
-  if (warnings.length) {
+  if (outputOptions.warnings && warnings.length) {
     lines.push('', 'Schedule warnings:');
     warnings.slice(0, 12).forEach(warning => lines.push(`- ${warning}`));
     if (warnings.length > 12) lines.push(`- ${warnings.length - 12} more warning(s) in Terp Track.`);
   }
 
-  lines.push(...scheduleRecentChangesText(changes));
+  if (outputOptions.recentChanges) lines.push(...scheduleRecentChangesText(changes));
 
   return lines.join('\n');
 }
@@ -1709,6 +1755,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const advisorFilter = getScheduleAdvisorFilter();
+  const outputOptions = getScheduleOutputOptions();
   const totalOpenSeats = selectedItems.reduce((sum, item) => {
     const open = parseInt(item.section.open_seats, 10);
     return sum + (Number.isFinite(open) ? open : 0);
@@ -1717,8 +1764,8 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     ...scheduleBlockedBlocks(prefs),
     ...selectedItems.flatMap(item => sectionBlocks(item.section, item.course)),
   ];
-  const changes = scheduleRecentChanges();
-  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes);
+  const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
+  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions);
   const courseRows = selectedItems
     .slice()
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
@@ -1748,20 +1795,20 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
           <span>${totalOpenSeats} open seats</span>
         </div>
       </div>
-      <p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>
+      ${outputOptions.preferences ? `<p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       ${renderScheduleOutputWeek(blocks)}
       <table class="schedule-output-table">
         <thead><tr><th>Course</th><th>Section</th><th>Meetings</th><th>Instructor</th><th>Seats</th></tr></thead>
         <tbody>${courseRows || '<tr><td colspan="5">No picked sections yet.</td></tr>'}</tbody>
       </table>
-      ${unscheduled.length ? `<div class="schedule-output-list"><strong>Unscheduled</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} ${scheduleEscape(course.title || '')}</span>`).join('')}</div>` : ''}
-      ${warnings.length ? `<div class="schedule-output-list warn"><strong>Warnings</strong>${warnings.slice(0, 8).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
+      ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list"><strong>Unscheduled</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} ${scheduleEscape(course.title || '')}</span>`).join('')}</div>` : ''}
+      ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Warnings</strong>${warnings.slice(0, 8).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
       ${scheduleChangeDigestHtml(changes, 'Schedule summary')}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
-  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled);
+  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions);
 
   return {
     text,
@@ -1770,6 +1817,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     advisorHtml,
     advisorText,
     advisorFilter,
+    outputOptions,
     advisorFilename: scheduleAdvisorFilename(term),
     advisorDocument: buildScheduleAdvisorDocument(advisorTitle, scheduleHtml, advisorHtml),
   };
@@ -1783,6 +1831,23 @@ function renderScheduleAdvisorFilterControls(activeFilter) {
       <div class="schedule-advisor-filter-group" role="group" aria-label="Filter advisor packet">
         ${SCHEDULE_ADVISOR_FILTERS.map(filter => `
           <button class="schedule-advisor-filter ${filter.id === active ? 'active' : ''}" type="button" data-advisor-filter="${scheduleEscape(filter.id)}" aria-pressed="${filter.id === active ? 'true' : 'false'}" title="${scheduleEscape(filter.description)}">${scheduleEscape(filter.label)}</button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderScheduleOutputOptions(options = getScheduleOutputOptions()) {
+  const normalized = normalizeScheduleOutputOptions(options);
+  return `
+    <div class="schedule-output-options" aria-label="Schedule output included sections">
+      <span>Include</span>
+      <div class="schedule-output-option-group">
+        ${SCHEDULE_OUTPUT_OPTION_DEFS.map(def => `
+          <label class="schedule-output-option">
+            <input type="checkbox" data-schedule-output-option="${scheduleEscape(def.id)}"${normalized[def.id] ? ' checked' : ''}>
+            <span>${scheduleEscape(def.label)}</span>
+          </label>
         `).join('')}
       </div>
     </div>
@@ -1808,6 +1873,7 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
           <button class="btn small primary" type="button" data-schedule-output="advisor-print">Print advisor PDF</button>
         </div>
       </div>
+      ${renderScheduleOutputOptions(scheduleOutputCache.outputOptions)}
       ${scheduleOutputCache.html}
       ${renderScheduleAdvisorFilterControls(scheduleOutputCache.advisorFilter)}
       ${scheduleOutputCache.advisorHtml}
@@ -1824,6 +1890,11 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       if (action === 'print') printScheduleOutputSummary();
       if (action === 'advisor-download') downloadScheduleAdvisorPacket();
       if (action === 'advisor-print') printScheduleAdvisorPacket();
+    });
+  });
+  root.querySelectorAll('[data-schedule-output-option]').forEach(input => {
+    input.addEventListener('change', () => {
+      setScheduleOutputOption(input.dataset.scheduleOutputOption, input.checked);
     });
   });
   root.querySelectorAll('[data-advisor-filter]').forEach(btn => {

@@ -13,6 +13,7 @@ function loadState() {
     selectedSections: {},
     schedulePrefs: {},
     scheduleAdvisorFilter: 'all',
+    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true },
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '' },
     recentChanges: [],
     majorId: null,
@@ -33,6 +34,7 @@ function loadState() {
         selectedSections: parsed.selectedSections || {},
         schedulePrefs: parsed.schedulePrefs || {},
         scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(parsed.scheduleAdvisorFilter) ? parsed.scheduleAdvisorFilter : 'all',
+        scheduleOutputOptions: { ...fallback.scheduleOutputOptions, ...(parsed.scheduleOutputOptions || {}) },
         roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(parsed.roadmapPrefs || {}) },
         recentChanges: Array.isArray(parsed.recentChanges) ? parsed.recentChanges.slice(0, 12) : [],
       };

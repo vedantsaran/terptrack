@@ -2154,6 +2154,50 @@ h1.hero-title em {
   justify-content: flex-end;
   gap: 7px;
 }
+.schedule-output-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 76%, var(--cream));
+  padding: 8px;
+}
+.schedule-output-options > span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-output-option-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.schedule-output-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--slate);
+  cursor: pointer;
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 5px 8px;
+}
+.schedule-output-option input {
+  accent-color: var(--maroon);
+  margin: 0;
+}
 .schedule-print-sheet {
   margin-top: 12px;
   border: 1px solid var(--line);
@@ -3188,7 +3232,8 @@ h1.hero-title em {
     padding: 0;
   }
   body.print-schedule .schedule-output-head,
-  body.print-schedule .schedule-output-actions {
+  body.print-schedule .schedule-output-actions,
+  body.print-schedule .schedule-output-options {
     display: none !important;
   }
   body.print-schedule .schedule-print-sheet {
@@ -3225,7 +3270,8 @@ h1.hero-title em {
     padding: 0;
   }
   body.print-advisor-packet .schedule-output-head,
-  body.print-advisor-packet .schedule-output-actions {
+  body.print-advisor-packet .schedule-output-actions,
+  body.print-advisor-packet .schedule-output-options {
     display: none !important;
   }
   body.print-advisor-packet .schedule-print-sheet,
@@ -3877,8 +3923,21 @@ h1.hero-title em {
     flex-direction: column;
   }
   .schedule-output-actions,
-  .schedule-print-meta {
+  .schedule-print-meta,
+  .schedule-output-option-group {
     justify-content: flex-start;
+  }
+  .schedule-output-options {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .schedule-output-options > span {
+    white-space: normal;
+  }
+  .schedule-output-option {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
   }
   .schedule-advisor-head,
   .schedule-advisor-semester-head {

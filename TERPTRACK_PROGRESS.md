@@ -901,3 +901,43 @@ Next pass candidates:
 - Add advisor-packet print presets for registrar/advisor vs student personal review.
 - Add Roadmap term-jump controls for plans with many more than eight semesters.
 - Add schedule output include/exclude toggles for warnings, recent changes, unscheduled courses, and preference notes.
+
+## 2026-06-30 Pass 24
+
+Focus: let students tailor Schedule Output and Advisor Packet handoffs by choosing which detail sections to include.
+
+Planned changes:
+- Persist schedule output content choices.
+- Add compact Include checkboxes for Preferences, Warnings, Unscheduled, and Recent changes.
+- Apply those choices to the rendered schedule sheet, advisor packet, `.txt` summary, and downloaded advisor HTML source.
+- Carry the choices through JSON import/export, share links, and snapshots.
+- Verify default output, all-options-off output, reload persistence, mobile layout, and cleanup.
+
+Completed:
+- Added `scheduleOutputOptions` to saved state defaults and migration.
+- Included `scheduleOutputOptions` in import, share payload/load, snapshot save, and snapshot restore.
+- Added schedule option normalization, getters, setters, and a reusable Include control.
+- Updated Schedule Output text generation so Preferences, Schedule warnings, Unscheduled courses, and Recent plan changes are omitted when unchecked.
+- Updated schedule print-sheet HTML to hide preference notes, warning lists, unscheduled lists, and recent-change digest based on the same options.
+- Updated Advisor Packet HTML and advisor text so preference notes, warning/follow-up detail sections, warning-based blocker rows, unscheduled blocker rows, and recent-change digest follow the selected options.
+- Styled the Include control for desktop, mobile wrapping, and print hiding.
+- Versioned `styles.css` to `v=25`, `js/state.js` to `v=6`, `js/schedule.js` to `v=20`, `js/io.js` to `v=6`, `js/share.js` to `v=6`, and `js/snapshots.js` to `v=6`.
+
+Verification:
+- Ran `node --check` on `js/schedule.js`, `js/state.js`, `js/io.js`, `js/share.js`, and `js/snapshots.js`.
+- Ran `git diff --check`.
+- Reloaded `http://localhost:5173/?pass24=...` in the in-app browser and confirmed all Pass 24 asset versions loaded.
+- Opened Schedule and confirmed Include controls rendered with all four defaults checked and the schedule summary still included Preferences, Schedule warnings, and Unscheduled courses.
+- Created a reversible CMSC 131 section change (`CMSC131-0202` to `CMSC131-0204` back to `CMSC131-0202`) and confirmed Recent changes appeared before testing that toggle.
+- Unchecked all four Include options and confirmed schedule/advisor detail sections disappeared: no preference note, warning list, unscheduled/follow-up list, recent digest, or corresponding `.txt` summary sections.
+- Reloaded the app and confirmed the unchecked options persisted and the output remained stripped.
+- Rechecked all four options and confirmed preference, warning, unscheduled, and recent-change content returned.
+- Checked a 390px-wide viewport: Include panel stacked, checkboxes wrapped two per row, and document-wide horizontal overflow stayed at 0.
+- Cleared the temporary Recent Changes history from Action Timeline and confirmed Schedule Output no longer showed the recent digest while all Include defaults remained checked.
+- Reset the browser viewport to desktop, confirmed CMSC 131 ended on `CMSC131-0202`, and confirmed current-page browser console errors were 0.
+
+Next pass candidates:
+- Add a term-availability simulator/test fixture inside the app's dev diagnostics so move suggestions can be regression-tested without waiting for live UMD data to line up.
+- Add advisor-packet print presets for registrar/advisor vs student personal review.
+- Add Roadmap term-jump controls for plans with many more than eight semesters.
+- Add schedule output saved presets for advisor, registrar, and personal review exports.
