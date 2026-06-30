@@ -30,7 +30,17 @@ function buildContext() {
       setItem: (key, value) => storage.set(key, String(value)),
       removeItem: key => storage.delete(key),
     },
-    document: { getElementById: () => null },
+    document: {
+      getElementById: id => (id === 'save-indicator' ? {
+        classList: { add() {}, remove() {} },
+      } : null),
+    },
+    confirm: () => true,
+    applyTheme() {},
+    applySettings() {},
+    render() {},
+    toastError(message) { throw new Error(message); },
+    toastSuccess() {},
     window: {},
   };
   vm.createContext(context);
@@ -41,6 +51,7 @@ function buildContext() {
     'js/state.js',
     'js/api.js',
     'js/import.js',
+    'js/share.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
   vm.runInContext(`
     state = loadState();
@@ -168,6 +179,84 @@ function testSyntheticPrerequisites(context) {
   };
 }
 
+function testAccountAndShareState(context) {
+  const result = clone(vm.runInContext(`
+    const prefs = normalizeAccountPrefs({
+      planName: '  Friends plan  ',
+      displayName: ' Test Student ',
+      friendInviteEmail: 'Friend@UMD.edu ',
+      friendInviteNote: ' compare schedules ',
+      friendInvites: [
+        { email: 'Pal@umd.edu', note: 'bioe track', status: 'accepted', direction: 'received', source: 'cloud', id: 'abc', cloudId: 'abc' },
+        { email: 'not-an-email', note: 'bad' }
+      ],
+      lastFriendSyncAt: '2026-06-30T10:00:00.000Z'
+    });
+    state = {
+      ...state,
+      courses: { 'CMSC 131': { status: 'passed' } },
+      customCourses: [],
+      customSemesters: [],
+      activeSchedule: null,
+      selectedSections: {},
+      schedulePrefs: {},
+      profilePrefs: defaultProfilePrefs(),
+      settings: { ...DEFAULT_SETTINGS }
+    };
+    const applied = applySharedPlanData({
+      v: 1,
+      courses: { 'MATH 140': { status: 'passed' } },
+      customCourses: [],
+      customSemesters: [],
+      selectedSections: { 'MATH 140': '0101' },
+      schedulePrefs: { earliestHour: 10 },
+      scheduleAdvisorFilter: 'remaining',
+      scheduleOutputPreset: 'advisor',
+      scheduleOutputOptions: { warnings: false },
+      roadmapPrefs: { filter: 'gened', query: 'math', selectedCode: 'MATH 140' },
+      recentChanges: [{ id: 'change-1' }],
+      profilePrefs: { interests: ['business'], careerGoal: 'finance analytics', genEdDepts: ['ECON'] },
+      settings: { theme: 'light' }
+    }, { confirm: false, sourceLabel: 'friend plan' });
+    ({
+      applied,
+      planName: prefs.planName,
+      displayName: prefs.displayName,
+      inviteEmail: prefs.friendInviteEmail,
+      inviteNote: prefs.friendInviteNote,
+      inviteCount: prefs.friendInvites.length,
+      inviteDirection: prefs.friendInvites[0].direction,
+      inviteStatus: prefs.friendInvites[0].status,
+      stateHasMath: Boolean(state.courses['MATH 140']),
+      selectedSection: state.selectedSections['MATH 140'],
+      profileInterest: state.profilePrefs.interests[0],
+      roadmapFilter: state.roadmapPrefs.filter,
+      outputPreset: state.scheduleOutputPreset,
+    })
+  `, context));
+
+  assert(result.planName === 'Friends plan', 'account prefs: plan name should trim');
+  assert(result.displayName === 'Test Student', 'account prefs: display name should trim');
+  assert(result.inviteEmail === 'friend@umd.edu', 'account prefs: friend invite email should normalize');
+  assert(result.inviteNote === 'compare schedules', 'account prefs: invite note should trim');
+  assert(result.inviteCount === 1, 'account prefs: invalid friend invite should be removed');
+  assert(result.inviteDirection === 'received', 'account prefs: invite direction should persist');
+  assert(result.inviteStatus === 'accepted', 'account prefs: invite status should persist');
+  assert(result.applied, 'shared plan: friend plan payload should apply');
+  assert(result.stateHasMath, 'shared plan: course state should be replaced');
+  assert(result.selectedSection === '0101', 'shared plan: selected section should persist');
+  assert(result.profileInterest === 'business', 'shared plan: profile prefs should normalize');
+  assert(result.roadmapFilter === 'gened', 'shared plan: roadmap prefs should persist');
+  assert(result.outputPreset === 'advisor', 'shared plan: output preset should persist');
+
+  return {
+    id: 'ACCOUNT-FRIENDS',
+    normalizedInvite: result.inviteEmail,
+    importedCourse: 'MATH 140',
+    outputPreset: result.outputPreset,
+  };
+}
+
 async function main() {
   const context = buildContext();
   const fixtures = [
@@ -184,10 +273,12 @@ async function main() {
     rows.push(await testMajorFixture(context, fixture));
   }
   const prereq = testSyntheticPrerequisites(context);
+  const account = testAccountAndShareState(context);
 
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain).`);
+  console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state).`);
 }
 
 main().catch(error => {

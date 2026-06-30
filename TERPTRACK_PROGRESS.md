@@ -1271,3 +1271,66 @@ Next pass candidates:
 - Expand Browse to support multi-department profile search rather than only first-department default plus chips.
 - Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
 - Start account/friends planning: schema for friend connections, shared plans, and privacy-safe read-only plan viewing.
+
+## 2026-06-30 Pass 32
+
+Focus: build the first real account/friends foundation for social planning and shared schedules.
+
+Planned changes:
+- Normalize account profile and friend-invite state across local storage, imports, and cloud payloads.
+- Extend the account modal with a student profile, friend invites, local share links, and cloud-only friend plan actions.
+- Add Supabase schema/RLS for profiles, friend requests, and accepted-friend shared plan reads.
+- Reuse the existing read-only share payload importer for friend-shared cloud plans.
+- Add regression coverage for account/friend state and shared-plan loading.
+
+Completed:
+- Added `defaultAccountPrefs()`, `normalizeAccountEmail()`, `normalizeAccountFriendInvite()`, and `normalizeAccountPrefs()` in `js/state.js`.
+- Account prefs now include display name, friend invite draft fields, normalized invite rows, friend sync timestamps, and friend-plan publish/load timestamps.
+- JSON imports now normalize incoming `accountPrefs` instead of blindly accepting malformed friend state.
+- Extracted `applySharedPlanData()` in `js/share.js` so hash links and cloud friend plans use the same validation, confirmation, save, theme, settings, and render path.
+- Expanded `js/account.js` with:
+  - cloud/local student profile save.
+  - display name, active major, and profile prefs written to `profiles`.
+  - local friend invite creation for everyone.
+  - cloud friend invite upsert for signed-in users.
+  - friend request sync for sent/received rows.
+  - accept/decline handling for received cloud requests.
+  - accepted-friend plan publishing through `shared_plans`.
+  - friend plan loading through the shared-plan importer.
+  - account modal sections for Student profile, Friends & shared plans, Requests, and Friend plans.
+- Added account/friend row styling with mobile stacking and no modal overflow at a 380px browser viewport.
+- Extended `supabase/schema.sql` with profile fields, `friend_requests`, `shared_plans`, idempotent policy drops, friend request RLS, and accepted-friend read-only shared plan access.
+- Documented Supabase setup in `README.md`.
+- Versioned changed browser assets:
+  - `styles.css?v=31`
+  - `js/state.js?v=10`
+  - `js/io.js?v=9`
+  - `js/share.js?v=9`
+  - `js/account.js?v=3`
+- Extended `scripts/test-generated-plans.js` with an account/share fixture that checks account normalization and friend-plan import behavior.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, and the new account/share fixture.
+- Account/share fixture confirmed:
+  - friend invite email normalizes to `friend@umd.edu`.
+  - invalid invite rows are dropped.
+  - accepted received invite status/direction persists.
+  - friend-plan import replaces course state with `MATH 140`.
+  - selected section, profile prefs, roadmap filter, and advisor output preset persist.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass32friends=1` from a temporary static server and confirmed:
+  - `styles.css?v=31`, `js/state.js?v=10`, `js/io.js?v=9`, `js/share.js?v=9`, and `js/account.js?v=3` loaded.
+  - No console errors on load.
+  - The account modal renders Cloud config, Student profile, Sign in, and Friends & shared plans sections.
+  - Friend email/note inputs render.
+  - Cloud-only friend buttons are disabled in local mode.
+  - No account modal horizontal overflow at the browser's 380px viewport.
+  - Adding a local invite renders one request row with `friend@umd.edu`, the note, pending/local status, and no console errors.
+
+Next pass candidates:
+- Add a friend/profile drawer for viewing accepted friends' names, majors, and last-published plan freshness.
+- Add Supabase migration/deploy notes for Vercel env setup and test a real magic-link round trip.
+- Add account/friend VM tests around cloud payload construction without requiring a live Supabase project.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Expand Browse to support multi-department profile search rather than only first-department default plus chips.

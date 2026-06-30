@@ -10,6 +10,7 @@ let accountClient = null;
 let accountSession = null;
 let accountAuthListenerReady = false;
 let accountConfig = { source: 'none', supabaseUrl: '', supabaseAnonKey: '' };
+let accountFriendPlans = [];
 
 function accountEscape(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
@@ -18,12 +19,54 @@ function accountEscape(value) {
 }
 
 function accountDefaultPrefs() {
-  return { planName: 'Primary TerpTrack plan', lastCloudSaveAt: '', lastCloudLoadAt: '' };
+  if (typeof defaultAccountPrefs === 'function') return defaultAccountPrefs();
+  return {
+    planName: 'Primary TerpTrack plan',
+    displayName: '',
+    friendInviteEmail: '',
+    friendInviteNote: '',
+    friendInvites: [],
+    lastCloudSaveAt: '',
+    lastCloudLoadAt: '',
+    lastFriendSyncAt: '',
+    lastFriendPlanPublishAt: '',
+    lastFriendPlanLoadAt: '',
+  };
 }
 
 function getAccountPrefs() {
-  state.accountPrefs = { ...accountDefaultPrefs(), ...(state.accountPrefs || {}) };
+  const merged = { ...accountDefaultPrefs(), ...(state.accountPrefs || {}) };
+  state.accountPrefs = typeof normalizeAccountPrefs === 'function' ? normalizeAccountPrefs(merged) : merged;
   return state.accountPrefs;
+}
+
+function accountNormalizeEmail(value) {
+  if (typeof normalizeAccountEmail === 'function') return normalizeAccountEmail(value);
+  const email = String(value || '').trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+}
+
+function accountCurrentMajorInfo() {
+  const id = state.majorId || 'CE';
+  const tpl = typeof getMajorTemplate === 'function' ? getMajorTemplate(id) : null;
+  return {
+    id,
+    name: tpl?.name || tpl?.programName || id || 'Undeclared',
+  };
+}
+
+function accountDisplayNameInput() {
+  return String(document.getElementById('account-display-name')?.value || getAccountPrefs().displayName || '').trim().slice(0, 80);
+}
+
+function accountProfilePayload() {
+  const major = accountCurrentMajorInfo();
+  return {
+    display_name: accountDisplayNameInput(),
+    major_id: major.id,
+    major_name: major.name,
+    profile_prefs: typeof getProfilePrefs === 'function' ? getProfilePrefs() : (state.profilePrefs || {}),
+  };
 }
 
 function accountReadManualConfig() {
@@ -169,7 +212,9 @@ function accountNormalizeLoadedState(cloudState) {
     scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(cloudState.scheduleOutputOptions || {}) },
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(cloudState.roadmapPrefs || {}) },
     recentChanges: Array.isArray(cloudState.recentChanges) ? cloudState.recentChanges.slice(0, 12) : [],
-    accountPrefs: { ...getAccountPrefs(), ...(cloudState.accountPrefs || {}) },
+    accountPrefs: typeof normalizeAccountPrefs === 'function'
+      ? normalizeAccountPrefs({ ...getAccountPrefs(), ...(cloudState.accountPrefs || {}) })
+      : { ...getAccountPrefs(), ...(cloudState.accountPrefs || {}) },
     profilePrefs: typeof normalizeProfilePrefs === 'function' ? normalizeProfilePrefs(cloudState.profilePrefs || {}) : (cloudState.profilePrefs || {}),
   };
 }
@@ -222,6 +267,7 @@ async function accountSaveCloudPlan() {
     const profileResult = await client.from('profiles').upsert({
       user_id: accountSession.user.id,
       email: accountSession.user.email || '',
+      ...accountProfilePayload(),
       updated_at: now,
     }, { onConflict: 'user_id' });
     if (profileResult.error) throw profileResult.error;
@@ -278,6 +324,306 @@ async function accountLoadCloudPlan() {
   }
 }
 
+async function accountSaveProfile() {
+  const prefs = getAccountPrefs();
+  const now = new Date().toISOString();
+  state.accountPrefs = { ...prefs, displayName: accountDisplayNameInput() };
+  saveState();
+  try {
+    const client = await accountEnsureClient();
+    if (!client || !accountSession?.user) {
+      accountSetStatus('Profile saved locally.', 'ok');
+      renderAccountModal();
+      return;
+    }
+    const { error } = await client.from('profiles').upsert({
+      user_id: accountSession.user.id,
+      email: accountSession.user.email || '',
+      ...accountProfilePayload(),
+      updated_at: now,
+    }, { onConflict: 'user_id' });
+    if (error) throw error;
+    accountSetStatus('Profile saved to cloud.', 'ok');
+    renderAccountModal();
+  } catch (err) {
+    accountSetStatus(err.message || 'Profile saved locally, but cloud sync failed.', 'warn');
+    renderAccountModal();
+  }
+}
+
+function accountMergeFriendInvite(invite) {
+  const prefs = getAccountPrefs();
+  const normalized = typeof normalizeAccountFriendInvite === 'function'
+    ? normalizeAccountFriendInvite(invite, prefs.friendInvites.length)
+    : invite;
+  if (!normalized?.email) return null;
+  const next = [...(prefs.friendInvites || [])];
+  const idx = next.findIndex(existing => (
+    (normalized.cloudId && existing.cloudId === normalized.cloudId)
+    || (normalized.id && existing.id === normalized.id)
+    || (normalized.direction === existing.direction && normalized.email === existing.email)
+  ));
+  if (idx >= 0) next[idx] = { ...next[idx], ...normalized };
+  else next.unshift(normalized);
+  state.accountPrefs = { ...prefs, friendInvites: next.slice(0, 30) };
+  return normalized;
+}
+
+async function accountCreateFriendInvite() {
+  const email = accountNormalizeEmail(document.getElementById('account-friend-email')?.value);
+  const note = String(document.getElementById('account-friend-note')?.value || '').trim().slice(0, 180);
+  const ownEmail = accountNormalizeEmail(accountSession?.user?.email);
+  if (!email) {
+    accountSetStatus('Enter a valid friend email.', 'warn');
+    return;
+  }
+  if (ownEmail && email === ownEmail) {
+    accountSetStatus('Use a different email than your account.', 'warn');
+    return;
+  }
+
+  const now = new Date().toISOString();
+  accountMergeFriendInvite({
+    id: `friend-${Date.now()}`,
+    email,
+    note,
+    status: 'pending',
+    direction: 'sent',
+    source: 'local',
+    createdAt: now,
+    updatedAt: now,
+  });
+  state.accountPrefs = {
+    ...getAccountPrefs(),
+    friendInviteEmail: email,
+    friendInviteNote: note,
+  };
+  saveState();
+
+  try {
+    const client = await accountEnsureClient();
+    if (!client || !accountSession?.user) {
+      accountSetStatus('Friend invite saved locally.', 'ok');
+      renderAccountModal();
+      return;
+    }
+    const { data, error } = await client.from('friend_requests')
+      .upsert({
+        requester_id: accountSession.user.id,
+        requester_email: accountSession.user.email || '',
+        recipient_email: email,
+        note,
+        status: 'pending',
+        updated_at: now,
+      }, { onConflict: 'requester_id,recipient_email' })
+      .select('id,status,created_at,updated_at')
+      .single();
+    if (error) throw error;
+    accountMergeFriendInvite({
+      id: data?.id || `friend-${Date.now()}`,
+      cloudId: data?.id || '',
+      email,
+      note,
+      status: data?.status || 'pending',
+      direction: 'sent',
+      source: 'cloud',
+      createdAt: data?.created_at || now,
+      updatedAt: data?.updated_at || now,
+    });
+    saveState();
+    accountSetStatus('Friend invite saved to cloud.', 'ok');
+    renderAccountModal();
+  } catch (err) {
+    accountSetStatus(`Invite saved locally. Cloud sync failed: ${err.message || 'unknown error'}`, 'warn');
+    renderAccountModal();
+  }
+}
+
+async function accountRemoveFriendInvite(id) {
+  const prefs = getAccountPrefs();
+  const invite = (prefs.friendInvites || []).find(item => item.id === id || item.cloudId === id);
+  try {
+    if (invite?.cloudId && accountSession?.user) {
+      const client = await accountEnsureClient();
+      if (client) {
+        const { error } = await client.from('friend_requests').delete().eq('id', invite.cloudId);
+        if (error) throw error;
+      }
+    }
+    state.accountPrefs = {
+      ...prefs,
+      friendInvites: (prefs.friendInvites || []).filter(item => item.id !== id && item.cloudId !== id),
+    };
+    saveState();
+    accountSetStatus('Friend invite removed.', 'ok');
+    renderAccountModal();
+  } catch (err) {
+    accountSetStatus(err.message || 'Could not remove friend invite.', 'warn');
+  }
+}
+
+async function accountSyncFriends() {
+  try {
+    const client = await accountEnsureClient();
+    if (!client || !accountSession?.user) {
+      accountSetStatus('Sign in first.', 'warn');
+      return;
+    }
+    const userId = accountSession.user.id;
+    const email = accountNormalizeEmail(accountSession.user.email);
+    const [sentResult, receivedResult] = await Promise.all([
+      client.from('friend_requests')
+        .select('id,requester_id,requester_email,recipient_email,note,status,created_at,updated_at')
+        .eq('requester_id', userId)
+        .order('updated_at', { ascending: false }),
+      email
+        ? client.from('friend_requests')
+          .select('id,requester_id,requester_email,recipient_email,note,status,created_at,updated_at')
+          .ilike('recipient_email', email)
+          .order('updated_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (sentResult.error) throw sentResult.error;
+    if (receivedResult.error) throw receivedResult.error;
+    const cloudInvites = [
+      ...(sentResult.data || []).map(row => ({
+        id: row.id,
+        cloudId: row.id,
+        email: row.recipient_email,
+        note: row.note,
+        status: row.status,
+        direction: 'sent',
+        source: 'cloud',
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })),
+      ...(receivedResult.data || [])
+        .filter(row => row.requester_id !== userId)
+        .map(row => ({
+          id: row.id,
+          cloudId: row.id,
+          email: row.requester_email,
+          note: row.note,
+          status: row.status,
+          direction: 'received',
+          source: 'cloud',
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        })),
+    ].map((invite, index) => normalizeAccountFriendInvite(invite, index)).filter(Boolean);
+    const localOnly = (getAccountPrefs().friendInvites || []).filter(invite => invite.source !== 'cloud');
+    state.accountPrefs = {
+      ...getAccountPrefs(),
+      friendInvites: [...cloudInvites, ...localOnly].slice(0, 30),
+      lastFriendSyncAt: new Date().toISOString(),
+    };
+    saveState();
+    accountSetStatus('Friend requests synced.', 'ok');
+    renderAccountModal();
+  } catch (err) {
+    accountSetStatus(err.message || 'Could not sync friend requests.', 'warn');
+  }
+}
+
+async function accountRespondToFriendInvite(id, status) {
+  const nextStatus = status === 'accepted' ? 'accepted' : 'declined';
+  try {
+    const prefs = getAccountPrefs();
+    const invite = (prefs.friendInvites || []).find(item => item.id === id || item.cloudId === id);
+    if (!invite?.cloudId) {
+      accountSetStatus('Sync friend requests first.', 'warn');
+      return;
+    }
+    const client = await accountEnsureClient();
+    if (!client || !accountSession?.user) {
+      accountSetStatus('Sign in first.', 'warn');
+      return;
+    }
+    const now = new Date().toISOString();
+    const { error } = await client.from('friend_requests')
+      .update({ status: nextStatus, recipient_id: accountSession.user.id, updated_at: now })
+      .eq('id', invite.cloudId);
+    if (error) throw error;
+    accountSetStatus(nextStatus === 'accepted' ? 'Friend request accepted.' : 'Friend request declined.', 'ok');
+    await accountSyncFriends();
+  } catch (err) {
+    accountSetStatus(err.message || 'Could not update friend request.', 'warn');
+  }
+}
+
+function accountFriendPlanPayload() {
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    state: typeof _planSharePayload === 'function' ? _planSharePayload() : accountCloudPayload().state,
+  };
+}
+
+async function accountPublishFriendPlan() {
+  try {
+    const client = await accountEnsureClient();
+    if (!client || !accountSession?.user) {
+      accountSetStatus('Sign in first.', 'warn');
+      return;
+    }
+    const prefs = getAccountPrefs();
+    const planName = document.getElementById('account-plan-name')?.value.trim() || prefs.planName || 'Primary TerpTrack plan';
+    const now = new Date().toISOString();
+    const { error } = await client.from('shared_plans').upsert({
+      owner_id: accountSession.user.id,
+      slug: 'primary',
+      name: planName,
+      payload: accountFriendPlanPayload(),
+      updated_at: now,
+    }, { onConflict: 'owner_id,slug' });
+    if (error) throw error;
+    state.accountPrefs = { ...prefs, planName, lastFriendPlanPublishAt: now };
+    saveState();
+    accountSetStatus('Plan published to accepted friends.', 'ok');
+    renderAccountModal();
+  } catch (err) {
+    accountSetStatus(err.message || 'Could not publish friend plan.', 'warn');
+  }
+}
+
+async function accountLoadFriendPlans() {
+  try {
+    const client = await accountEnsureClient();
+    if (!client || !accountSession?.user) {
+      accountSetStatus('Sign in first.', 'warn');
+      return;
+    }
+    const { data, error } = await client.from('shared_plans')
+      .select('id,owner_id,name,payload,updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    accountFriendPlans = (data || []).filter(row => row.owner_id !== accountSession.user.id);
+    state.accountPrefs = { ...getAccountPrefs(), lastFriendPlanLoadAt: new Date().toISOString() };
+    saveState();
+    accountSetStatus(accountFriendPlans.length ? 'Friend plans loaded.' : 'No friend plans available yet.', accountFriendPlans.length ? 'ok' : 'warn');
+    renderAccountModal();
+  } catch (err) {
+    accountSetStatus(err.message || 'Could not load friend plans.', 'warn');
+  }
+}
+
+function accountOpenFriendPlan(id) {
+  const row = accountFriendPlans.find(plan => plan.id === id);
+  if (!row) {
+    accountSetStatus('Friend plan not found.', 'warn');
+    return;
+  }
+  try {
+    const applied = applySharedPlanData(row.payload?.state || row.payload, { sourceLabel: row.name || 'friend plan' });
+    if (!applied) return;
+    closeAccountModal();
+    toastSuccess(`Loaded "${row.name || 'friend plan'}".`);
+  } catch (err) {
+    accountSetStatus(err.message || 'Could not open friend plan.', 'warn');
+  }
+}
+
 function accountSaveManualConfig() {
   const supabaseUrl = document.getElementById('account-config-url')?.value.trim();
   const supabaseAnonKey = document.getElementById('account-config-key')?.value.trim();
@@ -312,6 +658,66 @@ function accountStatsHtml() {
   `;
 }
 
+function accountFriendStatusText(invite) {
+  const direction = invite.direction === 'received' ? 'from' : 'to';
+  const source = invite.source === 'cloud' ? 'cloud' : 'local';
+  return `${direction} ${invite.email} · ${invite.status} · ${source}`;
+}
+
+function accountFriendInvitesHtml() {
+  const invites = getAccountPrefs().friendInvites || [];
+  if (!invites.length) {
+    return '<p class="account-empty">No friend invites yet.</p>';
+  }
+  return `
+    <div class="account-friend-list">
+      ${invites.map(invite => {
+        const canRespond = invite.direction === 'received' && invite.status === 'pending' && invite.cloudId;
+        const stamp = accountTime(invite.updatedAt || invite.createdAt);
+        return `
+          <div class="account-friend-row">
+            <div class="account-friend-info">
+              <strong>${accountEscape(invite.direction === 'received' ? 'Incoming request' : 'Friend invite')}</strong>
+              <span>${accountEscape(accountFriendStatusText(invite))}</span>
+              ${invite.note ? `<em>${accountEscape(invite.note)}</em>` : ''}
+              <small>${accountEscape(stamp)}</small>
+            </div>
+            <div class="account-friend-actions">
+              ${canRespond ? `
+                <button class="btn small" type="button" onclick="accountRespondToFriendInvite('${accountEscape(invite.cloudId)}','accepted')">Accept</button>
+                <button class="btn small" type="button" onclick="accountRespondToFriendInvite('${accountEscape(invite.cloudId)}','declined')">Decline</button>
+              ` : ''}
+              <button class="btn small" type="button" onclick="accountRemoveFriendInvite('${accountEscape(invite.cloudId || invite.id)}')">Remove</button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function accountFriendPlansHtml() {
+  if (!accountFriendPlans.length) {
+    return '<p class="account-empty">No loaded friend plans.</p>';
+  }
+  return `
+    <div class="account-friend-list">
+      ${accountFriendPlans.map(plan => `
+        <div class="account-friend-row">
+          <div class="account-friend-info">
+            <strong>${accountEscape(plan.name || 'Friend plan')}</strong>
+            <span>Updated ${accountEscape(accountTime(plan.updated_at))}</span>
+            <small>${accountEscape(plan.owner_id ? `owner ${plan.owner_id.slice(0, 8)}` : 'friend')}</small>
+          </div>
+          <div class="account-friend-actions">
+            <button class="btn small" type="button" onclick="accountOpenFriendPlan('${accountEscape(plan.id)}')">Open</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 async function renderAccountModal() {
   const body = document.getElementById('account-body');
   if (!body) return;
@@ -332,6 +738,7 @@ async function renderAccountModal() {
   }
 
   const prefs = getAccountPrefs();
+  const major = accountCurrentMajorInfo();
   const configHtml = `
     <div class="account-card">
       <div class="account-card-head">
@@ -349,6 +756,23 @@ async function renderAccountModal() {
       <div class="account-actions">
         <button class="btn small" type="button" onclick="accountSaveManualConfig()">Save dev config</button>
         <button class="btn small" type="button" onclick="accountClearManualConfig()">Clear dev config</button>
+      </div>
+    </div>
+  `;
+
+  const profileHtml = `
+    <div class="account-card">
+      <div class="account-card-head">
+        <strong>Student profile</strong>
+        <span>${accountEscape(major.name)}</span>
+      </div>
+      <label>Display name<input type="text" id="account-display-name" value="${accountEscape(prefs.displayName)}" placeholder="Name shown to friends"></label>
+      <div class="account-kv compact">
+        <span>Major</span><strong>${accountEscape(major.name)}</strong>
+        <span>Profile</span><strong>${accountEscape((getProfilePrefs().interests || []).length ? getProfilePrefs().interests.join(', ') : 'Not personalized')}</strong>
+      </div>
+      <div class="account-actions">
+        <button class="btn small" type="button" onclick="accountSaveProfile()">Save profile</button>
       </div>
     </div>
   `;
@@ -383,7 +807,39 @@ async function renderAccountModal() {
     </div>
   `;
 
-  body.innerHTML = `${accountStatsHtml()}${configHtml}${authHtml}`;
+  const friendsHtml = `
+    <div class="account-card">
+      <div class="account-card-head">
+        <strong>Friends & shared plans</strong>
+        <span>${accountSession?.user ? 'Cloud friends' : 'Local invites'}</span>
+      </div>
+      <div class="account-config-grid">
+        <label>Friend email<input type="email" id="account-friend-email" value="${accountEscape(prefs.friendInviteEmail)}" placeholder="friend@umd.edu"></label>
+        <label>Note<input type="text" id="account-friend-note" value="${accountEscape(prefs.friendInviteNote)}" placeholder="optional"></label>
+      </div>
+      <div class="account-actions">
+        <button class="btn small" type="button" onclick="accountCreateFriendInvite()">Add invite</button>
+        <button class="btn small" type="button" onclick="copyShareUrl()">Copy link</button>
+        <button class="btn small" type="button" onclick="accountSyncFriends()" ${accountSession?.user ? '' : 'disabled'}>Sync requests</button>
+        <button class="btn small" type="button" onclick="accountPublishFriendPlan()" ${accountSession?.user ? '' : 'disabled'}>Publish to friends</button>
+        <button class="btn small" type="button" onclick="accountLoadFriendPlans()" ${accountSession?.user ? '' : 'disabled'}>Load friend plans</button>
+      </div>
+      <div class="account-kv compact">
+        <span>Last sync</span><strong>${accountEscape(accountTime(prefs.lastFriendSyncAt))}</strong>
+        <span>Published</span><strong>${accountEscape(accountTime(prefs.lastFriendPlanPublishAt))}</strong>
+      </div>
+      <div class="account-subsection">
+        <strong>Requests</strong>
+        ${accountFriendInvitesHtml()}
+      </div>
+      <div class="account-subsection">
+        <strong>Friend plans</strong>
+        ${accountFriendPlansHtml()}
+      </div>
+    </div>
+  `;
+
+  body.innerHTML = `${accountStatsHtml()}${configHtml}${profileHtml}${authHtml}${friendsHtml}`;
 }
 
 function openAccountModal() {

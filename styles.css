@@ -1813,6 +1813,62 @@ h1.hero-title em {
   gap: 8px;
   margin-top: 12px;
 }
+.account-subsection {
+  margin-top: 12px;
+}
+.account-subsection > strong {
+  display: block;
+  color: var(--ink);
+  font-size: .78rem;
+  margin-bottom: 6px;
+}
+.account-empty {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--slate);
+  font-size: .78rem;
+  margin: 0;
+  padding: 10px;
+}
+.account-friend-list {
+  display: grid;
+  gap: 8px;
+}
+.account-friend-row {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 10px;
+}
+.account-friend-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.account-friend-info strong {
+  color: var(--ink);
+  font-size: .84rem;
+}
+.account-friend-info span,
+.account-friend-info small,
+.account-friend-info em {
+  color: var(--slate);
+  font-size: .72rem;
+  overflow-wrap: anywhere;
+}
+.account-friend-info em {
+  color: var(--ink-soft);
+  font-style: normal;
+}
+.account-friend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
 .account-status {
   min-height: 1em;
   margin: 10px 0 0;
@@ -4386,6 +4442,13 @@ h1.hero-title em {
   }
   .account-actions .btn {
     flex: 1 1 160px;
+  }
+  .account-friend-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+  .account-friend-actions {
+    justify-content: flex-start;
   }
   .auto-plan-review-head {
     flex-direction: column;

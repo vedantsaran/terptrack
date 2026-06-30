@@ -83,39 +83,46 @@ async function copyShareUrl() {
   }
 }
 
+function applySharedPlanData(data, options = {}) {
+  const payload = data?.state || data;
+  if (!payload || !payload.v) throw new Error('Bad payload');
+  const hasExisting = Object.keys(state.courses || {}).length > 0
+    || (state.customCourses || []).length > 0
+    || state.activeSchedule;
+  const label = options.sourceLabel || 'shared plan';
+  const msg = hasExisting
+    ? `Open this ${label}? It will replace your current plan (your local data will be overwritten).`
+    : `Open this ${label}?`;
+  if (options.confirm !== false && !confirm(msg)) return false;
+  state = {
+    ...state,
+    ...payload,
+    settings: { ...DEFAULT_SETTINGS, ...(payload.settings || {}) },
+    selectedSections: payload.selectedSections || {},
+    schedulePrefs: payload.schedulePrefs || {},
+    scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(payload.scheduleAdvisorFilter) ? payload.scheduleAdvisorFilter : 'all',
+    scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(payload.scheduleOutputPreset) ? payload.scheduleOutputPreset : 'personal',
+    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(payload.scheduleOutputOptions || {}) },
+    roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(payload.roadmapPrefs || {}) },
+    recentChanges: Array.isArray(payload.recentChanges) ? payload.recentChanges.slice(0, 12) : [],
+    profilePrefs: normalizeProfilePrefs(payload.profilePrefs || {}),
+    onboardingComplete: true,
+  };
+  saveState();
+  applyTheme();
+  applySettings();
+  render();
+  return true;
+}
+
 async function loadSharedPlanFromHash() {
   const m = location.hash.match(/^#plan=([A-Za-z0-9_\-]+)$/);
   if (!m) return false;
   try {
     const json = await _gunzipBase64(m[1]);
     const data = JSON.parse(json);
-    if (!data || !data.v) throw new Error('Bad payload');
-    const hasExisting = Object.keys(state.courses || {}).length > 0
-      || (state.customCourses || []).length > 0
-      || state.activeSchedule;
-    const msg = hasExisting
-      ? 'Open this shared plan? It will replace your current plan (your local data will be overwritten).'
-      : 'Open this shared plan?';
-    if (!confirm(msg)) return false;
-    state = {
-      ...state,
-      ...data,
-      settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) },
-      selectedSections: data.selectedSections || {},
-      schedulePrefs: data.schedulePrefs || {},
-      scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(data.scheduleAdvisorFilter) ? data.scheduleAdvisorFilter : 'all',
-      scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(data.scheduleOutputPreset) ? data.scheduleOutputPreset : 'personal',
-      scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(data.scheduleOutputOptions || {}) },
-      roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(data.roadmapPrefs || {}) },
-      recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],
-      profilePrefs: normalizeProfilePrefs(data.profilePrefs || {}),
-      onboardingComplete: true,
-    };
-    saveState();
+    if (!applySharedPlanData(data, { sourceLabel: 'shared plan' })) return false;
     history.replaceState(null, '', location.pathname);
-    applyTheme();
-    applySettings();
-    render();
     return true;
   } catch (e) {
     toastError('Could not load shared plan: ' + e.message);

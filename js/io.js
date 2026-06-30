@@ -37,6 +37,9 @@ document.getElementById('import-file').addEventListener('change', (e) => {
           scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(data.scheduleOutputOptions || {}) },
           roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(data.roadmapPrefs || {}) },
           recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],
+          accountPrefs: typeof normalizeAccountPrefs === 'function'
+            ? normalizeAccountPrefs({ ...(state.accountPrefs || {}), ...(data.accountPrefs || {}) })
+            : { ...(state.accountPrefs || {}), ...(data.accountPrefs || {}) },
           profilePrefs: normalizeProfilePrefs(data.profilePrefs || {}),
         };
         saveState();

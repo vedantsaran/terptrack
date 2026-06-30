@@ -162,6 +162,73 @@ function profileElectiveNote(index, prefs = getProfilePrefs()) {
   return `Personalized elective placeholder #${index}. ${parts.join(' · ')}.`;
 }
 
+function normalizeAccountEmail(value) {
+  const email = String(value || '').trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+}
+
+function defaultAccountPrefs() {
+  return {
+    planName: 'Primary TerpTrack plan',
+    displayName: '',
+    friendInviteEmail: '',
+    friendInviteNote: '',
+    friendInvites: [],
+    lastCloudSaveAt: '',
+    lastCloudLoadAt: '',
+    lastFriendSyncAt: '',
+    lastFriendPlanPublishAt: '',
+    lastFriendPlanLoadAt: '',
+  };
+}
+
+function normalizeAccountFriendInvite(invite, index = 0) {
+  const email = normalizeAccountEmail(invite?.email || invite?.recipientEmail || invite?.recipient_email);
+  if (!email) return null;
+  const rawStatus = String(invite?.status || 'pending').toLowerCase();
+  const status = ['pending', 'accepted', 'declined', 'blocked'].includes(rawStatus) ? rawStatus : 'pending';
+  const rawDirection = String(invite?.direction || 'sent').toLowerCase();
+  const direction = ['sent', 'received'].includes(rawDirection) ? rawDirection : 'sent';
+  const rawSource = String(invite?.source || 'local').toLowerCase();
+  const source = rawSource === 'cloud' ? 'cloud' : 'local';
+  const rawId = String(invite?.id || '').trim();
+  const cloudId = String(invite?.cloudId || invite?.cloud_id || (source === 'cloud' ? rawId : '')).trim();
+  return {
+    id: rawId || cloudId || `friend-${index + 1}`,
+    cloudId,
+    email,
+    note: String(invite?.note || '').trim().slice(0, 180),
+    status,
+    direction,
+    source,
+    createdAt: String(invite?.createdAt || invite?.created_at || ''),
+    updatedAt: String(invite?.updatedAt || invite?.updated_at || ''),
+  };
+}
+
+function normalizeAccountPrefs(value) {
+  const base = defaultAccountPrefs();
+  const merged = { ...base, ...(value || {}) };
+  const invites = (Array.isArray(merged.friendInvites) ? merged.friendInvites : [])
+    .map((invite, index) => normalizeAccountFriendInvite(invite, index))
+    .filter(Boolean)
+    .slice(0, 30);
+  return {
+    ...base,
+    ...merged,
+    planName: String(merged.planName || base.planName).trim().slice(0, 90) || base.planName,
+    displayName: String(merged.displayName || '').trim().slice(0, 80),
+    friendInviteEmail: normalizeAccountEmail(merged.friendInviteEmail),
+    friendInviteNote: String(merged.friendInviteNote || '').trim().slice(0, 180),
+    friendInvites: invites,
+    lastCloudSaveAt: String(merged.lastCloudSaveAt || ''),
+    lastCloudLoadAt: String(merged.lastCloudLoadAt || ''),
+    lastFriendSyncAt: String(merged.lastFriendSyncAt || ''),
+    lastFriendPlanPublishAt: String(merged.lastFriendPlanPublishAt || ''),
+    lastFriendPlanLoadAt: String(merged.lastFriendPlanLoadAt || ''),
+  };
+}
+
 function loadState() {
   const fallback = {
     courses: {},
@@ -178,7 +245,7 @@ function loadState() {
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '' },
     recentChanges: [],
     majorId: null,
-    accountPrefs: { planName: 'Primary TerpTrack plan', lastCloudSaveAt: '', lastCloudLoadAt: '' },
+    accountPrefs: defaultAccountPrefs(),
     profilePrefs: defaultProfilePrefs(),
     onboardingComplete: false,
     settings: { ...DEFAULT_SETTINGS },
@@ -201,7 +268,7 @@ function loadState() {
         scheduleOutputOptions: { ...fallback.scheduleOutputOptions, ...(parsed.scheduleOutputOptions || {}) },
         roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(parsed.roadmapPrefs || {}) },
         recentChanges: Array.isArray(parsed.recentChanges) ? parsed.recentChanges.slice(0, 12) : [],
-        accountPrefs: { ...fallback.accountPrefs, ...(parsed.accountPrefs || {}) },
+        accountPrefs: normalizeAccountPrefs({ ...fallback.accountPrefs, ...(parsed.accountPrefs || {}) }),
         profilePrefs: normalizeProfilePrefs({ ...fallback.profilePrefs, ...(parsed.profilePrefs || {}) }),
       };
     }
