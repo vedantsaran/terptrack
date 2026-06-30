@@ -153,7 +153,7 @@ async function renderOnboardingPreview() {
     });
     if (seq !== onboardPreviewSeq) return;
     root.className = `auto-plan-review onboard-plan-preview ${review.kind === 'curated' ? 'curated' : 'generated'}`;
-    root.innerHTML = onboardPreviewSummaryHtml(setup) + autoPlanReviewHtml(review);
+    root.innerHTML = onboardPreviewSummaryHtml(setup) + autoPlanReviewHtml(review, { actions: false });
   } catch (error) {
     if (seq !== onboardPreviewSeq) return;
     root.className = 'auto-plan-review onboard-plan-preview';

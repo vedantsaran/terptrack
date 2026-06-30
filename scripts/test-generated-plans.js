@@ -292,6 +292,26 @@ async function testAutoPlanDiagnostics(context) {
       });
       const templateDiagnostics = autoPlanDiagnostics(template);
       const templateHtml = autoPlanDiagnosticsHtml(template) + autoPlanSourceSamplesHtml(template);
+      const samplePlaceholder = template.placeholderSamples.find(course => /^GenEd/i.test(course.code)) || template.placeholderSamples[0];
+      const placeholderAction = autoPlanPlaceholderBrowseConfig(samplePlaceholder, template);
+      state.browseSavedSearches = [];
+      switchTab = tab => { currentTab = tab; };
+      autoPlanOpenBrowseReplacement({
+        dataset: {
+          browseDept: placeholderAction.dept,
+          browseGened: placeholderAction.genEd,
+          browseSearch: placeholderAction.search,
+          browseLabel: placeholderAction.label
+        }
+      });
+      const replacementBrowse = {
+        currentTab,
+        browseDept,
+        browseGenEd,
+        browseSearch,
+        savedCount: state.browseSavedSearches.length,
+        savedLabel: state.browseSavedSearches[0]?.label || '',
+      };
 
       fetchCoursesBatch = async (codes, onProgress) => {
         const out = {};
@@ -323,6 +343,8 @@ async function testAutoPlanDiagnostics(context) {
         templateTitles: templateDiagnostics.map(item => item.title),
         templateHtml,
         templatePlaceholderSamples: template.placeholderSamples.map(item => item.code),
+        placeholderAction,
+        replacementBrowse,
         mixedCoverage: mixed.metadataCoverage,
         mixedTitles: mixedDiagnostics.map(item => item.title),
         mixedHtml,
@@ -336,7 +358,14 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.templateTitles.includes('Replacement work'), 'auto plan diagnostics: should flag placeholder replacement work');
   assert(/Template fallback/.test(result.templateHtml), 'auto plan diagnostics: source samples should include template fallback row');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
+  assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
   assert(result.templatePlaceholderSamples.length > 0, 'auto plan diagnostics: should include placeholder samples');
+  assert(result.placeholderAction.genEd, 'auto plan diagnostics: placeholder action should infer a GenEd filter');
+  assert(result.placeholderAction.dept === '__PROFILE_DEPTS__', 'auto plan diagnostics: placeholder action should use profile departments when profile is active');
+  assert(result.replacementBrowse.currentTab === 'browse', 'auto plan diagnostics: replacement action should switch to Browse');
+  assert(result.replacementBrowse.browseGenEd === result.placeholderAction.genEd, 'auto plan diagnostics: replacement action should set Browse GenEd filter');
+  assert(result.replacementBrowse.savedCount === 1, 'auto plan diagnostics: replacement action should save the Browse search');
+  assert(/Replace/.test(result.replacementBrowse.savedLabel), 'auto plan diagnostics: saved replacement search should have a replacement label');
 
   assert(result.mixedCoverage.found === 3, 'auto plan diagnostics: mixed preview should count live records');
   assert(result.mixedCoverage.missing > 0, 'auto plan diagnostics: mixed preview should preserve fallback count');

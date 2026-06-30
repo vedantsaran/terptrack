@@ -2349,6 +2349,11 @@ h1.hero-title em {
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.auto-plan-source-samples em {
+  display: block;
+  color: var(--slate);
+  font-style: normal;
+}
 .auto-plan-source-samples strong {
   color: var(--ink-soft);
   font-family: 'JetBrains Mono', monospace;
@@ -2356,6 +2361,16 @@ h1.hero-title em {
   letter-spacing: .04em;
   text-transform: uppercase;
   margin-bottom: 2px;
+}
+.auto-plan-source-actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.auto-plan-source-action {
+  min-height: 28px;
+  white-space: nowrap;
 }
 .auto-plan-profile {
   margin-top: 10px;

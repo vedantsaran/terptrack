@@ -203,24 +203,112 @@ function autoPlanDiagnosticsHtml(review) {
   `;
 }
 
-function autoPlanSourceSamplesHtml(review) {
+function autoPlanPlaceholderTagsForBrowse(course) {
+  if (typeof inferPlaceholderTags === 'function') return inferPlaceholderTags(course);
+  const hay = [course?.code, course?.title, course?.note, course?.category].join(' ').toUpperCase();
+  const tags = [];
+  const known = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','DVUP','DVCC','SCIS'];
+  known.forEach(tag => { if (hay.includes(tag)) tags.push(tag); });
+  if (hay.includes('HUMANITIES') || /\bHU\b/.test(hay)) tags.push('DSHU');
+  if (hay.includes('HISTORY') || hay.includes('SOCIAL') || /\bHS\b/.test(hay)) tags.push('DSHS');
+  if (hay.includes('SCHOLARSHIP') || /\bSP\b/.test(hay)) tags.push('DSSP');
+  if (hay.includes('I-SERIES') || hay.includes('I SERIES')) tags.push('SCIS');
+  if (hay.includes('CULTURAL COMPETENCE')) tags.push('DVCC');
+  if (hay.includes('PLURAL')) tags.push('DVUP');
+  if (hay.includes('DIVERSITY') && !tags.includes('DVUP') && !tags.includes('DVCC')) tags.push('DVUP', 'DVCC');
+  return Array.from(new Set(tags));
+}
+
+function autoPlanPlaceholderBrowseConfig(course, review) {
+  if (!course) return null;
+  const profile = review?.profile || {};
+  const profileActive = !!profile.active;
+  const tags = autoPlanPlaceholderTagsForBrowse(course);
+  const primaryTag = tags[0] || '';
+  const isFreeElective = /^Free Elective/i.test(course.code || '');
+  const dept = profileActive ? '__PROFILE_DEPTS__' : '';
+  const genEd = primaryTag || (!isFreeElective ? '__ALL_GENEDS__' : (profileActive ? '' : '__ALL_GENEDS__'));
+  const search = '';
+  if (!dept && !genEd && !search) return null;
+  const reason = primaryTag
+    ? `${primaryTag} replacement`
+    : profileActive
+      ? 'profile departments'
+      : 'GenEd catalog';
+  return {
+    dept,
+    genEd,
+    search,
+    label: `Replace ${course.code || 'placeholder'} · ${reason}`,
+    button: primaryTag ? `Find ${primaryTag}` : profileActive ? 'Find profile fits' : 'Browse GenEds',
+  };
+}
+
+function autoPlanPlaceholderBrowseActionHtml(course, review) {
+  const config = autoPlanPlaceholderBrowseConfig(course, review);
+  if (!config) return '';
+  return `
+    <button
+      class="btn small auto-plan-source-action"
+      type="button"
+      data-auto-plan-browse-placeholder="1"
+      data-browse-dept="${settingsHtml(config.dept)}"
+      data-browse-gened="${settingsHtml(config.genEd)}"
+      data-browse-search="${settingsHtml(config.search)}"
+      data-browse-label="${settingsHtml(config.label)}"
+    >${settingsHtml(config.button)}</button>
+  `;
+}
+
+function autoPlanOpenBrowseReplacement(button) {
+  if (!button || typeof browseOpenSearch !== 'function') {
+    toastError('Browse is still loading. Try again in a moment.');
+    return;
+  }
+  const settingsModal = document.getElementById('settings-modal');
+  if (settingsModal) settingsModal.classList.remove('open');
+  browseOpenSearch({
+    dept: button.dataset.browseDept || '',
+    genEd: button.dataset.browseGened || '',
+    search: button.dataset.browseSearch || '',
+    label: button.dataset.browseLabel || '',
+    save: true,
+  });
+  toastSuccess('Opened Browse with a saved replacement search.');
+}
+
+document.addEventListener('click', (event) => {
+  const button = event.target && event.target.closest ? event.target.closest('[data-auto-plan-browse-placeholder]') : null;
+  if (!button) return;
+  event.preventDefault();
+  autoPlanOpenBrowseReplacement(button);
+});
+
+function autoPlanSourceSamplesHtml(review, opts = {}) {
   const metadata = review && review.metadataCoverage;
   if (!metadata) return '';
   const live = metadata.liveCodes || [];
   const missing = metadata.missingCodes || [];
   const placeholderSamples = review.placeholderSamples || [];
   const placeholderTotal = (review.genEdPlaceholders || 0) + (review.freeElectives || 0);
+  const actions = opts.actions !== false;
   if (!live.length && !missing.length && !placeholderSamples.length) return '';
   return `
     <div class="auto-plan-source-samples">
       ${live.length ? `<span><strong>Live metadata</strong>${settingsHtml(live.join(', '))}</span>` : ''}
       ${missing.length ? `<span><strong>Template fallback</strong>${settingsHtml(missing.join(', '))}${metadata.missing > missing.length ? ` +${settingsHtml(metadata.missing - missing.length)} more` : ''}</span>` : ''}
-      ${placeholderSamples.length ? `<span><strong>Placeholders to replace</strong>${settingsHtml(placeholderSamples.map(course => course.code).join(', '))}${placeholderTotal > placeholderSamples.length ? ` +${settingsHtml(placeholderTotal - placeholderSamples.length)} more` : ''}</span>` : ''}
+      ${placeholderSamples.length ? `
+        <span class="auto-plan-source-row">
+          <strong>Placeholders to replace</strong>
+          <em>${settingsHtml(placeholderSamples.map(course => course.code).join(', '))}${placeholderTotal > placeholderSamples.length ? ` +${settingsHtml(placeholderTotal - placeholderSamples.length)} more` : ''}</em>
+          ${actions ? `<span class="auto-plan-source-actions">${placeholderSamples.slice(0, 4).map(course => autoPlanPlaceholderBrowseActionHtml(course, review)).join('')}</span>` : ''}
+        </span>
+      ` : ''}
     </div>
   `;
 }
 
-function autoPlanReviewHtml(review) {
+function autoPlanReviewHtml(review, opts = {}) {
   const planned = review.totalCredits || 0;
   const target = review.targetCredits || 120;
   const creditDetail = planned >= target
@@ -296,7 +384,7 @@ function autoPlanReviewHtml(review) {
       <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>
     </div>
     ${autoPlanDiagnosticsHtml(review)}
-    ${autoPlanSourceSamplesHtml(review)}
+    ${autoPlanSourceSamplesHtml(review, opts)}
     <div class="auto-plan-profile">
       <strong>Profile fit</strong>
       <span>${settingsHtml(profileText)}</span>

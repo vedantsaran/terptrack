@@ -2024,3 +2024,57 @@ Next pass candidates:
 - Add Browse result sections for "best for your plan", "fills missing GenEd", and "available in your next term".
 - Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 45
+
+Focus: make generated-plan diagnostics actionable by jumping from placeholder source samples into saved Browse replacement searches.
+
+Planned changes:
+- Add replacement buttons to Auto Plan Review placeholder source samples.
+- Infer Browse department and GenEd filters from each placeholder.
+- Save the opened replacement search so students can come back after reviewing options.
+- Keep onboarding previews focused by hiding jump-away actions there.
+- Add regression coverage and Chrome QA.
+
+Completed:
+- Added `browseOpenSearch` and `browseUpsertSavedSearch` so Browse can be opened programmatically with a saved search preset.
+- Added placeholder-to-Browse config helpers that infer:
+  - specific GenEd tags such as DSHU, SCIS, and FSAW.
+  - profile-department mode when the profile is active.
+  - all-GenEd browsing for non-profile placeholder searches.
+- Added compact `Find ...` buttons to generated-plan placeholder source samples.
+- Clicking a placeholder action now:
+  - closes Settings.
+  - switches to Browse.
+  - applies the inferred department and GenEd filters.
+  - saves the replacement search with a `Replace ...` label.
+- Disabled placeholder Browse actions inside onboarding preview cards so first-run setup stays in the guided flow.
+- Added wrapping styles for source-sample actions so diagnostics remain compact.
+- Versioned changed browser assets:
+  - `styles.css?v=43`
+  - `js/settings.js?v=7`
+  - `js/onboarding.js?v=4`
+  - `js/browse.js?v=5`
+- Extended the auto-plan diagnostics regression fixture to cover placeholder action rendering, profile-department inference, GenEd filter inference, Browse switching, and saved replacement-search creation.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the auto-plan diagnostics fixture with replacement actions, the account/share fixture, the account setup fixture, the schedule timing fixture, the planner checklist fixture, the planner questions fixture, the Browse profile saved-search fixture, and the personalized onboarding fixture.
+- Ran `git diff --check`.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=43`, `js/settings.js?v=7`, `js/onboarding.js?v=4`, and `js/browse.js?v=5` loaded.
+  - STAT generated Auto Plan Review showed placeholder source samples plus four replacement buttons.
+  - clicking the `Find SCIS` action closed Settings and opened Browse.
+  - Browse selected `__PROFILE_DEPTS__` and `SCIS`.
+  - the saved replacement search chip rendered with a `Replace GenEd SCIS` label.
+  - the saved chip survived reload.
+  - applying the saved chip after reload restored `__PROFILE_DEPTS__` plus `SCIS`.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add Browse result sections for "best for your plan", "fills missing GenEd", and "available in your next term".
+- Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
+- Add drag-and-drop or one-click replacement from Browse result cards into placeholder slots.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

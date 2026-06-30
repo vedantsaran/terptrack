@@ -161,7 +161,18 @@ function browseSaveCurrentSearch() {
     toastError('Pick a department, GenEd, or keyword before saving.');
     return;
   }
-  const label = browseSearchLabel(current);
+  const saved = browseUpsertSavedSearch(current);
+  if (saved) toastSuccess(`Saved "${saved.label}".`);
+}
+
+function browseUpsertSavedSearch(search, options = {}) {
+  const current = {
+    dept: String(search?.dept || '').trim(),
+    genEd: String(search?.genEd || '').trim(),
+    search: String(search?.search || '').trim(),
+  };
+  if (!current.dept && !current.genEd && !current.search) return null;
+  const label = String(options.label || browseSearchLabel(current)).trim().slice(0, 90) || browseSearchLabel(current);
   const saved = browseSavedSearches();
   const duplicate = saved.find(search => (
     search.dept === current.dept
@@ -180,7 +191,28 @@ function browseSaveCurrentSearch() {
   ].slice(0, BROWSE_SAVED_LIMIT);
   saveState();
   renderBrowseSavedSearches();
-  toastSuccess(`Saved "${label}".`);
+  return next;
+}
+
+function browseOpenSearch(config = {}) {
+  const next = {
+    dept: String(config.dept || '').trim(),
+    genEd: String(config.genEd || '').trim(),
+    search: String(config.search || '').trim(),
+  };
+  browseProfileDefaultsApplied = true;
+  browseDept = next.dept;
+  browseGenEd = next.genEd;
+  browseSearch = next.search;
+  browseCache = [];
+  browseCacheKey = '';
+  if (config.save) browseUpsertSavedSearch(next, { label: config.label || browseSearchLabel(next) });
+  syncBrowseControls();
+  if (typeof switchTab === 'function') {
+    switchTab('browse');
+  } else {
+    renderBrowse();
+  }
 }
 
 function browseApplySavedSearch(id) {
