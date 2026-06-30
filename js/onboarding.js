@@ -498,6 +498,12 @@ function onboardResolvePriorCredits(rawCodes = '', presetIds = []) {
       _needsLookup: true,
       note: 'Manual prior credit entry. Verify official UMD transfer equivalency before registration.',
     }, 'Manual entry'));
+  const overlaps = Array.from(byKey.values())
+    .filter(course => (course.sources || []).length > 1)
+    .map(course => ({
+      code: course.code,
+      sources: (course.sources || []).slice(),
+    }));
   const courses = Array.from(byKey.values()).map(course => {
     const clean = { ...course };
     delete clean.sources;
@@ -508,6 +514,7 @@ function onboardResolvePriorCredits(rawCodes = '', presetIds = []) {
     presets: selectedPresets,
     courses,
     totalCredits,
+    overlaps,
   };
 }
 
@@ -566,6 +573,39 @@ function onboardPriorPlanMatches(resolved) {
   return { planned, outside };
 }
 
+function onboardPriorFormatList(values = [], limit = 4) {
+  const clean = values.map(value => String(value || '').trim()).filter(Boolean);
+  if (!clean.length) return '';
+  return clean.slice(0, limit).join(', ') + (clean.length > limit ? ` +${clean.length - limit} more` : '');
+}
+
+function onboardPriorOverlapSummaries(resolved) {
+  return (resolved?.overlaps || [])
+    .map(overlap => {
+      const sources = onboardPriorFormatList(overlap.sources || [], 3);
+      return sources ? `${overlap.code} via ${sources}` : overlap.code;
+    })
+    .filter(Boolean);
+}
+
+function onboardPriorExistingAttemptConflicts(resolved) {
+  const courses = resolved?.courses || [];
+  if (typeof getCourseState !== 'function') return [];
+  const conflictStatuses = new Set(['passed', 'in-progress', 'failed']);
+  return courses.map(course => {
+    const planCourse = typeof findCourse === 'function' ? findCourse(course.code) : null;
+    const code = planCourse?.code || course.code;
+    const courseState = getCourseState(code);
+    const status = String(courseState?.status || '');
+    if (!conflictStatuses.has(status)) return null;
+    return {
+      code,
+      status,
+      grade: courseState?.grade || '',
+    };
+  }).filter(Boolean);
+}
+
 function onboardPriorReviewItems(resolved, opts = {}) {
   const courses = resolved?.courses || [];
   if (!courses.length) return [];
@@ -574,6 +614,8 @@ function onboardPriorReviewItems(resolved, opts = {}) {
   const manualCount = onboardPriorManualCount(resolved);
   const { planned, outside } = onboardPriorPlanMatches(resolved);
   const genEdTags = Array.from(new Set(courses.flatMap(onboardPriorCourseGenEdTags))).sort();
+  const overlapSummaries = onboardPriorOverlapSummaries(resolved);
+  const existingAttempts = onboardPriorExistingAttemptConflicts(resolved);
   const items = [];
 
   const sourceLabels = sources.length ? sources.join(' + ') : (manualCount ? 'transfer database' : 'prior-credit');
@@ -602,6 +644,23 @@ function onboardPriorReviewItems(resolved, opts = {}) {
       level: 'warn',
       title: 'Manual course lookup',
       body: `${manualCount} typed course${manualCount === 1 ? '' : 's'} should be checked in the Transfer Course Database for exact UMD equivalency and credit amount.`,
+    });
+  }
+
+  if (overlapSummaries.length) {
+    items.push({
+      level: 'warn',
+      title: 'Selected-credit overlap',
+      body: `${onboardPriorFormatList(overlapSummaries, 3)} ${overlapSummaries.length === 1 ? 'maps' : 'map'} to the same UMD course more than once. Keep one official source per UMD course unless the Registrar or advisor confirms duplicate credit is allowed.`,
+    });
+  }
+
+  if (existingAttempts.length) {
+    const summaries = existingAttempts.map(item => `${item.code} is already marked ${item.status}${item.grade ? ` (${item.grade})` : ''}`);
+    items.push({
+      level: 'warn',
+      title: 'Existing attempt conflict',
+      body: `${onboardPriorFormatList(summaries, 3)}. Applying prior credit will replace that course status with transfer credit, so confirm the UMD attempt and prior-credit source should not both count.`,
     });
   }
 

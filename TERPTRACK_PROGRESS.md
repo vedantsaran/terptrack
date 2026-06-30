@@ -3727,3 +3727,53 @@ Next pass candidates:
 - Add per-major requirement-source citations to generated schedules.
 - Add a course-equivalency conflict detector for overlapping AP, IB, transfer, and UMD course attempts.
 - Add advisor-packet import/open affordances for loading shared plans before following packet action links.
+
+## 2026-06-30 Pass 74
+
+Focus: add a course-equivalency conflict detector for overlapping AP, IB, transfer, and UMD course attempts.
+
+Planned changes:
+- Preserve enough prior-credit resolver metadata to detect selected sources that map to the same UMD course.
+- Warn before applying prior credit when a selected credit would overwrite a course already marked passed, in-progress, or failed.
+- Surface these warnings in the existing prior-credit review checklist for both onboarding and Settings.
+- Keep existing deduping and apply behavior intact.
+
+Completed:
+- `onboardResolvePriorCredits()` now returns an `overlaps` array with duplicated UMD-equivalent course codes and their selected sources.
+- Added shared helper functions in `js/onboarding.js`:
+  - `onboardPriorFormatList()`.
+  - `onboardPriorOverlapSummaries()`.
+  - `onboardPriorExistingAttemptConflicts()`.
+- The prior-credit review checklist now adds:
+  - `Selected-credit overlap` when AP/IB/manual sources map to the same UMD course.
+  - `Existing attempt conflict` when selected prior credit would replace a passed, in-progress, or failed UMD course state with transfer credit.
+- The existing generic duplicate-credit review remains as a final advisor/Registrar caveat.
+- Versioned changed browser asset:
+  - `js/onboarding.js?v=14`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `ONBOARDING-PRIOR-CREDIT` fixture confirms:
+  - AP Calc BC plus manual `MATH140` creates a resolver overlap for `MATH 140`.
+  - overlap metadata includes both `AP Calc BC 4+` and `Manual entry`.
+  - the review checklist renders `Selected-credit overlap`.
+  - the review checklist renders `Existing attempt conflict` when `MATH 140` is already marked passed.
+  - applying the credits still dedupes `MATH 140` and marks it transfer without duplicating the planned row.
+- Used Chrome with the existing local server at `http://localhost:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed in Settings:
+  - `styles.css?v=68` and `js/onboarding.js?v=14` loaded.
+  - selecting AP Calc BC and typing `MATH140` rendered a visible 7-item prior-credit review.
+  - the review showed `Selected-credit overlap` with `MATH 140 via AP Calc BC 4+` and `Manual entry`.
+  - the review showed `Existing attempt conflict` with `MATH 140 is already marked passed (A)`.
+  - the warning explained that applying prior credit will replace that status with transfer credit.
+  - the summary still deduped to `2 courses · 8 credits · MATH 140, MATH 141`.
+  - there was no horizontal page overflow.
+  - no app-origin console errors appeared; Chrome logged only an unrelated extension message-port error.
+- Finalized the Chrome tab after restoring the original local app state.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add per-major requirement-source citations to generated schedules.
+- Add advisor-packet import/open affordances for loading shared plans before following packet action links.
+- Add an audit panel that summarizes unresolved prior-credit conflicts after credits are applied.

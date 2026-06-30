@@ -1865,7 +1865,7 @@ async function testOnboardingPriorCredit(context) {
         }]
       }];
       state.customCourses = [];
-      state.courses = {};
+      state.courses = { 'MATH 140': { status: 'passed', grade: 'A' } };
       state.recentChanges = [];
       fetchCourseFull = async code => {
         const id = normalizeCode(code);
@@ -1888,6 +1888,8 @@ async function testOnboardingPriorCredit(context) {
         'ap-english-lang-4',
         'ib-econ-hl-5'
       ]);
+      const reviewHtml = onboardPriorReviewChecklistHtml(resolved, { startYear: 2026 });
+      const futureReviewHtml = onboardPriorReviewChecklistHtml(resolved, { startYear: 2028 });
       const applied = await onboardApplyPriorCredits({
         transferRaw: 'MATH140 CMSC131',
         priorCreditIds: ['ap-calc-bc-4', 'ap-english-lang-4', 'ib-econ-hl-5']
@@ -1899,8 +1901,6 @@ async function testOnboardingPriorCredit(context) {
       const econPreset = onboardPriorPresetById('ib-econ-hl-5');
       const calcDetailHtml = onboardPriorDetailHtml(calcPreset);
       const calcDetailLinks = onboardPriorPresetLinks(calcPreset).map(link => link.label);
-      const reviewHtml = onboardPriorReviewChecklistHtml(resolved, { startYear: 2026 });
-      const futureReviewHtml = onboardPriorReviewChecklistHtml(resolved, { startYear: 2028 });
       return {
         presetCount: ONBOARD_PRIOR_CREDIT_PRESETS.length,
         sourceNoteCount: ONBOARD_PRIOR_CREDIT_PRESETS.filter(preset => /chart 2023-2026/.test(onboardPriorPresetSourceNote(preset))).length,
@@ -1911,6 +1911,7 @@ async function testOnboardingPriorCredit(context) {
         calcDetailLinks,
         reviewHtml,
         futureReviewHtml,
+        overlaps: resolved.overlaps,
         resolvedCodes: resolved.courses.map(course => course.code),
         resolvedCredits: resolved.totalCredits,
         summary: onboardPriorSummaryText(resolved),
@@ -1939,6 +1940,9 @@ async function testOnboardingPriorCredit(context) {
   assert(/Prior Credit Review/.test(result.reviewHtml) && /Chart year check/.test(result.reviewHtml), 'onboarding prior credit: review checklist should render chart-year checks');
   assert(/Fall 2026/.test(result.reviewHtml) && /AP exam year|IB exam date/.test(result.reviewHtml), 'onboarding prior credit: review checklist should compare start year to AP/IB verification');
   assert(/Manual course lookup/.test(result.reviewHtml) && /Transfer Course Database/.test(result.reviewHtml), 'onboarding prior credit: review checklist should flag typed course lookup');
+  assert(result.overlaps.some(overlap => overlap.code === 'MATH 140' && overlap.sources.includes('AP Calc BC 4+') && overlap.sources.includes('Manual entry')), 'onboarding prior credit: resolver should expose duplicate source overlaps');
+  assert(/Selected-credit overlap/.test(result.reviewHtml) && /MATH 140 via AP Calc BC 4\+/.test(result.reviewHtml) && /Manual entry/.test(result.reviewHtml), 'onboarding prior credit: review checklist should flag overlapping AP/manual credit sources');
+  assert(/Existing attempt conflict/.test(result.reviewHtml) && /MATH 140 is already marked passed/.test(result.reviewHtml), 'onboarding prior credit: review checklist should flag prior credits that overwrite existing UMD attempt states');
   assert(/Plan placement/.test(result.reviewHtml) && /outside-plan/.test(result.reviewHtml), 'onboarding prior credit: review checklist should distinguish plan matches from outside-plan credits');
   assert(/Duplicate-credit review/.test(result.reviewHtml), 'onboarding prior credit: review checklist should include duplicate-credit review');
   assert(/Fall 2028/.test(result.futureReviewHtml) && /current Registrar chart/.test(result.futureReviewHtml), 'onboarding prior credit: review checklist should warn when start year is outside checked chart window');
