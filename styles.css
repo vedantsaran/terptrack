@@ -5012,6 +5012,72 @@ h1.hero-title em {
   line-height: 1.35;
   margin-top: 3px;
 }
+.browse-impact-panel {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 9px;
+}
+.browse-impact-head {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+.browse-impact-head strong {
+  color: var(--ink);
+  font-size: .78rem;
+  font-weight: 780;
+}
+.browse-impact-head span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  font-weight: 750;
+  text-align: right;
+}
+.browse-impact-list {
+  display: grid;
+  gap: 6px;
+}
+.browse-impact-item {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--blue);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+}
+.browse-impact-item.ok {
+  border-left-color: var(--green);
+  background: var(--green-soft);
+}
+.browse-impact-item.warn {
+  border-left-color: var(--amber);
+  background: rgba(245, 158, 11, .10);
+}
+.browse-impact-item strong,
+.browse-impact-item span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.browse-impact-item strong {
+  color: var(--ink);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.browse-impact-item span {
+  color: var(--ink-soft);
+  font-size: .72rem;
+  line-height: 1.38;
+  margin-top: 3px;
+}
 .browse-why-panel {
   border-top: 1px solid var(--line);
   display: grid;
@@ -5078,6 +5144,14 @@ h1.hero-title em {
   gap: 2px;
 }
 .br-card.compact .browse-slot-head span {
+  text-align: left;
+}
+.br-card.compact .browse-impact-head {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+.br-card.compact .browse-impact-head span {
   text-align: left;
 }
 .br-card.compact .browse-why-head span {

@@ -36,6 +36,7 @@ let browseAvailabilityCache = {};
 let browseWhyCode = '';
 let browseWhyKey = '';
 let browseSlotKey = '';
+let browseImpactKey = '';
 
 function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
@@ -679,6 +680,7 @@ function browseToggleWhy(code, key = '') {
     browseWhyKey = '';
   }
   if (browseWhyCode) browseSlotKey = '';
+  if (browseWhyCode) browseImpactKey = '';
   if (typeof renderBrowse === 'function') renderBrowse();
 }
 
@@ -832,6 +834,7 @@ function browseToggleSlotPicker(code, key = '') {
   if (browseSlotKey) {
     browseWhyCode = '';
     browseWhyKey = '';
+    browseImpactKey = '';
   }
   if (typeof renderBrowse === 'function') renderBrowse();
 }
@@ -876,6 +879,19 @@ async function browseReplaceIntoSlot(code, slotKey) {
   await browseReplacePlaceholder(code);
 }
 
+function browseToggleImpact(code, key = '') {
+  const norm = normalizeCode(code);
+  if (!norm) return;
+  const scopedKey = String(key || norm);
+  browseImpactKey = browseImpactKey === scopedKey ? '' : scopedKey;
+  if (browseImpactKey) {
+    browseWhyCode = '';
+    browseWhyKey = '';
+    browseSlotKey = '';
+  }
+  if (typeof renderBrowse === 'function') renderBrowse();
+}
+
 function browseRowToReplacementCourse(row) {
   if (!row) return null;
   if (row._full) return row._full;
@@ -894,6 +910,189 @@ function browseRowToReplacementCourse(row) {
     coreqs: [],
     description: row.description || '',
   };
+}
+
+function browseCourseFromItem(item) {
+  const row = item.row || item;
+  return browseRowToReplacementCourse(row) || {
+    code: displayCode(item.code || row.course_id || ''),
+    title: row.name || '',
+    cr: parseInt(row.credits || '3', 10) || 3,
+    gen_ed: row.gen_ed || [],
+    categories: (item.genEdTags || browseCourseGenEdTags(row)).map(tag => `gened-${tag.toLowerCase()}`),
+  };
+}
+
+function browseSemesterCreditLoad(semId) {
+  const sem = (typeof getAllSemesters === 'function' ? getAllSemesters() : []).find(item => item.id === semId);
+  if (!sem) return 0;
+  return [
+    ...(sem.courses || []),
+    ...(state.customCourses || []).filter(course => course.semId === sem.id),
+  ].reduce((sum, course) => sum + (Number(course.cr) || 0), 0);
+}
+
+function browseImpactSemesterContext(item, opts = {}) {
+  const course = browseCourseFromItem(item);
+  const replacement = browseReplacementTarget();
+  const slots = opts.slotCandidates || browseSlotCandidatesFor(item, 1);
+  const slot = replacement ? null : slots[0] || null;
+  const nextTerm = opts.nextTerm || browseNextTermContext();
+  const sems = typeof getAllSemesters === 'function' ? getAllSemesters() : [];
+  const semId = replacement?.semId || slot?.semId || nextTerm.semId || (typeof scheduleDefaultSemesterId === 'function' ? scheduleDefaultSemesterId() : '');
+  const sem = sems.find(item => item.id === semId) || sems[0] || null;
+  const target = replacement || slot?.course || null;
+  const currentCredits = sem ? browseSemesterCreditLoad(sem.id) : 0;
+  const courseCredits = Number(course.cr) || 0;
+  const removedCredits = target ? (Number(target.cr) || 0) : 0;
+  const afterCredits = Math.max(0, currentCredits - removedCredits + courseCredits);
+  const term = sem
+    ? ((state.schedulePrefs || {})[sem.id]?.term || (typeof scheduleInferTermCode === 'function' ? scheduleInferTermCode(sem) : ''))
+    : nextTerm.term;
+  const termLabel = term && typeof scheduleTermLabel === 'function' ? scheduleTermLabel(term) : (nextTerm.termLabel || term || '');
+  return {
+    mode: replacement ? 'active-replacement' : slot ? 'slot' : 'add',
+    course,
+    sem,
+    semId: sem?.id || '',
+    semName: sem?.name || nextTerm.semName || 'next planned term',
+    term,
+    termLabel,
+    target,
+    slot,
+    currentCredits,
+    courseCredits,
+    removedCredits,
+    afterCredits,
+  };
+}
+
+function browseCodeIsPassedForImpact(code) {
+  if (typeof getCourseState !== 'function') return false;
+  const display = displayCode(code);
+  const norm = normalizeCode(code);
+  const states = [getCourseState(display), getCourseState(norm), getCourseState(code)];
+  return states.some(state => state.status === 'passed' || state.status === 'transfer');
+}
+
+function browsePrereqImpactDetail(row) {
+  const prereqText = browsePrereqText(row);
+  if (!prereqText) return {
+    level: 'info',
+    detail: 'Full prerequisite metadata is checked when you add the course.',
+  };
+  const groups = typeof parsePrereqGroups === 'function' ? parsePrereqGroups(prereqText) : [];
+  if (!groups.length) {
+    const codes = browsePrereqCodes(prereqText);
+    return {
+      level: codes.length ? 'warn' : 'info',
+      detail: codes.length
+        ? `Catalog text mentions ${codes.join(', ')}; review before registration.`
+        : 'Catalog prerequisite text is available; review details before registration.',
+    };
+  }
+  const missing = groups.filter(group => !group.some(browseCodeIsPassedForImpact));
+  if (!missing.length) return {
+    level: 'ok',
+    detail: 'Known prerequisite groups appear satisfied by passed or transfer coursework.',
+  };
+  return {
+    level: 'warn',
+    detail: `Potentially missing ${missing.map(group => group.join(' or ')).join('; ')}.`,
+  };
+}
+
+function browseImpactItems(item, opts = {}) {
+  const row = item.row || item;
+  const context = browseImpactSemesterContext(item, opts);
+  const ge = item.genEdTags || browseCourseGenEdTags(row);
+  const gapHits = item.gapHits || [];
+  const duplicate = (typeof flatCourses === 'function' ? flatCourses() : [])
+    .some(course => normalizeCode(course.code) === item.norm && browseIsCatalogCourseCode(course.code));
+  const loadLevel = context.afterCredits > 18 ? 'warn' : context.afterCredits >= 15 ? 'info' : 'ok';
+  const targetText = context.target
+    ? `Replacing ${context.target.code || 'placeholder'} in ${context.semName}`
+    : `Adding to ${context.semName}`;
+  const loadDetail = context.target
+    ? `${targetText}: ${context.currentCredits} -> ${context.afterCredits} credits.`
+    : `${targetText}: ${context.currentCredits} -> ${context.afterCredits} credits.`;
+  const availability = item.availability || null;
+  const prereq = browsePrereqImpactDetail(row);
+  const items = [{
+    title: 'Term load',
+    level: loadLevel,
+    detail: `${loadDetail}${context.termLabel ? ` Planned UMD term: ${context.termLabel}.` : ''}`,
+  }, {
+    title: 'Duplicate check',
+    level: duplicate ? 'warn' : 'ok',
+    detail: duplicate ? `${displayCode(item.code)} is already in your plan.` : 'No existing planned copy found.',
+  }];
+  if (gapHits.length) {
+    items.push({
+      title: 'GenEd impact',
+      level: 'ok',
+      detail: `Covers current gap${gapHits.length === 1 ? '' : 's'}: ${gapHits.join(' + ')}.`,
+    });
+  } else if (ge.length) {
+    items.push({
+      title: 'GenEd impact',
+      level: 'info',
+      detail: `Adds ${ge.join(' + ')} coverage; not currently one of the highest-priority gaps.`,
+    });
+  } else {
+    items.push({
+      title: 'GenEd impact',
+      level: 'info',
+      detail: 'No GenEd tags are attached to this catalog result.',
+    });
+  }
+  items.push({
+    title: 'Prereqs',
+    level: prereq.level,
+    detail: prereq.detail,
+  });
+  if (availability) {
+    const count = Number(availability.sectionCount) || 0;
+    const open = Number(availability.openSeats) || 0;
+    items.push({
+      title: 'Sections',
+      level: count ? 'ok' : 'warn',
+      detail: count
+        ? `${count} posted section${count === 1 ? '' : 's'}${open ? ` with ${open} open seat${open === 1 ? '' : 's'}` : ''} for ${availability.termLabel || context.termLabel || 'the checked term'}.`
+        : `No posted sections found yet for ${availability.termLabel || context.termLabel || 'the checked term'}.`,
+    });
+  } else {
+    items.push({
+      title: 'Sections',
+      level: context.term ? 'info' : 'warn',
+      detail: context.term
+        ? `Section availability has not been checked yet for ${context.termLabel || context.term}.`
+        : 'No schedule term is available for live section checking yet.',
+    });
+  }
+  return { context, items };
+}
+
+function browseImpactHtml(item, opts = {}, panelId = '') {
+  const { context, items } = browseImpactItems(item, opts);
+  const id = panelId || `browse-impact-${item.norm || normalizeCode(item.code || '')}`;
+  const modeText = context.mode === 'add' ? 'Add preview' : context.mode === 'slot' ? 'Best slot preview' : 'Replacement preview';
+  return `
+    <div class="browse-impact-panel" id="${browseEscape(id)}" role="region" aria-label="Schedule impact for ${browseEscape(displayCode(item.code || 'this course'))}">
+      <div class="browse-impact-head">
+        <strong>Schedule impact</strong>
+        <span>${browseEscape(modeText)}</span>
+      </div>
+      <div class="browse-impact-list">
+        ${items.map(impact => `
+          <div class="browse-impact-item ${browseEscape(impact.level || 'info')}">
+            <strong>${browseEscape(impact.title)}</strong>
+            <span>${browseEscape(impact.detail)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function browseFindCachedRow(code) {
@@ -941,6 +1140,10 @@ function browseCourseCardHtml(item, opts = {}) {
   const slotId = `browse-slot-${slotScopeKey.replace(/[^A-Za-z0-9_-]/g, '-')}`;
   const slotCandidates = canReplace ? [] : browseSlotCandidatesFor(item);
   const slotOpen = browseSlotKey === slotScopeKey;
+  const impactScopeKey = `${whyScope}:impact:${item.norm || actionCode}`;
+  const impactId = `browse-impact-${impactScopeKey.replace(/[^A-Za-z0-9_-]/g, '-')}`;
+  const canPreview = !inPlan;
+  const impactOpen = browseImpactKey === impactScopeKey;
   return `
     <div class="br-card ${inPlan ? 'in-plan' : ''}${opts.compact ? ' compact' : ''}">
       <div class="br-head">
@@ -963,9 +1166,11 @@ function browseCourseCardHtml(item, opts = {}) {
             ? `<button class="btn small primary" onclick="browseReplacePlaceholder('${browseEscape(actionCode)}')">Replace ${browseEscape(browseReplacementTargetLabel(replacementTarget))}</button><button class="btn small" onclick="browseAddCourse('${browseEscape(actionCode)}')">Add separately</button>`
             : `<button class="btn small" onclick="browseAddCourse('${browseEscape(actionCode)}')">Add to plan</button>`}
         ${slotCandidates.length ? `<button class="btn small" type="button" aria-expanded="${slotOpen ? 'true' : 'false'}" aria-controls="${browseEscape(slotId)}" onclick="browseToggleSlotPicker('${browseEscape(actionCode)}', '${browseEscape(slotScopeKey)}')">${slotOpen ? 'Hide slots' : 'Choose slot'}</button>` : ''}
+        ${canPreview ? `<button class="btn small" type="button" aria-expanded="${impactOpen ? 'true' : 'false'}" aria-controls="${browseEscape(impactId)}" onclick="browseToggleImpact('${browseEscape(actionCode)}', '${browseEscape(impactScopeKey)}')">${impactOpen ? 'Hide preview' : 'Preview'}</button>` : ''}
         <button class="btn small" type="button" aria-expanded="${whyOpen ? 'true' : 'false'}" aria-controls="${browseEscape(whyId)}" onclick="browseToggleWhy('${browseEscape(actionCode)}', '${browseEscape(whyKey)}')">${whyOpen ? 'Hide why' : 'Why'}</button>
       </div>
       ${slotOpen ? browseSlotPickerHtml(item, slotCandidates, slotId) : ''}
+      ${impactOpen ? browseImpactHtml(item, { nextTerm: opts.nextTerm || browseNextTermContext(), slotCandidates }, impactId) : ''}
       ${whyOpen ? browseExplanationHtml(item, opts.nextTerm || browseNextTermContext(), whyId) : ''}
     </div>
   `;

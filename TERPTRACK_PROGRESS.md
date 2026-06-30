@@ -2313,3 +2313,60 @@ Next pass candidates:
 - Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
 - Add elective-slot recommendations that distinguish free electives, major electives, technical electives, and supporting courses.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 50
+
+Focus: preview schedule impact before adding or replacing a Browse course.
+
+Planned changes:
+- Add a compact Browse card preview panel for schedule impact.
+- Show term load, GenEd effect, duplicate risk, prereq readiness, and posted-section status.
+- Prefer the best matching placeholder slot when one exists; otherwise preview the next add-to-plan term.
+- Keep Preview, Choose slot, and Why panels mutually exclusive.
+- Add regression coverage and Chrome QA.
+
+Completed:
+- Added `Preview` actions to actionable Browse cards.
+- Added Browse impact helpers that compute:
+  - best preview context: active replacement target, matching placeholder slot, or add-to-plan term.
+  - current and projected semester credits.
+  - duplicate status against existing planned catalog courses.
+  - GenEd gap/coverage impact.
+  - prerequisite readiness from catalog prerequisite text when available.
+  - posted section/open-seat status from already hydrated availability.
+- Added an inline `Schedule impact` panel with level-coded rows for ok/info/warn signals.
+- Made Preview mutually exclusive with `Choose slot` and `Why`, so a card never stacks multiple expanded panels.
+- Kept the preview read-only: it does not fetch, add, or replace anything.
+- Versioned changed browser assets:
+  - `styles.css?v=48`
+  - `js/browse.js?v=11`
+- Added the `BROWSE-IMPACT` regression fixture covering:
+  - best-slot preview mode.
+  - stable replacement credit load.
+  - duplicate check.
+  - GenEd gap impact.
+  - prerequisite group parsing and missing-prereq messaging.
+  - posted-section/open-seat messaging.
+  - closed/open panel rendering.
+  - panel exclusivity with slot picker and Why.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the auto-plan diagnostics fixture with replacement actions, the account/share fixture, the account setup fixture, the schedule timing fixture, the planner checklist fixture, the planner questions fixture, the Browse profile saved-search fixture, the Browse sections fixture, the Browse explanation fixture, the new Browse impact preview fixture, the Browse replacement fixture, the Browse slot selection fixture, and the personalized onboarding fixture.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=48`, `js/browse.js?v=11`, and `js/placeholder-search.js?v=5` loaded.
+  - a seeded plan with `GenEd DSHS`, `ENGL 101`, and a passed `STAT 100` opened Browse successfully.
+  - filtering to `GVPT200` rendered `GVPT 200` with `Add to plan`, `Choose slot`, `Preview`, and `Why`.
+  - Preview opened as `Best slot preview`.
+  - Preview showed term load `6 -> 6 credits`, the DSHS slot replacement context, GenEd impact, duplicate check, prereq metadata fallback, and `10 posted sections with 11 open seats`.
+  - opening `Choose slot` closed Preview.
+  - opening `Why` closed the slot picker.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add elective-slot recommendations that distinguish free electives, major electives, technical electives, and supporting courses.
+- Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
+- Add an impact preview variant that estimates prerequisite-chain additions before opening the resolver modal.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

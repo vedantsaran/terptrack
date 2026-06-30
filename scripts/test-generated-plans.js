@@ -921,6 +921,126 @@ async function testBrowseExplanationPanel(context) {
   };
 }
 
+async function testBrowseImpactPreview(context) {
+  const result = clone(await vm.runInContext(`
+    (() => {
+      state.activeSchedule = [{
+        id: 'PASS50A',
+        name: 'Pass 50 Fall 2026',
+        year: 'Year 1',
+        courses: [{
+          code: 'GenEd DSHS',
+          title: 'History and Social Sciences placeholder',
+          cr: 3,
+          kind: 'gened',
+          category: 'gened-dshs',
+          categories: ['gened-dshs'],
+          note: 'Auto-generated DSHS placeholder'
+        }, {
+          code: 'ENGL 101',
+          title: 'Academic Writing',
+          cr: 3,
+          kind: 'gened',
+          category: 'gened-fsaw',
+          categories: ['gened-fsaw']
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {
+        'STAT 100': { status: 'passed', grade: 'A' }
+      };
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['policy-society'],
+        careerGoal: 'public policy',
+        genEdDepts: 'GVPT'
+      });
+      recoGenEdGaps = () => [{ id: 'DSHS', label: 'History and Social Sciences', have: 0, need: 1 }];
+      placeholderSearchTarget = null;
+      placeholderSearchSelectedTags = [];
+      browseImpactKey = '';
+      browseWhyKey = '';
+      browseWhyCode = '';
+      browseSlotKey = '';
+      const nextTerm = { semId: 'PASS50A', semName: 'Pass 50 Fall 2026', term: '202608', termLabel: 'Fall 2026' };
+      const availability = {};
+      availability[browseAvailabilityKey(nextTerm.term, 'GVPT200')] = {
+        term: nextTerm.term,
+        termLabel: nextTerm.termLabel,
+        sectionCount: 2,
+        openSeats: 12
+      };
+      const rows = [{
+        course_id: 'GVPT200',
+        name: 'International Political Relations',
+        credits: '3',
+        description: 'A public policy and international relations course.',
+        gen_ed: ['DSHS', 'DVUP'],
+        relationships: {
+          prereqs: 'Prerequisite: STAT100 and MATH115.'
+        }
+      }];
+      const item = browseDecorateRows(rows, {
+        availability,
+        nextTerm,
+        plannedMap: new Map()
+      }).sort(browseCompareRows)[0];
+      const slotCandidates = browseSlotCandidatesFor(item);
+      const preview = browseImpactItems(item, { nextTerm, slotCandidates });
+      const closedHtml = browseCourseCardHtml(item, { nextTerm, whyScope: 'full' });
+      browseToggleImpact('GVPT200', 'full:impact:GVPT200');
+      const openedKey = browseImpactKey;
+      const openHtml = browseCourseCardHtml(item, { nextTerm, whyScope: 'full' });
+      browseToggleSlotPicker('GVPT200', 'full:slot:GVPT200');
+      const impactAfterSlot = browseImpactKey;
+      const slotAfterImpact = browseSlotKey;
+      browseToggleImpact('GVPT200', 'full:impact:GVPT200');
+      browseToggleWhy('GVPT200', 'full:GVPT200');
+      const impactAfterWhy = browseImpactKey;
+      const whyAfterImpact = browseWhyKey;
+      return {
+        context: preview.context,
+        titles: preview.items.map(item => item.title),
+        levels: preview.items.map(item => item.level),
+        detailText: preview.items.map(item => item.detail).join(' | '),
+        closedHtml,
+        openHtml,
+        openedKey,
+        impactAfterSlot,
+        slotAfterImpact,
+        impactAfterWhy,
+        whyAfterImpact
+      };
+    })()
+  `, context));
+
+  assert(result.context.mode === 'slot', 'browse impact: should preview best matching placeholder slot');
+  assert(result.context.currentCredits === 6 && result.context.afterCredits === 6, 'browse impact: replacement slot should keep term load stable');
+  assert(result.titles.includes('Term load'), 'browse impact: should include term load');
+  assert(result.titles.includes('Duplicate check'), 'browse impact: should include duplicate check');
+  assert(result.titles.includes('GenEd impact'), 'browse impact: should include GenEd impact');
+  assert(result.titles.includes('Prereqs'), 'browse impact: should include prereq status');
+  assert(result.titles.includes('Sections'), 'browse impact: should include sections status');
+  assert(/Replacing GenEd DSHS/.test(result.detailText) && /6 -> 6 credits/.test(result.detailText), 'browse impact: load detail should name replacement and credit change');
+  assert(/Covers current gap/.test(result.detailText) && /DSHS/.test(result.detailText), 'browse impact: GenEd detail should name gap');
+  assert(/Potentially missing MATH 115/.test(result.detailText), 'browse impact: prereq detail should identify unsatisfied prereq group');
+  assert(/2 posted sections/.test(result.detailText) && /12 open seats/.test(result.detailText), 'browse impact: section detail should include posted sections and seats');
+  assert(/Preview/.test(result.closedHtml), 'browse impact: closed card should render preview action');
+  assert(!/browse-impact-panel/.test(result.closedHtml), 'browse impact: closed card should not render panel');
+  assert(/browse-impact-panel/.test(result.openHtml), 'browse impact: open card should render panel');
+  assert(/Schedule impact/.test(result.openHtml) && /Best slot preview/.test(result.openHtml), 'browse impact: panel should show header and mode');
+  assert(result.openedKey === 'full:impact:GVPT200', 'browse impact: toggle should open scoped impact key');
+  assert(result.impactAfterSlot === '', 'browse impact: opening slot picker should close impact preview');
+  assert(result.slotAfterImpact === 'full:slot:GVPT200', 'browse impact: slot picker should open after closing impact preview');
+  assert(result.impactAfterWhy === '', 'browse impact: opening why should close impact preview');
+  assert(result.whyAfterImpact === 'full:GVPT200', 'browse impact: why should open after closing impact preview');
+
+  return {
+    id: 'BROWSE-IMPACT',
+    mode: result.context.mode,
+    load: `${result.context.currentCredits}->${result.context.afterCredits}`,
+  };
+}
+
 async function testBrowsePlaceholderReplacement(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -1220,6 +1340,7 @@ async function main() {
   const browse = await testBrowseProfileDepartments(context);
   const browseSections = await testBrowseResultSections(context);
   const browseWhy = await testBrowseExplanationPanel(context);
+  const browseImpact = await testBrowseImpactPreview(context);
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
@@ -1235,10 +1356,11 @@ async function main() {
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
+  console.log(`Browse impact fixture ${browseImpact.id}: ${browseImpact.mode}; load ${browseImpact.load}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse replacement + browse slot selection + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + personalized onboarding).`);
 }
 
 main().catch(error => {
