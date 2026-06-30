@@ -1002,6 +1002,120 @@ async function testBrowsePlaceholderReplacement(context) {
   };
 }
 
+async function testBrowseSlotSelection(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      state.activeSchedule = [{
+        id: 'PASS49A',
+        name: 'Pass 49 Fall',
+        year: 'Year 1',
+        courses: [
+          {
+            code: 'GenEd DSHS',
+            title: 'History and Social Sciences placeholder',
+            cr: 3,
+            kind: 'gened',
+            category: 'gened-dshs',
+            categories: ['gened-dshs'],
+            note: 'Auto-generated DSHS placeholder'
+          },
+          {
+            code: 'GenEd DSHU',
+            title: 'Humanities placeholder',
+            cr: 3,
+            kind: 'gened',
+            category: 'gened-dshu',
+            categories: ['gened-dshu'],
+            note: 'Auto-generated DSHU placeholder'
+          }
+        ]
+      }, {
+        id: 'PASS49B',
+        name: 'Pass 49 Spring',
+        year: 'Year 1',
+        courses: [{
+          code: 'Free Elective #1',
+          title: 'Free Elective 1',
+          cr: 3,
+          kind: 'tech',
+          category: 'elective',
+          note: 'Auto-generated credit placeholder'
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['policy-society'],
+        careerGoal: 'public policy',
+        genEdDepts: 'GVPT'
+      });
+      placeholderSearchTarget = null;
+      placeholderSearchSelectedTags = [];
+      placeholderSearchMode = 'all';
+      browseSlotKey = '';
+      browseWhyCode = '';
+      browseWhyKey = '';
+      currentTab = 'browse';
+      browseCache = [{
+        course_id: 'GVPT200',
+        name: 'International Political Relations',
+        credits: '3',
+        description: 'A public policy and international relations course.',
+        gen_ed: ['DSHS', 'DVUP']
+      }];
+      const item = browseDecorateRows(browseCache, {
+        nextTerm: { term: '202608', termLabel: 'Fall 2026' }
+      }).sort(browseCompareRows)[0];
+      const slots = browseSlotCandidatesFor(item);
+      const closedHtml = browseCourseCardHtml(item, { nextTerm: { term: '202608', termLabel: 'Fall 2026' }, whyScope: 'full' });
+      browseToggleSlotPicker('GVPT200', 'full:slot:GVPT200');
+      const openedKey = browseSlotKey;
+      const openHtml = browseCourseCardHtml(item, { nextTerm: { term: '202608', termLabel: 'Fall 2026' }, whyScope: 'full' });
+      browseToggleWhy('GVPT200', 'full:GVPT200');
+      const keyAfterWhy = browseSlotKey;
+      const whyAfterSlot = browseWhyKey;
+      await browseReplaceIntoSlot('GVPT200', slots[0].key);
+      const replaced = state.activeSchedule[0].courses[0];
+      const untouched = state.activeSchedule[0].courses[1];
+      const elective = state.activeSchedule[1].courses[0];
+      return {
+        slotCodes: slots.map(slot => slot.course.code),
+        slotLabels: slots.map(slot => slot.label),
+        closedHtml,
+        openHtml,
+        openedKey,
+        keyAfterWhy,
+        whyAfterSlot,
+        replaced,
+        untouched,
+        elective,
+        targetAfterReplace: placeholderSearchTarget
+      };
+    })()
+  `, context));
+
+  assert(result.slotCodes[0] === 'GenEd DSHS', 'browse slot selection: matching GenEd placeholder should rank first');
+  assert(result.slotCodes.includes('Free Elective #1'), 'browse slot selection: open elective slot should be available as fallback');
+  assert(/Choose slot/.test(result.closedHtml), 'browse slot selection: card should render slot picker action');
+  assert(!/browse-slot-panel/.test(result.closedHtml), 'browse slot selection: closed card should not render slot panel');
+  assert(/browse-slot-panel/.test(result.openHtml), 'browse slot selection: open card should render slot panel');
+  assert(/GenEd DSHS/.test(result.openHtml) && /DSHS match/.test(result.openHtml), 'browse slot selection: slot panel should show matching placeholder');
+  assert(result.openedKey === 'full:slot:GVPT200', 'browse slot selection: toggle should open scoped slot key');
+  assert(result.keyAfterWhy === '', 'browse slot selection: opening why should close the slot picker');
+  assert(result.whyAfterSlot === 'full:GVPT200', 'browse slot selection: why panel should open after closing slot picker');
+  assert(result.replaced.code === 'GVPT 200', 'browse slot selection: should replace selected placeholder with Browse course');
+  assert(result.replaced.category === 'gened-dshs', 'browse slot selection: replacement should preserve selected GenEd category');
+  assert(result.untouched.code === 'GenEd DSHU', 'browse slot selection: nonmatching placeholder should remain untouched');
+  assert(result.elective.code === 'Free Elective #1', 'browse slot selection: elective fallback should not be used when DSHS slot is selected');
+  assert(result.targetAfterReplace === null, 'browse slot selection: replacement target should clear after replacement');
+
+  return {
+    id: 'BROWSE-SLOT-SELECT',
+    firstSlot: result.slotCodes[0],
+    replaced: result.replaced.code,
+  };
+}
+
 async function testOnboardingPersonalizedSetup(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -1107,6 +1221,7 @@ async function main() {
   const browseSections = await testBrowseResultSections(context);
   const browseWhy = await testBrowseExplanationPanel(context);
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
+  const browseSlot = await testBrowseSlotSelection(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
 
   console.table(rows);
@@ -1121,8 +1236,9 @@ async function main() {
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
+  console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse replacement + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse replacement + browse slot selection + personalized onboarding).`);
 }
 
 main().catch(error => {

@@ -35,6 +35,7 @@ let browseRenderSeq = 0;
 let browseAvailabilityCache = {};
 let browseWhyCode = '';
 let browseWhyKey = '';
+let browseSlotKey = '';
 
 function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
@@ -677,6 +678,7 @@ function browseToggleWhy(code, key = '') {
     browseWhyCode = isOpen ? '' : norm;
     browseWhyKey = '';
   }
+  if (browseWhyCode) browseSlotKey = '';
   if (typeof renderBrowse === 'function') renderBrowse();
 }
 
@@ -717,6 +719,161 @@ function browseClearReplacementTarget() {
   if (typeof placeholderSearchTarget !== 'undefined') placeholderSearchTarget = null;
   if (typeof renderBrowse === 'function') renderBrowse();
   if (typeof toastInfo === 'function') toastInfo('Browse replacement target cleared.');
+}
+
+function browseIsCatalogCourseCode(code) {
+  return /^[A-Z]{3,4}\s*\d{3}[A-Z]?$/i.test(String(code || '').trim());
+}
+
+function browseIsSlotPlaceholder(course) {
+  if (!course || browseIsCatalogCourseCode(course.code)) return false;
+  const categories = Array.isArray(course.categories) ? course.categories : [];
+  const hay = [course.code, course.title, course.note, course.category, ...categories].join(' ').toUpperCase();
+  return /^GENED\s/i.test(course.code || '')
+    || /^FREE ELECTIVE/i.test(course.code || '')
+    || hay.includes('PLACEHOLDER')
+    || hay.includes('AUTO-GENERATED')
+    || String(course.category || '').startsWith('gened-');
+}
+
+function browseSlotPlaceholderTags(course) {
+  if (typeof inferPlaceholderTags === 'function') return inferPlaceholderTags(course);
+  const tags = new Set();
+  if (String(course?.category || '').startsWith('gened-')) tags.add(String(course.category).replace('gened-', '').toUpperCase());
+  (Array.isArray(course?.categories) ? course.categories : [])
+    .filter(cat => String(cat || '').startsWith('gened-'))
+    .forEach(cat => tags.add(String(cat).replace('gened-', '').toUpperCase()));
+  const hay = [course?.code, course?.title, course?.note].join(' ').toUpperCase();
+  BROWSE_GENED_TAGS.forEach(tag => { if (hay.includes(tag)) tags.add(tag); });
+  return Array.from(tags).filter(tag => BROWSE_GENED_TAGS.includes(tag));
+}
+
+function browseSlotStableKey(semId, index, code, custom = false) {
+  const raw = `${custom ? 'custom' : 'sem'}-${semId || 'none'}-${index}-${normalizeCode(code)}`;
+  return raw.replace(/[^A-Za-z0-9_-]/g, '-');
+}
+
+function browsePlaceholderSlots() {
+  const slots = [];
+  const sems = typeof getAllSemesters === 'function' ? getAllSemesters() : [];
+  sems.forEach((sem, semIndex) => {
+    (sem.courses || []).forEach((course, courseIndex) => {
+      if (!browseIsSlotPlaceholder(course)) return;
+      const semId = sem.id || `sem-${semIndex}`;
+      slots.push({
+        key: browseSlotStableKey(semId, courseIndex, course.code),
+        course: { ...course, semId, _browseSlotIndex: courseIndex },
+        semId,
+        semName: sem.name || semId,
+        index: courseIndex,
+        tags: browseSlotPlaceholderTags(course),
+        custom: false,
+      });
+    });
+  });
+  (state.customCourses || []).forEach((course, index) => {
+    if (!browseIsSlotPlaceholder(course)) return;
+    slots.push({
+      key: browseSlotStableKey(course.semId || 'custom', index, course.code, true),
+      course: { ...course, _browseCustomSlotIndex: index },
+      semId: course.semId || '',
+      semName: course.semName || 'Custom courses',
+      index,
+      tags: browseSlotPlaceholderTags(course),
+      custom: true,
+    });
+  });
+  return slots;
+}
+
+function browseSlotMatchDetail(item, slot) {
+  const courseTags = item.genEdTags || browseCourseGenEdTags(item.row || item);
+  const courseTagSet = new Set(courseTags);
+  const slotTags = slot.tags || [];
+  if (slotTags.length) {
+    const hits = slotTags.filter(tag => courseTagSet.has(tag));
+    if (!hits.length) return null;
+    return {
+      score: 300 + hits.length * 40,
+      label: `${hits.join(' + ')} match`,
+      matchedTags: hits,
+    };
+  }
+  if (/^FREE ELECTIVE/i.test(slot.course.code || '') || String(slot.course.category || '') === 'elective') {
+    return {
+      score: 60,
+      label: 'Open elective slot',
+      matchedTags: [],
+    };
+  }
+  return null;
+}
+
+function browseSlotCandidatesFor(item, limit = 5) {
+  if (!item || item.inPlan || browseReplacementTarget() || typeof replacePlaceholderWithCourse !== 'function') return [];
+  const duplicate = (typeof flatCourses === 'function' ? flatCourses() : [])
+    .some(course => normalizeCode(course.code) === item.norm && browseIsCatalogCourseCode(course.code));
+  if (duplicate) return [];
+  return browsePlaceholderSlots()
+    .map(slot => {
+      const match = browseSlotMatchDetail(item, slot);
+      return match ? { ...slot, ...match } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score || String(a.semName).localeCompare(String(b.semName)) || a.index - b.index)
+    .slice(0, limit);
+}
+
+function browseToggleSlotPicker(code, key = '') {
+  const norm = normalizeCode(code);
+  if (!norm) return;
+  const scopedKey = String(key || norm);
+  browseSlotKey = browseSlotKey === scopedKey ? '' : scopedKey;
+  if (browseSlotKey) {
+    browseWhyCode = '';
+    browseWhyKey = '';
+  }
+  if (typeof renderBrowse === 'function') renderBrowse();
+}
+
+function browseSlotPickerHtml(item, slots, panelId) {
+  if (!slots.length) return '';
+  const code = item.code || item.row?.course_id || '';
+  return `
+    <div class="browse-slot-panel" id="${browseEscape(panelId)}" role="region" aria-label="Choose placeholder slot for ${browseEscape(displayCode(code))}">
+      <div class="browse-slot-head">
+        <strong>Choose a slot</strong>
+        <span>Replace a planned placeholder with ${browseEscape(displayCode(code))}</span>
+      </div>
+      <div class="browse-slot-list">
+        ${slots.map(slot => `
+          <button class="browse-slot-option" type="button" onclick="browseReplaceIntoSlot('${browseEscape(normalizeCode(code))}', '${browseEscape(slot.key)}')">
+            <strong>${browseEscape(slot.course.code || 'Placeholder')}</strong>
+            <span>${browseEscape([slot.semName, slot.label, slot.course.title || ''].filter(Boolean).join(' · '))}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function browseReplaceIntoSlot(code, slotKey) {
+  if (typeof placeholderSearchTarget === 'undefined' || typeof replacePlaceholderWithCourse !== 'function') {
+    toastError('Placeholder replacement is still loading.');
+    return;
+  }
+  const slot = browsePlaceholderSlots().find(item => item.key === slotKey);
+  if (!slot) {
+    toastError('That placeholder slot is no longer available.');
+    browseSlotKey = '';
+    if (typeof renderBrowse === 'function') renderBrowse();
+    return;
+  }
+  placeholderSearchTarget = { ...slot.course, semId: slot.semId };
+  placeholderSearchSelectedTags = slot.tags.slice();
+  placeholderSearchMode = slot.tags.length ? 'all' : 'any';
+  browseSlotKey = '';
+  await browseReplacePlaceholder(code);
 }
 
 function browseRowToReplacementCourse(row) {
@@ -780,6 +937,10 @@ function browseCourseCardHtml(item, opts = {}) {
   const whyKey = `${whyScope}:${item.norm || actionCode}`;
   const whyId = `browse-why-${whyKey.replace(/[^A-Za-z0-9_-]/g, '-')}`;
   const whyOpen = browseWhyKey ? browseWhyKey === whyKey : browseWhyCode === item.norm;
+  const slotScopeKey = `${whyScope}:slot:${item.norm || actionCode}`;
+  const slotId = `browse-slot-${slotScopeKey.replace(/[^A-Za-z0-9_-]/g, '-')}`;
+  const slotCandidates = canReplace ? [] : browseSlotCandidatesFor(item);
+  const slotOpen = browseSlotKey === slotScopeKey;
   return `
     <div class="br-card ${inPlan ? 'in-plan' : ''}${opts.compact ? ' compact' : ''}">
       <div class="br-head">
@@ -801,8 +962,10 @@ function browseCourseCardHtml(item, opts = {}) {
           : canReplace
             ? `<button class="btn small primary" onclick="browseReplacePlaceholder('${browseEscape(actionCode)}')">Replace ${browseEscape(browseReplacementTargetLabel(replacementTarget))}</button><button class="btn small" onclick="browseAddCourse('${browseEscape(actionCode)}')">Add separately</button>`
             : `<button class="btn small" onclick="browseAddCourse('${browseEscape(actionCode)}')">Add to plan</button>`}
+        ${slotCandidates.length ? `<button class="btn small" type="button" aria-expanded="${slotOpen ? 'true' : 'false'}" aria-controls="${browseEscape(slotId)}" onclick="browseToggleSlotPicker('${browseEscape(actionCode)}', '${browseEscape(slotScopeKey)}')">${slotOpen ? 'Hide slots' : 'Choose slot'}</button>` : ''}
         <button class="btn small" type="button" aria-expanded="${whyOpen ? 'true' : 'false'}" aria-controls="${browseEscape(whyId)}" onclick="browseToggleWhy('${browseEscape(actionCode)}', '${browseEscape(whyKey)}')">${whyOpen ? 'Hide why' : 'Why'}</button>
       </div>
+      ${slotOpen ? browseSlotPickerHtml(item, slotCandidates, slotId) : ''}
       ${whyOpen ? browseExplanationHtml(item, opts.nextTerm || browseNextTermContext(), whyId) : ''}
     </div>
   `;

@@ -2252,3 +2252,64 @@ Next pass candidates:
 - Add direct placeholder-slot selection from Browse when no placeholder is active.
 - Add a side-by-side schedule impact preview before adding/replacing a Browse course.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 49
+
+Focus: let students choose a planned placeholder slot directly from Browse cards.
+
+Planned changes:
+- Detect compatible placeholder slots from the active plan while Browse results are rendered.
+- Add an inline Browse card picker for matching GenEd placeholders and open elective slots.
+- Reuse the existing placeholder replacement mutation path.
+- Keep `Why` explanations and slot selection from stacking on the same card.
+- Add regression coverage and Chrome QA.
+
+Completed:
+- Added Browse helpers to identify replaceable placeholders in the current plan:
+  - GenEd placeholders from category/tags/title/note.
+  - free elective placeholders as lower-priority fallback slots.
+  - exact semester/course-index keys for direct Browse selections.
+- Added `Choose slot` actions to Browse cards whenever a course can replace a compatible planned placeholder and no replacement target is already active.
+- Added an inline slot picker showing:
+  - the placeholder code.
+  - semester name.
+  - match reason such as `DSHS match` or `Open elective slot`.
+  - placeholder title.
+- Added direct `browseReplaceIntoSlot` flow that sets the same replacement target data as the placeholder modal, then calls the existing replacement path.
+- Updated placeholder replacement to respect a Browse-provided slot index when replacing, while stripping internal slot metadata from the saved course.
+- Made expanded slot panels and `Why` panels mutually exclusive.
+- Added compact styles for the inline slot picker inside highlight and full-result cards.
+- Versioned changed browser assets:
+  - `styles.css?v=47`
+  - `js/browse.js?v=10`
+  - `js/placeholder-search.js?v=5`
+- Added the `BROWSE-SLOT-SELECT` regression fixture covering:
+  - matching GenEd placeholder ranking above elective fallback.
+  - closed/open slot picker rendering.
+  - slot panel contents and match labels.
+  - `Why` panel closing the slot picker.
+  - direct replacement into the selected placeholder.
+  - nonselected placeholders and elective fallbacks staying untouched.
+  - target cleanup after replacement.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the auto-plan diagnostics fixture with replacement actions, the account/share fixture, the account setup fixture, the schedule timing fixture, the planner checklist fixture, the planner questions fixture, the Browse profile saved-search fixture, the Browse sections fixture, the Browse explanation fixture, the Browse replacement fixture, the new Browse slot selection fixture, and the personalized onboarding fixture.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=47`, `js/browse.js?v=10`, and `js/placeholder-search.js?v=5` loaded.
+  - a seeded plan with `GenEd DSHS` plus `Free Elective #1` opened Browse successfully.
+  - filtering to `GVPT200` rendered `GVPT 200` cards with `Choose slot`.
+  - the full-result slot picker opened with `GenEd DSHS` first and `Free Elective #1` as fallback.
+  - the slot picker showed `DSHS match` and no horizontal overflow.
+  - choosing `GenEd DSHS` replaced it with `GVPT 200`.
+  - the free elective remained in the plan.
+  - the slot picker closed after replacement.
+  - no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add a side-by-side schedule impact preview before adding/replacing a Browse course.
+- Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
+- Add elective-slot recommendations that distinguish free electives, major electives, technical electives, and supporting courses.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

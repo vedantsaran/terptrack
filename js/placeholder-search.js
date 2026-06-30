@@ -607,8 +607,9 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null) {
     return;
   }
 
+  const { _browseSlotIndex, _browseCustomSlotIndex, ...targetForUpdate } = placeholderSearchTarget;
   const updated = {
-    ...placeholderSearchTarget,
+    ...targetForUpdate,
     ...full,
     kind: category && category.startsWith('gened') ? 'gened' : (placeholderSearchTarget.kind || full.kind),
     category,
@@ -616,9 +617,15 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null) {
     note: `Replaced ${placeholderSearchTarget.code}${tags.length ? ` · ${tags.join(' + ')}` : ''}`,
   };
   const sched = mutableSchedule();
+  const targetSlotIndex = Number.isInteger(placeholderSearchTarget._browseSlotIndex) ? placeholderSearchTarget._browseSlotIndex : null;
+  const targetCustomSlotIndex = Number.isInteger(placeholderSearchTarget._browseCustomSlotIndex) ? placeholderSearchTarget._browseCustomSlotIndex : null;
   let replaced = false;
   for (const sem of [...sched, ...(state.customSemesters || [])]) {
-    const idx = (sem.courses || []).findIndex(c => c.code === placeholderSearchTarget.code && (!placeholderSearchTarget.semId || sem.id === placeholderSearchTarget.semId));
+    const idx = (sem.courses || []).findIndex((c, courseIndex) =>
+      c.code === placeholderSearchTarget.code
+      && (!placeholderSearchTarget.semId || sem.id === placeholderSearchTarget.semId)
+      && (targetSlotIndex === null || courseIndex === targetSlotIndex)
+    );
     if (idx >= 0) {
       sem.courses[idx] = updated;
       replaced = true;
@@ -626,7 +633,11 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null) {
     }
   }
   if (!replaced) {
-    const idx = (state.customCourses || []).findIndex(c => c.code === placeholderSearchTarget.code && (!placeholderSearchTarget.semId || c.semId === placeholderSearchTarget.semId));
+    const idx = (state.customCourses || []).findIndex((c, courseIndex) =>
+      c.code === placeholderSearchTarget.code
+      && (!placeholderSearchTarget.semId || c.semId === placeholderSearchTarget.semId)
+      && (targetCustomSlotIndex === null || courseIndex === targetCustomSlotIndex)
+    );
     if (idx >= 0) {
       state.customCourses[idx] = { ...updated, isCustom: true, semId: placeholderSearchTarget.semId };
       replaced = true;
