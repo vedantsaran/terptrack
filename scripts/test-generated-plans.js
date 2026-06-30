@@ -752,6 +752,96 @@ async function testBrowseProfileDepartments(context) {
   };
 }
 
+async function testBrowseResultSections(context) {
+  const result = clone(await vm.runInContext(`
+    (() => {
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['ai-data', 'policy-society'],
+        careerGoal: 'machine learning for public policy',
+        genEdDepts: 'INST, PSYC, GVPT'
+      });
+      recoGenEdGaps = () => [{ id: 'DSHS', label: 'History and Social Sciences', have: 0, need: 1 }];
+      const nextTerm = { term: '202608', termLabel: 'Fall 2026' };
+      const availability = {};
+      availability[browseAvailabilityKey(nextTerm.term, 'INST150')] = {
+        term: nextTerm.term,
+        termLabel: nextTerm.termLabel,
+        sectionCount: 3,
+        openSeats: 18
+      };
+      availability[browseAvailabilityKey(nextTerm.term, 'GVPT200')] = {
+        term: nextTerm.term,
+        termLabel: nextTerm.termLabel,
+        sectionCount: 0,
+        openSeats: 0
+      };
+      const rows = [
+        {
+          course_id: 'INST150',
+          name: 'Data, Policy, and Society',
+          description: 'Data analytics and public policy for civic technology.',
+          credits: '3',
+          gen_ed: ['DSHS']
+        },
+        {
+          course_id: 'PSYC200',
+          name: 'Development and Decision Making',
+          description: 'Psychology, public health, and learning communities.',
+          credits: '3',
+          gen_ed: ['DSHU']
+        },
+        {
+          course_id: 'GVPT200',
+          name: 'Public Policy Process',
+          description: 'Government institutions, equity, and policy design.',
+          credits: '3',
+          gen_ed: ['DSSP']
+        },
+        {
+          course_id: 'MATH140',
+          name: 'Calculus I',
+          description: 'Differential and integral calculus.',
+          credits: '4',
+          gen_ed: []
+        }
+      ];
+      const plannedMap = new Map([['MATH140', { course: { code: 'MATH140' }, semName: 'Fall 2026' }]]);
+      const decorated = browseDecorateRows(rows, { availability, nextTerm, plannedMap }).sort(browseCompareRows);
+      const sections = browseBuildResultSections(decorated, nextTerm);
+      const html = browseHighlightsHtml(sections);
+      const byId = Object.fromEntries(sections.map(section => [section.id, section.items.map(item => item.code)]));
+      return {
+        titles: sections.map(section => section.title),
+        byId,
+        html,
+        firstCode: decorated[0].code,
+        planned: decorated.find(item => item.code === 'MATH140'),
+        available: decorated.find(item => item.code === 'INST150').availability,
+      };
+    })()
+  `, context));
+
+  assert(result.firstCode === 'INST150', 'browse sections: gap + profile + posted sections should rank first');
+  assert(result.byId.best.includes('INST150'), 'browse sections: best section should include top fit');
+  assert(result.byId.gaps.includes('INST150'), 'browse sections: GenEd gap section should include DSHS match');
+  assert(result.byId.available.includes('INST150'), 'browse sections: available section should include posted-section match');
+  assert(result.planned.inPlan, 'browse sections: should tag courses already in plan');
+  assert(result.available.sectionCount === 3 && result.available.openSeats === 18, 'browse sections: should carry posted section counts and seats');
+  assert(/Browse highlights/.test(result.html), 'browse sections: should render highlight wrapper');
+  assert(/Best for your plan/.test(result.html), 'browse sections: should render best-fit section');
+  assert(/Fills missing GenEds/.test(result.html), 'browse sections: should render GenEd gap section');
+  assert(/Available in Fall 2026/.test(result.html), 'browse sections: should render next-term availability section');
+  assert(/3 posted/.test(result.html) && /18 open/.test(result.html), 'browse sections: should render posted-section badge');
+  assert(/Profile fit/.test(result.html), 'browse sections: should render profile-fit tags');
+
+  return {
+    id: 'BROWSE-SECTIONS',
+    first: result.firstCode,
+    sections: result.titles.join(' | '),
+    availability: `${result.available.sectionCount}/${result.available.openSeats}`,
+  };
+}
+
 async function testOnboardingPersonalizedSetup(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -854,6 +944,7 @@ async function main() {
   const planner = testPlannerRegistrationChecklist(context);
   const questions = testPlannerAdvisorQuestions(context);
   const browse = await testBrowseProfileDepartments(context);
+  const browseSections = await testBrowseResultSections(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
 
   console.table(rows);
@@ -865,8 +956,9 @@ async function main() {
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
+  console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + personalized onboarding).`);
 }
 
 main().catch(error => {

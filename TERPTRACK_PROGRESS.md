@@ -2078,3 +2078,60 @@ Next pass candidates:
 - Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
 - Add drag-and-drop or one-click replacement from Browse result cards into placeholder slots.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 46
+
+Focus: make Browse results easier to act on by grouping live catalog rows into personalized highlights.
+
+Planned changes:
+- Add Browse sections for best plan fits, GenEd gap fillers, and next-term availability.
+- Reuse existing profile, GenEd gap, planned-course, GPA, and schedule-term signals.
+- Hydrate posted-section availability without making Browse feel blocked.
+- Add regression coverage and Chrome QA.
+
+Completed:
+- Added Browse row decoration helpers that score catalog rows by:
+  - already in plan status.
+  - missing GenEd tags.
+  - profile interest, career-goal, and preferred-department matches.
+  - cached GPA signals.
+  - posted-section availability and open-seat counts.
+- Added `Browse highlights` above the full catalog grid with:
+  - `Best for your plan`.
+  - `Fills missing GenEds`.
+  - `Available in <term>`.
+- Added compact card rendering shared by highlight sections and the full result grid.
+- Added next-term context detection from the schedule planner so Browse availability matches the term TerpTrack would schedule next.
+- Added bounded section hydration for the top ranked candidates only:
+  - shows a checking state while top candidates are being evaluated.
+  - promotes rows with posted sections and open seats into the availability section.
+  - shows a clear no-posted-sections state instead of continuously walking down the full result list.
+- Kept the full result grid below highlights, sorted by plan fit.
+- Added responsive styles so highlight columns collapse cleanly on narrow screens.
+- Versioned changed browser assets:
+  - `styles.css?v=44`
+  - `js/browse.js?v=7`
+- Added the `BROWSE-SECTIONS` regression fixture for best-fit ranking, GenEd-gap grouping, availability grouping, posted/open-seat badges, and in-plan tagging.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the auto-plan diagnostics fixture with replacement actions, the account/share fixture, the account setup fixture, the schedule timing fixture, the planner checklist fixture, the planner questions fixture, the Browse profile saved-search fixture, the new Browse sections fixture, and the personalized onboarding fixture.
+- Ran `git diff --check`.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=44` and `js/browse.js?v=7` loaded.
+  - Browse opened with profile departments selected from profile preferences.
+  - live profile-department results rendered `Browse highlights`.
+  - the highlight titles were `Best for your plan`, `Fills missing GenEds`, and `Available in Fall 2026`.
+  - posted-section badges appeared, including examples like `3 posted · 80 open`, `1 posted · 52 open`, and `10 posted · 11 open`.
+  - profile-fit and GenEd-gap tags appeared in both highlights and full results.
+  - full results still rendered 200 result cards below the highlight sections.
+  - the bounded availability fix stopped the indefinite checking loop after top candidates were evaluated.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add one-click replacement from Browse result cards into a selected placeholder slot.
+- Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
+- Add a richer "why this course" drawer that explains profile, GenEd, prereq, and section-availability scoring.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

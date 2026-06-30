@@ -31,6 +31,8 @@ let browseGenEd = '';
 let browseCache = []; // current dept/gen-ed result set
 let browseCacheKey = '';
 let browseProfileDefaultsApplied = false;
+let browseRenderSeq = 0;
+let browseAvailabilityCache = {};
 
 function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
@@ -344,6 +346,279 @@ function browseCourseGenEdTags(row) {
     .filter(Boolean);
 }
 
+function browsePlannedCourseMap() {
+  const planned = new Map();
+  const semById = new Map((typeof getAllSemesters === 'function' ? getAllSemesters() : []).map(sem => [sem.id, sem]));
+  (typeof flatCourses === 'function' ? flatCourses() : []).forEach(course => {
+    const key = normalizeCode(course.code);
+    if (!key) return;
+    const sem = semById.get(course.semId) || null;
+    planned.set(key, { course, sem, semName: sem?.name || course.semName || '' });
+  });
+  return planned;
+}
+
+function browseNextTermContext() {
+  if (typeof recoSemesterContext === 'function') {
+    const ctx = recoSemesterContext();
+    return {
+      semId: ctx.semId || '',
+      semName: ctx.sem?.name || '',
+      term: ctx.term || '',
+      termLabel: ctx.termLabel || ctx.term || '',
+    };
+  }
+  const sems = typeof getAllSemesters === 'function' ? getAllSemesters() : [];
+  const sem = sems.find(item => {
+    if (typeof scheduleCoursesForSemester !== 'function') return false;
+    return scheduleCoursesForSemester(item.id).length;
+  }) || sems[0] || null;
+  const semId = sem?.id || '';
+  const term = sem
+    ? ((state.schedulePrefs || {})[sem.id]?.term || (typeof scheduleInferTermCode === 'function' ? scheduleInferTermCode(sem) : ''))
+    : '';
+  return {
+    semId,
+    semName: sem?.name || '',
+    term,
+    termLabel: term && typeof scheduleTermLabel === 'function' ? scheduleTermLabel(term) : term,
+  };
+}
+
+function browseAvailabilityKey(term, code) {
+  return `${String(term || '')}:${normalizeCode(code)}`;
+}
+
+function browseAvailabilityFor(code, term) {
+  return browseAvailabilityCache[browseAvailabilityKey(term, code)] || null;
+}
+
+function browseDecorateRows(rows, opts = {}) {
+  const profilePrefs = opts.profilePrefs !== undefined
+    ? opts.profilePrefs
+    : (typeof getProfilePrefs === 'function' ? getProfilePrefs() : null);
+  const profileActive = opts.profileActive !== undefined
+    ? opts.profileActive
+    : !!(profilePrefs && ((profilePrefs.interests || []).length || profilePrefs.careerGoal || (profilePrefs.genEdDepts || []).length));
+  const genEdGapTags = opts.genEdGapTags || browseGenEdGapTags();
+  const planned = opts.plannedMap || browsePlannedCourseMap();
+  const nextTerm = opts.nextTerm || browseNextTermContext();
+  const availability = opts.availability || browseAvailabilityCache;
+
+  return (rows || []).map(row => {
+    const code = row.course_id || row.code || '';
+    const norm = normalizeCode(code);
+    const ge = browseCourseGenEdTags(row);
+    const gapHits = ge.filter(tag => genEdGapTags.has(tag));
+    const cached = typeof ptCacheGet === 'function' ? (ptCacheGet(code) || {}) : {};
+    const gpa = (typeof row.average_gpa === 'number') ? row.average_gpa
+      : (typeof cached.average_gpa === 'number') ? cached.average_gpa
+        : null;
+    const profileMatch = typeof profileCourseMatch === 'function'
+      ? profileCourseMatch({ code, title: row.name, description: row.description, gen_ed: row.gen_ed }, profilePrefs || undefined)
+      : { score: 0, labels: [] };
+    const inPlan = planned.has(norm);
+    const available = availability[browseAvailabilityKey(nextTerm.term, code)] || null;
+    const sectionCount = Number(available?.sectionCount) || 0;
+    const openSeats = Number(available?.openSeats) || 0;
+    const score = (inPlan ? -420 : 40)
+      + gapHits.length * 175
+      + (profileActive ? (profileMatch.score || 0) : 0)
+      + (sectionCount ? 90 + Math.min(140, sectionCount * 12 + openSeats * 3) : 0)
+      + (gpa ? Math.round(gpa * 10) : 0);
+    return {
+      row,
+      code,
+      norm,
+      genEdTags: ge,
+      gapHits,
+      profileMatch,
+      profileActive,
+      inPlan,
+      plannedInfo: planned.get(norm) || null,
+      gpa,
+      availability: available,
+      score,
+    };
+  });
+}
+
+function browseCompareRows(a, b) {
+  if (a.score !== b.score) return b.score - a.score;
+  if (a.gapHits.length !== b.gapHits.length) return b.gapHits.length - a.gapHits.length;
+  const aProfile = a.profileMatch?.score || 0;
+  const bProfile = b.profileMatch?.score || 0;
+  if (aProfile !== bProfile) return bProfile - aProfile;
+  return String(a.code || '').localeCompare(String(b.code || ''));
+}
+
+function browseUniqueHighlights(items, limit = 4) {
+  const seen = new Set();
+  const out = [];
+  (items || []).forEach(item => {
+    if (!item || seen.has(item.norm)) return;
+    seen.add(item.norm);
+    out.push(item);
+  });
+  return out.slice(0, limit);
+}
+
+function browseTopAvailabilityCandidates(items, limit = 12) {
+  return browseUniqueHighlights(
+    (items || []).filter(item => !item.inPlan && /^[A-Z]{3,4}\d{3}[A-Z]?$/.test(item.norm)),
+    limit,
+  );
+}
+
+function browseBuildResultSections(items, nextTerm = browseNextTermContext()) {
+  const available = browseUniqueHighlights(
+    items.filter(item => !item.inPlan && (item.availability?.sectionCount || 0) > 0)
+      .sort((a, b) => (b.availability.openSeats || 0) - (a.availability.openSeats || 0) || browseCompareRows(a, b)),
+  );
+  const gapFillers = browseUniqueHighlights(items.filter(item => !item.inPlan && item.gapHits.length));
+  const best = browseUniqueHighlights(items.filter(item => !item.inPlan && (
+    item.gapHits.length || (item.profileMatch?.score || 0) || (item.availability?.sectionCount || 0)
+  )));
+  const fallbackBest = best.length ? best : browseUniqueHighlights(items.filter(item => !item.inPlan));
+  const availabilityCandidates = nextTerm.term ? browseTopAvailabilityCandidates(items, 12) : [];
+  const pendingAvailability = nextTerm.term && !available.length && availabilityCandidates.some(item => !item.availability)
+    ? availabilityCandidates.filter(item => !item.availability).slice(0, 3)
+    : [];
+  const checkedAvailability = nextTerm.term && !available.length && availabilityCandidates.length && availabilityCandidates.every(item => item.availability);
+  return [
+    fallbackBest.length ? {
+      id: 'best',
+      title: 'Best for your plan',
+      detail: 'Ranked by profile fit, GenEd gaps, GPA signals, and current plan status.',
+      items: fallbackBest,
+    } : null,
+    gapFillers.length ? {
+      id: 'gaps',
+      title: 'Fills missing GenEds',
+      detail: 'Courses that cover tracked GenEd requirements still missing from your plan.',
+      items: gapFillers,
+    } : null,
+    available.length ? {
+      id: 'available',
+      title: `Available in ${nextTerm.termLabel || 'next term'}`,
+      detail: 'Posted sections found for the schedule term TerpTrack would use next.',
+      items: available,
+    } : pendingAvailability.length ? {
+      id: 'available',
+      title: `Checking ${nextTerm.termLabel || 'next term'} sections`,
+      detail: 'TerpTrack is checking posted UMD sections for top matches.',
+      items: pendingAvailability,
+      pending: true,
+    } : checkedAvailability ? {
+      id: 'available',
+      title: `No posted ${nextTerm.termLabel || 'next term'} sections yet`,
+      detail: 'Top matches are still useful for planning, but UMD has no posted sections for them in this term.',
+      items: availabilityCandidates.slice(0, 3),
+    } : null,
+  ].filter(Boolean);
+}
+
+function browseAvailabilityTag(item) {
+  const available = item.availability;
+  if (!available) return '';
+  if ((available.sectionCount || 0) > 0) {
+    const seats = available.openSeats ? ` · ${available.openSeats} open` : '';
+    return `<span class="reco-tag live">${browseEscape(available.sectionCount)} posted${browseEscape(seats)}</span>`;
+  }
+  return '';
+}
+
+function browseCourseCardHtml(item, opts = {}) {
+  const r = item.row || item;
+  const code = item.code || r.course_id || '';
+  const inPlan = !!item.inPlan;
+  const ge = item.genEdTags || browseCourseGenEdTags(r);
+  const gapHits = item.gapHits || [];
+  const gpa = typeof item.gpa === 'number' ? item.gpa.toFixed(2) : '';
+  const profileTags = item.profileActive && item.profileMatch && item.profileMatch.score
+    ? `<span class="reco-tag profile">Profile fit</span>${(item.profileMatch.labels || []).map(label => `<span class="reco-tag">${browseEscape(label)}</span>`).join('')}`
+    : '';
+  const gapTags = gapHits.length
+    ? `<span class="reco-tag gap">Fills gap</span>${gapHits.map(tag => `<span class="reco-tag">${browseEscape(tag)}</span>`).join('')}`
+    : '';
+  const availabilityTag = browseAvailabilityTag(item);
+  const desc = r.description ? `${r.description.slice(0, opts.compact ? 130 : 200)}${r.description.length > (opts.compact ? 130 : 200) ? '...' : ''}` : '';
+  return `
+    <div class="br-card ${inPlan ? 'in-plan' : ''}${opts.compact ? ' compact' : ''}">
+      <div class="br-head">
+        <strong>${browseEscape(displayCode(code))}</strong>
+        <span class="br-credits">${browseEscape(r.credits || '?')} cr</span>
+      </div>
+      <div class="br-title">${browseEscape(r.name || '')}</div>
+      <div class="br-meta">
+        ${ge.length ? ge.map(g => `<span class="reco-tag">${browseEscape(g)}</span>`).join('') : ''}
+        ${gapTags}
+        ${profileTags}
+        ${availabilityTag}
+        ${gpa ? `<span class="br-gpa">GPA ${browseEscape(gpa)}</span>` : ''}
+      </div>
+      ${desc ? `<div class="br-desc">${browseEscape(desc)}</div>` : ''}
+      <div class="br-actions">
+        ${inPlan
+          ? `<span class="br-pill">In your plan${item.plannedInfo?.semName ? ` · ${browseEscape(item.plannedInfo.semName)}` : ''}</span>`
+          : `<button class="btn small" onclick="browseAddCourse('${browseEscape(code)}')">Add to plan</button>`}
+      </div>
+    </div>
+  `;
+}
+
+function browseHighlightsHtml(sections) {
+  if (!sections.length) return '';
+  return `
+    <div class="browse-highlights">
+      <div class="browse-highlights-head">
+        <strong>Browse highlights</strong>
+        <span>Personalized from your plan, profile, GenEd gaps, and posted sections.</span>
+      </div>
+      <div class="browse-highlight-grid">
+        ${sections.map(section => `
+          <section class="browse-highlight-section ${section.pending ? 'pending' : ''}">
+            <div class="browse-highlight-title">
+              <strong>${browseEscape(section.title)}</strong>
+              <span>${browseEscape(section.detail)}</span>
+            </div>
+            <div class="browse-highlight-cards">
+              ${section.items.map(item => browseCourseCardHtml(item, { compact: true })).join('')}
+            </div>
+          </section>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function browseHydrateAvailability(items, nextTerm, seq) {
+  if (!nextTerm.term || typeof umdioFetchSections !== 'function') return;
+  const candidates = browseTopAvailabilityCandidates(items, 12)
+    .filter(item => !browseAvailabilityFor(item.code, nextTerm.term));
+  if (!candidates.length) return;
+  const loaded = await Promise.all(candidates.map(async item => {
+    const sections = await umdioFetchSections(item.code, nextTerm.term).catch(() => []);
+    const openSeats = (sections || []).reduce((sum, section) => {
+      const open = parseInt(section.open_seats, 10);
+      return sum + (Number.isFinite(open) && open > 0 ? open : 0);
+    }, 0);
+    return {
+      code: item.code,
+      value: {
+        term: nextTerm.term,
+        termLabel: nextTerm.termLabel,
+        sectionCount: sections.length,
+        openSeats,
+      },
+    };
+  }));
+  loaded.forEach(item => {
+    browseAvailabilityCache[browseAvailabilityKey(nextTerm.term, item.code)] = item.value;
+  });
+  if (seq === browseRenderSeq) renderBrowse();
+}
+
 async function browseListCoursesForCurrentScope() {
   const allGenEds = browseGenEd === BROWSE_ALL_GENEDS_VALUE;
   const scope = browseDepartmentScope();
@@ -369,6 +644,7 @@ async function browseListCoursesForCurrentScope() {
 async function renderBrowse() {
   const view = document.getElementById('view-browse');
   if (!view) return;
+  const seq = ++browseRenderSeq;
   // Ensure department dropdown is populated once
   const sel = document.getElementById('br-dept');
   if (sel && sel.options.length <= 1) {
@@ -413,6 +689,7 @@ async function renderBrowse() {
       : browseGenEd && !browseDept ? `all ${browseGenEd} courses` : `${browseDept} courses`;
     grid.innerHTML = `<p class="reco-empty">Loading ${scopeLabel}…</p>`;
     browseCache = await browseListCoursesForCurrentScope();
+    if (seq !== browseRenderSeq) return;
   }
 
   let rows = browseCache;
@@ -427,62 +704,28 @@ async function renderBrowse() {
   }
   const profilePrefs = typeof getProfilePrefs === 'function' ? getProfilePrefs() : null;
   const profileActive = !!(profilePrefs && ((profilePrefs.interests || []).length || profilePrefs.careerGoal || (profilePrefs.genEdDepts || []).length));
-  const genEdGapTags = browseGenEdGapTags();
-  rows = rows.slice().sort((a, b) => {
-    const aGapHits = browseCourseGenEdTags(a).filter(tag => genEdGapTags.has(tag)).length;
-    const bGapHits = browseCourseGenEdTags(b).filter(tag => genEdGapTags.has(tag)).length;
-    if (aGapHits !== bGapHits) return bGapHits - aGapHits;
-    const aMatch = typeof profileCourseMatch === 'function' ? profileCourseMatch({ code: a.course_id, title: a.name, description: a.description }, profilePrefs || undefined).score : 0;
-    const bMatch = typeof profileCourseMatch === 'function' ? profileCourseMatch({ code: b.course_id, title: b.name, description: b.description }, profilePrefs || undefined).score : 0;
-    if (aMatch !== bMatch) return bMatch - aMatch;
-    return String(a.course_id || '').localeCompare(String(b.course_id || ''));
-  });
+  const nextTerm = browseNextTermContext();
+  const decoratedRows = browseDecorateRows(rows, {
+    profilePrefs,
+    profileActive,
+    nextTerm,
+  }).sort(browseCompareRows);
 
-  if (!rows.length) {
+  if (!decoratedRows.length) {
     grid.innerHTML = '<p class="reco-empty">No courses found. Try a different filter.</p>';
     return;
   }
 
-  const planned = new Set(flatCourses().map(c => normalizeCode(c.code)));
-  grid.innerHTML = rows.slice(0, 200).map(r => {
-    const code = r.course_id || '';
-    const inPlan = planned.has(normalizeCode(code));
-    const ge = browseCourseGenEdTags(r);
-    const gapHits = ge.filter(tag => genEdGapTags.has(tag));
-    const cached = ptCacheGet(code) || {};
-    const gpa = (typeof cached.average_gpa === 'number') ? cached.average_gpa.toFixed(2) : '';
-    const profileMatch = typeof profileCourseMatch === 'function'
-      ? profileCourseMatch({ code, title: r.name, description: r.description, gen_ed: r.gen_ed }, profilePrefs || undefined)
-      : { score: 0, labels: [] };
-    const profileTags = profileActive && profileMatch.score
-      ? `<span class="reco-tag profile">Profile fit</span>${(profileMatch.labels || []).map(label => `<span class="reco-tag">${browseEscape(label)}</span>`).join('')}`
-      : '';
-    const gapTags = gapHits.length
-      ? `<span class="reco-tag gap">Fills gap</span>${gapHits.map(tag => `<span class="reco-tag">${browseEscape(tag)}</span>`).join('')}`
-      : '';
-    const desc = r.description ? `${r.description.slice(0, 200)}${r.description.length > 200 ? '…' : ''}` : '';
-    return `
-      <div class="br-card ${inPlan ? 'in-plan' : ''}">
-        <div class="br-head">
-          <strong>${browseEscape(displayCode(code))}</strong>
-          <span class="br-credits">${browseEscape(r.credits || '?')} cr</span>
-        </div>
-        <div class="br-title">${browseEscape(r.name || '')}</div>
-        <div class="br-meta">
-          ${ge.length ? ge.map(g => `<span class="reco-tag">${browseEscape(g)}</span>`).join('') : ''}
-          ${gapTags}
-          ${profileTags}
-          ${gpa ? `<span class="br-gpa">GPA ${browseEscape(gpa)}</span>` : ''}
-        </div>
-        ${desc ? `<div class="br-desc">${browseEscape(desc)}</div>` : ''}
-        <div class="br-actions">
-          ${inPlan
-            ? '<span class="br-pill">In your plan</span>'
-            : `<button class="btn small" onclick="browseAddCourse('${browseEscape(code)}')">Add to plan</button>`}
-        </div>
-      </div>
-    `;
-  }).join('');
+  const sections = browseBuildResultSections(decoratedRows, nextTerm);
+  grid.innerHTML = `
+    ${browseHighlightsHtml(sections)}
+    <div class="browse-results-head">
+      <strong>Full results</strong>
+      <span>${browseEscape(decoratedRows.length)} match${decoratedRows.length === 1 ? '' : 'es'} shown by plan fit</span>
+    </div>
+    ${decoratedRows.slice(0, 200).map(item => browseCourseCardHtml(item)).join('')}
+  `;
+  browseHydrateAvailability(decoratedRows, nextTerm, seq);
 }
 
 async function browseAddCourse(code) {
