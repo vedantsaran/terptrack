@@ -4033,3 +4033,57 @@ Next pass candidates:
 - Clean ARHU/BSOS templates with stale upper-level seminar/capstone placeholders.
 - Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
 - Add official per-major citation links beside generated requirement groups.
+
+## 2026-06-30 Pass 80
+
+Focus: clean the next STEM/geo generated-template batch against live PlanetTerp.
+
+Planned changes:
+- Use the live verifier to target CMNS/STEM and geography-style templates with stale codes.
+- Replace missing codes with live same-department or close-program courses from PlanetTerp.
+- Prove the cleaned batch with targeted verification and update the all-major failure count.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Replaced stale generated-template codes with live PlanetTerp-resolving courses:
+  - STAT: `STAT436` -> `STAT464`.
+  - CHEM: `CHEM404` -> `CHEM482`; `CHEM498` -> `CHEM483`; goal `CHEM498` -> `CHEM483`.
+  - PHYS: `PHYS499` -> `PHYS410`; `PHYS429` -> `PHYS420`.
+  - ASTR: `ASTR398` -> `ASTR398B`; `ASTR499` -> `ASTR498N`; `ASTR405` -> `ASTR406`; goal `ASTR499` -> `ASTR498N`.
+  - NEUR: old non-resolving NEUR sequence -> live `NEUR200`, `NEUR305`, `NEUR306`, `NEUR405`, `NEUR479`, plus `PSYC414` and `PSYC417`; goal `NEUR400` -> `NEUR405`.
+  - AOSC: `AOSC444` -> `AOSC445`; `AOSC410` -> `AOSC432`; goal `AOSC444` -> `AOSC445`.
+  - GEOL: `GEOL388`, `GEOL394`, and `GEOL494` -> `GEOL452`, `GEOL460`, and `GEOL453`; goal `GEOL494` -> `GEOL453`.
+  - GEOG: `GEOG305`, `GEOG370`, and `GEOG498` -> `GEOG301`, `GEOG372`, and `GEOG498I`; goal `GEOG498` -> `GEOG498I`.
+
+Verification:
+- Ran direct PlanetTerp checks and department-list lookups for replacement STAT, CHEM, PHYS, ASTR, AOSC, GEOL, GEOG, NEUR, PSYC, and BSCI courses before editing.
+- Ran `node scripts/verify-random-schedules.js --majors STAT,CHEM,PHYS,ASTR,AOSC,GEOL,GEOG,NEUR --keep-going --seed pass80-stem`; it passed:
+  - `STAT`: 121 credits, 15 required courses verified in PlanetTerp.
+  - `CHEM`: 121 credits, 20 required courses verified in PlanetTerp.
+  - `PHYS`: 122 credits, 20 required courses verified in PlanetTerp.
+  - `ASTR`: 120 credits, 22 required courses verified in PlanetTerp.
+  - `AOSC`: 122 credits, 19 required courses verified in PlanetTerp.
+  - `GEOL`: 122 credits, 19 required courses verified in PlanetTerp.
+  - `GEOG`: 121 credits, 14 required courses verified in PlanetTerp.
+  - `NEUR`: 121 credits, 18 required courses verified in PlanetTerp.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass80-all`.
+  - Confirmed `AOSC`, `ASTR`, `CHEM`, `GEOG`, `GEOL`, `NEUR`, `PHYS`, and `STAT` now pass and dropped out of the failure summary.
+  - Remaining generated-template failure count is now 30:
+    `AMST`, `ANSC`, `ANTH`, `AREC`, `ARTH`, `ARTT`, `BIOE`, `CINE`, `EDUC`, `ENAE`, `ENCE`, `ENCH`, `ENEE`, `ENFP`, `ENGL`, `ENMA`, `FMSC`, `HIST`, `HLTH`, `JOUR`, `KNES`, `LING`, `MUSC`, `NFSC`, `PHIL`, `PLSC`, `SOCY`, `SPAN`, `THET`, `WMST`.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/`, then finalized Chrome and stopped the server before commit.
+- Chrome confirmed:
+  - `js/majors.js` loaded from the local server.
+  - Settings opened normally.
+  - Selecting Atmospheric & Oceanic Science showed the generated-major note.
+  - The AOSC auto-plan review rendered `19/19 live course records`.
+  - The rendered review included new `AOSC445` and did not include old `AOSC444` or `AOSC410`.
+  - There was no horizontal overflow.
+  - Browser console errors were clean.
+
+Next pass candidates:
+- Clean the remaining engineering generated templates with stale ENAE/ENCE/ENCH/ENEE/ENFP/ENMA codes.
+- Clean ARHU/BSOS templates with stale upper-level seminar/capstone placeholders.
+- Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
+- Add official per-major citation links beside generated requirement groups.
