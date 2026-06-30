@@ -52,6 +52,7 @@ function buildContext() {
     'js/api.js',
     'js/import.js',
     'js/share.js',
+    'js/schedule.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
   vm.runInContext(`
     state = loadState();
@@ -259,6 +260,69 @@ function testAccountAndShareState(context) {
   };
 }
 
+function testScheduleTimingFit(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      const timingPrefs = { ...DEFAULT_SCHEDULE_PREFS, mode: 'compact', minBreak: 15 };
+      const compactItems = [
+        {
+          course: { code: 'CMSC 131', title: 'Programming I' },
+          section: { section_id: 'CMSC131-0101', number: '0101', meetings: [{ days: 'MW', start_time: '9:00am', end_time: '10:15am', building: 'IRB', room: '1101' }] }
+        },
+        {
+          course: { code: 'MATH 140', title: 'Calculus I' },
+          section: { section_id: 'MATH140-0101', number: '0101', meetings: [{ days: 'MW', start_time: '10:30am', end_time: '11:45am', building: 'CSI', room: '2110' }] }
+        }
+      ];
+      const idleItems = [
+        {
+          course: { code: 'CMSC 131', title: 'Programming I' },
+          section: { section_id: 'CMSC131-0201', number: '0201', meetings: [{ days: 'MW', start_time: '8:00am', end_time: '9:15am', building: 'IRB', room: '1101' }] }
+        },
+        {
+          course: { code: 'MATH 140', title: 'Calculus I' },
+          section: { section_id: 'MATH140-0201', number: '0201', meetings: [{ days: 'MW', start_time: '2:00pm', end_time: '3:15pm', building: 'CSI', room: '2110' }] }
+        }
+      ];
+      const tightItems = [
+        {
+          course: { code: 'CMSC 131', title: 'Programming I' },
+          section: { section_id: 'CMSC131-0301', number: '0301', meetings: [{ days: 'M', start_time: '9:00am', end_time: '10:00am', building: 'IRB', room: '1101' }] }
+        },
+        {
+          course: { code: 'ENGL 101', title: 'Academic Writing' },
+          section: { section_id: 'ENGL101-0301', number: '0301', meetings: [{ days: 'M', start_time: '10:05am', end_time: '10:55am', building: 'VMH', room: '1200' }] }
+        }
+      ];
+      const compact = scheduleTimingFit(compactItems, timingPrefs, []);
+      const idle = scheduleTimingFit(idleItems, timingPrefs, []);
+      const tight = scheduleTimingFit(tightItems, timingPrefs, []);
+      return {
+        compactScore: compact.score,
+        idleScore: idle.score,
+        compactIdle: compact.metrics.totalIdle,
+        idleTotal: idle.metrics.totalIdle,
+        idleInsight: idle.insights.join(' | '),
+        tightTransitions: tight.metrics.tightTransitions,
+        tightInsight: tight.insights.join(' | '),
+      };
+    })()
+  `, context));
+
+  assert(result.compactScore > result.idleScore, 'schedule timing: compact schedule should score above idle schedule');
+  assert(result.idleTotal > result.compactIdle, 'schedule timing: idle schedule should report more idle time');
+  assert(/idle gap|idle time/i.test(result.idleInsight), 'schedule timing: idle insight should mention idle time');
+  assert(result.tightTransitions >= 1, 'schedule timing: tight cross-campus transition should be counted');
+  assert(/estimated walk|between CMSC 131 and ENGL 101/i.test(result.tightInsight), 'schedule timing: tight insight should explain transition');
+
+  return {
+    id: 'SCHEDULE-TIMING',
+    compactScore: result.compactScore,
+    idleScore: result.idleScore,
+    tightTransitions: result.tightTransitions,
+  };
+}
+
 async function main() {
   const context = buildContext();
   const fixtures = [
@@ -276,11 +340,13 @@ async function main() {
   }
   const prereq = testSyntheticPrerequisites(context);
   const account = testAccountAndShareState(context);
+  const timing = testScheduleTimingFit(context);
 
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state).`);
+  console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}.`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + schedule timing).`);
 }
 
 main().catch(error => {

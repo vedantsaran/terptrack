@@ -2563,6 +2563,87 @@ h1.hero-title em {
   background: var(--green-soft);
   color: var(--green);
 }
+.schedule-fit {
+  margin: -4px 0 18px;
+}
+.schedule-fit-panel {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--paper) 78%, var(--cream));
+  padding: 12px;
+}
+.schedule-fit-panel.ok {
+  border-left-color: var(--green);
+}
+.schedule-fit-panel.warn {
+  border-left-color: var(--amber);
+}
+.schedule-fit-panel.danger {
+  border-left-color: var(--red);
+}
+.schedule-fit-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+.schedule-fit-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+}
+.schedule-fit-head span {
+  display: block;
+  color: var(--slate);
+  font-size: .76rem;
+  margin-top: 2px;
+}
+.schedule-fit-head > strong {
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .92rem;
+  white-space: nowrap;
+}
+.schedule-fit-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.schedule-fit-metrics div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+  padding: 8px;
+  min-width: 0;
+}
+.schedule-fit-metrics strong,
+.schedule-fit-metrics span {
+  display: block;
+}
+.schedule-fit-metrics strong {
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .82rem;
+  overflow-wrap: anywhere;
+}
+.schedule-fit-metrics span {
+  color: var(--slate);
+  font-size: .66rem;
+  margin-top: 2px;
+}
+.schedule-fit-insights {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+.schedule-fit-insights span {
+  color: var(--ink-soft);
+  font-size: .75rem;
+  line-height: 1.35;
+}
 .schedule-output {
   margin: -4px 0 18px;
 }
@@ -4495,6 +4576,14 @@ h1.hero-title em {
   }
   .schedule-undo-actions {
     justify-content: flex-start;
+  }
+  .schedule-fit-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .schedule-fit-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .schedule-output-head,
   .schedule-print-head {

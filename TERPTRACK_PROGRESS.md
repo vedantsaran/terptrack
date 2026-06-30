@@ -1379,3 +1379,76 @@ Next pass candidates:
 - Add Vercel/Supabase environment setup notes and test magic-link sign-in on a real deployment.
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Improve schedule timing intelligence: conflict explanations, compact-day preferences, and time-window scoring.
+
+## 2026-06-30 Pass 34
+
+Focus: make the Schedule tab explain whether a picked semester is actually livable, not merely conflict-free.
+
+Planned changes:
+- Add day-level schedule timing analysis for active days, idle time, tight transitions, longest day, and TBA sections.
+- Convert timing analysis into a 0-100 fit score with plain-language insights.
+- Surface the score in the Schedule tab and schedule/advisor exports.
+- Use the timing score when ranking generated alternate schedules.
+- Add regression coverage so compact schedules beat idle-heavy schedules and tight cross-campus moves are flagged.
+
+Completed:
+- Added `scheduleDurationLabel()`, `scheduleTimingDayReports()`, and `scheduleTimingFit()` in `js/schedule.js`.
+- Timing fit now accounts for:
+  - time conflicts.
+  - tight breaks and estimated walk times.
+  - total idle time.
+  - long days.
+  - compact-mode active-day count.
+  - TBA meeting times.
+- Added a `#schedule-fit` panel in the Schedule tab.
+- The new Timing Fit panel shows:
+  - score and label.
+  - active days.
+  - total idle time.
+  - shortest break.
+  - longest day.
+  - up to five actionable insights.
+- Alternate schedule candidate scoring now includes timing score adjustment.
+- Alternate schedule cards now show `N/100 timing`.
+- Schedule summary text exports now include timing score and timing notes.
+- Printable schedule headers now include the timing score.
+- Advisor packet metrics now include timing fit, while moving goal-course/GPA details into the metrics row.
+- Added responsive styling for the timing panel and metric grid.
+- Versioned changed browser assets:
+  - `styles.css?v=32`
+  - `js/schedule.js?v=22`
+- Extended `scripts/test-generated-plans.js` to load `js/schedule.js`.
+- Added the `SCHEDULE-TIMING` regression fixture.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the account/share fixture, and the new schedule timing fixture.
+- Schedule timing fixture confirmed:
+  - compact sample schedule scores `100`.
+  - idle-heavy sample schedule scores `68`.
+  - compact score is above idle score.
+  - idle insight mentions idle time.
+  - tight cross-campus transition is counted and explained.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass34timing=1` from a temporary static server and confirmed:
+  - `styles.css?v=32` and `js/schedule.js?v=22` loaded.
+  - `#schedule-fit` exists.
+  - No console errors on load.
+  - Opening Schedule renders the Timing Fit empty state with four metrics.
+  - No document-wide horizontal overflow at the browser's 380px viewport.
+- Auto-picked sections in the browser and confirmed:
+  - Timing Fit renders a scored state with active days, idle time, shortest break, longest day, and specific insights.
+  - Schedule summary showed `4/5` picked, `0` conflicts, warnings, and open seats.
+  - No console errors after auto-pick.
+- Generated alternatives in the browser and confirmed:
+  - four alternate cards rendered.
+  - alternate cards include timing metrics such as `50/100 timing`.
+  - no console errors or horizontal overflow.
+- Stopped the temporary static server.
+
+Next pass candidates:
+- Add a “why this alternate is better” comparison between the current picked schedule and each alternate.
+- Add a schedule diagnostics export section with timing fit insights in the advisor packet body, not only the header metrics.
+- Add real Supabase/Vercel setup instructions and validate a magic-link account round trip on deployment.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve Browse with multi-department profile search and richer personalized class recommendations.

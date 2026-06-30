@@ -1088,6 +1088,138 @@ function selectedScheduleWarnings(selectedItems, prefs) {
   return warnings;
 }
 
+function scheduleDurationLabel(minutes) {
+  const mins = Math.max(0, Math.round(Number(minutes) || 0));
+  if (mins < 60) return `${mins} min`;
+  const hours = Math.floor(mins / 60);
+  const rest = mins % 60;
+  return rest ? `${hours} hr ${rest} min` : `${hours} hr`;
+}
+
+function scheduleTimingDayReports(items) {
+  const blocks = (items || [])
+    .flatMap(item => sectionBlocks(item.section, item.course))
+    .filter(block => !block.blocked)
+    .sort((a, b) => a.day.localeCompare(b.day) || a.start - b.start);
+  const untimedCount = (items || []).filter(item => !sectionBlocks(item.section, item.course).length).length;
+  return SCHEDULE_DAY_DEFS.map(day => {
+    const dayBlocks = blocks.filter(block => block.day === day.key).sort((a, b) => a.start - b.start);
+    const transitions = [];
+    for (let i = 0; i < dayBlocks.length - 1; i++) {
+      const a = dayBlocks[i];
+      const b = dayBlocks[i + 1];
+      if (normalizeCode(a.code) === normalizeCode(b.code)) continue;
+      const gap = Math.max(0, b.start - a.end);
+      const walk = estimateWalkMinutes(a.building || buildingFromRoom(a.room), b.building || buildingFromRoom(b.room));
+      transitions.push({ a, b, gap, walk });
+    }
+    const start = dayBlocks.length ? dayBlocks[0].start : null;
+    const end = dayBlocks.length ? dayBlocks[dayBlocks.length - 1].end : null;
+    const inClass = dayBlocks.reduce((sum, block) => sum + Math.max(0, block.end - block.start), 0);
+    const span = start !== null && end !== null ? Math.max(0, end - start) : 0;
+    const idle = transitions.reduce((sum, transition) => sum + transition.gap, 0);
+    return {
+      day,
+      blocks: dayBlocks,
+      transitions,
+      start,
+      end,
+      span,
+      inClass,
+      idle,
+      maxGap: transitions.length ? Math.max(...transitions.map(transition => transition.gap)) : 0,
+      shortestGap: transitions.length ? Math.min(...transitions.map(transition => transition.gap)) : null,
+    };
+  }).filter(report => report.blocks.length).map(report => ({ ...report, untimedCount }));
+}
+
+function scheduleTimingFit(items, prefs = DEFAULT_SCHEDULE_PREFS, conflicts = []) {
+  const reports = scheduleTimingDayReports(items);
+  const untimedCount = (items || []).filter(item => !sectionBlocks(item.section, item.course).length).length;
+  if (!(items || []).length) {
+    return {
+      score: 0,
+      label: 'No schedule yet',
+      tone: 'warn',
+      reports,
+      insights: ['Pick or auto-pick sections to see timing quality.'],
+      metrics: { activeDays: 0, totalIdle: 0, longestDay: 0, shortestBreak: null, tightTransitions: 0, untimedCount },
+      scoreAdjustment: -500,
+    };
+  }
+
+  const minBreak = Number(prefs.minBreak) || 0;
+  const transitions = reports.flatMap(report => report.transitions.map(transition => ({ ...transition, day: report.day })));
+  const tightTransitions = transitions.filter(transition => {
+    if (transition.walk !== null && transition.walk > 0) return transition.gap < transition.walk;
+    return minBreak && transition.gap < minBreak;
+  });
+  const longIdle = transitions.filter(transition => transition.gap >= 120);
+  const totalIdle = reports.reduce((sum, report) => sum + report.idle, 0);
+  const longestDay = reports.length ? Math.max(...reports.map(report => report.span)) : 0;
+  const shortestBreak = transitions.length ? Math.min(...transitions.map(transition => transition.gap)) : null;
+  const activeDays = reports.length;
+  let score = 100;
+  score -= (conflicts || []).length * 28;
+  score -= Math.min(42, tightTransitions.length * 12);
+  score -= Math.min(22, totalIdle / (prefs.mode === 'compact' ? 18 : 28));
+  score -= Math.min(18, reports.filter(report => report.span >= 8 * 60).length * 8);
+  score -= Math.min(18, longIdle.length * 5);
+  score -= untimedCount * 6;
+  if (prefs.mode === 'compact') {
+    score -= Math.max(0, activeDays - 3) * 7;
+    if (activeDays <= 3 && totalIdle <= 75) score += 7;
+  }
+  if (prefs.mode === 'balanced') {
+    score -= Math.max(0, activeDays - 4) * 3;
+  }
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const insights = [];
+  if ((conflicts || []).length) {
+    insights.push(`${conflicts.length} time conflict${conflicts.length === 1 ? '' : 's'} must be resolved before registration.`);
+  }
+  if (tightTransitions.length) {
+    const tight = tightTransitions.slice().sort((a, b) => a.gap - b.gap)[0];
+    const walkText = tight.walk !== null ? `; estimated walk ${scheduleDurationLabel(tight.walk)}` : '';
+    insights.push(`${tight.day.label}: ${scheduleDurationLabel(tight.gap)} between ${tight.a.code} and ${tight.b.code}${walkText}.`);
+  }
+  if (longIdle.length) {
+    const idle = longIdle.slice().sort((a, b) => b.gap - a.gap)[0];
+    insights.push(`${idle.day.label}: ${scheduleDurationLabel(idle.gap)} idle gap between ${idle.a.code} and ${idle.b.code}.`);
+  } else if (totalIdle > 0) {
+    insights.push(`${scheduleDurationLabel(totalIdle)} total idle time across ${activeDays} active day${activeDays === 1 ? '' : 's'}.`);
+  }
+  const longest = reports.slice().sort((a, b) => b.span - a.span)[0];
+  if (longest && longest.span >= 7 * 60) {
+    insights.push(`${longest.day.label}: longest day runs ${formatMeetingTime(longest.start)}-${formatMeetingTime(longest.end)}.`);
+  }
+  if (untimedCount) {
+    insights.push(`${untimedCount} picked section${untimedCount === 1 ? '' : 's'} still has time TBA.`);
+  }
+  if (prefs.mode === 'compact') {
+    insights.push(`Compact target: ${activeDays} active day${activeDays === 1 ? '' : 's'}, ${scheduleDurationLabel(totalIdle)} idle.`);
+  }
+  if (!insights.length) {
+    insights.push('No overlaps, tight walks, long idle gaps, or TBA meeting times detected.');
+  }
+
+  const label = score >= 90 ? 'Excellent timing'
+    : score >= 76 ? 'Strong timing'
+      : score >= 61 ? 'Workable timing'
+        : 'Needs timing review';
+  const tone = score >= 76 ? 'ok' : score >= 61 ? 'warn' : 'danger';
+  return {
+    score,
+    label,
+    tone,
+    reports,
+    insights: insights.slice(0, 5),
+    metrics: { activeDays, totalIdle, longestDay, shortestBreak, tightTransitions: tightTransitions.length, untimedCount },
+    scoreAdjustment: Math.round((score - 70) * 16),
+  };
+}
+
 function sectionScore(section, prefs = DEFAULT_SCHEDULE_PREFS, course = null, chosen = []) {
   const open = parseInt(section.open_seats, 10);
   const wait = parseInt(section.waitlist, 10);
@@ -1142,6 +1274,7 @@ function evaluateScheduleCandidate(items, prefs) {
   const { conflicts } = detectScheduleConflicts(items);
   const warnings = selectedScheduleWarnings(items, prefs);
   const locationReport = scheduleCandidateLocationReport(items, prefs);
+  const timing = scheduleTimingFit(items, prefs, conflicts);
   const openSeats = items.reduce((sum, item) => {
     const open = parseInt(item.section.open_seats, 10);
     return sum + (Number.isFinite(open) ? open : 0);
@@ -1149,10 +1282,11 @@ function evaluateScheduleCandidate(items, prefs) {
   const score = items.reduce((sum, item) => sum + sectionScore(item.section, prefs, item.course, items), 0)
     + (items.length * 500)
     + openSeats
+    + timing.scoreAdjustment
     - (conflicts.length * 10000)
     - (warnings.length * 130)
     - locationReport.penalty;
-  return { conflicts, warnings, openSeats, score, locationIssues: locationReport.alertCount };
+  return { conflicts, warnings, openSeats, score, locationIssues: locationReport.alertCount, timing };
 }
 
 function buildScheduleCandidate(courses, sectionsByCode, prefs, variant = 0, currentItems = []) {
@@ -1236,6 +1370,34 @@ function renderScheduleWarnings(warnings) {
   root.innerHTML = warnings.slice(0, 6)
     .map(w => `<div class="schedule-warning">${scheduleEscape(w)}</div>`)
     .join('');
+}
+
+function renderScheduleFitPanel(selectedItems, prefs, conflicts) {
+  const root = document.getElementById('schedule-fit');
+  if (!root) return;
+  const fit = scheduleTimingFit(selectedItems, prefs, conflicts);
+  const metrics = fit.metrics;
+  const shortest = metrics.shortestBreak === null ? 'n/a' : scheduleDurationLabel(metrics.shortestBreak);
+  root.innerHTML = `
+    <div class="schedule-fit-panel ${scheduleEscape(fit.tone)}">
+      <div class="schedule-fit-head">
+        <div>
+          <h3>Timing Fit</h3>
+          <span>${scheduleEscape(fit.label)}</span>
+        </div>
+        <strong>${fit.score}/100</strong>
+      </div>
+      <div class="schedule-fit-metrics">
+        <div><strong>${metrics.activeDays}</strong><span>active days</span></div>
+        <div><strong>${scheduleEscape(scheduleDurationLabel(metrics.totalIdle))}</strong><span>idle time</span></div>
+        <div><strong>${scheduleEscape(shortest)}</strong><span>shortest break</span></div>
+        <div><strong>${scheduleEscape(scheduleDurationLabel(metrics.longestDay))}</strong><span>longest day</span></div>
+      </div>
+      <div class="schedule-fit-insights">
+        ${fit.insights.map(insight => `<span>${scheduleEscape(insight)}</span>`).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function scheduleSectionMeetingLines(section) {
@@ -1663,6 +1825,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
   const filterContext = scheduleAdvisorFilterContext(sem?.id || '', selectedItems, conflicts, visibleWarnings, visibleUnscheduled, filter);
   const plan = scheduleAdvisorPlanHtml(sem?.id || '', selectedItems, filterContext);
   const generated = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   return `
     <article class="schedule-advisor-packet" id="schedule-advisor-packet">
       <div class="schedule-advisor-head">
@@ -1681,13 +1844,15 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         <div class="schedule-advisor-stat"><span>Credits</span><strong>${stats.earnedCredits}/${stats.totalRequired}</strong><em>${stats.plannedCredits} planned</em></div>
         <div class="schedule-advisor-stat"><span>Current term</span><strong>${selectedItems.length}/${courses.length}</strong><em>sections picked</em></div>
         <div class="schedule-advisor-stat"><span>Conflicts</span><strong>${conflicts.length}</strong><em>${warnings.length} warning${warnings.length === 1 ? '' : 's'}</em></div>
-        <div class="schedule-advisor-stat"><span>Goal courses</span><strong>${stats.goalDone}/${stats.goalTotal}</strong><em>GPA ${scheduleEscape(stats.gpa)}</em></div>
+        <div class="schedule-advisor-stat"><span>Timing fit</span><strong>${timing.score}/100</strong><em>${scheduleEscape(timing.label)}</em></div>
       </div>
       ${outputOptions.preferences ? `<p class="schedule-advisor-note">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       <div class="schedule-advisor-metrics">
         <span>${stats.inProgressCredits} in-progress credits</span>
         <span>${stats.remainingCredits} remaining planned credits</span>
         <span>${stats.genEdCredits} GenEd credits in plan</span>
+        <span>${stats.goalDone}/${stats.goalTotal} goal courses complete</span>
+        <span>GPA ${scheduleEscape(stats.gpa)}</span>
         <span>${totalOpenSeats} open seats in picked sections</span>
         <span>${plan.shownCourses}/${plan.totalCourses} courses shown</span>
         <span>${plan.shownCredits}/${plan.totalCredits} credits shown</span>
@@ -1730,6 +1895,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   const outputOptions = normalizeScheduleOutputOptions(options);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
+  const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const lines = [
     `Terp Track Schedule`,
     `Plan semester: ${sem?.name || 'Selected semester'}`,
@@ -1739,6 +1905,8 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
     `Warnings: ${warnings.length}`,
   ];
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
+  lines.push(`Timing fit: ${timing.score}/100 - ${timing.label}`);
+  timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
   lines.push('', 'Picked sections:');
 
   if (!selectedItems.length) lines.push('- No picked sections yet.');
@@ -1823,6 +1991,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     ...scheduleBlockedBlocks(prefs),
     ...selectedItems.flatMap(item => sectionBlocks(item.section, item.course)),
   ];
+  const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions);
   const courseRows = selectedItems
@@ -1851,6 +2020,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
           <span>${selectedItems.length}/${courses.length} picked</span>
           <span>${conflicts.length} conflicts</span>
           <span>${warnings.length} warnings</span>
+          <span>${timing.score}/100 timing</span>
           <span>${totalOpenSeats} open seats</span>
         </div>
       </div>
@@ -2102,6 +2272,7 @@ function renderScheduleAlternatives(alternatives) {
         const locationIssues = Number.isFinite(alt.locationIssues)
           ? alt.locationIssues
           : scheduleCandidateLocationReport(alt.items, currentPrefs).alertCount;
+        const timing = alt.timing || scheduleTimingFit(alt.items, currentPrefs, alt.conflicts);
         const courseLine = alt.items
           .map(item => `${item.course.code} ${item.section.number || ''}`.trim())
           .join(' · ');
@@ -2115,6 +2286,7 @@ function renderScheduleAlternatives(alternatives) {
               <span>${alt.items.length} picked</span>
               <span class="${alt.conflicts.length ? 'bad' : 'good'}">${alt.conflicts.length} conflicts</span>
               <span class="${alt.warnings.length ? 'warn' : 'good'}">${alt.warnings.length} warnings</span>
+              <span class="${timing.tone === 'ok' ? 'good' : timing.tone === 'warn' ? 'warn' : 'bad'}">${timing.score}/100 timing</span>
               <span>${alt.openSeats} open seats</span>
               ${urgentSeats ? `<span class="bad">${urgentSeats} seat risk${urgentSeats === 1 ? '' : 's'}</span>` : '<span class="good">seat-safe</span>'}
               ${blockConflicts ? `<span class="bad">${blockConflicts} block conflict${blockConflicts === 1 ? '' : 's'}</span>` : (blocked.length ? '<span class="good">blocks clear</span>' : '')}
@@ -2330,6 +2502,7 @@ async function renderSchedule(opts = {}) {
   }
   renderScheduleSummary(courses, selectedItems, conflicts, warnings, term);
   renderScheduleWarnings(warnings);
+  renderScheduleFitPanel(selectedItems, prefs, conflicts);
   renderScheduleOutputPanel(semId, term, courses, selectedItems, conflicts, warnings, prefs);
   renderScheduleUndo();
   renderScheduleAlternatives([]);
