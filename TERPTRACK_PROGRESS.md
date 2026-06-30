@@ -1723,3 +1723,53 @@ Next pass candidates:
 - Improve Browse with saved profile searches and richer personalized class recommendations.
 - Add a term-by-term registration checklist that connects remaining GenEds, prerequisites, and section timing risks.
 - Add exportable advisor questions generated from blockers, schedule timing risks, and unmet GenEds.
+
+## 2026-06-30 Pass 40
+
+Focus: turn Timeline advisor signals into a registration checklist students can act on before registration and advisor meetings.
+
+Planned changes:
+- Add a next-term checklist model from credit load, prerequisites, GenEd gaps, and picked-section timing.
+- Render the checklist in Timeline between planner stats and recommended moves.
+- Add export/select checklist text for advisor prep.
+- Add regression coverage for the new checklist flow.
+
+Completed:
+- Added `plannerRegistrationSelectedItems()`, `plannerChecklistItem()`, `plannerRegistrationChecklist()`, `plannerChecklistCard()`, `plannerRegistrationChecklistText()`, and `plannerChecklistHtml()` in `js/timeline.js`.
+- Timeline now renders a `Registration Checklist` with numbered action cards before recommended moves.
+- Checklist cards can flag underload, overload, prerequisite order, picked-section timing fit, missing sections, and GenEd gaps.
+- Added `Open Schedule` and `Find GenEd` actions from checklist items.
+- Added a `Select checklist` textarea export path for copying advisor-ready checklist text.
+- Added responsive checklist styling in `styles.css`.
+- Versioned changed browser assets:
+  - `styles.css?v=37`
+  - `js/timeline.js?v=7`
+- Extended `scripts/test-generated-plans.js` to load `js/timeline.js`.
+- Added the `PLANNER-CHECKLIST` regression fixture.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the account/share fixture, the account setup fixture, the schedule timing/comparison/advisor fixture, the new planner checklist fixture, and the Browse profile fixture.
+- Planner checklist fixture confirmed:
+  - credit-load guidance appears.
+  - prerequisite issues are surfaced.
+  - picked-section timing fit is included.
+  - GenEd gaps include `Find GenEd` actions.
+  - export text starts with `Registration checklist` and includes course context.
+  - checklist HTML includes schedule and GenEd action hooks.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass40checklist=1` from a temporary static server and confirmed:
+  - `styles.css?v=37` and `js/timeline.js?v=7` loaded.
+  - Timeline opened successfully.
+  - `Registration Checklist` rendered.
+  - checklist cards rendered with `Open Schedule` and GenEd actions.
+  - `Select checklist` exposed copyable export text.
+  - no console errors.
+  - no horizontal overflow at the browser's 380px viewport.
+- Reset the browser viewport and stopped the temporary static server.
+
+Next pass candidates:
+- Add exportable advisor questions generated from blockers, schedule timing risks, and unmet GenEds.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve Browse with saved profile searches and richer personalized class recommendations.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

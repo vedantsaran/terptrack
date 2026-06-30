@@ -213,6 +213,156 @@ function plannerActionCard(action, idx) {
   `;
 }
 
+function plannerRegistrationSelectedItems(semId, items = []) {
+  const bucket = (state.selectedSections || {})[semId] || {};
+  return items
+    .filter(item => !plannerIsComplete(item.course))
+    .map(item => {
+      const section = bucket[normalizeCode(item.course.code)];
+      return section ? { course: item.course, section } : null;
+    })
+    .filter(Boolean);
+}
+
+function plannerChecklistItem(level, title, body, meta = '', button = null) {
+  return { level: level || 'info', title, body, meta, button };
+}
+
+function plannerRegistrationChecklist(advisor) {
+  const items = [];
+  const nextSem = advisor.visibleSems.find(sem => (advisor.itemsBySem[sem.id] || []).some(item => !plannerIsComplete(item.course)))
+    || advisor.visibleSems[0] || null;
+  if (!nextSem) {
+    return [plannerChecklistItem('ok', 'No upcoming registration tasks', 'Every visible term is already complete or empty.', 'Refresh after editing your plan.')];
+  }
+  const semItems = advisor.itemsBySem[nextSem.id] || [];
+  const load = advisor.loads[nextSem.id] || 0;
+  const counts = plannerStatusCounts(semItems);
+  const semIssues = advisor.issues.filter(issue => issue.item.sem.id === nextSem.id);
+  const scheduleButton = {
+    label: 'Open Schedule',
+    attrs: `data-planner-schedule="${timelineEscape(nextSem.id)}"`,
+  };
+
+  if (load > PLANNER_MAX_CREDITS) {
+    items.push(plannerChecklistItem(
+      'danger',
+      `Balance ${nextSem.name} before registration`,
+      `${nextSem.name} has ${load} remaining credits. Move a flexible course before picking sections.`,
+      `Target ${PLANNER_TARGET_CREDITS}-${PLANNER_MAX_CREDITS} credits`,
+    ));
+  } else if (load > 0 && load < PLANNER_MIN_CREDITS) {
+    items.push(plannerChecklistItem(
+      'warn',
+      `Fill ${nextSem.name} to full-time range`,
+      `${nextSem.name} has ${load} remaining credits. Pull a ready course forward or confirm part-time intent.`,
+      `Minimum ${PLANNER_MIN_CREDITS} credits`,
+    ));
+  } else if (load > 0) {
+    items.push(plannerChecklistItem('ok', `${nextSem.name} credit load is workable`, `${load} remaining credits are planned for the next registration term.`, `${counts.ready} ready · ${counts.locked} locked`));
+  }
+
+  if (semIssues.length) {
+    const issue = semIssues[0];
+    items.push(plannerChecklistItem(
+      'danger',
+      `Resolve ${issue.item.course.code} prerequisite order`,
+      issue.prereqItem
+        ? `${issue.item.course.code} is planned before ${issue.missing} is complete. Move it after ${issue.prereqItem.course.code}.`
+        : `${issue.item.course.code} needs ${issue.missing}, which is not planned before ${nextSem.name}.`,
+      semIssues.length === 1 ? '1 locked next-term course' : `${semIssues.length} locked next-term courses`,
+    ));
+  } else if (counts.locked) {
+    items.push(plannerChecklistItem('warn', 'Confirm locked courses with an advisor', `${counts.locked} course${counts.locked === 1 ? '' : 's'} in ${nextSem.name} still show unmet prerequisites.`, 'Review degree audit before registration'));
+  } else if (counts.ready) {
+    items.push(plannerChecklistItem('ok', 'Prerequisites look ready', `${counts.ready} next-term course${counts.ready === 1 ? '' : 's'} can be attempted based on the current plan.`, 'Still confirm official restrictions'));
+  }
+
+  const selectedItems = plannerRegistrationSelectedItems(nextSem.id, semItems);
+  if (selectedItems.length && typeof scheduleTimingFit === 'function' && typeof detectScheduleConflicts === 'function') {
+    const prefs = typeof getSchedulePrefs === 'function' ? getSchedulePrefs(nextSem.id) : {};
+    const { conflicts } = detectScheduleConflicts(selectedItems);
+    const fit = scheduleTimingFit(selectedItems, prefs, conflicts);
+    const level = conflicts.length || fit.score < 61 ? 'danger' : fit.score < 76 ? 'warn' : 'ok';
+    items.push(plannerChecklistItem(
+      level,
+      `${nextSem.name} timing fit: ${fit.score}/100`,
+      fit.insights[0] || 'No timing notes detected for picked sections.',
+      `${selectedItems.length}/${semItems.filter(item => !plannerIsComplete(item.course)).length} sections picked`,
+      scheduleButton,
+    ));
+  } else if (load > 0) {
+    items.push(plannerChecklistItem(
+      'warn',
+      `Pick posted sections for ${nextSem.name}`,
+      'Use the Schedule tab to choose lecture, discussion, lab, and recitation sections before seats move.',
+      `${semItems.filter(item => !plannerIsComplete(item.course)).length} courses need section choices`,
+      scheduleButton,
+    ));
+  }
+
+  (advisor.genedGaps || []).slice(0, 2).forEach(gap => {
+    const tag = gap.id === 'DIVERSITY-2' ? 'DVUP' : gap.id;
+    items.push(plannerChecklistItem(
+      'info',
+      `Find remaining ${gap.label || gap.id}`,
+      `You have ${gap.have}/${gap.need} planned. Pick a course that covers ${gap.id} before the plan fills with electives.`,
+      'GenEd requirement',
+      { label: 'Find GenEd', attrs: `data-planner-gened="${timelineEscape(tag)}"` },
+    ));
+  });
+
+  if (!items.length) {
+    items.push(plannerChecklistItem('ok', 'Registration checklist is clear', 'Credit load, prerequisites, GenEds, and picked-section timing look ready from the current plan.', `${nextSem.name} reviewed`));
+  }
+  return items.slice(0, 7);
+}
+
+function plannerChecklistCard(item, idx) {
+  const button = item.button
+    ? `<button class="btn small ${item.level === 'danger' ? 'primary' : ''}" type="button" ${item.button.attrs}>${timelineEscape(item.button.label)}</button>`
+    : '';
+  return `
+    <div class="planner-check ${timelineEscape(item.level)}">
+      <b>${idx + 1}</b>
+      <div>
+        <strong>${timelineEscape(item.title)}</strong>
+        <p>${timelineEscape(item.body)}</p>
+        ${item.meta ? `<span>${timelineEscape(item.meta)}</span>` : ''}
+      </div>
+      ${button}
+    </div>
+  `;
+}
+
+function plannerRegistrationChecklistText(items) {
+  const lines = ['Registration checklist'];
+  (items || []).forEach((item, idx) => {
+    lines.push(`${idx + 1}. ${item.title}`);
+    if (item.body) lines.push(`   ${item.body}`);
+    if (item.meta) lines.push(`   ${item.meta}`);
+  });
+  return lines.join('\n');
+}
+
+function plannerChecklistHtml(items) {
+  return `
+    <div class="planner-checklist">
+      <div class="planner-checklist-head">
+        <div>
+          <h3>Registration Checklist</h3>
+          <span>${items.length} next actions from load, prerequisites, GenEds, and picked sections</span>
+        </div>
+        <button class="btn small" type="button" data-planner-copy-checklist>Select checklist</button>
+      </div>
+      <div class="planner-checklist-grid">
+        ${items.map(plannerChecklistCard).join('')}
+      </div>
+      <textarea id="planner-checklist-text" class="planner-checklist-text" readonly hidden>${timelineEscape(plannerRegistrationChecklistText(items))}</textarea>
+    </div>
+  `;
+}
+
 function plannerBuildAdvisor() {
   const sems = getAllSemesters();
   const allItems = plannerSemCourseItems();
@@ -538,6 +688,7 @@ function renderPlannerAdvisor() {
   const root = document.getElementById('timeline-plan-advisor');
   if (!root) return;
   const advisor = plannerBuildAdvisor();
+  const checklist = plannerRegistrationChecklist(advisor);
   const semRows = advisor.visibleSems.slice(0, 8).map(sem => {
     const load = advisor.loads[sem.id] || 0;
     const counts = plannerStatusCounts(advisor.itemsBySem[sem.id] || []);
@@ -564,6 +715,7 @@ function renderPlannerAdvisor() {
       <div class="planner-stat ${advisor.issues.length ? 'danger' : 'ok'}"><strong>${advisor.issues.length}</strong><span>prereq order issues</span></div>
       <div class="planner-stat ${advisor.genedGaps.length ? 'warn' : 'ok'}"><strong>${advisor.genedGaps.length}</strong><span>GenEd gaps</span></div>
     </div>
+    ${plannerChecklistHtml(checklist)}
     <div class="planner-body">
       <div>
         <h3>Recommended Moves</h3>
@@ -703,6 +855,20 @@ function plannerOpenGenEd(tag) {
   if (typeof genEdJumpToBrowse === 'function') genEdJumpToBrowse(tag);
 }
 
+function plannerOpenSchedule(semId) {
+  if (semId && typeof scheduleCurrentSemId !== 'undefined') scheduleCurrentSemId = semId;
+  if (typeof switchTab === 'function') switchTab('schedule');
+}
+
+function plannerSelectChecklistText() {
+  const textArea = document.getElementById('planner-checklist-text');
+  if (!textArea) return;
+  textArea.hidden = false;
+  textArea.focus();
+  textArea.select();
+  if (typeof toastInfo === 'function') toastInfo('Registration checklist selected.');
+}
+
 document.addEventListener('click', e => {
   const move = e.target.closest('[data-planner-move]');
   if (move) {
@@ -716,6 +882,15 @@ document.addEventListener('click', e => {
   const gened = e.target.closest('[data-planner-gened]');
   if (gened) {
     plannerOpenGenEd(gened.dataset.plannerGened);
+    return;
+  }
+  const schedule = e.target.closest('[data-planner-schedule]');
+  if (schedule) {
+    plannerOpenSchedule(schedule.dataset.plannerSchedule);
+    return;
+  }
+  if (e.target.closest('[data-planner-copy-checklist]')) {
+    plannerSelectChecklistText();
     return;
   }
   if (e.target.closest('[data-planner-refresh]')) {
