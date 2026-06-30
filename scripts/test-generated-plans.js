@@ -58,6 +58,7 @@ function buildContext() {
     'js/schedule.js',
     'js/timeline.js',
     'js/browse.js',
+    'js/onboarding.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
   vm.runInContext(`
     state = loadState();
@@ -722,6 +723,85 @@ async function testBrowseProfileDepartments(context) {
   };
 }
 
+async function testOnboardingPersonalizedSetup(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['ai-data'],
+        careerGoal: 'data science for civic technology',
+        genEdDepts: 'INST, GVPT'
+      });
+      const standardTerms = onboardTargetSemesterCount(2026, 'Spring', 2030);
+      const fastTerms = onboardTargetSemesterCount(2026, 'Fall', 2029);
+      const minimumTerms = onboardTargetSemesterCount(2026, 'Spring', 2026);
+      const prefs = onboardNormalizeSchedulePrefs({
+        earliest: '10:00',
+        latest: '17:00',
+        minBreak: '30',
+        mode: 'compact',
+        avoidDays: ['F', 'X', 'M', 'F']
+      });
+      const preview = await buildAutoPlanPreview('STAT', {
+        noFetch: true,
+        force: true,
+        startYear: 2027,
+        numSemesters: 6,
+        creditCap: 16,
+        profilePrefs: getProfilePrefs()
+      });
+      const curatedPreview = await buildAutoPlanPreview('CE', {
+        noFetch: true,
+        force: true,
+        startYear: 2028,
+        profilePrefs: getProfilePrefs()
+      });
+      await applyMajorTemplate('CE', { startTerm: 'Fall', startYear: 2028 });
+      onboardApplySchedulePrefs(prefs);
+      const sems = getAllSemesters();
+      const first = sems[0];
+      const firstPrefs = state.schedulePrefs[first.id];
+      return {
+        standardTerms,
+        fastTerms,
+        minimumTerms,
+        normalizedPrefs: prefs,
+        previewTerms: preview.termLoads.length,
+        previewFirstTerm: preview.termLoads[0].id,
+        previewProfileActive: preview.profile.active,
+        curatedPreviewFirstId: curatedPreview.termLoads[0].id,
+        curatedPreviewFirstName: curatedPreview.termLoads[0].name,
+        curatedFirstId: first.id,
+        curatedFirstName: first.name,
+        curatedEyebrow: state.settings.eyebrow,
+        firstPrefs,
+      };
+    })()
+  `, context));
+
+  assert(result.standardTerms === 8, 'onboarding: standard Fall-to-Spring timeline should produce 8 terms');
+  assert(result.fastTerms === 7, 'onboarding: Fall target graduation should produce a 7-term fast path');
+  assert(result.minimumTerms === 2, 'onboarding: target term count should keep a 2-term minimum');
+  assert(result.normalizedPrefs.earliest === '10:00' && result.normalizedPrefs.latest === '17:00', 'onboarding: schedule time preferences should normalize');
+  assert(result.normalizedPrefs.minBreak === 30 && result.normalizedPrefs.mode === 'compact', 'onboarding: schedule mode and break preferences should normalize');
+  assert(result.normalizedPrefs.avoidDays.length === 2 && result.normalizedPrefs.avoidDays.includes('F') && result.normalizedPrefs.avoidDays.includes('M'), 'onboarding: invalid and duplicate avoided days should be removed');
+  assert(result.previewTerms === 6, 'onboarding: generated preview should honor target term count');
+  assert(result.previewFirstTerm === 'F27', 'onboarding: generated preview should honor start year');
+  assert(result.previewProfileActive, 'onboarding: generated preview should use profile preferences');
+  assert(result.curatedPreviewFirstId === 'F28' && result.curatedPreviewFirstName === 'Fall 2028', 'onboarding: curated preview should relabel to chosen start year');
+  assert(result.curatedFirstId === 'F28' && result.curatedFirstName === 'Fall 2028', 'onboarding: curated schedule should relabel to chosen start year');
+  assert(/2028.*2032/.test(result.curatedEyebrow), 'onboarding: program eyebrow should reflect chosen start/end years');
+  assert(result.firstPrefs.earliest === '10:00' && result.firstPrefs.latest === '17:00', 'onboarding: applied schedule prefs should persist on semesters');
+  assert(result.firstPrefs.minBreak === 30 && result.firstPrefs.mode === 'compact', 'onboarding: applied schedule prefs should include mode and breaks');
+  assert(result.firstPrefs.term === '202808', 'onboarding: applied schedule prefs should include inferred UMD term');
+
+  return {
+    id: 'ONBOARDING-PERSONALIZED',
+    terms: `${result.fastTerms}/${result.standardTerms}`,
+    start: result.curatedFirstName,
+    prefs: `${result.firstPrefs.earliest}-${result.firstPrefs.latest} ${result.firstPrefs.mode}`,
+  };
+}
+
 async function main() {
   const context = buildContext();
   const fixtures = [
@@ -745,6 +825,7 @@ async function main() {
   const planner = testPlannerRegistrationChecklist(context);
   const questions = testPlannerAdvisorQuestions(context);
   const browse = await testBrowseProfileDepartments(context);
+  const onboarding = await testOnboardingPersonalizedSetup(context);
 
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
@@ -755,7 +836,8 @@ async function main() {
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches).`);
+  console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + personalized onboarding).`);
 }
 
 main().catch(error => {

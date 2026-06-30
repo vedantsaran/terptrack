@@ -20,6 +20,24 @@ function generateSemesterLabels(startTerm, startYear, count) {
   return out;
 }
 
+function relabelScheduleTerms(schedule, startTerm = 'Fall', startYear = 2026) {
+  const labels = generateSemesterLabels(startTerm, startYear, (schedule || []).length);
+  return JSON.parse(JSON.stringify(schedule || [])).map((sem, index) => ({
+    ...sem,
+    ...(labels[index] || {}),
+  }));
+}
+
+function majorEyebrowForStart(tpl, opts = {}) {
+  if (!opts.startYear) return tpl.eyebrow || `UMD · ${tpl.programName || tpl.name}`;
+  const count = opts.numSemesters || 8;
+  const labels = generateSemesterLabels(opts.startTerm || 'Fall', opts.startYear, count);
+  const lastName = labels[labels.length - 1]?.name || String(opts.startYear);
+  const yearMatch = lastName.match(/\b(20\d{2})\b/);
+  const endYear = yearMatch ? yearMatch[1] : String(Number(opts.startYear) + Math.floor(count / 2));
+  return `UMD · ${tpl.programName || tpl.name} · ${opts.startYear}–${endYear}`;
+}
+
 const AUTO_PLAN_GENED_REQUIREMENTS = [
   { id: 'FSAW', label: 'Academic Writing', need: 1, preferred: 0 },
   { id: 'FSOC', label: 'Oral Communication', need: 1, preferred: 0 },
@@ -370,8 +388,11 @@ async function buildAutoPlanPreview(majorId, opts = {}) {
       ? SCHEDULE
       : (Array.isArray(tpl.fixedSchedule) && tpl.fixedSchedule.length ? tpl.fixedSchedule : null);
     if (isMajorFullyBaked(tpl)) {
-      const analysis = curatedSchedule
-        ? autoPlanAnalyzeSchedule(curatedSchedule, { targetCredits, profilePrefs, requirementCourseCount: 0 })
+      const previewSchedule = curatedSchedule && (opts.startYear || opts.startTerm)
+        ? relabelScheduleTerms(curatedSchedule, opts.startTerm || 'Fall', opts.startYear || 2026)
+        : curatedSchedule;
+      const analysis = previewSchedule
+        ? autoPlanAnalyzeSchedule(previewSchedule, { targetCredits, profilePrefs, requirementCourseCount: 0 })
         : {};
       return {
         ...base,
@@ -527,19 +548,25 @@ function autoSchedule(courses, opts) {
    replaces state.activeSchedule.
    ---------------------------------------------------------- */
 async function applyMajorTemplate(majorId, opts) {
+  opts = opts || {};
   const tpl = getMajorTemplate(majorId);
   if (!tpl) throw new Error('Unknown major: ' + majorId);
   if (tpl.useDefaultSchedule) {
-    state.activeSchedule = null;
+    const shouldRelabel = opts.startYear || opts.startTerm;
+    if (shouldRelabel) {
+      state.activeSchedule = relabelScheduleTerms(SCHEDULE, opts.startTerm || 'Fall', opts.startYear || 2026);
+    } else {
+      state.activeSchedule = null;
+    }
     state.selectedSections = {};
     state.schedulePrefs = {};
     state.majorId = majorId;
     state.settings = { ...state.settings,
-      programName: tpl.programName, eyebrow: tpl.eyebrow,
+      programName: tpl.programName, eyebrow: majorEyebrowForStart(tpl, opts),
       totalCredits: tpl.totalCredits, goalCourses: tpl.goals || state.settings.goalCourses,
     };
     saveState(); applySettings(); render();
-    return { ok: true, schedule: SCHEDULE };
+    return { ok: true, schedule: state.activeSchedule || SCHEDULE };
   }
 
   // Templates with a hand-curated 4-year layout skip auto-gen.
@@ -567,7 +594,7 @@ async function applyMajorTemplate(majorId, opts) {
     // Union template goals with isGoal-flagged rows in the schedule
     const goalSet = new Set([...(tpl.goals || []), ...goalsFromSchedule]);
     state.settings = { ...state.settings,
-      programName: tpl.programName, eyebrow: tpl.eyebrow,
+      programName: tpl.programName, eyebrow: majorEyebrowForStart(tpl, opts),
       totalCredits: tpl.totalCredits, goalCourses: Array.from(goalSet),
     };
     saveState();
@@ -579,7 +606,7 @@ async function applyMajorTemplate(majorId, opts) {
   const codes = majorAllCodes(tpl).map(c => c.code);
   // Try multiple status elements so callers (Smart Import, settings, onboarding)
   // all get visible feedback. opts.statusId can override.
-  const statusIds = [opts && opts.statusId, 'import-status', 'set-major-status', 'ob-finish-status'].filter(Boolean);
+  const statusIds = [opts.statusId, 'import-status', 'set-major-status', 'ob-finish-status'].filter(Boolean);
   const statusEls = statusIds.map(id => document.getElementById(id)).filter(Boolean);
   const setStatus = (text, color) => statusEls.forEach(el => {
     el.textContent = text;
@@ -596,11 +623,11 @@ async function applyMajorTemplate(majorId, opts) {
   const courseObjs = autoPlanObjectsFromTemplate(tplCatalog, fetched);
 
   const schedule = autoSchedule(courseObjs, {
-    numSemesters: opts && opts.numSemesters || 8,
-    creditCap:    opts && opts.creditCap    || 17,
+    numSemesters: opts.numSemesters || 8,
+    creditCap:    opts.creditCap    || 17,
     targetCredits: tpl.totalCredits || 120,
-    startTerm:    opts && opts.startTerm    || 'Fall',
-    startYear:    opts && opts.startYear    || 2026,
+    startTerm:    opts.startTerm    || 'Fall',
+    startYear:    opts.startYear    || 2026,
     profilePrefs: typeof getProfilePrefs === 'function' ? getProfilePrefs() : null,
   });
 
@@ -609,7 +636,7 @@ async function applyMajorTemplate(majorId, opts) {
   state.schedulePrefs = {};
   state.majorId = majorId;
   state.settings = { ...state.settings,
-    programName: tpl.programName, eyebrow: tpl.eyebrow,
+    programName: tpl.programName, eyebrow: majorEyebrowForStart(tpl, opts),
     totalCredits: tpl.totalCredits, goalCourses: tpl.goals || [],
   };
   saveState();

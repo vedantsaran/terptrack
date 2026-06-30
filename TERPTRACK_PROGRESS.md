@@ -1959,3 +1959,68 @@ Next pass candidates:
 - Add diagnostics actions that jump from placeholder source samples directly to Browse saved replacement searches.
 - Add Browse result sections for "best for your plan", "fills missing GenEd", and "available in your next term".
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 44
+
+Focus: make first-run setup produce a more individualized plan instead of only applying a default major template.
+
+Planned changes:
+- Add target graduation and credit-load controls to onboarding.
+- Add default schedule preferences during onboarding.
+- Show a personalized setup preview before Finish.
+- Apply chosen start year, profile, transfer credit, timeline, and schedule preferences to the created plan.
+- Add regression coverage and browser QA.
+
+Completed:
+- Expanded onboarding from 5 to 6 steps with:
+  - major and start year.
+  - interests, career goal, and preferred GenEd departments.
+  - current year, target graduation term/year, and max credits per term.
+  - schedule defaults for earliest start, latest end, minimum breaks, optimization mode, and avoided weekdays.
+  - AP/IB/transfer code import.
+  - a fast preview before Finish.
+- Added onboarding helpers for:
+  - target semester-count calculation.
+  - schedule preference normalization.
+  - schedule preference application across plan semesters.
+  - preview summary rendering.
+- Reused the existing Auto Plan Review UI inside onboarding so setup previews show term loads, GenEd coverage, diagnostics, and profile fit.
+- Generated-major previews now honor onboarding `startYear`, `numSemesters`, `creditCap`, and profile preferences.
+- Curated major previews now relabel their term loads when onboarding chooses a later start year.
+- Applying curated, fixed, or generated major templates now derives the hero year range from the chosen start/term count instead of keeping stale template text.
+- Onboarding Finish now stops on major-apply failure instead of closing with a partially configured plan.
+- Added responsive onboarding styles for two-column controls, weekday preference chips, and the preview panel.
+- Versioned changed browser assets:
+  - `styles.css?v=42`
+  - `js/import.js?v=8`
+  - `js/onboarding.js?v=3`
+- Added the `ONBOARDING-PERSONALIZED` regression fixture.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the auto-plan diagnostics fixture, the account/share fixture, the account setup fixture, the schedule timing fixture, the planner checklist fixture, the planner questions fixture, the Browse profile saved-search fixture, and the new personalized onboarding fixture.
+- Onboarding fixture confirmed:
+  - Fall-to-Spring standard timeline creates 8 terms.
+  - Fall target graduation creates a 7-term fast path.
+  - schedule preferences normalize and drop invalid duplicate avoided days.
+  - generated preview honors start year, term count, credit cap, and profile preferences.
+  - curated preview and applied curated schedule relabel to `Fall 2028`.
+  - applied schedule preferences persist with inferred UMD term `202808`.
+  - hero eyebrow reflects `2028–2032`.
+- Attempted in-app browser QA against `http://127.0.0.1:5173/`, but the selected in-app browser repeatedly timed out during local navigation after reconnecting and following the browser troubleshooting path.
+- Used Chrome fallback with the existing local server at `http://127.0.0.1:5173/` and confirmed:
+  - `styles.css?v=42`, `js/import.js?v=8`, and `js/onboarding.js?v=3` loaded.
+  - first-run onboarding opened at the major step with six progress dots.
+  - setup preview used the selected `Fall 2028` start and did not show stale `Fall 2026` labels.
+  - preview showed `Fall 2028 to Spring 2032`, 8 terms, 16-credit cap, and schedule defaults after 10:00 / before 17:00 / 30 min breaks / avoid Friday / compact.
+  - Finish closed onboarding and created a plan starting at `Fall 2028`.
+  - hero eyebrow changed to `UMD · Computer Engineering · 2028–2032`.
+  - Schedule tab inherited start-after `10:00`, end-before `17:00`, `30` minute breaks, `compact` mode, and avoid-Friday.
+  - no horizontal overflow and no Chrome console errors.
+- Removed the temporary seed page and finalized the Chrome tab.
+
+Next pass candidates:
+- Add diagnostics actions that jump from placeholder source samples directly to Browse saved replacement searches.
+- Add Browse result sections for "best for your plan", "fills missing GenEd", and "available in your next term".
+- Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

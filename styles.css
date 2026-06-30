@@ -4523,6 +4523,77 @@ h1.hero-title em {
   color: var(--ink);
   font-size: .9rem;
 }
+.onboard-inline-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.onboard-day-prefs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cream) 72%, var(--paper));
+}
+.onboard-day-prefs legend {
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  padding: 0 4px;
+  text-transform: uppercase;
+}
+.onboard-day-prefs label {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  margin: 0 !important;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: .74rem !important;
+}
+.onboard-day-prefs input {
+  width: auto !important;
+  margin: 0;
+}
+.onboard-plan-preview {
+  max-height: min(430px, 46vh);
+  overflow: auto;
+}
+.onboard-preview-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.onboard-preview-summary span {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--slate);
+  font-size: .72rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.onboard-preview-summary strong {
+  display: block;
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
 
 /* ===========================================================
    BROWSE COURSES
@@ -5087,6 +5158,13 @@ h1.hero-title em {
   }
   .auto-plan-load {
     max-width: calc(50% - 3px);
+  }
+  .onboard-inline-grid,
+  .onboard-preview-summary {
+    grid-template-columns: 1fr;
+  }
+  .onboard-plan-preview {
+    max-height: 360px;
   }
   .profile-interest-grid {
     grid-template-columns: 1fr;
