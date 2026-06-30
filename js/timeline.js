@@ -949,6 +949,8 @@ function plannerChangeIcon(type) {
   if (type === 'section-swap') return '▦';
   if (type === 'auto-pick') return '✓';
   if (type === 'section-pick') return '◉';
+  if (type === 'placeholder-section-replacement' || type === 'placeholder-replacement') return '↺';
+  if (type === 'placeholder-undo') return '↶';
   if (type === 'clear') return '×';
   return '•';
 }
@@ -957,6 +959,128 @@ function plannerChangeTime(iso) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function plannerChangeCanUndo(change) {
+  return change?.undo?.kind === 'placeholder-replacement' && !change.undo.appliedAt;
+}
+
+function plannerClonePlain(value) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return Array.isArray(value) ? value.slice() : { ...value };
+  }
+}
+
+function plannerUndoSemester(location) {
+  const loc = location || {};
+  const semId = String(loc.semId || '');
+  if (!semId) return null;
+  const active = mutableSchedule().find(sem => sem.id === semId);
+  const custom = (state.customSemesters || []).find(sem => sem.id === semId);
+  if (loc.collection === 'custom-semester') return custom || active || null;
+  return active || custom || null;
+}
+
+function plannerUndoCourseSlot(undo) {
+  const loc = undo?.location || {};
+  const replacementNorm = normalizeCode(undo.replacementCode || '');
+  const originalNorm = normalizeCode(undo.originalCode || '');
+  if (loc.type === 'custom-course') {
+    const list = state.customCourses || [];
+    const preferred = Number.isInteger(loc.index) ? loc.index : -1;
+    if (preferred >= 0 && list[preferred] && normalizeCode(list[preferred].code) === replacementNorm) {
+      return { list, index: preferred, custom: true };
+    }
+    const index = list.findIndex(course =>
+      (!loc.semId || course.semId === loc.semId)
+      && [replacementNorm, originalNorm].includes(normalizeCode(course.code))
+    );
+    return index >= 0 ? { list, index, custom: true } : null;
+  }
+  const sem = plannerUndoSemester(loc);
+  const list = sem?.courses || [];
+  const preferred = Number.isInteger(loc.index) ? loc.index : -1;
+  if (preferred >= 0 && list[preferred] && normalizeCode(list[preferred].code) === replacementNorm) {
+    return { list, index: preferred, sem };
+  }
+  const index = list.findIndex(course => [replacementNorm, originalNorm].includes(normalizeCode(course.code)));
+  return index >= 0 ? { list, index, sem } : null;
+}
+
+function plannerRestoreCourseStatus(code, hadValue, value) {
+  const key = String(code || '');
+  if (!key) return;
+  state.courses = state.courses || {};
+  if (hadValue) state.courses[key] = plannerClonePlain(value);
+  else delete state.courses[key];
+}
+
+function plannerRestoreSelectedSection(semId, code, hadValue, value) {
+  const term = String(semId || '');
+  const key = normalizeCode(code || '');
+  if (!term || !key) return;
+  state.selectedSections = state.selectedSections || {};
+  state.selectedSections[term] = state.selectedSections[term] || {};
+  if (hadValue) state.selectedSections[term][key] = plannerClonePlain(value);
+  else delete state.selectedSections[term][key];
+  if (!Object.keys(state.selectedSections[term]).length) delete state.selectedSections[term];
+}
+
+function plannerApplyPlaceholderUndo(change) {
+  const undo = change?.undo;
+  if (!plannerChangeCanUndo(change)) return false;
+  const slot = plannerUndoCourseSlot(undo);
+  if (!slot || slot.index < 0) {
+    if (typeof toastError === 'function') toastError('Could not find the replacement course to undo.');
+    return false;
+  }
+  const replacementNorm = normalizeCode(undo.replacementCode || '');
+  if (replacementNorm && normalizeCode(slot.list[slot.index]?.code) !== replacementNorm) {
+    if (typeof toastError === 'function') toastError('That replacement changed after it was made, so undo is not available.');
+    return false;
+  }
+  const restoredCourse = plannerClonePlain(undo.originalCourse || {});
+  if (slot.custom) {
+    slot.list[slot.index] = {
+      ...restoredCourse,
+      isCustom: true,
+      semId: undo.semId || restoredCourse.semId || undo.location?.semId || '',
+    };
+  } else {
+    slot.list[slot.index] = restoredCourse;
+  }
+  plannerRestoreCourseStatus(undo.originalCode, undo.hadOriginalCourseState, undo.originalCourseState);
+  plannerRestoreCourseStatus(undo.replacementCode, undo.hadReplacementCourseState, undo.replacementCourseState);
+  plannerRestoreSelectedSection(undo.semId, undo.originalCode, undo.hadOriginalSelectedSection, undo.originalSelectedSection);
+  plannerRestoreSelectedSection(undo.semId, undo.replacementCode, undo.hadReplacementSelectedSection, undo.replacementSelectedSection);
+  undo.appliedAt = new Date().toISOString();
+  recordPlanChange({
+    type: 'placeholder-undo',
+    source: 'Timeline',
+    title: `Restored ${undo.originalCode || 'placeholder'}`,
+    detail: `${undo.replacementCode || 'Replacement course'} was reverted to ${undo.originalCode || 'the original placeholder'}.`,
+    meta: 'Undo placeholder replacement',
+  }, { save: false });
+  saveState();
+  render();
+  if (currentTab === 'timeline') renderTimeline();
+  if (typeof toastSuccess === 'function') toastSuccess(`Restored ${undo.originalCode || 'placeholder'}.`);
+  return true;
+}
+
+function undoPlanChange(changeId) {
+  const id = String(changeId || '');
+  const change = recentPlanChanges().find(item => item.id === id);
+  if (!change) {
+    if (typeof toastError === 'function') toastError('Could not find that recent change.');
+    return false;
+  }
+  if (change.undo?.kind === 'placeholder-replacement') return plannerApplyPlaceholderUndo(change);
+  if (typeof toastError === 'function') toastError('That change cannot be undone here.');
+  return false;
 }
 
 function renderPlanChangeHistory() {
@@ -976,10 +1100,15 @@ function renderPlanChangeHistory() {
         ${changes.slice(0, 8).map(change => `
           <div class="change-history-row">
             <span class="change-history-icon">${timelineEscape(plannerChangeIcon(change.type))}</span>
-            <div>
+            <div class="change-history-body">
               <strong>${timelineEscape(change.title)}</strong>
               ${change.detail ? `<p>${timelineEscape(change.detail)}</p>` : ''}
-              <span>${timelineEscape([change.meta, plannerChangeTime(change.at)].filter(Boolean).join(' · '))}</span>
+              <span class="change-history-meta">${timelineEscape([change.meta, plannerChangeTime(change.at)].filter(Boolean).join(' · '))}</span>
+              ${plannerChangeCanUndo(change) ? `
+                <div class="change-history-actions">
+                  <button class="btn small" type="button" data-change-undo="${timelineEscape(change.id)}">Undo</button>
+                </div>
+              ` : ''}
             </div>
           </div>
         `).join('')}
@@ -1072,6 +1201,11 @@ function plannerSelectAdvisorQuestionsText() {
 }
 
 document.addEventListener('click', e => {
+  const undoChange = e.target.closest('[data-change-undo]');
+  if (undoChange) {
+    undoPlanChange(undoChange.dataset.changeUndo);
+    return;
+  }
   const move = e.target.closest('[data-planner-move]');
   if (move) {
     plannerApplyMove(move.dataset.plannerMove, move.dataset.fromSem, move.dataset.toSem);

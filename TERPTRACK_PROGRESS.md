@@ -2730,3 +2730,67 @@ Next pass candidates:
 - Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
 - Add undo for bulk prior-credit applications through recent changes.
 - Add a compact advisor-export summary of open audit issues.
+
+## 2026-06-30 Pass 57
+
+Focus: add undo for placeholder replacements that also changed a pinned section pick.
+
+Planned changes:
+- Preserve enough undo data when replacing a placeholder to restore the original slot.
+- Include previous course status and selected-section state in the undo payload.
+- Render an `Undo` action in Timeline Recent Changes for undoable placeholder replacements.
+- Restore the original placeholder, remove the replacement section, and mark the original change as already undone.
+- Add regression and Chrome coverage.
+
+Completed:
+- Extended `recordPlanChange()` to keep a bounded JSON-safe `undo` payload.
+- Added placeholder replacement undo snapshots for:
+  - the original placeholder course.
+  - the exact active/custom semester or custom-course location.
+  - previous course status under both original and replacement codes.
+  - previous selected-section state under both original and replacement codes.
+- Added Timeline undo helpers that:
+  - find the replacement course by saved slot location with a same-semester fallback.
+  - verify the current course still matches the replacement code before applying undo.
+  - restore original course status and selected sections.
+  - clear the replacement selected section unless one existed before the replacement.
+  - mark the original change's undo payload with `appliedAt`.
+  - record a new `placeholder-undo` change.
+- Added `Undo` buttons to Recent Changes rows when the change has an unapplied placeholder-replacement undo payload.
+- Added Recent Changes styling for action rows and explicit meta text.
+- Versioned changed browser assets:
+  - `styles.css?v=54`
+  - `js/state.js?v=14`
+  - `js/timeline.js?v=9`
+  - `js/placeholder-search.js?v=8`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `PLACEHOLDER-SECTIONS` fixture confirms:
+  - the `GVPT200-0201` replacement still saves and pins the section.
+  - the recent change includes a `placeholder-replacement` undo payload.
+  - Recent Changes renders an `Undo` action.
+  - `undoPlanChange()` restores `GenEd DSHS`.
+  - the prior placeholder selected-section state is restored.
+  - the replacement selected-section state is cleared.
+  - a `placeholder-undo` change is recorded.
+  - the original replacement change is marked as already undone.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=54`, `js/state.js?v=14`, `js/timeline.js?v=9`, and `js/placeholder-search.js?v=8` loaded.
+  - seeded plan rendered `GenEd DSHS` and no `GVPT 200`.
+  - placeholder preview ranked `0201` first with `18 open`, `Excellent timing (100/100)`, and `No conflicts with picked sections`.
+  - `Use + pin` replaced the placeholder with `GVPT 200` and section `0201`.
+  - Timeline Recent Changes rendered `Replaced GenEd DSHS with GVPT 200` plus an `Undo` button.
+  - clicking `Undo` restored the visible `GenEd DSHS` row with the prior `OLD · time TBA` section chip.
+  - Timeline recorded `Restored GenEd DSHS` and removed the old undo button.
+  - Schedule no longer showed the `GVPT 200` pick after undo.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add undo for bulk prior-credit applications through recent changes.
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
+- Add a compact advisor-export summary of open audit issues.
+- Add a student-facing conflict explanation when undo is unavailable because the replacement course changed afterward.

@@ -1070,6 +1070,13 @@ async function testPlaceholderSectionPreview(context) {
       state.courses = {};
       state.selectedSections = {
         PASS55: {
+          GENEDDSHS: {
+            section_id: 'PLACEHOLDER-OLD',
+            semester: '202608',
+            number: 'OLD',
+            pinned: true,
+            meetings: []
+          },
           ENGL101: {
             section_id: 'ENGL101-0101',
             semester: '202608',
@@ -1134,6 +1141,23 @@ async function testPlaceholderSectionPreview(context) {
       const selected = state.selectedSections.PASS55?.GVPT200 || null;
       const staleSelected = state.selectedSections.PASS55?.GENEDDSHS || null;
       const replaced = state.activeSchedule[0].courses[0];
+      const recentChange = state.recentChanges[0] || null;
+      const oldGetElementById = document.getElementById;
+      const historyRoot = { innerHTML: '' };
+      document.getElementById = id => {
+        if (id === 'plan-change-history') return historyRoot;
+        return oldGetElementById(id);
+      };
+      renderPlanChangeHistory();
+      const historyHtml = historyRoot.innerHTML;
+      const canUndoBefore = plannerChangeCanUndo(recentChange);
+      const undoApplied = undoPlanChange(recentChange.id);
+      document.getElementById = oldGetElementById;
+      const restored = state.activeSchedule[0].courses[0];
+      const restoredOldSection = state.selectedSections.PASS55?.GENEDDSHS || null;
+      const clearedReplacementSection = state.selectedSections.PASS55?.GVPT200 || null;
+      const undoChange = state.recentChanges[0] || null;
+      const originalChangeAfterUndo = state.recentChanges.find(change => change.id === recentChange.id) || null;
       return {
         context: preview.context,
         firstNumber: preview.samples[0]?.section.number || '',
@@ -1148,7 +1172,15 @@ async function testPlaceholderSectionPreview(context) {
         staleSelected,
         replaced,
         targetAfterReplace: placeholderSearchTarget,
-        recentChange: state.recentChanges[0] || null,
+        recentChange,
+        historyHtml,
+        canUndoBefore,
+        undoApplied,
+        restored,
+        restoredOldSection,
+        clearedReplacementSection,
+        undoChange,
+        originalChangeAfterUndo,
       };
     })()
   `, context));
@@ -1176,11 +1208,21 @@ async function testPlaceholderSectionPreview(context) {
   assert(!result.staleSelected, 'placeholder section preview: stale placeholder section picks should be cleared');
   assert(result.targetAfterReplace === null, 'placeholder section preview: target should clear after replacement');
   assert(result.recentChange?.type === 'placeholder-section-replacement', 'placeholder section preview: replacement with section should record a recent change');
+  assert(result.recentChange?.undo?.kind === 'placeholder-replacement', 'placeholder section preview: recent change should include undo payload');
+  assert(/data-change-undo/.test(result.historyHtml) && /Undo/.test(result.historyHtml), 'placeholder section preview: recent changes should render undo action');
+  assert(result.canUndoBefore === true, 'placeholder section preview: change should be undoable before applying undo');
+  assert(result.undoApplied === true, 'placeholder section preview: undo should apply successfully');
+  assert(result.restored.code === 'GenEd DSHS', 'placeholder section preview: undo should restore the placeholder course');
+  assert(result.restoredOldSection?.section_id === 'PLACEHOLDER-OLD' && result.restoredOldSection.pinned === true, 'placeholder section preview: undo should restore the prior placeholder section state');
+  assert(!result.clearedReplacementSection, 'placeholder section preview: undo should clear replacement section state');
+  assert(result.undoChange?.type === 'placeholder-undo', 'placeholder section preview: undo should record a restore change');
+  assert(result.originalChangeAfterUndo?.undo?.appliedAt, 'placeholder section preview: original undo action should be marked applied');
 
   return {
     id: 'PLACEHOLDER-SECTIONS',
     first: result.firstNumber,
     pinned: result.selected?.number || '',
+    undo: result.restored?.code || '',
     load: `${result.context.currentCredits}->${result.context.afterCredits}`,
   };
 }
@@ -1904,7 +1946,7 @@ async function main() {
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
   console.log(`Browse impact fixture ${browseImpact.id}: ${browseImpact.mode}; load ${browseImpact.load}.`);
-  console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; pinned ${placeholderSections.pinned}; load ${placeholderSections.load}.`);
+  console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; pinned ${placeholderSections.pinned}; undo ${placeholderSections.undo}; load ${placeholderSections.load}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);

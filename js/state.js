@@ -345,11 +345,23 @@ function saveState() {
   saveState._t = setTimeout(() => ind.classList.remove('show'), 1100);
 }
 
+function cleanPlanChangeUndo(value) {
+  if (!value || typeof value !== 'object' || !value.kind) return null;
+  try {
+    const json = JSON.stringify(value);
+    if (!json || json.length > 12000) return null;
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 function recordPlanChange(change, opts = {}) {
   const highlights = (Array.isArray(change.highlights) ? change.highlights : [])
     .map(item => String(item || '').trim().slice(0, 180))
     .filter(Boolean)
     .slice(0, 6);
+  const undo = cleanPlanChangeUndo(change.undo);
   const clean = {
     id: `change-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
     at: new Date().toISOString(),
@@ -360,6 +372,7 @@ function recordPlanChange(change, opts = {}) {
     meta: String(change.meta || '').slice(0, 140),
   };
   if (highlights.length) clean.highlights = highlights;
+  if (undo) clean.undo = undo;
   state.recentChanges = [clean, ...(state.recentChanges || [])].slice(0, 12);
   if (opts.save !== false) saveState();
   return clean;

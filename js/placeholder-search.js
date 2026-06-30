@@ -662,6 +662,29 @@ function placeholderPreviewSectionById(courseId, sectionId, context = placeholde
     .find(section => String(section.section_id || section.number || '') === target) || null;
 }
 
+function placeholderClonePlain(value) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return Array.isArray(value) ? value.slice() : { ...value };
+  }
+}
+
+function placeholderCourseStateSnapshot(code) {
+  const key = String(code || '');
+  const courses = state.courses || {};
+  const had = Object.prototype.hasOwnProperty.call(courses, key);
+  return { had, value: had ? placeholderClonePlain(courses[key]) : null };
+}
+
+function placeholderSelectedSectionSnapshot(semId, code) {
+  const bucket = (state.selectedSections || {})[semId] || {};
+  const key = normalizeCode(code || '');
+  const had = !!key && Object.prototype.hasOwnProperty.call(bucket, key);
+  return { had, value: had ? placeholderClonePlain(bucket[key]) : null };
+}
+
 function placeholderSectionPreviewState(row) {
   const context = placeholderScheduleContext(row);
   const key = placeholderSectionPreviewCacheKey(row.course_id || row.code, context);
@@ -903,6 +926,7 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
   }
 
   const { _browseSlotIndex, _browseCustomSlotIndex, ...targetForUpdate } = placeholderSearchTarget;
+  const oldCode = placeholderSearchTarget.code;
   const updated = {
     ...targetForUpdate,
     ...full,
@@ -914,8 +938,13 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
   const sched = mutableSchedule();
   const targetSlotIndex = Number.isInteger(placeholderSearchTarget._browseSlotIndex) ? placeholderSearchTarget._browseSlotIndex : null;
   const targetCustomSlotIndex = Number.isInteger(placeholderSearchTarget._browseCustomSlotIndex) ? placeholderSearchTarget._browseCustomSlotIndex : null;
+  const originalCourseState = placeholderCourseStateSnapshot(oldCode);
+  const replacementCourseState = placeholderCourseStateSnapshot(updated.code);
+  const originalSelectedSection = placeholderSelectedSectionSnapshot(replacementContext.semId, oldCode);
+  const replacementSelectedSection = placeholderSelectedSectionSnapshot(replacementContext.semId, updated.code);
   let replaced = false;
-  for (const sem of [...sched, ...(state.customSemesters || [])]) {
+  let replacementLocation = null;
+  for (const sem of sched) {
     const idx = (sem.courses || []).findIndex((c, courseIndex) =>
       c.code === placeholderSearchTarget.code
       && (!placeholderSearchTarget.semId || sem.id === placeholderSearchTarget.semId)
@@ -923,8 +952,24 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
     );
     if (idx >= 0) {
       sem.courses[idx] = updated;
+      replacementLocation = { type: 'semester', collection: 'active', semId: sem.id, index: idx };
       replaced = true;
       break;
+    }
+  }
+  if (!replaced) {
+    for (const sem of (state.customSemesters || [])) {
+      const idx = (sem.courses || []).findIndex((c, courseIndex) =>
+        c.code === placeholderSearchTarget.code
+        && (!placeholderSearchTarget.semId || sem.id === placeholderSearchTarget.semId)
+        && (targetSlotIndex === null || courseIndex === targetSlotIndex)
+      );
+      if (idx >= 0) {
+        sem.courses[idx] = updated;
+        replacementLocation = { type: 'semester', collection: 'custom-semester', semId: sem.id, index: idx };
+        replaced = true;
+        break;
+      }
     }
   }
   if (!replaced) {
@@ -935,6 +980,7 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
     );
     if (idx >= 0) {
       state.customCourses[idx] = { ...updated, isCustom: true, semId: placeholderSearchTarget.semId };
+      replacementLocation = { type: 'custom-course', semId: placeholderSearchTarget.semId, index: idx };
       replaced = true;
     }
   }
@@ -943,7 +989,6 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
     state.courses[updated.code] = state.courses[placeholderSearchTarget.code];
     delete state.courses[placeholderSearchTarget.code];
   }
-  const oldCode = placeholderSearchTarget.code;
   let pinnedSectionLabel = '';
   if (replacementContext.semId && typeof setSelectedSection === 'function') {
     setSelectedSection(replacementContext.semId, oldCode, null);
@@ -973,6 +1018,23 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
         ? `${oldCode} changed to ${updated.code}; ${pinnedSectionLabel} was picked and pinned for ${replacementContext.semName}.`
         : `${oldCode} changed to ${updated.code} in ${replacementContext.semName}.`,
       meta: tags.length ? tags.join(' + ') : (category || 'Course replacement'),
+      undo: {
+        kind: 'placeholder-replacement',
+        semId: replacementContext.semId,
+        originalCode: oldCode,
+        replacementCode: updated.code,
+        originalCourse: placeholderClonePlain(targetForUpdate),
+        replacementCourse: placeholderClonePlain(updated),
+        location: replacementLocation,
+        hadOriginalCourseState: originalCourseState.had,
+        originalCourseState: originalCourseState.value,
+        hadReplacementCourseState: replacementCourseState.had,
+        replacementCourseState: replacementCourseState.value,
+        hadOriginalSelectedSection: originalSelectedSection.had,
+        originalSelectedSection: originalSelectedSection.value,
+        hadReplacementSelectedSection: replacementSelectedSection.had,
+        replacementSelectedSection: replacementSelectedSection.value,
+      },
     }, { save: false });
   }
   saveState();
