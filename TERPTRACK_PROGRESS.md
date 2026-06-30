@@ -4205,3 +4205,60 @@ Next pass candidates:
 - Clean the remaining public-health and education templates: `FMSC`, `HLTH`, `KNES`, and `EDUC`.
 - Clean the remaining Journalism template: `JOUR`.
 - Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
+
+## 2026-06-30 Pass 83
+
+Focus: clear the final generated-template live PlanetTerp failures across AGNR, public health, education, and journalism.
+
+Planned changes:
+- Target the 9 remaining generated templates from the Pass 82 all-major verifier.
+- Replace every stale course with a live PlanetTerp-resolving course while keeping templates duplicate-free and scheduleable.
+- Improve Elementary Education's generated sequence from dead legacy placeholders to live elementary curriculum courses.
+- Prove the full generated-template catalog with the all-major live verifier.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Replaced the final stale generated-template codes with live PlanetTerp-resolving courses:
+  - ANSC: `ANSC203`, `ANSC301`, `ANSC305`, `ANSC411`, and `ANSC412` -> `ANSC204`, `ANSC314`, `ANSC327`, `ANSC410`, and `ANSC417`.
+  - AREC: `AREC410`, generic `AREC489`, and `AREC460` -> `AREC422`, `AREC489L`, and `AREC456`; goal now uses `AREC489L`.
+  - EDUC: replaced dead `EDUC100`, `EDCI418`, `EDCI419`, `EDCI488`, `MATH210`, `MATH211`, and `EDCI487`; the generated sequence now uses live `EDCI210`, `EDCI322`, `EDCI352`, `EDCI372`, `EDCI397`, `EDCI488R`, `EDCI461`, `MATH212`, and `MATH213`; goal now uses `EDCI488R`.
+  - FMSC: `FMSC105` and `FMSC447` -> `FMSC170` and `FMSC450`.
+  - HLTH: `HLTH485`, `HLTH320`, and `HLTH456` -> `HLTH498L`, `HLTH302`, and `HLTH460`.
+  - JOUR: `JOUR499`, `JOUR450`, and generic `JOUR458` -> `JOUR480`, `JOUR453`, and `JOUR458B`; goal now uses `JOUR480`.
+  - KNES: generic `KNES157` -> `KNES157T`.
+  - NFSC: `NFSC340`, `NFSC451`, and `NFSC453` -> `NFSC341`, `NFSC450`, and `NFSC455`; goal now uses `NFSC450`.
+  - PLSC: `PLSC202`, `PLSC304`, `PLSC313`, `PLSC472`, generic `PLSC489`, and `PLSC470` -> `PLSC201`, `PLSC205`, `PLSC271`, `PLSC476`, `PLSC489B`, and `PLSC471`; goal now uses `PLSC489B`.
+
+Verification:
+- Ran direct PlanetTerp department-list and course-endpoint checks for every replacement ANSC, AREC, EDCI, MATH, FMSC, HLTH, JOUR, KNES, NFSC, and PLSC code before editing.
+- Ran `node scripts/verify-random-schedules.js --majors ANSC,AREC,EDUC,FMSC,HLTH,JOUR,KNES,NFSC,PLSC --keep-going --seed pass83-remaining`; it passed:
+  - `ANSC`: 120 credits, 18 required courses verified in PlanetTerp.
+  - `AREC`: 120 credits, 16 required courses verified in PlanetTerp.
+  - `EDUC`: 121 credits, 14 required courses verified in PlanetTerp.
+  - `FMSC`: 122 credits, 13 required courses verified in PlanetTerp.
+  - `HLTH`: 121 credits, 15 required courses verified in PlanetTerp.
+  - `JOUR`: 122 credits, 15 required courses verified in PlanetTerp.
+  - `KNES`: 121 credits, 16 required courses verified in PlanetTerp.
+  - `NFSC`: 121 credits, 19 required courses verified in PlanetTerp.
+  - `PLSC`: 122 credits, 17 required courses verified in PlanetTerp.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass83-all`.
+  - Verified all 50 generated schedules against PlanetTerp.
+  - This is the first all-major live audit with zero generated-template failures.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/`, then finalized Chrome and stopped the server before commit.
+- Chrome confirmed:
+  - Settings opened normally.
+  - Selecting Plant Sciences showed the generated-major note.
+  - The Plant Sciences auto-plan review rendered `17/17 live course records`.
+  - The Plant Sciences review rendered full tracked GenEd coverage.
+  - The review's live metadata sample included `PLSC201`, `PLSC205`, `PLSC271`, `PLSC476`, and `PLSC489B`.
+  - Exact-code matching found no old invalid `PLSC202`, `PLSC304`, `PLSC313`, `PLSC472`, generic `PLSC489`, or `PLSC470` entries.
+  - There was no horizontal overflow.
+  - Browser console errors were clean.
+
+Next pass candidates:
+- Add a generated template freshness report to Settings so users can see that every generated requirement is live-verified.
+- Add official per-major citation links beside generated requirement groups.
+- Broaden the live verifier to check generated course credits and titles against rendered UI snapshots, not just template metadata.
+- Add a lightweight CI/offline fixture for the live-verifier shape with an opt-in network mode for release passes.
