@@ -3924,3 +3924,60 @@ Next pass candidates:
 - Add per-major requirement-source citations to generated schedules.
 - Add a downloaded advisor-packet self-check that can verify its embedded plan hash against the live app.
 - Add a reviewed-prior-credit history filter or restore flow in Timeline.
+
+## 2026-06-30 Pass 78
+
+Focus: add regular live random schedule testing against PlanetTerp and fix the first sampled fake/outdated generated-major course codes.
+
+Planned changes:
+- Add a standalone verifier that samples generated 4-year plans, runs the app's real auto-plan builder, and checks all generated requirement codes against PlanetTerp.
+- Keep the verifier deterministic by seed/count, with an all-major mode for catalog audits.
+- Fix every invalid course code found by the first seeded random sample instead of weakening the verifier.
+- Keep `README.md` untouched and unstaged per the current goal constraint.
+
+Completed:
+- Added `scripts/verify-random-schedules.js`.
+  - Loads the app's planning code in a Node VM.
+  - Samples generated-only majors with a deterministic seed.
+  - Builds live `buildAutoPlanPreview()` plans with profile/start-term variation.
+  - Requires full live metadata coverage for every generated requirement code.
+  - Calls `https://planetterp.com/api/v1/course?name=...` for every non-placeholder requirement course.
+  - Verifies 8 terms, target-credit coverage, <=4 credits over target, <=18 credits per term, full tracked GenEd coverage, and no duplicate real course codes.
+  - Supports `--all` and `--keep-going` for broader catalog-debt discovery.
+  - Caches PlanetTerp lookups inside the run to keep all-major audits practical.
+- Fixed generated-major templates found by the seeded sample:
+  - HESP: replaced invalid `HESP427` / `HESP437` with live `HESP417` / `HESP422`.
+  - PHSC: replaced dead PHSC codes with live `SPHL100`, `EPIB301`, `PHSC450`, `MIEH300`, and `HLTH391`; updated goal to `PHSC450`.
+  - ARCH: replaced outdated `ARCH220`, `ARCH221`, `ARCH222`, `ARCH320`, `ARCH321`, `ARCH478`, `ARCH418`, and `ARCH452` with live Architecture courses; updated goal to `ARCH403`.
+  - BCHM: replaced invalid `BCHM499` with live `BSCI410`.
+  - AAST: replaced invalid `AASP201`, `AASP298`, `AASP397`, `AASP498`, and `AASP422`; updated goal to `AASP401`.
+- Ran an all-generated-major `--keep-going` audit and captured the remaining template-debt list for future passes.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- Ran `node scripts/verify-random-schedules.js --seed pass78-live --count 4`; it passed:
+  - `HESP`: 122 credits, 16 required courses verified in PlanetTerp, max 17 credits.
+  - `PHSC`: 121 credits, 17 required courses verified in PlanetTerp, max 16 credits.
+  - `ARCH`: 120 credits, 19 required courses verified in PlanetTerp, max 16 credits.
+  - `BCHM`: 121 credits, 22 required courses verified in PlanetTerp, max 16 credits.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass78-all`.
+  - Confirmed AAST now passed after fixes.
+  - Confirmed 43 remaining generated templates still have one or more PlanetTerp-missing codes and should be cleaned in follow-up passes:
+    `ACCOUNTING`, `AMST`, `ANSC`, `ANTH`, `AOSC`, `AREC`, `ARTH`, `ARTT`, `ASTR`, `BIOE`, `CHEM`, `CINE`, `EDUC`, `ENAE`, `ENCE`, `ENCH`, `ENEE`, `ENFP`, `ENGL`, `ENMA`, `FMSC`, `GEOG`, `GEOL`, `HIST`, `HLTH`, `IS`, `JOUR`, `KNES`, `LING`, `MARKETING`, `MGMT`, `MUSC`, `NEUR`, `NFSC`, `PHIL`, `PHYS`, `PLSC`, `SCM`, `SOCY`, `SPAN`, `STAT`, `THET`, `WMST`.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/`, then finalized Chrome and stopped the server before commit.
+- Chrome confirmed:
+  - `js/majors.js` loaded from the local server.
+  - Settings opened normally.
+  - Selecting Hearing & Speech Sciences showed the generated-major note.
+  - The HESP auto-plan review rendered `16/16 live course records`.
+  - The HESP auto-plan review rendered full tracked GenEd coverage.
+  - The review did not include old invalid `HESP427` or `HESP437` codes.
+  - There was no horizontal overflow.
+  - Browser console errors were clean.
+
+Next pass candidates:
+- Use the all-major verifier output to clean the remaining 43 generated templates in batches by college.
+- Add a generated template freshness report to Settings so users can see which requirements were verified live and which are placeholders.
+- Add a CI-friendly offline fixture for the new random verifier, plus an opt-in live PlanetTerp check for release passes.
+- Add official per-major citation links beside generated requirement groups.

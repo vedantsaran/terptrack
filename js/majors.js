@@ -483,11 +483,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Public Health Science · BS',
     totalCredits: 120,
     coreCodes: [
-      'PHSC100','PHSC300','PHSC301','PHSC401','PHSC402','BSCI170','BSCI223','EPIB315','PHSC498',
+      'SPHL100','PHSC300','EPIB301','PHSC401','PHSC402','BSCI170','BSCI223','EPIB315','PHSC450',
     ],
-    upperElectiveCodes: ['PHSC420','PHSC450','PHSC470'],
+    upperElectiveCodes: ['PHSC420','MIEH300','HLTH391'],
     supportCodes: ['BSCI171','CHEM131','CHEM132','MATH130','STAT100'],
-    goals: ['PHSC498'],
+    goals: ['PHSC450'],
     notes: 'BS PHSC at the Universities at Shady Grove. Heavy bio + chem support.',
   },
   KNES: {
@@ -543,11 +543,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · Architecture · BA',
     totalCredits: 120,
     coreCodes: [
-      'ARCH170','ARCH171','ARCH220','ARCH221','ARCH222','ARCH320','ARCH321','ARCH400','ARCH401','ARCH402','ARCH478',
+      'ARCH170','ARCH171','ARCH200','ARCH201','ARCH225','ARCH226','ARCH270','ARCH271','ARCH300','ARCH400','ARCH401','ARCH402','ARCH403',
     ],
-    upperElectiveCodes: ['ARCH408','ARCH418','ARCH452'],
+    upperElectiveCodes: ['ARCH408','ARCH430','ARCH460','ARCH481'],
     supportCodes: ['PHYS121','MATH140'],
-    goals: ['ARCH478'],
+    goals: ['ARCH403'],
     notes: 'BA Architecture (4-yr). M.Arch is the accredited path; BA is pre-professional.',
   },
 
@@ -621,7 +621,7 @@ const MAJOR_TEMPLATES = {
     coreCodes: [
       'BSCI170','BSCI171','BSCI222','BCHM461','BCHM462','BCHM463','BCHM464','BCHM465',
     ],
-    upperElectiveCodes: ['BCHM485','BCHM499'],
+    upperElectiveCodes: ['BCHM485','BSCI410'],
     supportCodes: ['CHEM131','CHEM132','CHEM231','CHEM232','CHEM241','CHEM242','CHEM271','CHEM272','MATH140','MATH141','PHYS141','PHYS142'],
     goals: ['BCHM465'],
     notes: 'BS Biochemistry. Heavy chem + bio overlap — prepares well for med school / grad school.',
@@ -723,7 +723,7 @@ const MAJOR_TEMPLATES = {
     coreCodes: [
       'HESP120','HESP202','HESP300','HESP311','HESP400','HESP402','HESP411','HESP420','HESP489',
     ],
-    upperElectiveCodes: ['HESP406','HESP427','HESP437'],
+    upperElectiveCodes: ['HESP406','HESP417','HESP422'],
     supportCodes: ['PSYC100','BSCI201','STAT100','LING200'],
     goals: ['HESP489'],
     notes: 'BA Hearing & Speech. Pre-grad-school for SLP / audiology — clinical observation in junior/senior year.',
@@ -735,11 +735,11 @@ const MAJOR_TEMPLATES = {
     eyebrow: 'UMD · African American Studies · BA',
     totalCredits: 120,
     coreCodes: [
-      'AASP100','AASP201','AASP298','AASP301','AASP397','AASP401','AASP498',
+      'AASP100','AASP202','AASP211','AASP301','AASP400','AASP401','AASP411',
     ],
-    upperElectiveCodes: ['AASP422','AASP443'],
+    upperElectiveCodes: ['AASP320','AASP443'],
     supportCodes: ['HIST200','SOCY100'],
-    goals: ['AASP498'],
+    goals: ['AASP401'],
     notes: 'BA AASP. Interdisciplinary across history, sociology, literature, and policy.',
   },
 
