@@ -496,13 +496,15 @@ function settingsPriorCreditGridHtml(selectedIds = []) {
   if (typeof ONBOARD_PRIOR_CREDIT_PRESETS === 'undefined') return '';
   const selected = new Set(selectedIds || []);
   return ONBOARD_PRIOR_CREDIT_PRESETS.map(preset => `
-    <label class="onboard-prior-chip settings-prior-chip ${selected.has(preset.id) ? 'selected' : ''}">
-      <input type="checkbox" data-prior-id="${settingsHtml(preset.id)}" ${selected.has(preset.id) ? 'checked' : ''}>
-      <span>
-        <strong>${settingsHtml(preset.label)}</strong>
-        <small>${settingsHtml(preset.detail)}</small>
-      </span>
-    </label>
+    ${typeof onboardPriorChipHtml === 'function'
+      ? onboardPriorChipHtml(preset, { checked: selected.has(preset.id), extraClass: 'settings-prior-chip' })
+      : `<label class="onboard-prior-chip settings-prior-chip ${selected.has(preset.id) ? 'selected' : ''}">
+          <input type="checkbox" data-prior-id="${settingsHtml(preset.id)}" ${selected.has(preset.id) ? 'checked' : ''}>
+          <span>
+            <strong>${settingsHtml(preset.label)}</strong>
+            <small>${settingsHtml(preset.detail)}</small>
+          </span>
+        </label>`}
   `).join('');
 }
 

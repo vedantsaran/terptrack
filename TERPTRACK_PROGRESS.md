@@ -3252,3 +3252,62 @@ Next pass candidates:
 - Broaden prior-credit equivalency coverage with official-source mappings.
 - Add advisor packet quick links from audit issues into Browse or placeholder replacement.
 - Add Timeline recovery for stale prior-credit rows with multiple changed courses split between Plan-visible and removed items.
+
+## 2026-06-30 Pass 66
+
+Focus: add source-level notes per AP / IB prior-credit preset.
+
+Planned changes:
+- Make each prior-credit preset visibly carry its chart source context instead of relying only on the generic source note.
+- Keep onboarding and Settings prior-credit chips consistent through shared rendering.
+- Add direct AP and IB chart links to the official source panel.
+- Preserve compact chip layout without horizontal overflow.
+
+Completed:
+- Added prior-credit source metadata for AP and IB presets:
+  - AP presets show `AP chart 2023-2026`, UMD course count, and an exam-year verification note.
+  - IB presets show `IB chart 2023-2026`, UMD course count, and an exam-date verification note.
+- Added direct UMD Registrar PDF links for:
+  - `AP Chart 2023-2026`
+  - `IB Chart 2023-2026`
+- Added a shared prior-credit chip renderer used by both first-run onboarding and Settings.
+- Styled the new per-chip source line as compact metadata.
+- Versioned changed browser assets:
+  - `styles.css?v=62`
+  - `js/settings.js?v=10`
+  - `js/onboarding.js?v=10`
+
+Verification:
+- Checked UMD Registrar prior-learning-credit source context before changing the UI. The app still tells students presets are planning shortcuts and that official score reports, exam year/date, duplicate-credit rules, department review, and Registrar charts matter.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `ONBOARDING-PRIOR-CREDIT` fixture confirms:
+  - every preset exposes chart source metadata.
+  - AP presets name the AP chart, course count, and exam-year caveat.
+  - IB presets name the IB chart and exam-date caveat.
+  - preset chips render the new source line.
+  - the official source note links the AP and IB chart sources.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - Settings prior-credit chips render the same per-preset source notes.
+  - the Settings source notice includes AP and IB chart links.
+  - prior-credit apply, stale undo, recovery, and undo behavior still pass.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=62`, `js/settings.js?v=10`, and `js/onboarding.js?v=10` loaded.
+  - first-run onboarding opened on the seeded state.
+  - using the real `Next` controls reached the transfer step.
+  - onboarding showed 20 prior-credit chips and 20 per-chip source lines.
+  - AP Calc BC showed `AP chart 2023-2026 · 2 UMD courses · verify by exam year`.
+  - IB Economics HL showed `IB chart 2023-2026 · 2 UMD courses · verify by exam date`.
+  - onboarding source links included UMD Prior Learning Credit, AP Chart 2023-2026, IB Chart 2023-2026, Transfer Course Database, and Search transfer equivalencies.
+  - Settings showed the same 20 source-tagged prior-credit chips and source links.
+  - there was no horizontal overflow in onboarding, Settings, or the page.
+  - Chrome app-origin console warnings/errors were clean.
+  - the restored app page no longer showed the seeded onboarding state.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add advisor packet quick links from audit issues into Browse or placeholder replacement.
+- Add Timeline recovery for stale prior-credit rows with multiple changed courses split between Plan-visible and removed items.
+- Add a source/verification drawer for a selected prior-credit preset.

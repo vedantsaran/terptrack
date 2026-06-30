@@ -1841,8 +1841,14 @@ async function testOnboardingPriorCredit(context) {
       const customCodes = state.customCourses.map(course => course.code);
       const byCode = Object.fromEntries(state.customCourses.map(course => [course.code, course]));
       const sourceNotice = onboardPriorSourceNoticeHtml();
+      const calcPreset = onboardPriorPresetById('ap-calc-bc-4');
+      const econPreset = onboardPriorPresetById('ib-econ-hl-5');
       return {
         presetCount: ONBOARD_PRIOR_CREDIT_PRESETS.length,
+        sourceNoteCount: ONBOARD_PRIOR_CREDIT_PRESETS.filter(preset => /chart 2023-2026/.test(onboardPriorPresetSourceNote(preset))).length,
+        calcSourceNote: onboardPriorPresetSourceNote(calcPreset),
+        econSourceNote: onboardPriorPresetSourceNote(econPreset),
+        calcChipHtml: onboardPriorChipHtml(calcPreset),
         resolvedCodes: resolved.courses.map(course => course.code),
         resolvedCredits: resolved.totalCredits,
         summary: onboardPriorSummaryText(resolved),
@@ -1860,6 +1866,10 @@ async function testOnboardingPriorCredit(context) {
   `, context));
 
   assert(result.presetCount >= 18, 'onboarding prior credit: should expose a broad AP/IB preset list');
+  assert(result.sourceNoteCount === result.presetCount, 'onboarding prior credit: every preset should expose chart source metadata');
+  assert(/AP chart 2023-2026/.test(result.calcSourceNote) && /2 UMD courses/.test(result.calcSourceNote), 'onboarding prior credit: AP presets should name the AP chart and course count');
+  assert(/IB chart 2023-2026/.test(result.econSourceNote) && /verify by exam date/.test(result.econSourceNote), 'onboarding prior credit: IB presets should name the IB chart and exam-date caveat');
+  assert(/prior-chip-source/.test(result.calcChipHtml) && /verify by exam year/.test(result.calcChipHtml), 'onboarding prior credit: preset chips should render source notes');
   assert(result.resolvedCodes.filter(code => code === 'MATH 140').length === 1, 'onboarding prior credit: should dedupe preset and raw MATH 140');
   assert(result.resolvedCodes.includes('MATH 141'), 'onboarding prior credit: AP Calc BC should include MATH 141');
   assert(result.resolvedCodes.includes('AP FSAW Credit'), 'onboarding prior credit: AP English should map to FSAW prior credit');
@@ -1876,6 +1886,7 @@ async function testOnboardingPriorCredit(context) {
   assert(result.applied.applied.length === result.resolvedCodes.length, 'onboarding prior credit: applied count should match resolved deduped courses');
   assert(/prior-credit/.test(result.recentChange.type), 'onboarding prior credit: should record a recent change entry');
   assert(/Official source check/.test(result.sourceNotice) && /June 30, 2026/.test(result.sourceNotice), 'onboarding prior credit: source notice should include checked date');
+  assert(/AP Chart 2023-2026/.test(result.sourceNotice) && /IB Chart 2023-2026/.test(result.sourceNotice), 'onboarding prior credit: source notice should link AP and IB chart sources');
   assert(result.sourceNotice.includes('registrar.umd.edu/transfer-credit/prior-learning-credit'), 'onboarding prior credit: source notice should link UMD prior learning credit');
   assert(result.sourceNotice.includes('app.transfercredit.umd.edu'), 'onboarding prior credit: source notice should link transfer database search');
 
@@ -2002,6 +2013,7 @@ async function testSettingsPriorCreditEditor(context) {
       const originalChangeAfterUndo = state.recentChanges.find(change => change.id === changeAfterApply.id) || null;
       return {
         gridHasPreset: /ap-calc-bc-4/.test(gridHtml) && /settings-prior-chip/.test(gridHtml),
+        gridHasSourceNote: /prior-chip-source/.test(gridHtml) && /AP chart 2023-2026/.test(gridHtml) && /verify by exam year/.test(gridHtml),
         sourceNoticeHtml,
         summaryBefore,
         statusAfter: elements['set-prior-status'].textContent,
@@ -2031,7 +2043,9 @@ async function testSettingsPriorCreditEditor(context) {
   `, context));
 
   assert(result.gridHasPreset, 'settings prior credit: grid should render AP/IB preset chips');
+  assert(result.gridHasSourceNote, 'settings prior credit: grid should render per-preset source notes');
   assert(/Official source check/.test(result.sourceNoticeHtml) && /Transfer Course Database/.test(result.sourceNoticeHtml), 'settings prior credit: source notice should render official links');
+  assert(/AP Chart 2023-2026/.test(result.sourceNoticeHtml) && /IB Chart 2023-2026/.test(result.sourceNoticeHtml), 'settings prior credit: source notice should include AP/IB chart links');
   assert(/June 30, 2026/.test(result.sourceNoticeHtml) && result.sourceNoticeHtml.includes('app.transfercredit.umd.edu'), 'settings prior credit: source notice should include checked date and database search link');
   assert(/6 courses/.test(result.summaryBefore) && /20 credits/.test(result.summaryBefore), 'settings prior credit: live summary should count deduped preset and raw credits');
   assert(/Applied 6 prior-credit courses/.test(result.statusAfter), 'settings prior credit: status should report applied credits');

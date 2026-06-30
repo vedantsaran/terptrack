@@ -4884,6 +4884,14 @@ h1.hero-title em {
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
+.onboard-prior-chip .prior-chip-source {
+  color: var(--blue);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .61rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
 .onboard-prior-chip.selected {
   border-color: rgba(46,107,63,.45);
   background: var(--green-soft);

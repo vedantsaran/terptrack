@@ -12,9 +12,21 @@ const ONBOARD_DAY_OPTIONS = ['M', 'Tu', 'W', 'Th', 'F'];
 const PRIOR_CREDIT_SOURCE_CHECKED = 'June 30, 2026';
 const PRIOR_CREDIT_SOURCE_LINKS = [
   { label: 'UMD Prior Learning Credit', url: 'https://registrar.umd.edu/transfer-credit/prior-learning-credit' },
+  { label: 'AP Chart 2023-2026', url: 'https://registrar.umd.edu/sites/default/files/2024-08/AP%20Chart%202023-2026.pdf' },
+  { label: 'IB Chart 2023-2026', url: 'https://registrar.umd.edu/sites/default/files/2024-08/IB%20Chart%202023-2026.pdf' },
   { label: 'Transfer Course Database', url: 'https://registrar.umd.edu/transfer-credit/transfer-course-database' },
   { label: 'Search transfer equivalencies', url: 'https://app.transfercredit.umd.edu/' },
 ];
+const PRIOR_CREDIT_SOURCE_META = {
+  AP: {
+    label: 'AP chart 2023-2026',
+    note: 'verify by exam year',
+  },
+  IB: {
+    label: 'IB chart 2023-2026',
+    note: 'verify by exam date',
+  },
+};
 const ONBOARD_PRIOR_CREDIT_PRESETS = [
   {
     id: 'ap-calc-ab-4',
@@ -237,6 +249,29 @@ function onboardPriorSourceNoticeHtml() {
   `;
 }
 
+function onboardPriorPresetSourceNote(preset) {
+  const source = String(preset?.source || 'Credit').toUpperCase();
+  const meta = PRIOR_CREDIT_SOURCE_META[source] || { label: `${source} source`, note: 'verify official equivalency' };
+  const courseCount = (preset?.courses || []).length;
+  const courseText = `${courseCount || 1} UMD course${courseCount === 1 ? '' : 's'}`;
+  return `${meta.label} · ${courseText} · ${meta.note}`;
+}
+
+function onboardPriorChipHtml(preset, options = {}) {
+  const checked = !!options.checked;
+  const extraClass = options.extraClass || '';
+  return `
+    <label class="onboard-prior-chip ${extraClass} ${checked ? 'selected' : ''}">
+      <input type="checkbox" data-prior-id="${onboardEscape(preset.id)}" ${checked ? 'checked' : ''}>
+      <span>
+        <strong>${onboardEscape(preset.label)}</strong>
+        <small>${onboardEscape(preset.detail)}</small>
+        <small class="prior-chip-source">${onboardEscape(onboardPriorPresetSourceNote(preset))}</small>
+      </span>
+    </label>
+  `;
+}
+
 function onboardRenderPriorSourceNotice(id) {
   const root = document.getElementById(id);
   if (root) root.innerHTML = onboardPriorSourceNoticeHtml();
@@ -404,15 +439,7 @@ function onboardRefreshPriorCreditSummary() {
 function onboardRenderPriorCreditControls() {
   const root = document.getElementById('ob-prior-grid');
   if (!root) return;
-  root.innerHTML = ONBOARD_PRIOR_CREDIT_PRESETS.map(preset => `
-    <label class="onboard-prior-chip">
-      <input type="checkbox" data-prior-id="${onboardEscape(preset.id)}">
-      <span>
-        <strong>${onboardEscape(preset.label)}</strong>
-        <small>${onboardEscape(preset.detail)}</small>
-      </span>
-    </label>
-  `).join('');
+  root.innerHTML = ONBOARD_PRIOR_CREDIT_PRESETS.map(preset => onboardPriorChipHtml(preset)).join('');
   root.querySelectorAll('input[type="checkbox"]').forEach(input => {
     input.addEventListener('change', onboardRefreshPriorCreditSummary);
   });
