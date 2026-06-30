@@ -1178,13 +1178,35 @@ function plannerChangePriorCreditTarget(change) {
   if (undo?.kind !== 'prior-credit' || undo.appliedAt) return null;
   const groups = plannerPriorCreditChangeGroups(change);
   if (!groups.missing.length) return null;
-  const mixed = groups.visible.length > 0;
+  const removedLabel = groups.missing.length === 1 ? 'Review removed credit' : `Review ${groups.missing.length} removed credits`;
   return {
     codes: groups.missing.slice(),
-    label: mixed
-      ? (groups.missing.length === 1 ? 'Review removed credit' : `Review ${groups.missing.length} removed credits`)
-      : 'Review prior credits',
+    label: removedLabel,
   };
+}
+
+function plannerPriorCreditRecoveryHtml(codes = []) {
+  const cleanCodes = Array.from(new Set((codes || [])
+    .map(code => String(code || '').trim())
+    .filter(Boolean)));
+  if (!cleanCodes.length) return '';
+  const count = cleanCodes.length;
+  const label = count === 1 ? 'removed prior-credit entry' : 'removed prior-credit entries';
+  return `
+    <div class="prior-recovery-card">
+      <strong>${timelineEscape(count)} ${timelineEscape(label)} need review</strong>
+      <p>${timelineEscape(plannerFormatCodes(cleanCodes))} ${count === 1 ? 'is' : 'are'} no longer in your plan. Re-add the matching AP/IB preset or paste exact UMD course codes after checking official sources.</p>
+    </div>
+  `;
+}
+
+function plannerRenderPriorCreditRecovery(codes = []) {
+  const root = document.getElementById('set-prior-recovery-note');
+  if (!root) return false;
+  const html = plannerPriorCreditRecoveryHtml(codes);
+  root.innerHTML = html;
+  root.hidden = !html;
+  return !!html;
 }
 
 function plannerChangeScheduleTarget(change) {
@@ -1360,6 +1382,7 @@ function plannerOpenPriorCreditReview(changeId) {
     return false;
   }
   openSettings();
+  plannerRenderPriorCreditRecovery(target.codes);
   plannerFocusSettingsPriorCredit();
   return true;
 }

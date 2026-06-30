@@ -559,6 +559,11 @@ function renderSettingsPriorCreditControls() {
       raw.addEventListener('input', settingsRefreshPriorCreditSummary);
     }
   }
+  const recovery = document.getElementById('set-prior-recovery-note');
+  if (recovery) {
+    recovery.hidden = true;
+    recovery.innerHTML = '';
+  }
   const status = document.getElementById('set-prior-status');
   if (status) {
     status.textContent = '';

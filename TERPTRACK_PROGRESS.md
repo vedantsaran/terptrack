@@ -3621,3 +3621,56 @@ Next pass candidates:
 - Add Timeline recovery for stale prior-credit rows with multiple removed prior-credit entries and pluralized Settings labels.
 - Add an advisor packet import/open banner that explains when live deep links require the same browser profile state.
 - Add per-major requirement-source citations to generated schedules.
+
+## 2026-06-30 Pass 72
+
+Focus: make Timeline recovery clearer when several prior-credit entries were removed after applying credits.
+
+Planned changes:
+- Improve the stale prior-credit Timeline button labels so removed-credit recovery is explicit and pluralized.
+- Show the removed prior-credit codes inside Settings after a Timeline recovery click.
+- Clear stale recovery guidance when Settings is opened normally.
+- Keep the recovery note compact and distinct from the prior-credit checklist.
+
+Completed:
+- Updated `plannerChangePriorCreditTarget()` so all missing prior-credit cases use:
+  - `Review removed credit` for one missing entry.
+  - `Review N removed credits` for multiple missing entries.
+- Added shared Timeline helpers for Settings recovery guidance:
+  - `plannerPriorCreditRecoveryHtml(codes)`.
+  - `plannerRenderPriorCreditRecovery(codes)`.
+- `plannerOpenPriorCreditReview()` now opens Settings and renders a note listing the removed prior-credit codes before focusing the AP / IB / Transfer Credit section.
+- Added `#set-prior-recovery-note` to the Settings prior-credit section.
+- Normal Settings prior-credit rendering clears any old recovery note so stale context does not linger.
+- Styled the recovery note as a compact amber review callout.
+- Versioned changed browser assets:
+  - `styles.css?v=67`
+  - `js/timeline.js?v=17`
+  - `js/settings.js?v=13`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - one removed prior-credit entry renders `Review removed credit`.
+  - three removed entries render `Review 3 removed credits`.
+  - the target carries all removed codes.
+  - the Settings recovery note pluralizes `3 removed prior-credit entries need review`.
+  - the note lists `AP FSAW Credit, ECON 200, ECON 201` and points students back to AP/IB presets or exact UMD course codes after checking official sources.
+  - the Timeline recovery path opens Settings and restores the note after Settings clears normal prior-credit state.
+- Used Chrome with the existing local server at `http://localhost:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=67`, `js/timeline.js?v=17`, and `js/settings.js?v=13` loaded.
+  - the seeded Timeline Recent Changes row showed `Undo unavailable: AP FSAW Credit, ECON 200, ECON 201 were changed...`.
+  - the row rendered a single `Review 3 removed credits` recovery button.
+  - clicking the recovery button opened Settings.
+  - the Settings prior-credit section was on screen and showed `3 removed prior-credit entries need review`.
+  - the note listed `AP FSAW Credit, ECON 200, ECON 201` and included official-source guidance.
+  - there was no horizontal page overflow in Timeline or Settings recovery states.
+- Finalized the Chrome tab after restoring the original local app state.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add an advisor packet import/open banner that explains when live deep links require the same browser profile state.
+- Add per-major requirement-source citations to generated schedules.
+- Add a course-equivalency conflict detector for overlapping AP, IB, transfer, and UMD course attempts.

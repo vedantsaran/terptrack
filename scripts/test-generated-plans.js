@@ -2016,9 +2016,14 @@ async function testSettingsPriorCreditEditor(context) {
       }));
       chips.forEach(chip => { chip.classList.owner = chip; });
       const elements = {
-        'set-prior-codes': { value: 'CMSC131 MATH140', dataset: {}, addEventListener() {} },
+        'settings-prior-credit-section': {
+          classList: { add() {}, remove() {} },
+          scrollIntoView() {},
+        },
+        'set-prior-codes': { value: 'CMSC131 MATH140', dataset: {}, addEventListener() {}, focus() {} },
         'set-prior-summary': { textContent: '' },
         'set-prior-review': { innerHTML: '', hidden: true },
+        'set-prior-recovery-note': { innerHTML: '', hidden: true },
         'set-prior-status': { textContent: '', style: {} },
         'set-prior-source-note': { innerHTML: '' },
         'set-prior-detail': { innerHTML: '', hidden: true, dataset: {}, addEventListener() {}, scrollIntoView() {} },
@@ -2050,6 +2055,8 @@ async function testSettingsPriorCreditEditor(context) {
       const settingsReviewHtml = elements['set-prior-review'].innerHTML;
       const settingsReviewHidden = elements['set-prior-review'].hidden;
       await applySettingsPriorCredits();
+      const statusAfterApply = elements['set-prior-status'].textContent;
+      const statusColorAfterApply = elements['set-prior-status'].style.color;
       const changeAfterApply = state.recentChanges[0] || null;
       const transferKeysAfterApply = Object.entries(state.courses || {}).filter(([, value]) => value.status === 'transfer').map(([key]) => key).sort();
       const customCodesAfterApply = state.customCourses.map(course => course.code).sort();
@@ -2065,6 +2072,31 @@ async function testSettingsPriorCreditEditor(context) {
       const canUndoAfterRemovedPrior = plannerChangeCanUndo(changeAfterApply);
       const removedPriorReviewTarget = plannerChangeReviewTarget(changeAfterApply);
       const removedPriorCreditTarget = plannerChangePriorCreditTarget(changeAfterApply);
+      state.courses = JSON.parse(JSON.stringify(coursesAfterApplySnapshot));
+      state.customCourses = JSON.parse(JSON.stringify(customCoursesAfterApplySnapshot));
+      ['AP FSAW Credit', 'ECON 200', 'ECON 201'].forEach(code => { delete state.courses[code]; });
+      const missingPriorNorms = new Set(['APFSAWCREDIT', 'ECON200', 'ECON201']);
+      state.customCourses = (state.customCourses || []).filter(course => !missingPriorNorms.has(normalizeCode(course.code)));
+      renderPlanChangeHistory();
+      const multiRemovedPriorHistoryHtml = elements['plan-change-history'].innerHTML;
+      const multiRemovedPriorCreditTarget = plannerChangePriorCreditTarget(changeAfterApply);
+      const multiRemovedRecoveryHtml = plannerPriorCreditRecoveryHtml(multiRemovedPriorCreditTarget?.codes || []);
+      const multiRemovedRecoveryRendered = plannerRenderPriorCreditRecovery(multiRemovedPriorCreditTarget?.codes || []);
+      const multiRemovedRecoveryNoteHtml = elements['set-prior-recovery-note'].innerHTML;
+      const multiRemovedRecoveryNoteHidden = elements['set-prior-recovery-note'].hidden;
+      let multiRemovedSettingsOpened = false;
+      const originalOpenSettings = openSettings;
+      const originalFocusSettingsPriorCredit = plannerFocusSettingsPriorCredit;
+      openSettings = () => {
+        multiRemovedSettingsOpened = true;
+        renderSettingsPriorCreditControls();
+      };
+      plannerFocusSettingsPriorCredit = () => true;
+      const multiRemovedOpenResult = plannerOpenPriorCreditReview(changeAfterApply.id);
+      openSettings = originalOpenSettings;
+      plannerFocusSettingsPriorCredit = originalFocusSettingsPriorCredit;
+      const multiRemovedOpenRecoveryNoteHtml = elements['set-prior-recovery-note'].innerHTML;
+      const multiRemovedOpenRecoveryNoteHidden = elements['set-prior-recovery-note'].hidden;
       state.courses = JSON.parse(JSON.stringify(coursesAfterApplySnapshot));
       state.customCourses = JSON.parse(JSON.stringify(customCoursesAfterApplySnapshot));
       state.courses['MATH 140'] = { status: 'passed', grade: 'A' };
@@ -2106,8 +2138,8 @@ async function testSettingsPriorCreditEditor(context) {
         summaryBefore,
         settingsReviewHtml,
         settingsReviewHidden,
-        statusAfter: elements['set-prior-status'].textContent,
-        statusColor: elements['set-prior-status'].style.color,
+        statusAfter: statusAfterApply,
+        statusColor: statusColorAfterApply,
         transferKeys: transferKeysAfterApply,
         customCodes: customCodesAfterApply,
         recentChange: changeAfterApply,
@@ -2117,6 +2149,16 @@ async function testSettingsPriorCreditEditor(context) {
         canUndoAfterRemovedPrior,
         removedPriorReviewTarget,
         removedPriorCreditTarget,
+        multiRemovedPriorHistoryHtml,
+        multiRemovedPriorCreditTarget,
+        multiRemovedRecoveryHtml,
+        multiRemovedRecoveryRendered,
+        multiRemovedRecoveryNoteHtml,
+        multiRemovedRecoveryNoteHidden,
+        multiRemovedSettingsOpened,
+        multiRemovedOpenResult,
+        multiRemovedOpenRecoveryNoteHtml,
+        multiRemovedOpenRecoveryNoteHidden,
         mixedPriorHistoryHtml,
         canUndoAfterMixedPrior,
         mixedPriorReviewTarget,
@@ -2162,8 +2204,16 @@ async function testSettingsPriorCreditEditor(context) {
   assert(/Undo unavailable/.test(result.removedPriorHistoryHtml) && /AP FSAW Credit was changed/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should explain stale undo');
   assert(!/data-change-undo/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should hide undo button');
   assert(!/data-change-review/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should not offer a missing plan-row jump');
-  assert(/data-change-prior-credit/.test(result.removedPriorHistoryHtml) && /Review prior credits/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should offer settings recovery');
-  assert(!result.removedPriorReviewTarget && result.removedPriorCreditTarget?.label === 'Review prior credits', 'settings prior credit: removed prior-credit target should open prior-credit review');
+  assert(/data-change-prior-credit/.test(result.removedPriorHistoryHtml) && /Review removed credit/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should offer settings recovery');
+  assert(!result.removedPriorReviewTarget && result.removedPriorCreditTarget?.label === 'Review removed credit', 'settings prior credit: removed prior-credit target should open prior-credit review');
+  assert(/AP FSAW Credit, ECON 200, ECON 201 were changed/.test(result.multiRemovedPriorHistoryHtml), 'settings prior credit: multiple removed prior credits should explain all changed entries');
+  assert(/Review 3 removed credits/.test(result.multiRemovedPriorHistoryHtml), 'settings prior credit: multiple removed credits should render a plural recovery label');
+  assert(result.multiRemovedPriorCreditTarget?.codes?.length === 3 && result.multiRemovedPriorCreditTarget?.label === 'Review 3 removed credits', 'settings prior credit: multiple removed target should carry all removed codes');
+  assert(/3 removed prior-credit entries need review/.test(result.multiRemovedRecoveryHtml), 'settings prior credit: recovery note should pluralize removed prior-credit entries');
+  assert(/AP FSAW Credit, ECON 200, ECON 201/.test(result.multiRemovedRecoveryHtml) && /official sources/.test(result.multiRemovedRecoveryHtml), 'settings prior credit: recovery note should list removed credits and official-source guidance');
+  assert(result.multiRemovedRecoveryRendered === true && result.multiRemovedRecoveryNoteHidden === false, 'settings prior credit: recovery note renderer should reveal the Settings notice');
+  assert(result.multiRemovedSettingsOpened === true && result.multiRemovedOpenResult === true, 'settings prior credit: Timeline recovery should open Settings');
+  assert(result.multiRemovedOpenRecoveryNoteHidden === false && /3 removed prior-credit entries/.test(result.multiRemovedOpenRecoveryNoteHtml), 'settings prior credit: Timeline recovery should restore the Settings notice after opening Settings');
   assert(result.canUndoAfterMixedPrior === false, 'settings prior credit: mixed stale row should disable unsafe undo');
   assert(/MATH 140, AP FSAW Credit were changed/.test(result.mixedPriorHistoryHtml), 'settings prior credit: mixed stale row should explain visible and removed changes');
   assert(!/data-change-undo/.test(result.mixedPriorHistoryHtml), 'settings prior credit: mixed stale row should hide undo button');
