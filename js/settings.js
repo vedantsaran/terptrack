@@ -18,7 +18,10 @@ function populateMajorSelect() {
     sel.appendChild(og);
   });
   sel.value = state.majorId || 'CE';
-  sel.onchange = () => renderMajorSelectNote(sel.value);
+  sel.onchange = () => {
+    renderMajorSelectNote(sel.value);
+    renderAutoPlanReview(sel.value);
+  };
   renderMajorSelectNote(sel.value);
 }
 
@@ -34,7 +37,193 @@ function renderMajorSelectNote(majorId) {
   const badge = baked
     ? '<span style="color:var(--green);font-weight:600">★ Curated 4-year schedule</span>'
     : '<span style="color:var(--amber);font-weight:600">✱ Auto-generated full 4-year draft</span>';
-  note.innerHTML = `${badge} · ${tpl.notes || ''}`;
+  note.innerHTML = `${badge} · ${settingsHtml(tpl.notes || '')}`;
+}
+
+let autoPlanReviewSeq = 0;
+let autoPlanReviewTimer = null;
+
+function settingsHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
+
+function autoPlanReviewStat(label, value, detail) {
+  return `
+    <div class="auto-plan-stat">
+      <strong>${settingsHtml(value)}</strong>
+      <span>${settingsHtml(label)}</span>
+      ${detail ? `<small>${settingsHtml(detail)}</small>` : ''}
+    </div>
+  `;
+}
+
+function autoPlanTermList(terms) {
+  return (terms || []).map(term => `
+    <span class="auto-plan-load ${term.heavy ? 'heavy' : term.full ? 'full' : ''}" title="${settingsHtml(term.courseCount)} courses">
+      <span>${settingsHtml(term.name)}</span>
+      <strong>${settingsHtml(term.credits)}</strong>
+    </span>
+  `).join('');
+}
+
+function autoPlanGenEdList(summary) {
+  return (summary || []).map(req => `
+    <span class="auto-plan-gened-chip ${req.complete ? 'complete' : 'missing'}">
+      <strong>${settingsHtml(req.id)}</strong>
+      <span>${settingsHtml(req.have)}/${settingsHtml(req.need)}</span>
+    </span>
+  `).join('');
+}
+
+function autoPlanReviewHtml(review) {
+  const planned = review.totalCredits || 0;
+  const target = review.targetCredits || 120;
+  const creditDetail = planned >= target
+    ? `${planned - target} over target`
+    : `${target - planned} short`;
+  const heavyNames = (review.heavyTerms || []).map(term => term.name).join(', ');
+  const metadata = review.metadataCoverage;
+  const metadataDetail = metadata
+    ? `${metadata.found}/${metadata.total} live course records`
+    : 'curated local schedule';
+  const profile = review.profile || {};
+  const profileBits = [];
+  if ((profile.interests || []).length) profileBits.push(profile.interests.join(', '));
+  if ((profile.preferredDepartments || []).length) profileBits.push(`depts: ${profile.preferredDepartments.slice(0, 6).join(', ')}`);
+  if (profile.careerGoal) profileBits.push(`goal: ${profile.careerGoal}`);
+  const profileText = profile.active
+    ? profileBits.join(' · ')
+    : 'Neutral profile. Add interests below to personalize generated elective placeholders.';
+  const sampleElectives = (review.freeElectiveSamples || []).map(course => `
+    <li>
+      <strong>${settingsHtml(course.title || course.code)}</strong>
+      ${course.note ? `<span>${settingsHtml(course.note)}</span>` : ''}
+    </li>
+  `).join('');
+
+  if (review.kind === 'curated') {
+    return `
+      <div class="auto-plan-review-head">
+        <div>
+          <strong>Curated plan ready</strong>
+          <span>${settingsHtml(review.majorName)} uses a hand-built four-year schedule.</span>
+        </div>
+        <span class="auto-plan-review-badge good">Curated</span>
+      </div>
+      <div class="auto-plan-review-stats">
+        ${autoPlanReviewStat('planned credits', planned || target, metadataDetail)}
+        ${autoPlanReviewStat('terms', (review.termLoads || []).length || 8, 'editable after applying')}
+        ${autoPlanReviewStat('courses', review.courseCount || 'ready', 'progress is preserved')}
+      </div>
+      ${review.termLoads ? `<div class="auto-plan-loads">${autoPlanTermList(review.termLoads)}</div>` : ''}
+    `;
+  }
+
+  const warnings = [];
+  if ((review.heavyTerms || []).length) {
+    warnings.push(`${heavyNames} reach 18 credits. After applying, move a placeholder if that load is too high.`);
+  }
+  if (metadata && metadata.missing) {
+    warnings.push(`${metadata.missing} requirement${metadata.missing === 1 ? '' : 's'} used template-only 3-credit fallback data.`);
+  }
+
+  return `
+    <div class="auto-plan-review-head">
+      <div>
+        <strong>Auto Plan Review</strong>
+        <span>${settingsHtml(review.majorName)} will generate a full editable draft before live replacement.</span>
+      </div>
+      <span class="auto-plan-review-badge">Generated</span>
+    </div>
+    <div class="auto-plan-review-stats">
+      ${autoPlanReviewStat('planned credits', `${planned}/${target}`, creditDetail)}
+      ${autoPlanReviewStat('GenEd coverage', `${review.genEdCompleteCount}/${review.genEdRequirementCount}`, `${review.genEdPlaceholders} placeholders`)}
+      ${autoPlanReviewStat('major requirements', review.requirementCourseCount, metadataDetail)}
+      ${autoPlanReviewStat('heavy terms', (review.heavyTerms || []).length, '18-credit terms')}
+    </div>
+    <div class="auto-plan-review-block">
+      <span class="auto-plan-review-label">Term Loads</span>
+      <div class="auto-plan-loads">${autoPlanTermList(review.termLoads)}</div>
+    </div>
+    <div class="auto-plan-review-block">
+      <span class="auto-plan-review-label">GenEd / I-Series Coverage</span>
+      <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>
+    </div>
+    <div class="auto-plan-profile">
+      <strong>Profile fit</strong>
+      <span>${settingsHtml(profileText)}</span>
+    </div>
+    ${sampleElectives ? `<ul class="auto-plan-electives">${sampleElectives}</ul>` : ''}
+    ${warnings.length ? `<div class="auto-plan-warning">${warnings.map(settingsHtml).join(' ')}</div>` : ''}
+  `;
+}
+
+async function renderAutoPlanReview(majorId) {
+  const root = document.getElementById('set-auto-plan-review');
+  if (!root) return;
+  const tpl = getMajorTemplate(majorId);
+  if (!tpl) {
+    root.hidden = true;
+    root.innerHTML = '';
+    return;
+  }
+  root.hidden = false;
+  const seq = ++autoPlanReviewSeq;
+  root.className = 'auto-plan-review loading';
+  root.innerHTML = `
+    <div class="auto-plan-review-head">
+      <div>
+        <strong>Reviewing ${settingsHtml(tpl.name)}</strong>
+        <span>${isMajorFullyBaked(tpl) ? 'Reading curated schedule…' : 'Fetching course metadata without changing your plan…'}</span>
+      </div>
+    </div>
+  `;
+  if (typeof buildAutoPlanPreview !== 'function') {
+    root.innerHTML = '<div class="auto-plan-warning">Auto plan preview is still loading. Reopen Settings in a moment.</div>';
+    return;
+  }
+  try {
+    const profilePrefs = readProfileForm('set');
+    const review = await buildAutoPlanPreview(majorId, {
+      profilePrefs,
+      onProgress(done, total) {
+        if (seq !== autoPlanReviewSeq) return;
+        const line = root.querySelector('.auto-plan-review-head span');
+        if (line) line.textContent = `Fetching course metadata ${done}/${total}…`;
+      },
+    });
+    if (seq !== autoPlanReviewSeq) return;
+    root.className = `auto-plan-review ${review.kind === 'curated' ? 'curated' : 'generated'}`;
+    root.innerHTML = autoPlanReviewHtml(review);
+  } catch (e) {
+    if (seq !== autoPlanReviewSeq) return;
+    root.className = 'auto-plan-review';
+    root.innerHTML = `<div class="auto-plan-warning">Could not build preview: ${settingsHtml(e.message || e)}</div>`;
+  }
+}
+
+function queueAutoPlanReview() {
+  clearTimeout(autoPlanReviewTimer);
+  autoPlanReviewTimer = setTimeout(() => {
+    const sel = document.getElementById('set-major');
+    if (sel) renderAutoPlanReview(sel.value);
+  }, 250);
+}
+
+function bindProfileReviewUpdates() {
+  const modal = document.getElementById('settings-modal');
+  if (!modal) return;
+  modal.querySelectorAll('#set-interest-grid input, #set-career-goal, #set-gened-depts').forEach(el => {
+    if (el.dataset.reviewBound) return;
+    el.dataset.reviewBound = '1';
+    el.addEventListener(el.tagName === 'INPUT' && el.type === 'text' ? 'input' : 'change', queueAutoPlanReview);
+  });
 }
 
 function profileInterestGridHtml(selectedIds = [], name = 'profile-interest') {
@@ -86,6 +275,8 @@ function openSettings() {
   const status = document.getElementById('set-major-status');
   if (status) status.textContent = '';
   document.getElementById('settings-modal').classList.add('open');
+  bindProfileReviewUpdates();
+  renderAutoPlanReview(document.getElementById('set-major')?.value);
 }
 
 async function applyMajorFromSettings() {

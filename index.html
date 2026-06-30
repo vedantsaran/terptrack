@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=28">
+<link rel="stylesheet" href="styles.css?v=29">
 </head>
 <body data-theme="dark">
 
@@ -558,7 +558,7 @@
 </div>
 
 <div class="modal-backdrop" id="settings-modal">
-  <div class="modal" style="max-width:560px">
+  <div class="modal" style="max-width:640px">
     <h3>Customize Your Plan</h3>
     <p style="font-size:.86rem;color:var(--slate);margin:-6px 0 8px">Defaults match UMD Computer Engineering. Tweak any field for your own program.</p>
 
@@ -570,6 +570,7 @@
       </div>
       <p id="set-major-note" style="font-size:.74rem;color:var(--slate);margin:6px 0 0;font-style:italic"></p>
       <p id="set-major-status" style="font-size:.78rem;margin:6px 0 0;min-height:1em"></p>
+      <div id="set-auto-plan-review" class="auto-plan-review" hidden></div>
       <p style="font-size:.74rem;color:var(--slate);margin:8px 0 0">
         <strong>★</strong> = curated 4-year schedule. <strong>✱</strong> = auto-generated full 4-year draft with searchable GenEd/elective placeholders.
         Templates use umd.io + PlanetTerp to fill in titles, credits, prereqs, and avg GPA. Course progress is preserved when you switch.
@@ -875,10 +876,10 @@
 <script src="js/api.js"></script>
 <script src="js/schedule.js?v=21"></script>
 <script src="js/courses.js"></script>
-<script src="js/settings.js?v=3"></script>
+<script src="js/settings.js?v=4"></script>
 <script src="js/semesters.js"></script>
 <script src="js/io.js?v=8"></script>
-<script src="js/import.js?v=3"></script>
+<script src="js/import.js?v=4"></script>
 <script src="js/prereq-resolver.js"></script>
 <script src="js/recommendations.js?v=11"></script>
 <script src="js/major-builder.js"></script>
@@ -892,7 +893,7 @@
 <script src="js/gpa-sim.js"></script>
 <script src="js/snapshots.js?v=8"></script>
 <script src="js/account.js?v=2"></script>
-<script src="js/events.js?v=2"></script>
+<script src="js/events.js?v=3"></script>
 <script src="js/table.js"></script>
 <script src="js/main.js?v=2"></script>
 </body>

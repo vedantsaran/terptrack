@@ -81,13 +81,6 @@ const _mbModal = document.getElementById('mb-modal');
 if (_mbModal) _mbModal.addEventListener('click', (e) => {
   if (e.target.id === 'mb-modal') closeMajorBuilder();
 });
-document.addEventListener('change', (e) => {
-  if (e.target && e.target.id === 'set-major') {
-    const note = document.getElementById('set-major-note');
-    const tpl = getMajorTemplate(e.target.value);
-    if (note && tpl) note.textContent = tpl.notes || '';
-  }
-});
 // Allow Enter on the code field to trigger lookup
 document.getElementById('ac-code').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); lookupCourseFromPlanetTerp(); }

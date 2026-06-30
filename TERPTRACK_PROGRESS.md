@@ -1121,3 +1121,59 @@ Next pass candidates:
 - Use the profile to pre-filter GenEd placeholder search departments and Browse Courses defaults.
 - Add generated-plan regression fixtures for representative high-credit, low-credit, BA-language, and STEM majors.
 - Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
+
+## 2026-06-30 Pass 29
+
+Focus: add a pre-apply Auto Plan Review panel for generated major templates.
+
+Planned changes:
+- Add a non-mutating generated-plan preview builder that uses the same auto-scheduler as major application.
+- Show generated plan credits, term loads, GenEd/I-Series coverage, placeholder counts, live metadata coverage, profile fit, and heavy-term warnings in Settings before Apply.
+- Keep curated majors readable with a simpler curated-plan summary.
+- Let unsaved Settings profile edits immediately personalize generated elective preview rows.
+- Remove stale Settings major-note update code that stripped the curated/generated badge after select changes.
+- Verify generated-plan review data, live browser behavior, and static checks.
+
+Completed:
+- Added `buildAutoPlanPreview()` plus schedule-analysis helpers in `js/import.js`.
+- Reused the same template-to-course-object path for preview and apply, including live `fetchCoursesBatch()` metadata when available and template-only fallback data when not.
+- Passed profile preferences explicitly into generated free-elective creation so preview and applied schedules use the same personalization path.
+- Added the Settings Auto Plan Review panel with generated/curated states, credit stats, term-load chips, GenEd chips, profile-fit copy, sample personalized elective rows, and warning text for 18-credit terms or missing live metadata.
+- Added stale-result protection for async preview fetches when students change selected majors quickly.
+- Added debounced preview refresh from Settings profile inputs so interests, career goal, and preferred departments affect the preview before saving or applying.
+- Removed the older document-level `set-major` change handler in `js/events.js` because it overwrote the richer Settings note.
+- Expanded the Settings modal width to fit review data cleanly.
+- Added responsive CSS for the review panel and versioned `styles.css` to `v=29`, `js/settings.js` to `v=4`, `js/import.js` to `v=4`, and `js/events.js` to `v=3`.
+
+Verification:
+- Ran `node --check` on every file in `js/`.
+- Ran `git diff --check`.
+- Ran an isolated VM preview test for Aerospace Engineering and confirmed:
+  - Generated review kind.
+  - 8 terms.
+  - 126/125 planned credits from template-only fallback.
+  - Term loads of `15, 15, 18, 15, 18, 15, 15, 15`.
+  - Every GenEd/I-Series bucket complete.
+  - 12 GenEd placeholders.
+  - 18-credit terms exposed for Fall 2027 and Fall 2028.
+  - Profile labels include AI + data.
+- Ran an isolated VM preview test for African American Studies and confirmed:
+  - Generated review kind.
+  - 121/120 planned credits.
+  - Every GenEd/I-Series bucket complete.
+  - 13 free electives.
+  - Free-elective samples use the AI + data label and preferred department/career-goal notes.
+- Loaded `http://127.0.0.1:5174/?pass29review2=...` from a temporary isolated static server and confirmed `styles.css?v=29`, `js/settings.js?v=4`, `js/import.js?v=4`, and `js/events.js?v=3` loaded.
+- Opened Settings in the browser and confirmed the curated Computer Engineering review renders planned credits, terms, course count, and term-load chips with no horizontal overflow.
+- Selected Aerospace Engineering in the browser and confirmed:
+  - The Settings note retains the `✱ Auto-generated full 4-year draft` badge.
+  - The generated review renders 127/125 planned credits using live metadata, 13/13 GenEd coverage, 11 placeholders, 24/30 live course records, and term loads.
+  - No document-wide horizontal overflow.
+- Entered unsaved profile values in Settings, selected African American Studies, and confirmed the generated preview shows AI + data elective labels, INST/PSYC/GVPT department hints, and the career goal before applying.
+- Attempted a 390px in-app browser viewport check, but the browser viewport capability timed out twice and then timed out on read-only state checks after the failed override. Did not rely on that result; stopped the temporary static server.
+
+Next pass candidates:
+- Use the profile to pre-filter GenEd placeholder search departments and Browse Courses defaults.
+- Add generated-plan regression fixtures for representative high-credit, low-credit, BA-language, and STEM majors.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
