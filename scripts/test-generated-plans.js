@@ -303,6 +303,8 @@ function testScheduleTimingFit(context) {
         { items: idleItems, conflicts: [], warnings: ['Long idle gap'], openSeats: 12, timing: idle, locationIssues: 0 },
         timingPrefs
       );
+      const advisorDiagnosticHtml = scheduleAdvisorTimingDiagnosticsHtml(idle);
+      const advisorDiagnosticText = scheduleAdvisorTimingDiagnosticsText(idle).join(' | ');
       return {
         compactScore: compact.score,
         idleScore: idle.score,
@@ -315,6 +317,8 @@ function testScheduleTimingFit(context) {
         comparisonTimingDelta: comparison.timingDelta,
         comparisonWarningDelta: comparison.warningDelta,
         comparisonOpenSeatDelta: comparison.openSeatDelta,
+        advisorDiagnosticHtml,
+        advisorDiagnosticText,
       };
     })()
   `, context));
@@ -328,6 +332,10 @@ function testScheduleTimingFit(context) {
   assert(result.comparisonWarningDelta < 0, 'schedule alternatives: comparison should report warning reduction');
   assert(result.comparisonOpenSeatDelta > 0, 'schedule alternatives: comparison should report open-seat gain');
   assert(/Improves timing fit|Saves|open seats/i.test(result.comparisonLines), 'schedule alternatives: comparison should explain why option is better');
+  assert(/Timing Diagnostics/.test(result.advisorDiagnosticHtml), 'schedule advisor diagnostics: HTML should include a timing diagnostics section');
+  assert(/Active days/.test(result.advisorDiagnosticHtml) && /Advisor follow-up/.test(result.advisorDiagnosticHtml), 'schedule advisor diagnostics: HTML should include metrics and follow-up');
+  assert(/idle gap|tighter lecture/i.test(result.advisorDiagnosticHtml), 'schedule advisor diagnostics: HTML should explain idle-time review');
+  assert(/Timing diagnostics/.test(result.advisorDiagnosticText) && /Follow-up/i.test(result.advisorDiagnosticText), 'schedule advisor diagnostics: text should include timing follow-up');
 
   return {
     id: 'SCHEDULE-TIMING',

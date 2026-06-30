@@ -3046,6 +3046,83 @@ h1.hero-title em {
 .schedule-advisor-view-note strong {
   color: var(--ink);
 }
+.schedule-advisor-diagnostics {
+  margin: 10px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 10px;
+}
+.schedule-advisor-diagnostics-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.schedule-advisor-diagnostics-head h4 {
+  margin: 0 0 2px;
+  font-family: 'Fraunces', serif;
+  font-size: .95rem;
+}
+.schedule-advisor-diagnostics-head span,
+.schedule-advisor-diagnostic-list span,
+.schedule-advisor-diagnostic-metrics em {
+  display: block;
+  color: var(--slate);
+  font-size: .72rem;
+  font-style: normal;
+  line-height: 1.35;
+}
+.schedule-advisor-diagnostics-head > strong {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--maroon);
+  font-size: .64rem;
+  letter-spacing: .04em;
+  padding: 3px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-advisor-diagnostic-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 9px;
+}
+.schedule-advisor-diagnostic-metrics span {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cream) 70%, var(--paper));
+  min-width: 0;
+  padding: 7px;
+}
+.schedule-advisor-diagnostic-metrics strong {
+  display: block;
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.schedule-advisor-diagnostic-notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+.schedule-advisor-diagnostic-list {
+  border-top: 1px solid var(--line);
+  padding-top: 7px;
+}
+.schedule-advisor-diagnostic-list strong {
+  display: block;
+  color: var(--ink);
+  font-size: .74rem;
+  margin-bottom: 4px;
+}
+.schedule-advisor-diagnostic-list span + span {
+  margin-top: 3px;
+}
 .schedule-advisor-section-title {
   display: flex;
   justify-content: space-between;
@@ -3885,6 +3962,9 @@ h1.hero-title em {
   body.print-advisor-packet .schedule-advisor-flags span,
   body.print-advisor-packet .schedule-advisor-metrics span,
   body.print-advisor-packet .schedule-advisor-stat,
+  body.print-advisor-packet .schedule-advisor-diagnostics,
+  body.print-advisor-packet .schedule-advisor-diagnostic-metrics span,
+  body.print-advisor-packet .schedule-advisor-diagnostic-list,
   body.print-advisor-packet .schedule-advisor-semester,
   body.print-advisor-packet .schedule-change-row {
     border-color: #bbb;
@@ -4653,6 +4733,16 @@ h1.hero-title em {
   .schedule-advisor-filter {
     flex: 1 1 calc(50% - 6px);
     min-width: 0;
+  }
+  .schedule-advisor-diagnostics-head {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .schedule-advisor-diagnostic-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .schedule-advisor-diagnostic-notes {
+    grid-template-columns: 1fr;
   }
   .schedule-advisor-section-title {
     flex-direction: column;

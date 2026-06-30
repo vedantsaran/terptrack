@@ -1400,6 +1400,77 @@ function renderScheduleFitPanel(selectedItems, prefs, conflicts) {
   `;
 }
 
+function scheduleTimingDiagnostics(timing) {
+  const fit = timing || scheduleTimingFit([], DEFAULT_SCHEDULE_PREFS, []);
+  const metrics = fit.metrics || {};
+  const shortestBreak = metrics.shortestBreak === null || metrics.shortestBreak === undefined
+    ? 'n/a'
+    : scheduleDurationLabel(metrics.shortestBreak);
+  const metricRows = [
+    { label: 'Active days', value: String(metrics.activeDays || 0) },
+    { label: 'Idle time', value: scheduleDurationLabel(metrics.totalIdle || 0) },
+    { label: 'Shortest break', value: shortestBreak },
+    { label: 'Longest day', value: scheduleDurationLabel(metrics.longestDay || 0) },
+    { label: 'Tight moves', value: String(metrics.tightTransitions || 0) },
+    { label: 'TBA picks', value: String(metrics.untimedCount || 0) },
+  ];
+  const insights = Array.isArray(fit.insights) && fit.insights.length
+    ? fit.insights.slice(0, 5)
+    : ['No timing notes available.'];
+  const followups = [];
+  if (fit.score < 61) followups.push('Review alternate sections before registration.');
+  else if (fit.score < 76) followups.push('Consider whether another section would better match the listed timing notes.');
+  if ((metrics.tightTransitions || 0) > 0) followups.push('Confirm back-to-back building changes are realistic.');
+  if ((metrics.totalIdle || 0) >= 150) followups.push('Ask whether a tighter lecture, discussion, or lab combination exists.');
+  if ((metrics.longestDay || 0) >= 7 * 60) followups.push('Confirm the longest day works with commuting, meals, and work commitments.');
+  if ((metrics.untimedCount || 0) > 0) followups.push('Recheck TBA meeting times before locking the term.');
+  if (!followups.length) followups.push('No timing-specific advisor follow-up needed after normal section review.');
+  return {
+    metricRows,
+    insights,
+    followups: Array.from(new Set(followups)).slice(0, 4),
+  };
+}
+
+function scheduleAdvisorTimingDiagnosticsHtml(timing) {
+  const diagnostics = scheduleTimingDiagnostics(timing);
+  return `
+    <section class="schedule-advisor-diagnostics">
+      <div class="schedule-advisor-diagnostics-head">
+        <div>
+          <h4>Timing Diagnostics</h4>
+          <span>${scheduleEscape(timing.label)} · ${timing.score}/100 fit</span>
+        </div>
+        <strong>${scheduleEscape(timing.tone === 'ok' ? 'Ready' : timing.tone === 'warn' ? 'Review' : 'Fix first')}</strong>
+      </div>
+      <div class="schedule-advisor-diagnostic-metrics">
+        ${diagnostics.metricRows.map(row => `<span><strong>${scheduleEscape(row.value)}</strong><em>${scheduleEscape(row.label)}</em></span>`).join('')}
+      </div>
+      <div class="schedule-advisor-diagnostic-notes">
+        <div class="schedule-advisor-diagnostic-list">
+          <strong>What to check</strong>
+          ${diagnostics.insights.map(insight => `<span>${scheduleEscape(insight)}</span>`).join('')}
+        </div>
+        <div class="schedule-advisor-diagnostic-list">
+          <strong>Advisor follow-up</strong>
+          ${diagnostics.followups.map(followup => `<span>${scheduleEscape(followup)}</span>`).join('')}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function scheduleAdvisorTimingDiagnosticsText(timing) {
+  const diagnostics = scheduleTimingDiagnostics(timing);
+  return [
+    'Timing diagnostics:',
+    `- Timing fit: ${timing.score}/100 - ${timing.label}`,
+    `- Metrics: ${diagnostics.metricRows.map(row => `${row.label} ${row.value}`).join(' / ')}`,
+    ...diagnostics.insights.map(insight => `- Check: ${insight}`),
+    ...diagnostics.followups.map(followup => `- Follow-up: ${followup}`),
+  ];
+}
+
 function scheduleSectionMeetingLines(section) {
   const timed = (section && section.meetings || []).filter(m => m.days && m.start_time && m.end_time);
   if (!timed.length) return ['Time TBA'];
@@ -1717,6 +1788,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
   const outputOptions = normalizeScheduleOutputOptions(options);
+  const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const context = scheduleAdvisorFilterContext(
     sem?.id || '',
     selectedItems,
@@ -1738,6 +1810,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
     `Goal courses: ${stats.goalDone}/${stats.goalTotal}`,
   ];
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
+  lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
   lines.push('', `${filterDef.heading}:`);
 
   getAllSemesters().forEach(planSem => {
@@ -1781,6 +1854,17 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-print-meta span,.schedule-advisor-metrics span,.schedule-advisor-flags span{border:1px solid #d8cec0;border-radius:999px;background:#fff;padding:3px 8px;font-size:12px}
     .schedule-print-prefs,.schedule-advisor-note{color:#5d5962;font-size:13px}
     .schedule-advisor-view-note{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:9px 10px;color:#5d5962;font-size:12px;margin:10px 0}
+    .schedule-advisor-diagnostics{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-advisor-diagnostics-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-advisor-diagnostics-head h4{margin:0}
+    .schedule-advisor-diagnostics-head span,.schedule-advisor-diagnostic-list span,.schedule-advisor-diagnostic-metrics em{display:block;color:#5d5962;font-size:12px;font-style:normal}
+    .schedule-advisor-diagnostics-head strong{font-size:12px;text-transform:uppercase}
+    .schedule-advisor-diagnostic-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
+    .schedule-advisor-diagnostic-metrics span{border:1px solid #d8cec0;border-radius:8px;background:#fbf7ef;padding:7px}
+    .schedule-advisor-diagnostic-metrics strong{display:block;font-size:14px}
+    .schedule-advisor-diagnostic-notes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+    .schedule-advisor-diagnostic-list{border-top:1px solid #eee4d8;padding-top:7px;font-size:12px}
+    .schedule-advisor-diagnostic-list strong{display:block;margin-bottom:4px}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
@@ -1809,6 +1893,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
+    @media (max-width:720px){.schedule-advisor-diagnostic-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}}
   `;
 }
@@ -1860,6 +1945,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       </div>
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
+      ${scheduleAdvisorTimingDiagnosticsHtml(timing)}
       ${scheduleChangeDigestHtml(visibleChanges, 'Advisor context')}
       <p class="schedule-advisor-view-note"><strong>${scheduleEscape(filterDef.label)} view:</strong> ${scheduleEscape(filterDef.description)}</p>
       <div class="schedule-advisor-section-title">

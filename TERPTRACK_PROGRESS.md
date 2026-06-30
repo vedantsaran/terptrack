@@ -1559,3 +1559,61 @@ Next pass candidates:
 - Add real Supabase/Vercel setup instructions and validate a magic-link account round trip on deployment.
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Improve Browse with saved profile searches and richer personalized class recommendations.
+
+## 2026-06-30 Pass 37
+
+Focus: make advisor packets explain schedule timing problems, not just show a numeric timing score.
+
+Planned changes:
+- Add a reusable timing diagnostics model for advisor/export surfaces.
+- Render timing metrics, timing notes, and advisor follow-up items inside the advisor packet body.
+- Include the same diagnostic lines in the advisor text builder.
+- Add regression coverage so the advisor packet keeps the diagnostics.
+
+Completed:
+- Added `scheduleTimingDiagnostics()` in `js/schedule.js`.
+- Added `scheduleAdvisorTimingDiagnosticsHtml()` for advisor packet rendering.
+- Added `scheduleAdvisorTimingDiagnosticsText()` for advisor text output.
+- Advisor packets now include a `Timing Diagnostics` section with:
+  - active days.
+  - idle time.
+  - shortest break.
+  - longest day.
+  - tight moves.
+  - TBA picks.
+  - timing notes from the schedule fit analysis.
+  - advisor follow-up items for review-worthy schedules.
+- Standalone advisor packet downloads now include matching diagnostics CSS.
+- Added responsive and print styles for the diagnostics section in `styles.css`.
+- Versioned changed browser assets:
+  - `styles.css?v=34`
+  - `js/schedule.js?v=24`
+- Extended the `SCHEDULE-TIMING` regression fixture to assert advisor diagnostics HTML and text.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the account/share fixture, the schedule timing/comparison fixture, and the Browse profile fixture.
+- Schedule timing fixture now also confirmed:
+  - advisor diagnostics HTML includes `Timing Diagnostics`.
+  - advisor diagnostics HTML includes metrics and `Advisor follow-up`.
+  - advisor diagnostics HTML explains idle-time review.
+  - advisor diagnostics text includes timing follow-up lines.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass37diagnostics=seeded` from a temporary static server with a seeded browser fixture and confirmed:
+  - `styles.css?v=34` and `js/schedule.js?v=24` loaded.
+  - Schedule tab opened successfully.
+  - advisor packet rendered.
+  - `Timing Diagnostics` rendered in the advisor packet.
+  - metrics rendered for active days, idle time, shortest break, longest day, tight moves, and TBA picks.
+  - timing notes explained the idle gap and longest day.
+  - advisor follow-up suggested a tighter section combination and longest-day review.
+  - no console errors.
+  - no horizontal overflow at the browser's 380px viewport.
+- Reset the browser viewport and stopped the temporary static server.
+
+Next pass candidates:
+- Add the current-vs-alternate comparison details to the advisor packet/export when an alternate is applied.
+- Add real Supabase/Vercel setup instructions and validate a magic-link account round trip on deployment.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve Browse with saved profile searches and richer personalized class recommendations.
+- Add a term-by-term registration checklist that connects remaining GenEds, prerequisites, and section timing risks.
