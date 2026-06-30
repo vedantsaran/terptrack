@@ -2612,3 +2612,61 @@ Next pass candidates:
 - Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
 - Add undo for bulk prior-credit applications through recent changes.
 - Add a compact advisor-export summary of open audit issues.
+
+## 2026-06-30 Pass 55
+
+Focus: add section-aware meeting-time previews before replacing a placeholder course.
+
+Planned changes:
+- Add a `Preview times` action to placeholder replacement results.
+- Use the placeholder's target semester and selected UMD term for section lookup.
+- Compare candidate sections against already picked sections in that semester.
+- Show meeting times, open seats, timing fit, conflicts, and term-load change before replacement.
+- Add deterministic regression and Chrome coverage.
+
+Completed:
+- Added per-result section preview state inside the placeholder replacement modal.
+- Added placeholder schedule-context helpers that resolve:
+  - target placeholder semester.
+  - selected UMD term and term label.
+  - current and post-replacement semester credits.
+  - current picked sections excluding the placeholder being replaced.
+- Added section preview helpers that:
+  - fetch posted sections with `umdioFetchSections(course, term)`.
+  - rank non-conflicting sections ahead of conflicting options.
+  - reuse existing Schedule timing and conflict helpers.
+  - show open seats, waitlist status, meeting summary, timing score, and conflicts with picked sections.
+  - handle loading, no-term, lookup-error, and no-posted-section states.
+- Added `Preview times` / `Hide times` buttons beside `Use this course` in each placeholder search result.
+- Added compact preview panel styles for posted section options.
+- Versioned changed browser assets:
+  - `styles.css?v=52`
+  - `js/placeholder-search.js?v=6`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures plus the new `PLACEHOLDER-SECTIONS` fixture.
+- The new regression fixture confirms:
+  - preview uses the target placeholder semester and term `202608`.
+  - replacement keeps term load stable at `6 -> 6` credits.
+  - already picked sections are included in conflict checks.
+  - the non-conflicting section ranks first.
+  - open seats and timed meetings are exposed.
+  - conflicts with a picked `ENGL 101` section are flagged.
+  - preview, loading, and no-posted-section HTML states render.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page that backed up and restored both app state and the umd.io cache, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=52` and `js/placeholder-search.js?v=6` loaded.
+  - seeded plan rendered `GenEd DSHS` and a picked `ENGL 101` section.
+  - opening `GenEd DSHS` displayed a cached `GVPT 200` replacement result with `Preview times`.
+  - `Preview times` expanded to show `Pass 55 Fall 2026 · Fall 2026 · 6 -> 6 credits`.
+  - the non-conflicting `0201 · TuTh 2:00pm-3:15pm · TYD 2101` section ranked first with `18 open`, `Excellent timing (100/100)`, and `No conflicts with picked sections`.
+  - the conflicting `0101 · M 10:30am-11:45am · TYD 1101` section showed `Conflicts with ENGL 101`.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
+- Add undo for bulk prior-credit applications through recent changes.
+- Add a compact advisor-export summary of open audit issues.
+- Add one-click section pinning from the placeholder preview when a replacement is selected.

@@ -1042,6 +1042,114 @@ async function testBrowseImpactPreview(context) {
   };
 }
 
+function testPlaceholderSectionPreview(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      state.activeSchedule = [{
+        id: 'PASS55',
+        name: 'Pass 55 Fall 2026',
+        year: 'Year 1',
+        courses: [{
+          code: 'GenEd DSHS',
+          title: 'History and Social Sciences placeholder',
+          cr: 3,
+          kind: 'gened',
+          category: 'gened-dshs',
+          categories: ['gened-dshs'],
+          note: 'Auto-generated DSHS placeholder'
+        }, {
+          code: 'ENGL 101',
+          title: 'Academic Writing',
+          cr: 3,
+          kind: 'gened',
+          category: 'gened-fsaw',
+          categories: ['gened-fsaw']
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.selectedSections = {
+        PASS55: {
+          ENGL101: {
+            section_id: 'ENGL101-0101',
+            semester: '202608',
+            number: '0101',
+            open_seats: '8',
+            meetings: [{ days: 'M', start_time: '10:00am', end_time: '11:00am', building: 'TWS', room: '1200' }]
+          }
+        }
+      };
+      state.schedulePrefs = { PASS55: { mode: 'compact', minBreak: 15, term: '202608' } };
+      placeholderSearchTarget = { ...state.activeSchedule[0].courses[0], semId: 'PASS55' };
+      placeholderSearchSelectedTags = ['DSHS'];
+      const row = {
+        course_id: 'GVPT200',
+        name: 'International Political Relations',
+        credits: '3',
+        description: 'A public policy and international relations course.',
+        gen_ed: ['DSHS', 'DVUP']
+      };
+      const sections = [{
+        section_id: 'GVPT200-0101',
+        semester: '202608',
+        number: '0101',
+        open_seats: '3',
+        waitlist: '0',
+        seats: '30',
+        meetings: [{ days: 'M', start_time: '10:30am', end_time: '11:45am', building: 'TYD', room: '1101' }]
+      }, {
+        section_id: 'GVPT200-0201',
+        semester: '202608',
+        number: '0201',
+        open_seats: '18',
+        waitlist: '0',
+        seats: '35',
+        meetings: [{ days: 'TuTh', start_time: '2:00pm', end_time: '3:15pm', building: 'TYD', room: '2101' }]
+      }];
+      const context = placeholderScheduleContext(row);
+      const preview = placeholderBuildSectionPreview(row, sections, context);
+      const html = placeholderSectionPreviewHtml(row, { status: 'ready', context, sections });
+      const emptyHtml = placeholderSectionPreviewHtml(row, { status: 'ready', context, sections: [] });
+      const loadingHtml = placeholderSectionPreviewHtml(row, { status: 'loading', context, sections: [] });
+      const conflict = preview.samples.find(item => item.section.number === '0101');
+      const clear = preview.samples.find(item => item.section.number === '0201');
+      return {
+        context: preview.context,
+        firstNumber: preview.samples[0]?.section.number || '',
+        firstConflictCount: preview.samples[0]?.conflictCodes.length || 0,
+        clear,
+        conflict,
+        currentItems: preview.currentItems.map(item => item.course.code),
+        html,
+        emptyHtml,
+        loadingHtml,
+      };
+    })()
+  `, context));
+
+  assert(result.context.semId === 'PASS55', 'placeholder section preview: should use the target placeholder semester');
+  assert(result.context.term === '202608' && result.context.termLabel === 'Fall 2026', 'placeholder section preview: should infer the target UMD term');
+  assert(result.context.currentCredits === 6 && result.context.afterCredits === 6, 'placeholder section preview: replacement should keep term load stable');
+  assert(result.currentItems.includes('ENGL 101'), 'placeholder section preview: should compare against already picked sections');
+  assert(result.firstNumber === '0201' && result.firstConflictCount === 0, 'placeholder section preview: non-conflicting section should rank first');
+  assert(result.clear.openSeats === 18 && result.clear.timed, 'placeholder section preview: should expose open seats and timed meetings for clear option');
+  assert(result.conflict.conflictCodes.includes('ENGL 101'), 'placeholder section preview: should flag conflicts with selected sections');
+  assert(/Meeting preview/.test(result.html) && /Pass 55 Fall 2026/.test(result.html), 'placeholder section preview: html should render header and semester');
+  assert(/6 -&gt; 6 credits|6 -> 6 credits/.test(result.html), 'placeholder section preview: html should render credit change');
+  assert(/0201/.test(result.html) && /TuTh 2:00pm-3:15pm/.test(result.html), 'placeholder section preview: html should render section meeting times');
+  assert(/No conflicts with picked sections/.test(result.html), 'placeholder section preview: html should render clear conflict status');
+  assert(/Conflicts with ENGL 101/.test(result.html), 'placeholder section preview: html should render conflict status');
+  assert(/2 posted sections checked/.test(result.html), 'placeholder section preview: html should render checked-section count');
+  assert(/No posted sections found/.test(result.emptyHtml), 'placeholder section preview: empty state should explain missing sections');
+  assert(/Loading posted sections/.test(result.loadingHtml), 'placeholder section preview: loading state should render');
+
+  return {
+    id: 'PLACEHOLDER-SECTIONS',
+    first: result.firstNumber,
+    load: `${result.context.currentCredits}->${result.context.afterCredits}`,
+  };
+}
+
 async function testBrowsePlaceholderReplacement(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -1740,6 +1848,7 @@ async function main() {
   const browseSections = await testBrowseResultSections(context);
   const browseWhy = await testBrowseExplanationPanel(context);
   const browseImpact = await testBrowseImpactPreview(context);
+  const placeholderSections = testPlaceholderSectionPreview(context);
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
   const browseTypedSlots = await testBrowseTypedSlotMatching(context);
@@ -1760,6 +1869,7 @@ async function main() {
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
   console.log(`Browse impact fixture ${browseImpact.id}: ${browseImpact.mode}; load ${browseImpact.load}.`);
+  console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; load ${placeholderSections.load}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
@@ -1767,7 +1877,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

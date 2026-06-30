@@ -8,6 +8,8 @@ let placeholderSearchResults = [];
 let placeholderSearchSelectedTags = [];
 let placeholderSearchMode = 'all';
 let placeholderSearchRequestSeq = 0;
+let placeholderSectionPreviewKey = '';
+let placeholderSectionPreviewCache = {};
 
 const PLACEHOLDER_ALL_DEPTS_VALUE = '__ALL_GENED_DEPTS__';
 const PLACEHOLDER_PROFILE_DEPTS_VALUE = '__PROFILE_GENED_DEPTS__';
@@ -121,6 +123,7 @@ function closePlaceholderSearch() {
   if (modal) modal.classList.remove('open');
   placeholderSearchTarget = null;
   placeholderSearchResults = [];
+  placeholderSectionPreviewKey = '';
 }
 
 function placeholderBrowseConfig(target = placeholderSearchTarget) {
@@ -174,6 +177,7 @@ function openPlaceholderSearch(courseCode, semId = '') {
   placeholderSearchSelectedTags = inferPlaceholderTags(course);
   placeholderSearchResults = [];
   placeholderSearchMode = placeholderSearchSelectedTags.length ? 'all' : 'any';
+  placeholderSectionPreviewKey = '';
   placeholderSearchRequestSeq++;
 
   const title = document.getElementById('ps-title');
@@ -504,6 +508,252 @@ function candidateToCourse(row) {
   };
 }
 
+function placeholderPreviewNorm(courseId) {
+  return normalizeCode(courseId || '');
+}
+
+function placeholderScheduleContext(row = null) {
+  const sems = typeof getAllSemesters === 'function' ? getAllSemesters() : [];
+  const semId = placeholderSearchTarget?.semId
+    || (typeof scheduleDefaultSemesterId === 'function' ? scheduleDefaultSemesterId() : '')
+    || sems[0]?.id
+    || '';
+  const sem = sems.find(item => item.id === semId) || sems[0] || null;
+  const term = sem
+    ? ((state.schedulePrefs || {})[sem.id]?.term || (typeof scheduleInferTermCode === 'function' ? scheduleInferTermCode(sem) : ''))
+    : '';
+  const termLabel = term && typeof scheduleTermLabel === 'function' ? scheduleTermLabel(term) : term;
+  const currentCredits = typeof browseSemesterCreditLoad === 'function'
+    ? browseSemesterCreditLoad(semId)
+    : [
+        ...(sem?.courses || []),
+        ...(state.customCourses || []).filter(course => course.semId === semId),
+      ].reduce((sum, course) => sum + (Number(course.cr) || 0), 0);
+  const replacement = row ? candidateToCourse(row) : null;
+  const removedCredits = Number(placeholderSearchTarget?.cr) || 0;
+  const courseCredits = replacement ? Number(replacement.cr) || 0 : 0;
+  return {
+    sem,
+    semId,
+    semName: sem?.name || semId || 'selected semester',
+    term,
+    termLabel,
+    prefs: typeof getSchedulePrefs === 'function' ? getSchedulePrefs(semId) : (typeof DEFAULT_SCHEDULE_PREFS !== 'undefined' ? DEFAULT_SCHEDULE_PREFS : {}),
+    currentCredits,
+    removedCredits,
+    courseCredits,
+    afterCredits: Math.max(0, currentCredits - removedCredits + courseCredits),
+  };
+}
+
+function placeholderCoursesForSemester(semId) {
+  const sem = (typeof getAllSemesters === 'function' ? getAllSemesters() : []).find(item => item.id === semId);
+  return [
+    ...(sem?.courses || []),
+    ...(state.customCourses || []).filter(course => course.semId === semId),
+  ];
+}
+
+function placeholderSelectedItemsForPreview(context, replacementNorm = '') {
+  const bucket = (state.selectedSections || {})[context.semId] || {};
+  const courses = placeholderCoursesForSemester(context.semId);
+  const targetNorm = placeholderSearchTarget ? normalizeCode(placeholderSearchTarget.code) : '';
+  return Object.entries(bucket).map(([norm, section]) => {
+    if (!section) return null;
+    const cleanNorm = normalizeCode(norm);
+    if (cleanNorm === targetNorm || cleanNorm === replacementNorm) return null;
+    if (section.semester && context.term && String(section.semester) !== String(context.term)) return null;
+    const course = courses.find(item => normalizeCode(item.code) === cleanNorm) || {
+      code: displayCode(cleanNorm),
+      title: displayCode(cleanNorm),
+      cr: 0,
+    };
+    return { course, section };
+  }).filter(Boolean);
+}
+
+function placeholderSectionConflictCodes(section, course, currentItems) {
+  if (typeof sectionBlocks !== 'function' || typeof blocksConflict !== 'function') return [];
+  const candidateBlocks = sectionBlocks(section, course);
+  const conflicts = new Set();
+  currentItems.forEach(item => {
+    const blocks = sectionBlocks(item.section, item.course);
+    candidateBlocks.forEach(a => {
+      blocks.forEach(b => {
+        if (blocksConflict(a, b)) conflicts.add(item.course.code || displayCode(item.section.course || ''));
+      });
+    });
+  });
+  return Array.from(conflicts);
+}
+
+function placeholderBuildSectionPreview(row, sections, context = placeholderScheduleContext(row)) {
+  const course = candidateToCourse(row);
+  const currentItems = placeholderSelectedItemsForPreview(context, normalizeCode(course.code));
+  const prefs = context.prefs || (typeof DEFAULT_SCHEDULE_PREFS !== 'undefined' ? DEFAULT_SCHEDULE_PREFS : {});
+  const samples = (sections || []).map(section => {
+    const item = { course, section };
+    const items = [...currentItems, item];
+    const conflictCodes = placeholderSectionConflictCodes(section, course, currentItems);
+    const blocked = typeof sectionBlockedOverlaps === 'function' ? sectionBlockedOverlaps(section, prefs, course) : [];
+    const evaluation = typeof evaluateScheduleCandidate === 'function'
+      ? evaluateScheduleCandidate(items, prefs)
+      : {
+          timing: typeof scheduleTimingFit === 'function' ? scheduleTimingFit(items, prefs, []) : null,
+          score: 0,
+          openSeats: 0,
+          warnings: [],
+        };
+    const openSeats = typeof sectionSeatNumber === 'function'
+      ? sectionSeatNumber(section.open_seats)
+      : (Number.isFinite(parseInt(section.open_seats, 10)) ? parseInt(section.open_seats, 10) : null);
+    const waitlist = typeof sectionSeatNumber === 'function'
+      ? sectionSeatNumber(section.waitlist)
+      : (Number.isFinite(parseInt(section.waitlist, 10)) ? parseInt(section.waitlist, 10) : null);
+    const timed = typeof sectionHasTimedMeetings === 'function' ? sectionHasTimedMeetings(section) : !!((section.meetings || []).some(m => m.days && m.start_time && m.end_time));
+    const summary = typeof sectionSummary === 'function'
+      ? sectionSummary(section)
+      : `${section.number || 'Section'} · ${timed ? 'posted time' : 'time TBA'}`;
+    const level = conflictCodes.length || blocked.length ? 'warn' : (timed ? 'ok' : 'info');
+    return {
+      section,
+      summary,
+      openSeats,
+      waitlist,
+      conflictCodes,
+      blockedCount: blocked.length,
+      timingLabel: evaluation.timing?.label || '',
+      timingScore: evaluation.timing?.score || 0,
+      warningCount: evaluation.warnings?.length || 0,
+      score: evaluation.score || 0,
+      timed,
+      level,
+    };
+  }).sort((a, b) => (
+    a.conflictCodes.length - b.conflictCodes.length
+    || a.blockedCount - b.blockedCount
+    || (b.openSeats ?? -1) - (a.openSeats ?? -1)
+    || b.timingScore - a.timingScore
+    || b.score - a.score
+  ));
+  return {
+    course,
+    context,
+    currentItems,
+    sections: sections || [],
+    samples,
+  };
+}
+
+function placeholderSectionPreviewCacheKey(courseId, context = placeholderScheduleContext()) {
+  return `${context.term || 'no-term'}:${placeholderPreviewNorm(courseId)}`;
+}
+
+function placeholderSectionPreviewState(row) {
+  const context = placeholderScheduleContext(row);
+  const key = placeholderSectionPreviewCacheKey(row.course_id || row.code, context);
+  return placeholderSectionPreviewCache[key] || { status: context.term ? 'idle' : 'no-term', context };
+}
+
+function placeholderSectionPreviewHtml(row, overrideState = null) {
+  const state = overrideState || placeholderSectionPreviewState(row);
+  const context = state.context || placeholderScheduleContext(row);
+  const code = displayCode(row.course_id || row.code || '');
+  if (state.status === 'loading') {
+    return `
+      <div class="ps-section-preview loading">
+        <div class="ps-section-preview-head"><strong>Meeting preview</strong><span>Loading posted sections for ${placeholderEscape(context.termLabel || context.term || 'selected term')}...</span></div>
+      </div>
+    `;
+  }
+  if (state.status === 'no-term') {
+    return `
+      <div class="ps-section-preview warn">
+        <div class="ps-section-preview-head"><strong>Meeting preview</strong><span>No UMD term is tied to this placeholder semester yet.</span></div>
+      </div>
+    `;
+  }
+  if (state.status === 'error') {
+    return `
+      <div class="ps-section-preview warn">
+        <div class="ps-section-preview-head"><strong>Meeting preview</strong><span>Section lookup failed. Open Browse or Schedule and retry after UMD data loads.</span></div>
+      </div>
+    `;
+  }
+  const preview = placeholderBuildSectionPreview(row, state.sections || [], context);
+  const loadText = `${preview.context.currentCredits} -> ${preview.context.afterCredits} credits`;
+  if (!preview.sections.length) {
+    return `
+      <div class="ps-section-preview warn">
+        <div class="ps-section-preview-head">
+          <strong>Meeting preview</strong>
+          <span>${placeholderEscape(preview.context.semName)} · ${placeholderEscape(preview.context.termLabel || preview.context.term || 'selected term')} · ${placeholderEscape(loadText)}</span>
+        </div>
+        <p>No posted sections found for ${placeholderEscape(code)} in this term yet.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="ps-section-preview">
+      <div class="ps-section-preview-head">
+        <strong>Meeting preview</strong>
+        <span>${placeholderEscape(preview.context.semName)} · ${placeholderEscape(preview.context.termLabel || preview.context.term || 'selected term')} · ${placeholderEscape(loadText)}</span>
+      </div>
+      <div class="ps-section-list">
+        ${preview.samples.slice(0, 4).map(item => {
+          const seats = item.openSeats === null ? 'seats TBA' : `${item.openSeats} open`;
+          const wait = item.waitlist ? ` · ${item.waitlist} waitlisted` : '';
+          const conflict = item.conflictCodes.length
+            ? `Conflicts with ${item.conflictCodes.join(', ')}`
+            : item.blockedCount
+              ? `${item.blockedCount} blocked-time overlap${item.blockedCount === 1 ? '' : 's'}`
+              : 'No conflicts with picked sections';
+          return `
+            <div class="ps-section-option ${placeholderEscape(item.level)}">
+              <strong>${placeholderEscape(item.summary)}</strong>
+              <span>${placeholderEscape([seats + wait, item.timingLabel ? `${item.timingLabel} (${item.timingScore}/100)` : '', conflict].filter(Boolean).join(' · '))}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <p>${placeholderEscape(preview.sections.length)} posted section${preview.sections.length === 1 ? '' : 's'} checked before replacing ${placeholderEscape(placeholderSearchTarget?.code || 'the placeholder')}.</p>
+    </div>
+  `;
+}
+
+async function togglePlaceholderSectionPreview(courseId) {
+  const norm = placeholderPreviewNorm(courseId);
+  if (!norm) return;
+  if (placeholderSectionPreviewKey === norm) {
+    placeholderSectionPreviewKey = '';
+    renderPlaceholderResults();
+    return;
+  }
+  placeholderSectionPreviewKey = norm;
+  const row = placeholderSearchResults.find(item => placeholderPreviewNorm(item.course_id || item.code) === norm) || { course_id: courseId };
+  const context = placeholderScheduleContext(row);
+  const cacheKey = placeholderSectionPreviewCacheKey(courseId, context);
+  if (!context.term || typeof umdioFetchSections !== 'function') {
+    placeholderSectionPreviewCache[cacheKey] = { status: context.term ? 'error' : 'no-term', context, sections: [] };
+    renderPlaceholderResults();
+    return;
+  }
+  if (placeholderSectionPreviewCache[cacheKey]?.status === 'ready') {
+    renderPlaceholderResults();
+    return;
+  }
+  placeholderSectionPreviewCache[cacheKey] = { status: 'loading', context, sections: [] };
+  renderPlaceholderResults();
+  const requestId = placeholderSearchRequestSeq;
+  try {
+    const sections = await umdioFetchSections(courseId, context.term);
+    placeholderSectionPreviewCache[cacheKey] = { status: 'ready', context, sections: sections || [] };
+  } catch {
+    placeholderSectionPreviewCache[cacheKey] = { status: 'error', context, sections: [] };
+  }
+  if (requestId === placeholderSearchRequestSeq && placeholderSectionPreviewKey === norm) renderPlaceholderResults();
+}
+
 function scorePlaceholderCandidate(row) {
   const before = getGenEdRequirementStatus();
   const after = getGenEdRequirementStatus(candidateToCourse(row));
@@ -530,8 +780,12 @@ function renderPlaceholderResults() {
   }
   grid.innerHTML = '';
   rows = rows.slice().sort((a, b) => scorePlaceholderCandidate(b) - scorePlaceholderCandidate(a));
+  if (placeholderSectionPreviewKey && !rows.some(r => placeholderPreviewNorm(r.course_id || r.code) === placeholderSectionPreviewKey)) {
+    placeholderSectionPreviewKey = '';
+  }
   rows.slice(0, 80).forEach(r => {
     const code = displayCode(r.course_id || '');
+    const norm = placeholderPreviewNorm(r.course_id || code);
     const tags = getCandidateTags(r);
     const previewCourse = candidateToCourse(r);
     const preview = getGenEdRequirementStatus(previewCourse);
@@ -552,6 +806,7 @@ function renderPlaceholderResults() {
     const safeGapText = placeholderEscape(gapText);
     const safeImpact = placeholderEscape(newlyHelps.length ? `Counts as ${newlyHelps.join(' + ')}` : 'No Gen-Ed tags found for this course');
     const safeDesc = placeholderEscape(r.description ? `${r.description.slice(0, 180)}${r.description.length > 180 ? '…' : ''}` : '');
+    const previewOpen = placeholderSectionPreviewKey === norm;
     const card = document.createElement('div');
     card.className = `ps-result ${preview.complete ? 'complete' : ''}`;
     card.innerHTML = `
@@ -566,9 +821,16 @@ function renderPlaceholderResults() {
         <span>${safeImpact}</span>
       </div>
       ${safeDesc ? `<div class="br-desc">${safeDesc}</div>` : ''}
-      <div class="br-actions"><button class="btn small primary" type="button">Use this course</button></div>
+      <div class="br-actions">
+        <button class="btn small" type="button" data-ps-preview="${placeholderEscape(norm)}" aria-expanded="${previewOpen ? 'true' : 'false'}">${previewOpen ? 'Hide times' : 'Preview times'}</button>
+        <button class="btn small primary" type="button" data-ps-use="${placeholderEscape(norm)}">Use this course</button>
+      </div>
+      ${previewOpen ? placeholderSectionPreviewHtml(r) : ''}
     `;
-    card.querySelector('button').addEventListener('click', () => replacePlaceholderWithCourse(r.course_id, r._full || null));
+    const previewBtn = card.querySelector('[data-ps-preview]');
+    if (previewBtn) previewBtn.addEventListener('click', () => togglePlaceholderSectionPreview(r.course_id));
+    const useBtn = card.querySelector('[data-ps-use]');
+    if (useBtn) useBtn.addEventListener('click', () => replacePlaceholderWithCourse(r.course_id, r._full || null));
     grid.appendChild(card);
   });
 }
