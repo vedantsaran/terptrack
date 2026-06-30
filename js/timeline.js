@@ -1136,6 +1136,18 @@ function plannerFindVisiblePlanCourse(code) {
   return flatCourses().find(course => normalizeCode(course.code) === norm) || null;
 }
 
+function plannerPriorCreditChangeGroups(change) {
+  const changed = plannerPriorCreditChangedCodes(change);
+  const visible = [];
+  const missing = [];
+  changed.forEach(code => {
+    const course = plannerFindVisiblePlanCourse(code);
+    if (course) visible.push({ code, course });
+    else missing.push(code);
+  });
+  return { changed, visible, missing };
+}
+
 function plannerChangeReviewTarget(change) {
   const undo = change?.undo;
   if (undo?.kind === 'placeholder-replacement' && !undo.appliedAt) {
@@ -1147,13 +1159,15 @@ function plannerChangeReviewTarget(change) {
     };
   }
   if (undo?.kind === 'prior-credit' && !undo.appliedAt) {
-    const changed = plannerPriorCreditChangedCodes(change);
-    const code = changed.find(item => plannerFindVisiblePlanCourse(item));
-    if (!code) return null;
-    const course = plannerFindVisiblePlanCourse(code);
+    const groups = plannerPriorCreditChangeGroups(change);
+    const target = groups.visible[0];
+    if (!target) return null;
+    const hasMissing = groups.missing.length > 0;
     return {
-      code: course?.code || code,
-      label: changed.length > 1 ? 'Show first edited course' : 'Show edited course',
+      code: target.course?.code || target.code,
+      label: hasMissing
+        ? (groups.visible.length > 1 ? 'Show first Plan edit' : 'Show Plan edit')
+        : (groups.changed.length > 1 ? 'Show first edited course' : 'Show edited course'),
     };
   }
   return null;
@@ -1162,11 +1176,15 @@ function plannerChangeReviewTarget(change) {
 function plannerChangePriorCreditTarget(change) {
   const undo = change?.undo;
   if (undo?.kind !== 'prior-credit' || undo.appliedAt) return null;
-  const changed = plannerPriorCreditChangedCodes(change);
-  if (!changed.length) return null;
-  const hasMissingPlanCourse = changed.some(code => !plannerFindVisiblePlanCourse(code));
-  if (!hasMissingPlanCourse) return null;
-  return { label: 'Review prior credits' };
+  const groups = plannerPriorCreditChangeGroups(change);
+  if (!groups.missing.length) return null;
+  const mixed = groups.visible.length > 0;
+  return {
+    codes: groups.missing.slice(),
+    label: mixed
+      ? (groups.missing.length === 1 ? 'Review removed credit' : `Review ${groups.missing.length} removed credits`)
+      : 'Review prior credits',
+  };
 }
 
 function plannerChangeScheduleTarget(change) {

@@ -2003,6 +2003,16 @@ async function testSettingsPriorCreditEditor(context) {
       state.courses = JSON.parse(JSON.stringify(coursesAfterApplySnapshot));
       state.customCourses = JSON.parse(JSON.stringify(customCoursesAfterApplySnapshot));
       state.courses['MATH 140'] = { status: 'passed', grade: 'A' };
+      state.customCourses = (state.customCourses || []).filter(course => normalizeCode(course.code) !== 'APFSAWCREDIT');
+      delete state.courses['AP FSAW Credit'];
+      renderPlanChangeHistory();
+      const mixedPriorHistoryHtml = elements['plan-change-history'].innerHTML;
+      const canUndoAfterMixedPrior = plannerChangeCanUndo(changeAfterApply);
+      const mixedPriorReviewTarget = plannerChangeReviewTarget(changeAfterApply);
+      const mixedPriorCreditTarget = plannerChangePriorCreditTarget(changeAfterApply);
+      state.courses = JSON.parse(JSON.stringify(coursesAfterApplySnapshot));
+      state.customCourses = JSON.parse(JSON.stringify(customCoursesAfterApplySnapshot));
+      state.courses['MATH 140'] = { status: 'passed', grade: 'A' };
       renderPlanChangeHistory();
       const staleHistoryHtml = elements['plan-change-history'].innerHTML;
       const canUndoAfterStatusEdit = plannerChangeCanUndo(changeAfterApply);
@@ -2036,6 +2046,10 @@ async function testSettingsPriorCreditEditor(context) {
         canUndoAfterRemovedPrior,
         removedPriorReviewTarget,
         removedPriorCreditTarget,
+        mixedPriorHistoryHtml,
+        canUndoAfterMixedPrior,
+        mixedPriorReviewTarget,
+        mixedPriorCreditTarget,
         staleHistoryHtml,
         canUndoAfterStatusEdit,
         staleReviewTarget,
@@ -2073,6 +2087,13 @@ async function testSettingsPriorCreditEditor(context) {
   assert(!/data-change-review/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should not offer a missing plan-row jump');
   assert(/data-change-prior-credit/.test(result.removedPriorHistoryHtml) && /Review prior credits/.test(result.removedPriorHistoryHtml), 'settings prior credit: removed prior-credit course should offer settings recovery');
   assert(!result.removedPriorReviewTarget && result.removedPriorCreditTarget?.label === 'Review prior credits', 'settings prior credit: removed prior-credit target should open prior-credit review');
+  assert(result.canUndoAfterMixedPrior === false, 'settings prior credit: mixed stale row should disable unsafe undo');
+  assert(/MATH 140, AP FSAW Credit were changed/.test(result.mixedPriorHistoryHtml), 'settings prior credit: mixed stale row should explain visible and removed changes');
+  assert(!/data-change-undo/.test(result.mixedPriorHistoryHtml), 'settings prior credit: mixed stale row should hide undo button');
+  assert(/data-change-review/.test(result.mixedPriorHistoryHtml) && /Show Plan edit/.test(result.mixedPriorHistoryHtml), 'settings prior credit: mixed stale row should offer visible Plan recovery');
+  assert(/data-change-prior-credit/.test(result.mixedPriorHistoryHtml) && /Review removed credit/.test(result.mixedPriorHistoryHtml), 'settings prior credit: mixed stale row should offer removed-credit settings recovery');
+  assert(result.mixedPriorReviewTarget?.code === 'MATH 140', 'settings prior credit: mixed Plan recovery should target visible edited course');
+  assert(result.mixedPriorCreditTarget?.codes?.includes('AP FSAW Credit') && result.mixedPriorCreditTarget?.label === 'Review removed credit', 'settings prior credit: mixed removed recovery should target missing course');
   assert(result.canUndoAfterStatusEdit === false, 'settings prior credit: edited course status should disable undo');
   assert(/Undo unavailable/.test(result.staleHistoryHtml) && /MATH 140 was changed/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should explain edited course status');
   assert(!/data-change-undo/.test(result.staleHistoryHtml), 'settings prior credit: stale undo should hide undo button');

@@ -3371,3 +3371,62 @@ Next pass candidates:
 - Add Timeline recovery for stale prior-credit rows with multiple changed courses split between Plan-visible and removed items.
 - Add a source/verification drawer for a selected prior-credit preset.
 - Add advisor-packet deep links from downloaded HTML back into the live app when opened from the same origin.
+
+## 2026-06-30 Pass 68
+
+Focus: add Timeline recovery for stale prior-credit rows with multiple changed courses split between Plan-visible and removed items.
+
+Planned changes:
+- Keep unsafe prior-credit undo blocked whenever any applied credit no longer matches the recorded transfer state.
+- Split changed prior-credit entries into visible Plan courses and removed/outside-plan credits.
+- Offer a Plan jump for the visible changed course and a Settings recovery for removed prior credits on the same Timeline row.
+- Keep removed-only and visible-only stale prior-credit behavior unchanged.
+
+Completed:
+- Added `plannerPriorCreditChangeGroups(change)` to classify changed prior-credit entries as:
+  - visible in the current Plan.
+  - missing from the current Plan and therefore recoverable through prior-credit review.
+- Updated prior-credit Timeline recovery labels:
+  - mixed visible/removed rows now show `Show Plan edit`.
+  - mixed removed-credit rows now show `Review removed credit` or `Review N removed credits`.
+  - removed-only rows still show `Review prior credits`.
+  - visible-only rows still show `Show edited course` or `Show first edited course`.
+- Prior-credit Settings recovery now carries the missing changed course codes in its target data.
+- Extended the generated-plan prior-credit editor regression to simulate:
+  - `MATH 140` still visible in Plan but changed from transfer to passed with grade A.
+  - `AP FSAW Credit` removed from course state and outside-plan custom courses.
+  - the same stale Timeline row exposing both Plan and Settings recovery actions.
+- Versioned changed browser assets:
+  - `js/timeline.js?v=16`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - mixed stale prior-credit rows disable unsafe undo.
+  - the unavailable reason lists both `MATH 140` and `AP FSAW Credit`.
+  - no `data-change-undo` button is rendered.
+  - `Show Plan edit` targets visible `MATH 140`.
+  - `Review removed credit` targets missing `AP FSAW Credit`.
+  - removed-only and visible-only stale prior-credit recovery behavior remains covered.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - the seeded app loaded at `/?pass68-mixed-prior-credit=1`.
+  - `styles.css?v=63` and `js/timeline.js?v=16` loaded.
+  - the Timeline row showed `Undo unavailable: MATH 140, AP FSAW Credit were changed after these credits were applied.`
+  - the Timeline row showed zero undo buttons.
+  - the Timeline row showed one `Show Plan edit` recovery button.
+  - the Timeline row showed one `Review removed credit` recovery button.
+  - schedule-term and original-term recovery buttons were absent for this prior-credit row.
+  - clicking `Show Plan edit` switched to Plan, reset filters/search, and focused visible `MATH 140`.
+  - clicking `Review removed credit` opened Settings, focused `#set-prior-codes`, highlighted the prior-credit section, and showed the official-source note.
+  - there was no horizontal overflow in Timeline, Plan recovery, or Settings recovery.
+  - the restore URL returned to `/?pass68-restored=1` and the seeded Timeline text was absent afterward.
+  - Chrome app-origin console warnings/errors were clean.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add a source/verification drawer for a selected prior-credit preset.
+- Add advisor-packet deep links from downloaded HTML back into the live app when opened from the same origin.
+- Add Timeline recovery for stale prior-credit rows with multiple removed prior-credit entries and pluralized Settings labels.
