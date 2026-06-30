@@ -1177,3 +1177,51 @@ Next pass candidates:
 - Add generated-plan regression fixtures for representative high-credit, low-credit, BA-language, and STEM majors.
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
+
+## 2026-06-30 Pass 30
+
+Focus: use the personalization profile to steer course discovery.
+
+Planned changes:
+- Make Browse Courses start from profile-preferred departments when a profile exists.
+- Add visible Browse profile chips so students can quickly switch between preferred departments.
+- Rank Browse results by profile fit while preserving existing department and GenEd filters.
+- Add a profile-departments scope to GenEd placeholder replacement search.
+- Boost/profile-label placeholder replacement candidates that match the student's interests, preferred departments, or career goal.
+- Verify the behavior with focused VM checks and a browser asset-load check.
+
+Completed:
+- Added Browse profile helpers for preferred departments, summary text, default application, control syncing, profile hint rendering, and HTML escaping.
+- Browse now defaults to the first preferred department on first visit when the student has profile departments and no manual Browse filter is active.
+- Added `#br-profile-hints` with profile department chips and active-chip styling.
+- Browse cards now sort by `profileCourseMatch()` before course code and show Profile fit tags/reasons when applicable.
+- Placeholder search now has a `Profile departments` select option that fans GenEd queries across preferred departments and dedupes repeated rows.
+- Generic GenEd placeholders now default to profile departments when available; writing/oral placeholders still default to ENGL/COMM.
+- Placeholder replacement candidates now include profile scoring in their sort order and render Profile fit badges/reasons.
+- Escaped dynamic Browse card and hint HTML while touching that render path.
+- Versioned `styles.css` to `v=30`, `js/browse.js` to `v=2`, and `js/placeholder-search.js` to `v=3`.
+
+Verification:
+- Ran `node --check` on every file in `js/`.
+- Ran `git diff --check`.
+- Ran a focused VM behavior test confirming:
+  - Profile departments normalize to `INST, PSYC, GVPT, CMSC, STAT, MATH...`.
+  - Generic DSHS placeholders default to the profile-departments scope.
+  - Writing placeholders still default to ENGL.
+  - The placeholder department select includes `Profile departments` and labels `INST` as a profile department.
+  - Profile-scoped GenEd search fans out across preferred departments and dedupes repeated rows.
+  - Profile-matching placeholder candidates outrank neutral candidates.
+  - Browse defaults to `INST` for the test profile.
+- Ran a rendered Browse VM test confirming:
+  - `renderBrowse()` selects `INST`.
+  - The profile hint renders AI + data / Policy + society, preferred departments, and career goal.
+  - Browse cards render a Profile fit badge for a matching course.
+- Loaded `http://127.0.0.1:5174/?pass30profile=...` from a temporary isolated static server and confirmed `styles.css?v=30`, `js/browse.js?v=2`, and `js/placeholder-search.js?v=3` loaded and the `#br-profile-hints` mount exists.
+- Browser click interactions in that in-app browser session did not open Settings despite no console errors, so profile UI interaction was not used as evidence this pass.
+- Confirmed nothing remained listening on port 5174 after stopping the temporary server.
+
+Next pass candidates:
+- Add generated-plan regression fixtures for representative high-credit, low-credit, BA-language, and STEM majors.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Expand Browse to support multi-department profile search rather than only first-department default plus chips.
+- Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.

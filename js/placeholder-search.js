@@ -10,6 +10,7 @@ let placeholderSearchMode = 'all';
 let placeholderSearchRequestSeq = 0;
 
 const PLACEHOLDER_ALL_DEPTS_VALUE = '__ALL_GENED_DEPTS__';
+const PLACEHOLDER_PROFILE_DEPTS_VALUE = '__PROFILE_GENED_DEPTS__';
 const PLACEHOLDER_DEFAULT_DEPTS = ['ENGL','COMM','HIST','GVPT','PSYC','SOCY','ANTH','PHIL','ARTH','THET','MUSC','RELS','WMST','AASP','AMST','GEOG','ECON'];
 const PLACEHOLDER_GENED_TAGS = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','DVUP','DVCC','SCIS'];
 const PLACEHOLDER_CORE_REQUIREMENTS = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','SCIS'];
@@ -141,7 +142,7 @@ function openPlaceholderSearch(courseCode, semId = '') {
   if (mode) mode.value = placeholderSearchMode;
   const dept = document.getElementById('ps-dept');
   if (dept) {
-    populatePlaceholderDeptSelect();
+    populatePlaceholderDeptSelect(true);
     dept.value = suggestedDeptForPlaceholder(course);
   }
   const sem = document.getElementById('ps-semester');
@@ -154,25 +155,37 @@ function openPlaceholderSearch(courseCode, semId = '') {
   setTimeout(() => q && q.focus(), 50);
 }
 
-function populatePlaceholderDeptSelect() {
+function populatePlaceholderDeptSelect(force = false) {
   const sel = document.getElementById('ps-dept');
-  if (!sel || sel.options.length) return;
+  if (!sel || (sel.options.length && !force)) return;
+  const current = sel.value;
+  sel.innerHTML = '';
   const allOpt = document.createElement('option');
   allOpt.value = PLACEHOLDER_ALL_DEPTS_VALUE;
   allOpt.textContent = 'All common Gen-Ed depts';
   sel.appendChild(allOpt);
-  PLACEHOLDER_DEFAULT_DEPTS.forEach(dept => {
+  const profileDepts = placeholderProfileDepartments();
+  if (profileDepts.length) {
+    const profileOpt = document.createElement('option');
+    profileOpt.value = PLACEHOLDER_PROFILE_DEPTS_VALUE;
+    profileOpt.textContent = `Profile departments (${profileDepts.slice(0, 4).join(', ')})`;
+    sel.appendChild(profileOpt);
+  }
+  const depts = Array.from(new Set([...profileDepts, ...PLACEHOLDER_DEFAULT_DEPTS]));
+  depts.forEach(dept => {
     const opt = document.createElement('option');
     opt.value = dept;
-    opt.textContent = dept;
+    opt.textContent = profileDepts.includes(dept) ? `${dept} · profile` : dept;
     sel.appendChild(opt);
   });
+  if ([...sel.options].some(opt => opt.value === current)) sel.value = current;
 }
 
 function suggestedDeptForPlaceholder(course) {
   const hay = [course.code, course.title, course.note].join(' ').toUpperCase();
   if (hay.includes('COMM') || hay.includes('ORAL')) return 'COMM';
   if (hay.includes('ENGL') || hay.includes('WRITING')) return 'ENGL';
+  if (placeholderProfileDepartments().length) return PLACEHOLDER_PROFILE_DEPTS_VALUE;
   if (hay.includes('HIST')) return 'HIST';
   // For generic HS/HU/Diversity placeholders, start broad so users don't
   // have to guess which department happens to carry the right Gen-Ed tag.
@@ -271,6 +284,46 @@ function placeholderAllSearchDepts() {
     : PLACEHOLDER_DEFAULT_DEPTS;
 }
 
+function placeholderProfileDepartments() {
+  const allowed = new Set(placeholderAllSearchDepts());
+  const depts = typeof profilePreferredDepartments === 'function' ? profilePreferredDepartments() : [];
+  return depts.filter(dept => allowed.has(dept)).slice(0, 8);
+}
+
+function placeholderDeptScope(value) {
+  const raw = value || PLACEHOLDER_ALL_DEPTS_VALUE;
+  if (raw === PLACEHOLDER_PROFILE_DEPTS_VALUE) {
+    const depts = placeholderProfileDepartments();
+    return {
+      value: raw,
+      label: depts.length ? `profile departments (${depts.slice(0, 5).join(', ')})` : 'profile departments',
+      depts,
+      apiDept: '',
+      profile: true,
+      all: false,
+    };
+  }
+  if (raw === PLACEHOLDER_ALL_DEPTS_VALUE) {
+    return {
+      value: raw,
+      label: 'all departments',
+      depts: [],
+      apiDept: '',
+      profile: false,
+      all: true,
+    };
+  }
+  const clean = String(raw).trim().toUpperCase();
+  return {
+    value: clean,
+    label: clean,
+    depts: clean ? [clean] : [],
+    apiDept: clean,
+    profile: false,
+    all: false,
+  };
+}
+
 async function listPlaceholderCoursesByDepts(depts) {
   const out = [];
   let idx = 0;
@@ -293,16 +346,29 @@ function placeholderSearchTagsForApi() {
 
 async function listPlaceholderCoursesByGenEdTags(tags, dept) {
   const uniqueTags = Array.from(new Set((tags || []).map(t => String(t || '').trim().toUpperCase()).filter(Boolean)));
-  const cleanDept = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? '' : String(dept || '').trim().toUpperCase();
+  const scope = placeholderDeptScope(dept);
   if (!uniqueTags.length) return [];
+
+  if (scope.profile) {
+    if (!scope.depts.length) return listPlaceholderCoursesByGenEdTags(uniqueTags, PLACEHOLDER_ALL_DEPTS_VALUE);
+    const lists = await Promise.all(scope.depts.map(profileDept => listPlaceholderCoursesByGenEdTags(uniqueTags, profileDept).catch(() => [])));
+    const byCode = new Map();
+    lists.flat().forEach(r => {
+      const key = normalizeCode(r.course_id || '');
+      if (!key) return;
+      const existing = byCode.get(key) || {};
+      byCode.set(key, { ...existing, ...r, _dept: r.dept_id || r._dept || existing._dept || '' });
+    });
+    return Array.from(byCode.values());
+  }
 
   // Reuse the same Gen-Ed query path as the Browse Courses tab so clicking a
   // schedule Gen-Ed placeholder and using the generic Gen-Ed browser return
   // the same candidate set. That helper also owns the global-gen-ed fallback.
   if (typeof browseListCoursesByGenEdTags === 'function') {
-    return (await browseListCoursesByGenEdTags(uniqueTags, { dept: cleanDept })).map(r => ({
+    return (await browseListCoursesByGenEdTags(uniqueTags, { dept: scope.apiDept })).map(r => ({
       ...r,
-      _dept: r.dept_id || cleanDept || r._dept || '',
+      _dept: r.dept_id || scope.apiDept || r._dept || '',
     }));
   }
 
@@ -312,14 +378,14 @@ async function listPlaceholderCoursesByGenEdTags(tags, dept) {
   async function worker() {
     while (idx < uniqueTags.length) {
       const tag = uniqueTags[idx++];
-      const rows = await umdioListCoursesByGenEd(tag, { dept: cleanDept }).catch(() => []);
-      rows.forEach(r => out.push({ ...r, _dept: r.dept_id || cleanDept || '', _sourceGenEd: tag }));
+      const rows = await umdioListCoursesByGenEd(tag, { dept: scope.apiDept }).catch(() => []);
+      rows.forEach(r => out.push({ ...r, _dept: r.dept_id || scope.apiDept || '', _sourceGenEd: tag }));
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker));
 
   if (!out.length) {
-    const fallbackDepts = cleanDept ? [cleanDept] : placeholderAllSearchDepts();
+    const fallbackDepts = scope.apiDept ? [scope.apiDept] : placeholderAllSearchDepts();
     const deptRows = await listPlaceholderCoursesByDepts(fallbackDepts);
     const selected = new Set(uniqueTags);
     return deptRows.filter(r => ((r.gen_ed && r.gen_ed.flat().filter(Boolean)) || [])
@@ -333,19 +399,19 @@ async function searchPlaceholderCourses() {
   const grid = document.getElementById('ps-results');
   const status = document.getElementById('ps-status');
   const dept = document.getElementById('ps-dept')?.value || PLACEHOLDER_ALL_DEPTS_VALUE;
+  const deptScope = placeholderDeptScope(dept);
   const query = (document.getElementById('ps-search')?.value || '').trim().toLowerCase();
-  const useGenEdApi = placeholderSearchSelectedTags.length || dept === PLACEHOLDER_ALL_DEPTS_VALUE;
+  const useGenEdApi = placeholderSearchSelectedTags.length || deptScope.all || deptScope.profile;
   const apiTags = placeholderSearchTagsForApi();
   if (status) {
-    const scope = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? 'all departments' : dept;
     status.textContent = useGenEdApi
-      ? `Searching ${apiTags.length === PLACEHOLDER_GENED_TAGS.length ? 'all Gen-Ed tags' : apiTags.join(' + ')} across ${scope}…`
-      : `Searching ${dept} courses…`;
+      ? `Searching ${apiTags.length === PLACEHOLDER_GENED_TAGS.length ? 'all Gen-Ed tags' : apiTags.join(' + ')} across ${deptScope.label}…`
+      : `Searching ${deptScope.label} courses…`;
   }
   if (grid) grid.innerHTML = '<p class="reco-empty">Loading candidate courses…</p>';
   const rows = useGenEdApi
     ? await listPlaceholderCoursesByGenEdTags(apiTags, dept)
-    : await listPlaceholderCoursesByDepts([dept]);
+    : await listPlaceholderCoursesByDepts(deptScope.depts);
   if (requestId !== placeholderSearchRequestSeq) return;
   const byCode = new Map();
   rows.forEach(r => {
@@ -366,9 +432,8 @@ async function searchPlaceholderCourses() {
     return hay.includes(query);
   });
   if (status) {
-    const scope = dept === PLACEHOLDER_ALL_DEPTS_VALUE ? 'all departments' : dept;
     status.textContent = placeholderSearchResults.length
-      ? `${placeholderSearchResults.length} matching course${placeholderSearchResults.length === 1 ? '' : 's'} found across ${scope}. Best Gen-Ed fits appear first.`
+      ? `${placeholderSearchResults.length} matching course${placeholderSearchResults.length === 1 ? '' : 's'} found across ${deptScope.label}. Best Gen-Ed and profile fits appear first.`
       : 'No matches yet. Try “Match any selected tag,” clear filters, or use Lookup Code for a course you already know.';
   }
   renderPlaceholderResults();
@@ -402,7 +467,10 @@ function scorePlaceholderCandidate(row) {
   const tags = getCandidateTags(row);
   const selectedHits = tags.filter(t => placeholderSearchSelectedTags.includes(t)).length;
   const missingHits = tags.filter(t => getMissingPlaceholderFilterTags().includes(t)).length;
-  return (after.complete ? 10000 : 0) + (improvement * 500) + (missingHits * 50) + (selectedHits * 10) - after.missing.length;
+  const profileMatch = typeof profileCourseMatch === 'function'
+    ? profileCourseMatch({ code: row.course_id, title: row.name, description: row.description, gen_ed: row.gen_ed })
+    : { score: 0 };
+  return (after.complete ? 10000 : 0) + (improvement * 500) + (profileMatch.score * 4) + (missingHits * 50) + (selectedHits * 10) - after.missing.length;
 }
 
 function renderPlaceholderResults() {
@@ -431,6 +499,12 @@ function renderPlaceholderResults() {
     const safeCredits = placeholderEscape(r.credits || '?');
     const safeName = placeholderEscape(r.name || '');
     const safeDept = placeholderEscape(r._dept || '');
+    const profileMatch = typeof profileCourseMatch === 'function'
+      ? profileCourseMatch({ code: r.course_id, title: r.name, description: r.description, gen_ed: r.gen_ed })
+      : { score: 0, labels: [] };
+    const safeProfileTags = profileMatch.score
+      ? `<span class="reco-tag profile">Profile fit</span>${(profileMatch.labels || []).map(label => `<span class="reco-tag">${placeholderEscape(label)}</span>`).join('')}`
+      : '';
     const safeGapText = placeholderEscape(gapText);
     const safeImpact = placeholderEscape(newlyHelps.length ? `Counts as ${newlyHelps.join(' + ')}` : 'No Gen-Ed tags found for this course');
     const safeDesc = placeholderEscape(r.description ? `${r.description.slice(0, 180)}${r.description.length > 180 ? '…' : ''}` : '');
@@ -442,7 +516,7 @@ function renderPlaceholderResults() {
         <span class="br-credits">${safeCredits} cr</span>
       </div>
       <div class="br-title">${safeName}</div>
-      <div class="br-meta">${safeDept ? `<span class="reco-tag dept">${safeDept}</span>` : ''}${tags.map(t => `<span class="reco-tag ${selected.has(t) ? 'selected' : ''}">${placeholderEscape(t)}</span>`).join('')}</div>
+      <div class="br-meta">${safeDept ? `<span class="reco-tag dept">${safeDept}</span>` : ''}${tags.map(t => `<span class="reco-tag ${selected.has(t) ? 'selected' : ''}">${placeholderEscape(t)}</span>`).join('')}${safeProfileTags}</div>
       <div class="ps-impact ${preview.complete ? 'complete' : ''}">
         <strong>${safeGapText}</strong>
         <span>${safeImpact}</span>

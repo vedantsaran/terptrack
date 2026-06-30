@@ -28,13 +28,93 @@ let browseSearch = '';
 let browseGenEd = '';
 let browseCache = []; // current dept/gen-ed result set
 let browseCacheKey = '';
+let browseProfileDefaultsApplied = false;
 
 function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
 }
 
+function browseEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
+
 function browseAllSearchDepts() {
   return (typeof COMMON_DEPTS !== 'undefined' && Array.isArray(COMMON_DEPTS)) ? COMMON_DEPTS : [];
+}
+
+function browseProfileDepartments() {
+  const depts = typeof profilePreferredDepartments === 'function' ? profilePreferredDepartments() : [];
+  const allowed = new Set(browseAllSearchDepts());
+  return depts.filter(dept => allowed.has(dept)).slice(0, 8);
+}
+
+function browseProfileSummaryText(depts) {
+  const prefs = typeof getProfilePrefs === 'function' ? getProfilePrefs() : null;
+  const interestLabels = typeof profileSelectedInterestDefs === 'function'
+    ? profileSelectedInterestDefs(prefs || undefined).map(def => def.label)
+    : [];
+  if (!depts.length && !interestLabels.length && !(prefs && prefs.careerGoal)) return '';
+  const parts = [];
+  if (interestLabels.length) parts.push(interestLabels.slice(0, 2).join(', '));
+  if (depts.length) parts.push(`departments: ${depts.slice(0, 5).join(', ')}`);
+  if (prefs && prefs.careerGoal) parts.push(`goal: ${prefs.careerGoal}`);
+  return parts.join(' · ');
+}
+
+function syncBrowseControls() {
+  const dept = document.getElementById('br-dept');
+  if (dept && dept.value !== browseDept) dept.value = browseDept || '';
+  const ge = document.getElementById('br-gened');
+  if (ge && ge.value !== browseGenEd) ge.value = browseGenEd || '';
+  const search = document.getElementById('br-search');
+  if (search && search.value !== browseSearch) search.value = browseSearch || '';
+}
+
+function applyBrowseProfileDefaults() {
+  if (browseProfileDefaultsApplied || browseDept || browseGenEd || browseSearch) return;
+  const depts = browseProfileDepartments();
+  if (!depts.length) return;
+  browseDept = depts[0];
+  browseCache = [];
+  browseCacheKey = '';
+  browseProfileDefaultsApplied = true;
+  syncBrowseControls();
+}
+
+function renderBrowseProfileHints() {
+  const root = document.getElementById('br-profile-hints');
+  if (!root) return;
+  const depts = browseProfileDepartments();
+  const summary = browseProfileSummaryText(depts);
+  if (!summary) {
+    root.hidden = true;
+    root.innerHTML = '';
+    return;
+  }
+  root.hidden = false;
+  const deptButtons = depts.map(dept => `
+    <button type="button" class="browse-profile-chip ${browseDept === dept ? 'active' : ''}" data-br-profile-dept="${browseEscape(dept)}">${browseEscape(dept)}</button>
+  `).join('');
+  root.innerHTML = `
+    <span>Profile search</span>
+    <strong>${browseEscape(summary)}</strong>
+    <div>${deptButtons}</div>
+  `;
+  root.querySelectorAll('[data-br-profile-dept]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      browseDept = btn.dataset.brProfileDept || '';
+      browseCache = [];
+      browseCacheKey = '';
+      syncBrowseControls();
+      renderBrowse();
+    });
+  });
 }
 
 async function browseListCoursesByGenEdWithFallback(tag, dept = '') {
@@ -90,10 +170,13 @@ async function renderBrowse() {
       sel.appendChild(o);
     });
   }
+  applyBrowseProfileDefaults();
+  syncBrowseControls();
+  renderBrowseProfileHints();
 
   const grid = document.getElementById('br-grid');
   if (!browseDept && !browseGenEd) {
-    grid.innerHTML = '<p class="reco-empty">Pick a department, choose a Gen-Ed tag, or choose “All Gen-Ed categories” to browse Gen-Eds across every department.</p>';
+    grid.innerHTML = '<p class="reco-empty">Pick a department, choose a Gen-Ed tag, or set interests in Settings so TerpTrack can start with your profile departments.</p>';
     return;
   }
 
@@ -127,6 +210,14 @@ async function renderBrowse() {
   } else if (browseGenEd === BROWSE_ALL_GENEDS_VALUE) {
     rows = rows.filter(r => Array.isArray(r.gen_ed) && r.gen_ed.flat().filter(Boolean).length);
   }
+  const profilePrefs = typeof getProfilePrefs === 'function' ? getProfilePrefs() : null;
+  const profileActive = !!(profilePrefs && ((profilePrefs.interests || []).length || profilePrefs.careerGoal || (profilePrefs.genEdDepts || []).length));
+  rows = rows.slice().sort((a, b) => {
+    const aMatch = typeof profileCourseMatch === 'function' ? profileCourseMatch({ code: a.course_id, title: a.name, description: a.description }, profilePrefs || undefined).score : 0;
+    const bMatch = typeof profileCourseMatch === 'function' ? profileCourseMatch({ code: b.course_id, title: b.name, description: b.description }, profilePrefs || undefined).score : 0;
+    if (aMatch !== bMatch) return bMatch - aMatch;
+    return String(a.course_id || '').localeCompare(String(b.course_id || ''));
+  });
 
   if (!rows.length) {
     grid.innerHTML = '<p class="reco-empty">No courses found. Try a different filter.</p>';
@@ -140,22 +231,30 @@ async function renderBrowse() {
     const ge = (r.gen_ed && r.gen_ed.flat().filter(Boolean)) || [];
     const cached = ptCacheGet(code) || {};
     const gpa = (typeof cached.average_gpa === 'number') ? cached.average_gpa.toFixed(2) : '';
+    const profileMatch = typeof profileCourseMatch === 'function'
+      ? profileCourseMatch({ code, title: r.name, description: r.description, gen_ed: r.gen_ed }, profilePrefs || undefined)
+      : { score: 0, labels: [] };
+    const profileTags = profileActive && profileMatch.score
+      ? `<span class="reco-tag profile">Profile fit</span>${(profileMatch.labels || []).map(label => `<span class="reco-tag">${browseEscape(label)}</span>`).join('')}`
+      : '';
+    const desc = r.description ? `${r.description.slice(0, 200)}${r.description.length > 200 ? '…' : ''}` : '';
     return `
       <div class="br-card ${inPlan ? 'in-plan' : ''}">
         <div class="br-head">
-          <strong>${displayCode(code)}</strong>
-          <span class="br-credits">${r.credits || '?'} cr</span>
+          <strong>${browseEscape(displayCode(code))}</strong>
+          <span class="br-credits">${browseEscape(r.credits || '?')} cr</span>
         </div>
-        <div class="br-title">${r.name || ''}</div>
+        <div class="br-title">${browseEscape(r.name || '')}</div>
         <div class="br-meta">
-          ${ge.length ? ge.map(g => `<span class="reco-tag">${g}</span>`).join('') : ''}
-          ${gpa ? `<span class="br-gpa">GPA ${gpa}</span>` : ''}
+          ${ge.length ? ge.map(g => `<span class="reco-tag">${browseEscape(g)}</span>`).join('') : ''}
+          ${profileTags}
+          ${gpa ? `<span class="br-gpa">GPA ${browseEscape(gpa)}</span>` : ''}
         </div>
-        ${r.description ? `<div class="br-desc">${(r.description || '').slice(0, 200)}${r.description.length > 200 ? '…' : ''}</div>` : ''}
+        ${desc ? `<div class="br-desc">${browseEscape(desc)}</div>` : ''}
         <div class="br-actions">
           ${inPlan
             ? '<span class="br-pill">In your plan</span>'
-            : `<button class="btn small" onclick="browseAddCourse('${code}')">Add to plan</button>`}
+            : `<button class="btn small" onclick="browseAddCourse('${browseEscape(code)}')">Add to plan</button>`}
         </div>
       </div>
     `;
@@ -170,6 +269,7 @@ async function browseAddCourse(code) {
 function initBrowse() {
   const dept = document.getElementById('br-dept');
   if (dept) dept.addEventListener('change', (e) => {
+    browseProfileDefaultsApplied = true;
     browseDept = e.target.value;
     browseCache = [];
     browseCacheKey = '';
@@ -182,6 +282,7 @@ function initBrowse() {
   });
   const ge = document.getElementById('br-gened');
   if (ge) ge.addEventListener('change', (e) => {
+    browseProfileDefaultsApplied = true;
     browseGenEd = e.target.value;
     browseCache = [];
     browseCacheKey = '';
