@@ -951,6 +951,8 @@ function plannerChangeIcon(type) {
   if (type === 'section-pick') return '◉';
   if (type === 'placeholder-section-replacement' || type === 'placeholder-replacement') return '↺';
   if (type === 'placeholder-undo') return '↶';
+  if (type === 'prior-credit') return 'T';
+  if (type === 'prior-credit-undo') return '↶';
   if (type === 'clear') return '×';
   return '•';
 }
@@ -962,7 +964,7 @@ function plannerChangeTime(iso) {
 }
 
 function plannerChangeCanUndo(change) {
-  return change?.undo?.kind === 'placeholder-replacement' && !change.undo.appliedAt;
+  return ['placeholder-replacement', 'prior-credit'].includes(change?.undo?.kind) && !change.undo.appliedAt;
 }
 
 function plannerClonePlain(value) {
@@ -1071,6 +1073,43 @@ function plannerApplyPlaceholderUndo(change) {
   return true;
 }
 
+function plannerRemovePriorCustomCourse(entry) {
+  if (!entry?.addedCustomCourse) return false;
+  const norm = normalizeCode(entry.code || '');
+  const before = (state.customCourses || []).length;
+  state.customCourses = (state.customCourses || []).filter(course => {
+    if (normalizeCode(course.code) !== norm) return true;
+    if (course.isPriorCredit || entry.customCourse?.isPriorCredit) return false;
+    return true;
+  });
+  return state.customCourses.length !== before;
+}
+
+function plannerApplyPriorCreditUndo(change) {
+  const undo = change?.undo;
+  if (!plannerChangeCanUndo(change) || !Array.isArray(undo.entries)) return false;
+  const restored = [];
+  const removed = [];
+  undo.entries.forEach(entry => {
+    plannerRestoreCourseStatus(entry.code, entry.hadCourseState, entry.courseState);
+    if (plannerRemovePriorCustomCourse(entry)) removed.push(entry.code);
+    restored.push(entry.code);
+  });
+  undo.appliedAt = new Date().toISOString();
+  recordPlanChange({
+    type: 'prior-credit-undo',
+    source: 'Timeline',
+    title: `Undid ${restored.length} prior-credit course${restored.length === 1 ? '' : 's'}`,
+    detail: restored.slice(0, 8).join(', ') + (restored.length > 8 ? ` +${restored.length - 8} more` : ''),
+    meta: removed.length ? `${removed.length} outside-plan course${removed.length === 1 ? '' : 's'} removed` : 'Restored previous course statuses',
+  }, { save: false });
+  saveState();
+  render();
+  if (currentTab === 'timeline') renderTimeline();
+  if (typeof toastSuccess === 'function') toastSuccess(`Undid ${restored.length} prior-credit course${restored.length === 1 ? '' : 's'}.`);
+  return true;
+}
+
 function undoPlanChange(changeId) {
   const id = String(changeId || '');
   const change = recentPlanChanges().find(item => item.id === id);
@@ -1079,6 +1118,7 @@ function undoPlanChange(changeId) {
     return false;
   }
   if (change.undo?.kind === 'placeholder-replacement') return plannerApplyPlaceholderUndo(change);
+  if (change.undo?.kind === 'prior-credit') return plannerApplyPriorCreditUndo(change);
   if (typeof toastError === 'function') toastError('That change cannot be undone here.');
   return false;
 }

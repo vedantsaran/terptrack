@@ -1850,6 +1850,7 @@ async function testSettingsPriorCreditEditor(context) {
         'set-prior-codes': { value: 'CMSC131 MATH140', dataset: {}, addEventListener() {} },
         'set-prior-summary': { textContent: '' },
         'set-prior-status': { textContent: '', style: {} },
+        'plan-change-history': { innerHTML: '' },
         'set-prior-grid': {
           innerHTML: '',
           querySelectorAll(selector) {
@@ -1870,14 +1871,32 @@ async function testSettingsPriorCreditEditor(context) {
       settingsRefreshPriorCreditSummary();
       const summaryBefore = elements['set-prior-summary'].textContent;
       await applySettingsPriorCredits();
+      const changeAfterApply = state.recentChanges[0] || null;
+      const transferKeysAfterApply = Object.entries(state.courses || {}).filter(([, value]) => value.status === 'transfer').map(([key]) => key).sort();
+      const customCodesAfterApply = state.customCourses.map(course => course.code).sort();
+      renderPlanChangeHistory();
+      const historyHtml = elements['plan-change-history'].innerHTML;
+      const canUndoBefore = plannerChangeCanUndo(changeAfterApply);
+      const undoApplied = undoPlanChange(changeAfterApply.id);
+      const transferKeysAfterUndo = Object.entries(state.courses || {}).filter(([, value]) => value.status === 'transfer').map(([key]) => key).sort();
+      const customCodesAfterUndo = state.customCourses.map(course => course.code).sort();
+      const undoChange = state.recentChanges[0] || null;
+      const originalChangeAfterUndo = state.recentChanges.find(change => change.id === changeAfterApply.id) || null;
       return {
         gridHasPreset: /ap-calc-bc-4/.test(gridHtml) && /settings-prior-chip/.test(gridHtml),
         summaryBefore,
         statusAfter: elements['set-prior-status'].textContent,
         statusColor: elements['set-prior-status'].style.color,
-        transferKeys: Object.entries(state.courses || {}).filter(([, value]) => value.status === 'transfer').map(([key]) => key).sort(),
-        customCodes: state.customCourses.map(course => course.code).sort(),
-        recentChange: state.recentChanges[0],
+        transferKeys: transferKeysAfterApply,
+        customCodes: customCodesAfterApply,
+        recentChange: changeAfterApply,
+        historyHtml,
+        canUndoBefore,
+        undoApplied,
+        transferKeysAfterUndo,
+        customCodesAfterUndo,
+        undoChange,
+        originalChangeAfterUndo,
       };
     })()
   `, context));
@@ -1891,11 +1910,20 @@ async function testSettingsPriorCreditEditor(context) {
   assert(!result.customCodes.includes('MATH 140') && !result.customCodes.includes('CMSC 131'), 'settings prior credit: planned courses should not be duplicated as custom courses');
   assert(result.customCodes.includes('MATH 141') && result.customCodes.includes('AP FSAW Credit'), 'settings prior credit: unplanned equivalents should be added outside plan');
   assert(result.recentChange.source === 'settings', 'settings prior credit: recent change should record settings source');
+  assert(result.recentChange.undo?.kind === 'prior-credit', 'settings prior credit: recent change should include undo payload');
+  assert(/data-change-undo/.test(result.historyHtml) && /Undo/.test(result.historyHtml), 'settings prior credit: recent changes should render undo action');
+  assert(result.canUndoBefore === true, 'settings prior credit: change should be undoable before applying undo');
+  assert(result.undoApplied === true, 'settings prior credit: undo should apply successfully');
+  assert(!result.transferKeysAfterUndo.includes('MATH 140') && !result.transferKeysAfterUndo.includes('CMSC 131'), 'settings prior credit: undo should restore planned-course statuses');
+  assert(result.customCodesAfterUndo.length === 0, 'settings prior credit: undo should remove added outside-plan prior-credit courses');
+  assert(result.undoChange.type === 'prior-credit-undo', 'settings prior credit: undo should record a restore change');
+  assert(result.originalChangeAfterUndo.undo?.appliedAt, 'settings prior credit: original undo action should be marked applied');
 
   return {
     id: 'SETTINGS-PRIOR-CREDIT',
     transfers: result.transferKeys.length,
     added: result.customCodes.length,
+    undo: result.customCodesAfterUndo.length,
   };
 }
 
@@ -1952,7 +1980,7 @@ async function main() {
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
   console.log(`Audit issue fixture ${auditIssues.id}: ${auditIssues.count} issues; opened ${auditIssues.opened}; browse ${auditIssues.browse}.`);
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
-  console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses.`);
+  console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
   console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }

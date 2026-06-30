@@ -347,6 +347,22 @@ function onboardPriorSummaryText(resolved) {
   return `${count} course${count === 1 ? '' : 's'} · ${credits} credit${credits === 1 ? '' : 's'} · ${codes}${extra}`;
 }
 
+function onboardClonePlain(value) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return Array.isArray(value) ? value.slice() : { ...value };
+  }
+}
+
+function onboardCourseStateSnapshot(code) {
+  const key = String(code || '');
+  const courses = state.courses || {};
+  const had = Object.prototype.hasOwnProperty.call(courses, key);
+  return { had, value: had ? onboardClonePlain(courses[key]) : null };
+}
+
 function onboardRefreshPriorCreditSummary() {
   const summary = document.getElementById('ob-prior-summary');
   if (!summary) return;
@@ -388,6 +404,7 @@ async function onboardApplyPriorCredits(setup) {
   const resolved = onboardResolvePriorCredits(setup.transferRaw, setup.priorCreditIds);
   const applied = [];
   const added = [];
+  const undoEntries = [];
   state.customCourses = state.customCourses || [];
   for (const course of resolved.courses) {
     let finalCourse = { ...course };
@@ -408,13 +425,23 @@ async function onboardApplyPriorCredits(setup) {
     delete finalCourse._needsLookup;
     const code = onboardPriorDisplayCode(finalCourse.code);
     finalCourse.code = code;
+    const previousState = onboardCourseStateSnapshot(code);
     const existing = findCourse(code);
+    let addedCourse = null;
     if (!existing) {
       state.customCourses.push(finalCourse);
       added.push(code);
+      addedCourse = onboardClonePlain(finalCourse);
     }
     state.courses[code] = { status: 'transfer', grade: '' };
     applied.push(code);
+    undoEntries.push({
+      code,
+      hadCourseState: previousState.had,
+      courseState: previousState.value,
+      addedCustomCourse: !!addedCourse,
+      customCourse: addedCourse,
+    });
   }
   if (applied.length && typeof recordPlanChange === 'function') {
     recordPlanChange({
@@ -423,6 +450,11 @@ async function onboardApplyPriorCredits(setup) {
       title: `Applied ${applied.length} prior-credit course${applied.length === 1 ? '' : 's'}`,
       detail: applied.slice(0, 8).join(', ') + (applied.length > 8 ? ` +${applied.length - 8} more` : ''),
       meta: added.length ? `${added.length} added outside plan` : 'All matched existing plan courses',
+      undo: {
+        kind: 'prior-credit',
+        source: setup.source || 'onboarding',
+        entries: undoEntries,
+      },
     }, { save: false });
   }
   return { ...resolved, applied, added };

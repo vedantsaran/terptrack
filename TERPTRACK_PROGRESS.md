@@ -2794,3 +2794,59 @@ Next pass candidates:
 - Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.
 - Add a compact advisor-export summary of open audit issues.
 - Add a student-facing conflict explanation when undo is unavailable because the replacement course changed afterward.
+
+## 2026-06-30 Pass 58
+
+Focus: add undo for bulk AP/IB/transfer prior-credit applications.
+
+Planned changes:
+- Preserve enough state when prior credits are applied to restore planned-course statuses.
+- Track outside-plan prior-credit courses added by the apply operation so undo can remove them.
+- Render a Timeline Recent Changes undo action for prior-credit applications.
+- Record a separate restore event after undo and mark the original operation as already undone.
+- Add deterministic regression and Chrome coverage.
+
+Completed:
+- Added prior-credit undo payloads to onboarding/settings application flow:
+  - snapshots previous `state.courses` values for each applied code.
+  - captures custom prior-credit courses added outside the active plan.
+  - records the source that applied the credits.
+- Extended Timeline undo handling so prior-credit applications can be undone from Recent Changes.
+- Restored prior planned-course statuses during undo and removed outside-plan prior-credit rows that were created by the original application.
+- Added a `prior-credit-undo` recent-change record and marked the original undo payload with `appliedAt`.
+- Versioned changed browser assets:
+  - `js/timeline.js?v=10`
+  - `js/onboarding.js?v=7`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `SETTINGS-PRIOR-CREDIT` fixture confirms:
+  - applying AP Calculus BC, AP English Language, IB Economics HL, and typed raw codes applies 6 transfers.
+  - 4 outside-plan prior-credit courses are added.
+  - the recent change includes a `prior-credit` undo payload.
+  - Recent Changes renders an `Undo` action.
+  - `undoPlanChange()` restores planned-course statuses for `MATH 140` and `CMSC 131`.
+  - outside-plan prior-credit courses are removed, leaving 0 custom rows.
+  - a `prior-credit-undo` change is recorded.
+  - the original change is marked as already undone.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `js/timeline.js?v=10` and `js/onboarding.js?v=7` loaded.
+  - a clean seeded plan rendered `MATH 140` and `CMSC 131` with no transfer badges.
+  - Settings rendered 20 prior-credit preset checkboxes.
+  - selecting AP Calculus BC, AP English Language, IB Economics HL, and typed `CMSC131 MATH140` produced the summary `6 courses · 20 credits · MATH 140, MATH 141, AP FSAW Credit, ECON 200, ECON 201, CMSC 131`.
+  - applying prior credits reported `Applied 6 prior-credit courses · 4 added outside plan`.
+  - transfer badges and `AP FSAW Credit` were visible after apply.
+  - Timeline Recent Changes rendered `Applied 6 prior-credit courses`, all 6 course codes, `4 added outside plan`, and an `Undo` button.
+  - clicking `Undo` rendered `Undid 6 prior-credit courses` and `4 outside-plan courses removed`.
+  - the old undo button disappeared and transfer badges were removed from the plan.
+  - no horizontal overflow was present.
+  - Chrome console output had only extension-origin noise; there were no app-origin warnings or errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor.
+- Add a compact advisor-export summary of open audit issues.
+- Add student-facing conflict explanations when undo is unavailable because a course changed afterward.
+- Broaden prior-credit equivalency coverage with official-source mappings.
