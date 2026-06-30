@@ -1653,6 +1653,9 @@ function testAuditIssueDrawer(context) {
       const genedGap = issues.find(issue => issue.key === 'gened-DSHU');
       auditIssueKey = dshuSlot.key;
       const html = auditIssuesHtml();
+      const advisorIssues = scheduleAdvisorAuditIssues(20);
+      const advisorDshuSlot = advisorIssues.find(issue => issue.courseCode === 'GenEd DSHU');
+      const advisorDshuGap = advisorIssues.find(issue => issue.key === 'gened-DSHU');
       state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true };
       state.scheduleAdvisorFilter = 'blockers';
       const advisorOutput = buildScheduleOutput('PASS54', '202608', state.activeSchedule[0].courses, [], [], [], { ...DEFAULT_SCHEDULE_PREFS });
@@ -1673,6 +1676,8 @@ function testAuditIssueDrawer(context) {
         advisorDocument: advisorOutput.advisorDocument,
         advisorHtmlNoAudit: advisorOutputNoAudit.advisorHtml,
         advisorOptions: advisorOutput.outputOptions,
+        advisorDshuSlot,
+        advisorDshuGap,
         openedPlaceholder,
         currentTab,
         browseDept,
@@ -1690,11 +1695,15 @@ function testAuditIssueDrawer(context) {
   assert(result.genedGap && result.genedGap.type === 'gened', 'audit issues: should include a DSHU requirement gap');
   assert(/Degree|open item|Why it remains|What can satisfy it|Choose Replacement|Open Browse/.test(result.html), 'audit issues: expanded drawer should render explanatory copy and actions');
   assert(result.advisorOptions.auditIssues === true, 'advisor audit export: audit issues should default into schedule output options');
+  assert(/Replace GenEd DSHU in Pass 54 Fall/.test(result.advisorDshuSlot?.actionSummary || ''), 'advisor audit export: placeholder issue should include replacement quick-link action text');
+  assert(/Profile departments/.test(result.advisorDshuGap?.browseTarget || '') && /DSHU/.test(result.advisorDshuGap?.browseTarget || ''), 'advisor audit export: GenEd issue should include Browse target quick-link context');
   assert(/Degree Audit Snapshot/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include audit snapshot section');
   assert(/Audit issues/.test(result.advisorHtml) && /16 open items/.test(result.advisorHtml) && /showing top 6/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include full audit issue counts and compact top list');
   assert(/GenEd DSHU|GVPT 3xx Elective A|Free Elective/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include top audit issue titles');
+  assert(/Next action|Browse target|data-schedule-audit-primary|data-schedule-audit-browse/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include quick-link actions and targets');
   assert(/Degree audit snapshot/.test(result.advisorText) && /Satisfies:/.test(result.advisorText), 'advisor audit export: advisor text should include audit snapshot details');
-  assert(/schedule-advisor-audit/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include audit CSS/markup');
+  assert(/Next action:|Browse target:/.test(result.advisorText), 'advisor audit export: advisor text should include quick-link action details');
+  assert(/schedule-advisor-audit-link/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include audit quick-link CSS/markup');
   assert(!/Degree Audit Snapshot/.test(result.advisorHtmlNoAudit), 'advisor audit export: audit snapshot should hide when auditIssues option is off');
   assert(result.openedPlaceholder.code === 'GenEd DSHU' && result.openedPlaceholder.semId === 'PASS54', 'audit issues: primary placeholder action should open the replacement modal for the exact slot');
   assert(result.currentTab === 'browse', 'audit issues: Browse handoff should switch to Browse');

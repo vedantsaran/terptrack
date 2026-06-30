@@ -3311,3 +3311,63 @@ Next pass candidates:
 - Add advisor packet quick links from audit issues into Browse or placeholder replacement.
 - Add Timeline recovery for stale prior-credit rows with multiple changed courses split between Plan-visible and removed items.
 - Add a source/verification drawer for a selected prior-credit preset.
+
+## 2026-06-30 Pass 67
+
+Focus: add advisor packet quick links from audit issues into Browse or placeholder replacement.
+
+Planned changes:
+- Keep the existing Audit drawer actions as the source of truth.
+- Carry each audit issue's next action into the Schedule advisor packet.
+- Show the Browse target used for GenEd gaps and placeholders.
+- Make in-app advisor packet rows clickable without breaking downloaded/printed packets.
+
+Completed:
+- Extended Schedule's advisor audit issue projection to include:
+  - action type.
+  - course/semester target for placeholder replacement.
+  - sanitized Browse target details.
+  - human-readable next-action text.
+- Advisor Packet audit rows now show:
+  - `Next action`.
+  - `Browse target`.
+  - a primary quick-link button.
+  - an `Open Browse` quick-link button.
+- In-app advisor packet buttons now call the same Audit actions used by the Degree Audit drawer:
+  - placeholder issues open the placeholder replacement modal.
+  - GenEd gap and Browse actions open Browse with the saved audit search.
+- Downloaded/printed advisor packets include the same action and Browse-target text plus styled quick-link labels.
+- Versioned changed browser assets:
+  - `styles.css?v=63`
+  - `js/schedule.js?v=27`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `AUDIT-ISSUES` fixture confirms:
+  - placeholder issues carry replacement quick-link text such as `Replace GenEd DSHU in Pass 54 Fall`.
+  - GenEd gap issues carry Browse target context such as `Profile departments · DSHU`.
+  - advisor HTML includes `Next action`, `Browse target`, and `data-schedule-audit-*` quick-link buttons.
+  - advisor text export includes `Next action:` and `Browse target:` lines.
+  - standalone advisor documents include the audit quick-link CSS/markup.
+  - existing Audit drawer primary and Browse handoffs still work.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=63` and `js/schedule.js?v=27` loaded.
+  - a seeded plan with GenEd gaps and placeholders opened without the welcome panel.
+  - the Schedule Advisor Packet rendered the Degree Audit Snapshot.
+  - the top six audit rows each showed a `Next action`, `Browse target`, primary quick-link button, and `Open Browse` button.
+  - the packet showed Browse targets such as `Profile departments · DSHS`.
+  - clicking the first in-app advisor packet quick link switched to Browse.
+  - Browse landed on profile departments with the DSHS GenEd filter.
+  - Browse saved an audit-labeled search.
+  - there was no horizontal overflow.
+  - Chrome app-origin console warnings/errors were clean.
+  - the restored app page no longer showed the seeded audit state or saved audit search.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add Timeline recovery for stale prior-credit rows with multiple changed courses split between Plan-visible and removed items.
+- Add a source/verification drawer for a selected prior-credit preset.
+- Add advisor-packet deep links from downloaded HTML back into the live app when opened from the same origin.

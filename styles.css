@@ -3721,6 +3721,49 @@ h1.hero-title em {
   font-size: .66rem;
   line-height: 1.3;
 }
+.schedule-advisor-audit-next {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 7px;
+}
+.schedule-advisor-audit-next span {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--cream) 64%, var(--paper));
+  padding: 6px 7px;
+}
+.schedule-advisor-audit-next strong {
+  display: block;
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  letter-spacing: .05em;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+.schedule-advisor-audit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.schedule-advisor-audit-link {
+  border: 1px solid rgba(46,92,139,.34);
+  border-radius: 999px;
+  background: rgba(46,92,139,.08);
+  color: var(--blue);
+  cursor: pointer;
+  font-size: .66rem;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 4px 8px;
+}
+.schedule-advisor-audit-link.primary {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
 .schedule-advisor-section-title {
   display: flex;
   justify-content: space-between;

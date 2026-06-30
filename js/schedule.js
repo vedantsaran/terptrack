@@ -1591,17 +1591,32 @@ function scheduleAdvisorAuditIssues(limit = 6) {
   if (typeof auditDegreeIssues !== 'function') return [];
   try {
     const issues = auditDegreeIssues()
-      .map(issue => ({
-        key: issue.key,
-        type: issue.type || 'audit',
-        level: issue.level || 'info',
-        title: issue.title || 'Degree audit item',
-        status: issue.status || '',
-        summary: issue.summary || '',
-        satisfies: issue.satisfies || '',
-        actionLabel: issue.actionLabel || '',
-        tags: Array.isArray(issue.tags) ? issue.tags.slice(0, 4) : [],
-      }));
+      .map(issue => {
+        const browse = issue.browse || {};
+        const clean = {
+          key: issue.key,
+          type: issue.type || 'audit',
+          level: issue.level || 'info',
+          title: issue.title || 'Degree audit item',
+          status: issue.status || '',
+          summary: issue.summary || '',
+          satisfies: issue.satisfies || '',
+          actionLabel: issue.actionLabel || '',
+          actionType: issue.actionType || 'browse',
+          courseCode: issue.courseCode || '',
+          semId: issue.semId || '',
+          browse: {
+            dept: browse.dept || '',
+            genEd: browse.genEd || '',
+            search: browse.search || '',
+            label: browse.label || '',
+          },
+          tags: Array.isArray(issue.tags) ? issue.tags.slice(0, 4) : [],
+        };
+        clean.actionSummary = scheduleAuditIssueActionSummary(clean);
+        clean.browseTarget = scheduleAuditIssueBrowseTarget(clean);
+        return clean;
+      });
     const shown = issues.slice(0, limit);
     shown.totalOpen = issues.length;
     shown.totalCounts = issues.reduce((acc, issue) => {
@@ -1630,6 +1645,57 @@ function scheduleAuditIssueLevelLabel(issue) {
   if (issue.level === 'danger') return 'Critical';
   if (issue.level === 'warn') return 'Review';
   return 'Plan';
+}
+
+function scheduleAuditIssueSemesterName(semId) {
+  const sem = (typeof getAllSemesters === 'function' ? getAllSemesters() : []).find(item => item.id === semId);
+  return sem?.name || semId || '';
+}
+
+function scheduleAuditBrowseDeptLabel(dept) {
+  if (!dept) return '';
+  if (typeof BROWSE_PROFILE_DEPTS_VALUE !== 'undefined' && dept === BROWSE_PROFILE_DEPTS_VALUE) return 'Profile departments';
+  return dept;
+}
+
+function scheduleAuditBrowseGenEdLabel(genEd) {
+  if (!genEd) return '';
+  if (typeof BROWSE_ALL_GENEDS_VALUE !== 'undefined' && genEd === BROWSE_ALL_GENEDS_VALUE) return 'All GenEds';
+  return genEd;
+}
+
+function scheduleAuditIssueBrowseTarget(issue) {
+  const browse = issue?.browse || {};
+  const parts = [
+    scheduleAuditBrowseDeptLabel(browse.dept),
+    scheduleAuditBrowseGenEdLabel(browse.genEd),
+    browse.search,
+  ].filter(Boolean);
+  if (parts.length) return parts.join(' · ');
+  if (issue?.actionType === 'placeholder') return 'Replacement drawer, then Browse if needed';
+  return 'Browse course catalog';
+}
+
+function scheduleAuditIssueActionSummary(issue) {
+  if (issue?.actionType === 'placeholder') {
+    const semName = scheduleAuditIssueSemesterName(issue.semId);
+    return `Replace ${issue.courseCode || issue.title || 'placeholder'}${semName ? ` in ${semName}` : ''}`;
+  }
+  return `${issue?.actionLabel || 'Find courses'} in Browse`;
+}
+
+function scheduleAuditIssueActionHtml(issue) {
+  if (!issue?.key) return '';
+  return `
+    <div class="schedule-advisor-audit-next">
+      <span><strong>Next action</strong>${scheduleEscape(issue.actionSummary || 'Review in Terp Track')}</span>
+      <span><strong>Browse target</strong>${scheduleEscape(issue.browseTarget || 'Browse course catalog')}</span>
+    </div>
+    <div class="schedule-advisor-audit-actions">
+      <button class="schedule-advisor-audit-link primary" type="button" data-schedule-audit-primary="${scheduleEscape(issue.key)}">${scheduleEscape(issue.actionLabel || 'Open')}</button>
+      <button class="schedule-advisor-audit-link" type="button" data-schedule-audit-browse="${scheduleEscape(issue.key)}">Open Browse</button>
+    </div>
+  `;
 }
 
 function scheduleAdvisorAuditSummaryHtml(issues) {
@@ -1666,6 +1732,7 @@ function scheduleAdvisorAuditSummaryHtml(issues) {
               <strong>${scheduleEscape(issue.title)}</strong>
               <p>${scheduleEscape(issue.summary)}</p>
               <span>${scheduleEscape([issue.status, issue.satisfies].filter(Boolean).join(' · '))}</span>
+              ${scheduleAuditIssueActionHtml(issue)}
             </div>
           </div>
         `).join('')}
@@ -1688,8 +1755,26 @@ function scheduleAdvisorAuditSummaryText(issues) {
     lines.push(`- ${scheduleAuditIssueLevelLabel(issue)}: ${issue.title}${issue.status ? ` (${issue.status})` : ''}`);
     if (issue.summary) lines.push(`  ${issue.summary}`);
     if (issue.satisfies) lines.push(`  Satisfies: ${issue.satisfies}`);
+    if (issue.actionSummary) lines.push(`  Next action: ${issue.actionSummary}`);
+    if (issue.browseTarget) lines.push(`  Browse target: ${issue.browseTarget}`);
   });
   return lines;
+}
+
+function scheduleOpenAdvisorAuditPrimary(key) {
+  if (typeof auditOpenIssuePrimary !== 'function') {
+    if (typeof toastError === 'function') toastError('Degree audit actions are still loading.');
+    return;
+  }
+  auditOpenIssuePrimary(key);
+}
+
+function scheduleOpenAdvisorAuditBrowse(key) {
+  if (typeof auditOpenIssueBrowse !== 'function') {
+    if (typeof toastError === 'function') toastError('Degree audit Browse actions are still loading.');
+    return;
+  }
+  auditOpenIssueBrowse(key);
 }
 
 function scheduleCourseIsGenEd(course) {
@@ -1989,6 +2074,12 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-audit-row b{font-size:10px;text-transform:uppercase;color:#8b0000}
     .schedule-advisor-audit-row p{margin:2px 0;color:#5d5962}
     .schedule-advisor-audit-row span{display:block;color:#5d5962;font-size:11px}
+    .schedule-advisor-audit-next{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:7px}
+    .schedule-advisor-audit-next span{border:1px solid #d8cec0;border-radius:7px;background:#fbf7ef;padding:6px 7px}
+    .schedule-advisor-audit-next strong{display:block;color:#8b0000;font-size:9px;text-transform:uppercase}
+    .schedule-advisor-audit-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+    .schedule-advisor-audit-link{border:1px solid #9fb4c8;border-radius:999px;background:#eef4fa;color:#2e5c8b;font-size:11px;font-weight:700;padding:4px 8px}
+    .schedule-advisor-audit-link.primary{border-color:#2e5c8b;background:#2e5c8b;color:#fff}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
@@ -2368,6 +2459,20 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
     btn.addEventListener('click', e => {
       e.preventDefault();
       setScheduleAdvisorFilter(btn.dataset.advisorFilter);
+    });
+  });
+  root.querySelectorAll('[data-schedule-audit-primary]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      root.dataset.lastAuditAction = 'primary';
+      scheduleOpenAdvisorAuditPrimary(btn.dataset.scheduleAuditPrimary);
+    });
+  });
+  root.querySelectorAll('[data-schedule-audit-browse]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      root.dataset.lastAuditAction = 'browse';
+      scheduleOpenAdvisorAuditBrowse(btn.dataset.scheduleAuditBrowse);
     });
   });
 }
