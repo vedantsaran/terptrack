@@ -3829,3 +3829,55 @@ Next pass candidates:
 - Add per-major requirement-source citations to generated schedules.
 - Add a resolution/dismissal flow for reviewed prior-credit conflict audit items.
 - Add advisor-packet import/open affordances for loading shared plans before following packet action links.
+
+## 2026-06-30 Pass 76
+
+Focus: add a resolution/dismissal flow for reviewed prior-credit conflict audit items.
+
+Planned changes:
+- Let students mark a prior-credit conflict as reviewed after checking official sources or advisor guidance.
+- Persist the reviewed state on the same recent-change review payload that created the audit issue.
+- Remove reviewed prior-credit conflicts from Degree Audit and advisor audit snapshots.
+- Keep the Settings review action and prior-credit undo behavior intact.
+
+Completed:
+- `auditRecentPriorCreditChanges()` now ignores prior-credit review payloads with `resolvedAt` or legacy `reviewedAt`.
+- Added `auditMarkPriorCreditReviewed()` to:
+  - find the exact prior-credit recent change behind the open audit issue.
+  - store `undo.review.resolvedAt`.
+  - store `undo.review.resolvedSummary`.
+  - add a `Prior-credit conflicts marked reviewed.` highlight to the recent change.
+  - save state, refresh the audit panel, refresh change history when present, and show a success toast.
+- The prior-credit audit drawer now keeps `Review prior credits` as the primary Settings action and uses `Mark Reviewed` as the secondary action instead of a duplicate Settings button.
+- Advisor audit snapshots automatically stop including reviewed prior-credit conflicts because they are built from the filtered audit issue list.
+- Versioned changed browser asset:
+  - `js/audit.js?v=3`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `AUDIT-ISSUES` fixture confirms:
+  - the prior-credit drawer renders `Review prior credits`, `Mark Reviewed`, and duplicate-credit rules.
+  - the primary action still opens/focuses Settings.
+  - the deep-link Browse-style action still opens/focuses Settings for advisor packet compatibility.
+  - marking reviewed returns `true`.
+  - the recent change persists `undo.review.resolvedAt` and `undo.review.resolvedSummary`.
+  - the recent change adds the reviewed highlight.
+  - the reviewed prior-credit issue disappears from Degree Audit.
+  - the reviewed prior-credit issue disappears from advisor audit snapshots.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/` and a temporary same-origin seed page, then removed the seed page and stopped the server before commit.
+- Chrome confirmed:
+  - `js/audit.js?v=3`, `js/schedule.js?v=30`, and `js/onboarding.js?v=15` loaded.
+  - before review, Degree Audit showed `1 prior-credit review`.
+  - the open issue showed `MATH 140 via AP Calc BC 4+, Manual entry`, `Review prior credits`, and `Mark Reviewed`.
+  - after clicking `Mark Reviewed`, Degree Audit showed `0 prior-credit reviews` and no prior-credit conflict item.
+  - after reload, the reviewed conflict stayed hidden, confirming persisted state.
+  - there was no horizontal overflow.
+  - browser console errors were clean.
+- Finalized the Chrome tab.
+
+Next pass candidates:
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add per-major requirement-source citations to generated schedules.
+- Add advisor-packet import/open affordances for loading shared plans before following packet action links.
+- Add a reviewed-prior-credit history filter or restore flow in Timeline.

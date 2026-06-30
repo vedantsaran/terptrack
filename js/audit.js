@@ -525,7 +525,13 @@ function auditRecentPriorCreditChanges(limit = 5) {
     : (Array.isArray(appState.recentChanges) ? appState.recentChanges : []);
   return (changes || [])
     .filter(change => change?.undo?.kind === 'prior-credit' && !change.undo.appliedAt)
+    .filter(change => !auditPriorCreditReviewResolved(change))
     .slice(0, limit);
+}
+
+function auditPriorCreditReviewResolved(change) {
+  const review = change?.undo?.review || {};
+  return !!(review.resolvedAt || review.reviewedAt);
 }
 
 function auditPriorCreditEvidence(change) {
@@ -662,7 +668,6 @@ function auditIssuesHtml() {
 function auditIssueCardHtml(issue) {
   const open = auditIssueKey === issue.key;
   const tags = (issue.tags || []).map(tag => `<span>${auditEscape(tag)}</span>`).join('');
-  const secondaryLabel = issue.actionType === 'prior-credit' ? 'Open Settings' : 'Open Browse';
   return `
     <div class="audit-issue ${auditEscape(issue.level)} ${open ? 'open' : ''}">
       <button type="button" class="audit-issue-main" onclick="auditToggleIssue('${auditEscape(issue.key)}')" aria-expanded="${open ? 'true' : 'false'}">
@@ -687,7 +692,9 @@ function auditIssueCardHtml(issue) {
           </div>
           <div class="audit-issue-actions">
             <button type="button" class="btn small primary" onclick="auditOpenIssuePrimary('${auditEscape(issue.key)}')">${auditEscape(issue.actionLabel || 'Open')}</button>
-            <button type="button" class="btn small" onclick="auditOpenIssueBrowse('${auditEscape(issue.key)}')">${auditEscape(secondaryLabel)}</button>
+            ${issue.actionType === 'prior-credit'
+              ? `<button type="button" class="btn small" onclick="auditMarkPriorCreditReviewed('${auditEscape(issue.key)}')">Mark Reviewed</button>`
+              : `<button type="button" class="btn small" onclick="auditOpenIssueBrowse('${auditEscape(issue.key)}')">Open Browse</button>`}
           </div>
         </div>
       ` : ''}
@@ -761,5 +768,50 @@ function auditOpenPriorCreditReview(issue) {
     if (section?.scrollIntoView) section.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
   if (typeof toastInfo === 'function') toastInfo('Opened Settings prior-credit review.');
+  return true;
+}
+
+function auditFindRecentPriorCreditChange(issue) {
+  const appState = typeof state !== 'undefined' ? state : {};
+  const changes = typeof recentPlanChanges === 'function'
+    ? recentPlanChanges()
+    : (Array.isArray(appState.recentChanges) ? appState.recentChanges : []);
+  const changeId = String(issue?.changeId || '');
+  return (changes || []).find(change => String(change?.id || '') === changeId) || null;
+}
+
+function auditRefreshIssuePanel() {
+  const doc = typeof document !== 'undefined' ? document : null;
+  if (!doc?.getElementById) return;
+  if (doc.getElementById('audit-percent') && typeof renderAudit === 'function') {
+    renderAudit();
+    return;
+  }
+  const issuesEl = doc.getElementById('audit-issues');
+  if (issuesEl) issuesEl.innerHTML = auditIssuesHtml();
+}
+
+function auditMarkPriorCreditReviewed(key) {
+  const issue = auditFindIssue(key);
+  if (!issue || issue.actionType !== 'prior-credit') return false;
+  const change = auditFindRecentPriorCreditChange(issue);
+  if (!change?.undo?.review) {
+    if (typeof toastError === 'function') toastError('Could not find that prior-credit review.');
+    return false;
+  }
+  const resolvedAt = new Date().toISOString();
+  change.undo.review.resolvedAt = resolvedAt;
+  change.undo.review.resolvedSummary = issue.summary || '';
+  const highlight = 'Prior-credit conflicts marked reviewed.';
+  const existingHighlights = Array.isArray(change.highlights) ? change.highlights : [];
+  change.highlights = [
+    highlight,
+    ...existingHighlights.filter(item => String(item || '') !== highlight),
+  ].slice(0, 6);
+  if (typeof saveState === 'function') saveState();
+  auditIssueKey = '';
+  auditRefreshIssuePanel();
+  if (typeof renderPlanChangeHistory === 'function') renderPlanChangeHistory();
+  if (typeof toastSuccess === 'function') toastSuccess('Prior-credit conflict marked reviewed.');
   return true;
 }

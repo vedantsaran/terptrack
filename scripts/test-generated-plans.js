@@ -1705,6 +1705,12 @@ function testAuditIssueDrawer(context) {
       const advisorOutput = buildScheduleOutput('PASS54', '202608', state.activeSchedule[0].courses, [], [], [], { ...DEFAULT_SCHEDULE_PREFS });
       state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: false };
       const advisorOutputNoAudit = buildScheduleOutput('PASS54', '202608', state.activeSchedule[0].courses, [], [], [], { ...DEFAULT_SCHEDULE_PREFS });
+      const priorCreditReviewed = auditMarkPriorCreditReviewed(priorCreditIssue.key);
+      const reviewedChange = state.recentChanges.find(change => change.id === 'prior-conflict-1') || null;
+      const reviewedIssues = auditDegreeIssues();
+      const reviewedAdvisorIssues = scheduleAdvisorAuditIssues(20);
+      const reviewedAdvisorPriorCredit = reviewedAdvisorIssues.find(issue => issue.type === 'prior-credit') || null;
+      const reviewedAuditHtml = auditIssuesHtml();
       auditOpenIssuePrimary(dshuSlot.key);
       const directOpenedPlaceholder = openedPlaceholder ? { ...openedPlaceholder } : null;
       auditOpenIssueBrowse(genedGap.key);
@@ -1749,6 +1755,11 @@ function testAuditIssueDrawer(context) {
         priorCreditPrimaryFocused,
         priorCreditBrowseOpened,
         priorCreditBrowseFocused,
+        priorCreditReviewed,
+        reviewedChange,
+        reviewedCount: reviewedIssues.length,
+        reviewedAdvisorPriorCredit,
+        reviewedAuditHtml,
         dshuSlot,
         gvptSlot,
         freeSlot,
@@ -1782,12 +1793,17 @@ function testAuditIssueDrawer(context) {
   assert(/Degree|open item|Why it remains|What can satisfy it|Choose Replacement|Open Browse/.test(result.html), 'audit issues: expanded drawer should render explanatory copy and actions');
   assert(result.priorCreditIssue?.actionType === 'prior-credit', 'audit issues: should create a prior-credit review action from saved conflict evidence');
   assert(/MATH 140 via AP Calc BC 4\+/.test(result.priorCreditIssue.summary) && /already marked passed/.test(result.priorCreditIssue.summary + result.priorCreditIssue.detail), 'audit issues: prior-credit item should summarize overlaps and existing attempts');
-  assert(/Review prior credits/.test(result.priorCreditHtml) && /Open Settings/.test(result.priorCreditHtml) && /Duplicate-credit/.test(result.priorCreditHtml), 'audit issues: prior-credit drawer should render Settings review actions and rules');
+  assert(/Review prior credits/.test(result.priorCreditHtml) && /Mark Reviewed/.test(result.priorCreditHtml) && /Duplicate-credit/.test(result.priorCreditHtml), 'audit issues: prior-credit drawer should render Settings review actions and rules');
   assert(result.priorCreditPrimaryOpened === 1 && result.priorCreditPrimaryFocused === 1, 'audit issues: prior-credit primary action should open and focus Settings');
   assert(result.priorCreditBrowseOpened === 1 && result.priorCreditBrowseFocused === 1, 'audit issues: prior-credit Browse action should reuse the Settings review path');
+  assert(result.priorCreditReviewed === true, 'audit issues: prior-credit review should be markable as reviewed');
+  assert(result.reviewedChange?.undo?.review?.resolvedAt && /MATH 140 via AP Calc BC 4\+/.test(result.reviewedChange.undo.review.resolvedSummary || ''), 'audit issues: reviewed prior-credit change should persist resolved timestamp and summary');
+  assert((result.reviewedChange?.highlights || []).includes('Prior-credit conflicts marked reviewed.'), 'audit issues: reviewed prior-credit change should add a recent-change highlight');
+  assert(result.reviewedCount === result.count - 1 && !/Prior credit conflicts need review/.test(result.reviewedAuditHtml), 'audit issues: reviewed prior-credit item should disappear from Degree Audit');
   assert(result.advisorOptions.auditIssues === true, 'advisor audit export: audit issues should default into schedule output options');
   assert(result.advisorPriorCredit?.actionSummary === 'Review prior-credit conflicts in Settings', 'advisor audit export: prior-credit item should describe the Settings review action');
   assert(result.advisorPriorCredit?.browseTarget === 'Settings · AP / IB / Transfer Credit', 'advisor audit export: prior-credit item should target Settings instead of Browse');
+  assert(!result.reviewedAdvisorPriorCredit, 'advisor audit export: reviewed prior-credit item should disappear from advisor audit snapshots');
   assert(/Replace GenEd DSHU in Pass 54 Fall/.test(result.advisorDshuSlot?.actionSummary || ''), 'advisor audit export: placeholder issue should include replacement quick-link action text');
   assert(/Profile departments/.test(result.advisorDshuGap?.browseTarget || '') && /DSHU/.test(result.advisorDshuGap?.browseTarget || ''), 'advisor audit export: GenEd issue should include Browse target quick-link context');
   assert(/Degree Audit Snapshot/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include audit snapshot section');
