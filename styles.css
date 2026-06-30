@@ -1813,6 +1813,75 @@ h1.hero-title em {
   gap: 8px;
   margin-top: 12px;
 }
+.account-checklist {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.account-checklist-head,
+.account-check {
+  display: grid;
+  gap: 8px;
+}
+.account-checklist-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+}
+.account-checklist-head strong {
+  color: var(--ink);
+  font-size: .78rem;
+}
+.account-checklist-head span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+}
+.account-check {
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 8px;
+}
+.account-check b {
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  letter-spacing: .05em;
+  padding: 3px 6px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.account-check.ok b {
+  background: rgba(46,107,63,.12);
+  color: var(--green);
+}
+.account-check.warn b {
+  background: rgba(245,158,11,.14);
+  color: var(--amber);
+}
+.account-check.missing b {
+  background: rgba(175,35,35,.10);
+  color: var(--red);
+}
+.account-check strong,
+.account-check span {
+  display: block;
+}
+.account-check strong {
+  color: var(--ink);
+  font-size: .74rem;
+  line-height: 1.25;
+}
+.account-check span {
+  color: var(--slate);
+  font-size: .7rem;
+  line-height: 1.35;
+  margin-top: 2px;
+}
 .account-subsection {
   margin-top: 12px;
 }
@@ -4629,6 +4698,12 @@ h1.hero-title em {
   }
   .account-actions .btn {
     flex: 1 1 160px;
+  }
+  .account-check {
+    grid-template-columns: 1fr;
+  }
+  .account-check b {
+    justify-self: start;
   }
   .account-friend-row {
     align-items: stretch;

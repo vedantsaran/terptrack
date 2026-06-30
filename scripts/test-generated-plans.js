@@ -52,6 +52,7 @@ function buildContext() {
     'js/api.js',
     'js/import.js',
     'js/share.js',
+    'js/account.js',
     'js/schedule.js',
     'js/browse.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
@@ -363,6 +364,40 @@ function testScheduleTimingFit(context) {
   };
 }
 
+function testAccountCloudSetup(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      const missing = accountCloudSetupChecks({ source: 'none', supabaseUrl: '', supabaseAnonKey: '' }, false, 'https://terptrack.vercel.app');
+      const manual = accountCloudSetupChecks({ source: 'manual', supabaseUrl: 'https://demo.supabase.co', supabaseAnonKey: 'a'.repeat(80) }, true, 'http://127.0.0.1:5174');
+      const vercel = accountCloudSetupChecks({ source: 'vercel', supabaseUrl: 'https://demo.supabase.co', supabaseAnonKey: 'b'.repeat(80) }, true, 'https://terptrack.vercel.app');
+      const html = accountCloudSetupHtml({ source: 'vercel', supabaseUrl: 'https://demo.supabase.co', supabaseAnonKey: 'b'.repeat(80) }, true);
+      return {
+        missingStatuses: missing.map(check => check.status).join(','),
+        manualDeployment: manual.find(check => check.id === 'deployment')?.status || '',
+        manualClient: manual.find(check => check.id === 'client')?.status || '',
+        vercelDeployment: vercel.find(check => check.id === 'deployment')?.status || '',
+        vercelCredentials: vercel.find(check => check.id === 'credentials')?.status || '',
+        vercelClient: vercel.find(check => check.id === 'client')?.status || '',
+        html,
+      };
+    })()
+  `, context));
+
+  assert(result.missingStatuses.split(',').every(status => status === 'missing'), 'account setup: missing config should mark every setup check missing');
+  assert(result.manualDeployment === 'warn', 'account setup: manual config should warn for deployment');
+  assert(result.manualClient === 'ok', 'account setup: initialized manual client should be ready');
+  assert(result.vercelDeployment === 'ok', 'account setup: Vercel config should be deployment-ready');
+  assert(result.vercelCredentials === 'ok', 'account setup: valid Supabase credentials should be ready');
+  assert(result.vercelClient === 'ok', 'account setup: initialized Vercel client should be ready');
+  assert(/Cloud setup/.test(result.html) && /Vercel env vars are serving/.test(result.html), 'account setup: readiness HTML should explain Vercel config');
+
+  return {
+    id: 'ACCOUNT-CLOUD-SETUP',
+    missing: result.missingStatuses,
+    vercel: [result.vercelDeployment, result.vercelCredentials, result.vercelClient].join('/'),
+  };
+}
+
 async function testBrowseProfileDepartments(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -444,15 +479,17 @@ async function main() {
   }
   const prereq = testSyntheticPrerequisites(context);
   const account = testAccountAndShareState(context);
+  const accountSetup = testAccountCloudSetup(context);
   const timing = testScheduleTimingFit(context);
   const browse = await testBrowseProfileDepartments(context);
 
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
+  console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + schedule timing + browse profile).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + account setup + schedule timing + browse profile).`);
 }
 
 main().catch(error => {

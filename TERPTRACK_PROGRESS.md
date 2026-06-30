@@ -1670,3 +1670,56 @@ Next pass candidates:
 - Improve Browse with saved profile searches and richer personalized class recommendations.
 - Add a term-by-term registration checklist that connects remaining GenEds, prerequisites, and section timing risks.
 - Add exportable advisor questions generated from blockers, schedule timing risks, and unmet GenEds.
+
+## 2026-06-30 Pass 39
+
+Focus: make cloud account setup self-diagnosing so Supabase/Vercel deployment is easier to verify before real students rely on it.
+
+Planned changes:
+- Add in-app cloud setup readiness checks to the Account modal.
+- Validate config source, Supabase URL/key shape, client initialization, schema, and magic-link redirect expectations.
+- Expand README setup instructions into a concrete Supabase/Vercel runbook.
+- Add regression coverage for the readiness model.
+
+Completed:
+- Added `accountConfigQuality()` in `js/account.js`.
+- Added `accountCloudSetupChecks()` to produce structured setup checks for:
+  - deployment config.
+  - Supabase credentials.
+  - client connection.
+  - database schema.
+  - magic-link redirect.
+- Added `accountCloudSetupHtml()` and rendered it inside the Account modal's Cloud config card.
+- The Account modal now shows a compact `Cloud setup` checklist with ready/check/missing states.
+- Added responsive styles for the setup checklist in `styles.css`.
+- Expanded `README.md` with Supabase SQL, Auth redirect, Vercel env var, magic-link, cloud save/load, and friend-plan round-trip steps.
+- Versioned changed browser assets:
+  - `styles.css?v=36`
+  - `js/account.js?v=5`
+- Extended `scripts/test-generated-plans.js` to load `js/account.js`.
+- Added the `ACCOUNT-CLOUD-SETUP` regression fixture.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the account/share fixture, the new account setup fixture, the schedule timing/comparison/advisor fixture, and the Browse profile fixture.
+- Account setup fixture confirmed:
+  - missing config marks all setup checks missing.
+  - manual config warns for deployment while allowing an initialized client.
+  - Vercel config marks deployment, credential shape, and client connection ready.
+  - readiness HTML includes the Vercel config explanation.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass39account=1` from a temporary static server and confirmed:
+  - `styles.css?v=36` and `js/account.js?v=5` loaded.
+  - Account modal opened successfully.
+  - Cloud setup checklist rendered five checks.
+  - no-config state showed all checks missing and disabled magic-link sign-in.
+  - no console errors.
+  - no horizontal overflow at the browser's 380px viewport.
+- Reset the browser viewport and stopped the temporary static server.
+
+Next pass candidates:
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve Browse with saved profile searches and richer personalized class recommendations.
+- Add a term-by-term registration checklist that connects remaining GenEds, prerequisites, and section timing risks.
+- Add exportable advisor questions generated from blockers, schedule timing risks, and unmet GenEds.

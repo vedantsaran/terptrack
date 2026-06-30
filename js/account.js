@@ -156,6 +156,95 @@ function accountConfigLabel(source) {
   return 'Local only';
 }
 
+function accountConfigQuality(config) {
+  const supabaseUrl = String(config?.supabaseUrl || '').trim();
+  const supabaseAnonKey = String(config?.supabaseAnonKey || '').trim();
+  const hasUrl = !!supabaseUrl;
+  const hasKey = !!supabaseAnonKey;
+  const urlLooksValid = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseUrl);
+  const keyLooksValid = supabaseAnonKey.length >= 40 && /^[A-Za-z0-9._-]+$/.test(supabaseAnonKey);
+  return { hasUrl, hasKey, urlLooksValid, keyLooksValid };
+}
+
+function accountCloudSetupChecks(config, clientReady = false, origin = '') {
+  const source = config?.source || 'none';
+  const quality = accountConfigQuality(config);
+  const currentOrigin = origin || (typeof location !== 'undefined' ? location.origin : '');
+  const configured = quality.hasUrl && quality.hasKey;
+  return [
+    {
+      id: 'deployment',
+      status: source === 'vercel' || source === 'window' ? 'ok' : source === 'manual' ? 'warn' : 'missing',
+      label: 'Deployment config',
+      detail: source === 'vercel'
+        ? 'Vercel env vars are serving /api/config.'
+        : source === 'window'
+          ? 'Runtime window config is present.'
+          : source === 'manual'
+            ? 'Manual browser config works for local testing; add Vercel env vars before launch.'
+            : 'Add SUPABASE_URL and SUPABASE_ANON_KEY in Vercel.',
+    },
+    {
+      id: 'credentials',
+      status: configured && quality.urlLooksValid && quality.keyLooksValid ? 'ok' : configured ? 'warn' : 'missing',
+      label: 'Supabase credentials',
+      detail: !configured
+        ? 'Project URL and public anon key are required.'
+        : quality.urlLooksValid && quality.keyLooksValid
+          ? 'URL and anon key shape look ready.'
+          : 'Check the project URL and anon key formatting.',
+    },
+    {
+      id: 'client',
+      status: clientReady ? 'ok' : configured ? 'warn' : 'missing',
+      label: 'Client connection',
+      detail: clientReady
+        ? 'Supabase client initialized.'
+        : configured
+          ? 'Credentials are present; client still needs to initialize.'
+          : 'Client will stay disabled until credentials exist.',
+    },
+    {
+      id: 'schema',
+      status: configured ? 'warn' : 'missing',
+      label: 'Database schema',
+      detail: configured
+        ? 'Confirm supabase/schema.sql is applied in the Supabase SQL editor.'
+        : 'Apply supabase/schema.sql after creating the Supabase project.',
+    },
+    {
+      id: 'redirect',
+      status: currentOrigin && configured ? 'warn' : 'missing',
+      label: 'Magic-link redirect',
+      detail: currentOrigin && configured
+        ? `Confirm ${currentOrigin} is allowed in Supabase Auth URL settings.`
+        : 'Add the deployed app URL to Supabase Auth URL settings.',
+    },
+  ];
+}
+
+function accountCloudSetupHtml(config, clientReady) {
+  const checks = accountCloudSetupChecks(config, clientReady);
+  const okCount = checks.filter(check => check.status === 'ok').length;
+  return `
+    <div class="account-checklist">
+      <div class="account-checklist-head">
+        <strong>Cloud setup</strong>
+        <span>${okCount}/${checks.length} ready</span>
+      </div>
+      ${checks.map(check => `
+        <div class="account-check ${accountEscape(check.status)}">
+          <b>${accountEscape(check.status === 'ok' ? 'Ready' : check.status === 'warn' ? 'Check' : 'Missing')}</b>
+          <div>
+            <strong>${accountEscape(check.label)}</strong>
+            <span>${accountEscape(check.detail)}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function accountTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Never';
@@ -810,6 +899,7 @@ async function renderAccountModal() {
         <button class="btn small" type="button" onclick="accountSaveManualConfig()">Save dev config</button>
         <button class="btn small" type="button" onclick="accountClearManualConfig()">Clear dev config</button>
       </div>
+      ${accountCloudSetupHtml(config, !!client)}
     </div>
   `;
 
