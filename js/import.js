@@ -295,6 +295,7 @@ function autoPlanAnalyzeSchedule(semesters, opts = {}) {
   });
   const genEdPlaceholders = courses.filter(course => /^GenEd\s/i.test(course.code || ''));
   const freeElectives = courses.filter(course => /^Free Elective/i.test(course.code || ''));
+  const placeholderCourses = [...genEdPlaceholders, ...freeElectives];
   const selectedInterests = typeof profileSelectedInterestDefs === 'function'
     ? profileSelectedInterestDefs(prefs || undefined).map(def => def.label)
     : [];
@@ -319,7 +320,13 @@ function autoPlanAnalyzeSchedule(semesters, opts = {}) {
       title: course.title,
       note: course.note,
     })),
-    placeholderCredits: [...genEdPlaceholders, ...freeElectives].reduce((sum, course) => sum + autoPlanCredits(course), 0),
+    placeholderSamples: placeholderCourses.slice(0, 5).map(course => ({
+      code: course.code,
+      title: course.title,
+      cr: autoPlanCredits(course),
+      note: course.note,
+    })),
+    placeholderCredits: placeholderCourses.reduce((sum, course) => sum + autoPlanCredits(course), 0),
     heavyTerms: termLoads.filter(term => term.heavy),
     fullTerms: termLoads.filter(term => term.full),
     profile: {
@@ -403,6 +410,12 @@ async function buildAutoPlanPreview(majorId, opts = {}) {
       profilePrefs,
       requirementCourseCount: tplCatalog.length,
     });
+    const liveCodes = tplCatalog
+      .filter(item => fetched && fetched[normalizeCode(item.code)])
+      .map(item => displayCode(item.code));
+    const missingCodes = tplCatalog
+      .filter(item => !(fetched && fetched[normalizeCode(item.code)]))
+      .map(item => displayCode(item.code));
     return {
       ...base,
       ...analysis,
@@ -412,6 +425,9 @@ async function buildAutoPlanPreview(majorId, opts = {}) {
         found: fetchedCount,
         total: codes.length,
         missing: Math.max(0, codes.length - fetchedCount),
+        coveragePct: codes.length ? Math.round((fetchedCount / codes.length) * 100) : 100,
+        liveCodes: liveCodes.slice(0, 10),
+        missingCodes: missingCodes.slice(0, 14),
       },
     };
   })();

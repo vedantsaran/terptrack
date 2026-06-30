@@ -81,6 +81,145 @@ function autoPlanGenEdList(summary) {
   `).join('');
 }
 
+function autoPlanDiagnostic(level, title, body, meta = '') {
+  return { level: level || 'info', title, body, meta };
+}
+
+function autoPlanDiagnostics(review) {
+  if (!review) return [];
+  if (review.kind === 'curated') {
+    return [
+      autoPlanDiagnostic('ok', 'Curated source', 'This plan uses a hand-built four-year layout for the selected major.', 'Local schedule'),
+      autoPlanDiagnostic('ok', 'Editable after apply', 'Courses, terms, sections, and statuses can still be customized after applying.', `${review.courseCount || 0} courses`),
+    ];
+  }
+
+  const diagnostics = [];
+  const metadata = review.metadataCoverage || null;
+  if (metadata) {
+    if (metadata.total && metadata.missing === 0) {
+      diagnostics.push(autoPlanDiagnostic(
+        'ok',
+        'Live metadata complete',
+        'Every major requirement preview used live course metadata before scheduling.',
+        `${metadata.coveragePct}% live`,
+      ));
+    } else if (metadata.found > 0) {
+      diagnostics.push(autoPlanDiagnostic(
+        'warn',
+        'Mixed metadata sources',
+        `${metadata.found}/${metadata.total} requirements used live metadata; ${metadata.missing} used template fallback credits and titles.`,
+        `${metadata.coveragePct}% live`,
+      ));
+    } else {
+      diagnostics.push(autoPlanDiagnostic(
+        'warn',
+        'Template-only preview',
+        'The preview used local requirement data and 3-credit fallback rows because live metadata was unavailable.',
+        `${metadata.total || 0} requirements`,
+      ));
+    }
+  }
+
+  const heavyTerms = review.heavyTerms || [];
+  const fullTerms = review.fullTerms || [];
+  if (heavyTerms.length) {
+    diagnostics.push(autoPlanDiagnostic(
+      'warn',
+      'Heavy term load',
+      `${heavyTerms.map(term => term.name).join(', ')} reach 18 credits. Move placeholders after applying if needed.`,
+      `${heavyTerms.length} heavy term${heavyTerms.length === 1 ? '' : 's'}`,
+    ));
+  } else {
+    diagnostics.push(autoPlanDiagnostic(
+      'ok',
+      'Load balance',
+      'No generated term exceeds the 18-credit hard cap.',
+      `${fullTerms.length} full term${fullTerms.length === 1 ? '' : 's'}`,
+    ));
+  }
+
+  const missingGenEds = (review.genEdSummary || []).filter(req => !req.complete);
+  if (missingGenEds.length) {
+    diagnostics.push(autoPlanDiagnostic(
+      'danger',
+      'GenEd gaps remain',
+      `Missing ${missingGenEds.map(req => req.id).join(', ')} after generation.`,
+      `${review.genEdCompleteCount}/${review.genEdRequirementCount} covered`,
+    ));
+  } else {
+    diagnostics.push(autoPlanDiagnostic(
+      'ok',
+      'GenEd placeholders covered',
+      'The generated plan reserves slots for every tracked GenEd and I-Series bucket.',
+      `${review.genEdPlaceholders || 0} GenEd placeholders`,
+    ));
+  }
+
+  const placeholderCredits = review.placeholderCredits || 0;
+  if (placeholderCredits > 0) {
+    diagnostics.push(autoPlanDiagnostic(
+      'info',
+      'Replacement work',
+      `${placeholderCredits} credits are placeholders for GenEds, electives, minors, certificates, or interests.`,
+      `${(review.placeholderSamples || []).length} examples shown`,
+    ));
+  }
+
+  const profile = review.profile || {};
+  diagnostics.push(profile.active
+    ? autoPlanDiagnostic(
+      'ok',
+      'Personalized electives',
+      'Free-elective placeholders are labeled from your interests, preferred departments, and career goal.',
+      (profile.preferredDepartments || []).slice(0, 4).join(', ') || 'Profile active',
+    )
+    : autoPlanDiagnostic(
+      'info',
+      'Neutral electives',
+      'Add interests and preferred departments below to make free-elective placeholders more useful.',
+      'Optional',
+    ));
+
+  return diagnostics.slice(0, 6);
+}
+
+function autoPlanDiagnosticsHtml(review) {
+  const diagnostics = autoPlanDiagnostics(review);
+  if (!diagnostics.length) return '';
+  return `
+    <div class="auto-plan-diagnostics">
+      <span class="auto-plan-review-label">Diagnostics</span>
+      <div class="auto-plan-diagnostic-grid">
+        ${diagnostics.map(item => `
+          <div class="auto-plan-diagnostic ${settingsHtml(item.level)}">
+            <strong>${settingsHtml(item.title)}</strong>
+            <p>${settingsHtml(item.body)}</p>
+            ${item.meta ? `<span>${settingsHtml(item.meta)}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function autoPlanSourceSamplesHtml(review) {
+  const metadata = review && review.metadataCoverage;
+  if (!metadata) return '';
+  const live = metadata.liveCodes || [];
+  const missing = metadata.missingCodes || [];
+  const placeholderSamples = review.placeholderSamples || [];
+  const placeholderTotal = (review.genEdPlaceholders || 0) + (review.freeElectives || 0);
+  if (!live.length && !missing.length && !placeholderSamples.length) return '';
+  return `
+    <div class="auto-plan-source-samples">
+      ${live.length ? `<span><strong>Live metadata</strong>${settingsHtml(live.join(', '))}</span>` : ''}
+      ${missing.length ? `<span><strong>Template fallback</strong>${settingsHtml(missing.join(', '))}${metadata.missing > missing.length ? ` +${settingsHtml(metadata.missing - missing.length)} more` : ''}</span>` : ''}
+      ${placeholderSamples.length ? `<span><strong>Placeholders to replace</strong>${settingsHtml(placeholderSamples.map(course => course.code).join(', '))}${placeholderTotal > placeholderSamples.length ? ` +${settingsHtml(placeholderTotal - placeholderSamples.length)} more` : ''}</span>` : ''}
+    </div>
+  `;
+}
+
 function autoPlanReviewHtml(review) {
   const planned = review.totalCredits || 0;
   const target = review.targetCredits || 120;
@@ -122,6 +261,7 @@ function autoPlanReviewHtml(review) {
         ${autoPlanReviewStat('courses', review.courseCount || 'ready', 'progress is preserved')}
       </div>
       ${review.termLoads ? `<div class="auto-plan-loads">${autoPlanTermList(review.termLoads)}</div>` : ''}
+      ${autoPlanDiagnosticsHtml(review)}
     `;
   }
 
@@ -155,6 +295,8 @@ function autoPlanReviewHtml(review) {
       <span class="auto-plan-review-label">GenEd / I-Series Coverage</span>
       <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>
     </div>
+    ${autoPlanDiagnosticsHtml(review)}
+    ${autoPlanSourceSamplesHtml(review)}
     <div class="auto-plan-profile">
       <strong>Profile fit</strong>
       <span>${settingsHtml(profileText)}</span>
@@ -366,3 +508,30 @@ function applySettings() {
     semSel.value = cur;
   }
 }
+
+function bindSettingsButton() {
+  const btn = document.getElementById('settings-btn');
+  if (!btn || btn.dataset.settingsBound) return;
+  btn.dataset.settingsBound = '1';
+  btn.addEventListener('click', () => {
+    try {
+      openSettings();
+    } catch (error) {
+      console.error('Could not open settings', error);
+      if (typeof toastError === 'function') toastError('Could not open Settings. Try reloading TerpTrack.');
+    }
+  });
+}
+
+if (typeof window !== 'undefined') {
+  Object.assign(window, {
+    openSettings,
+    closeSettings,
+    saveSettings,
+    resetAllData,
+    applySettings,
+    applyMajorFromSettings,
+  });
+}
+
+bindSettingsButton();

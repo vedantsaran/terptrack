@@ -2292,6 +2292,71 @@ h1.hero-title em {
   border-color: rgba(139,0,0,.28);
   background: rgba(139,0,0,.06);
 }
+.auto-plan-diagnostics {
+  margin-top: 10px;
+}
+.auto-plan-diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.auto-plan-diagnostic {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 9px;
+}
+.auto-plan-diagnostic.ok { border-left-color: var(--green); }
+.auto-plan-diagnostic.warn { border-left-color: var(--amber); }
+.auto-plan-diagnostic.danger { border-left-color: var(--red); }
+.auto-plan-diagnostic strong,
+.auto-plan-diagnostic span {
+  display: block;
+}
+.auto-plan-diagnostic strong {
+  color: var(--ink);
+  font-size: .76rem;
+  line-height: 1.2;
+}
+.auto-plan-diagnostic p {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: .7rem;
+  line-height: 1.35;
+}
+.auto-plan-diagnostic span {
+  margin-top: 6px;
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  overflow-wrap: anywhere;
+}
+.auto-plan-source-samples {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+.auto-plan-source-samples span,
+.auto-plan-source-samples strong {
+  display: block;
+}
+.auto-plan-source-samples span {
+  color: var(--slate);
+  font-size: .7rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.auto-plan-source-samples strong {
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
 .auto-plan-profile {
   margin-top: 10px;
   padding-top: 9px;
@@ -4806,7 +4871,7 @@ h1.hero-title em {
   .topbar .label { display: none; }
   .topbar-actions {
     flex: 1;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 6px;
     overflow-x: auto;
     scrollbar-width: none;
@@ -4901,6 +4966,9 @@ h1.hero-title em {
   }
   .auto-plan-review-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .auto-plan-diagnostic-grid {
+    grid-template-columns: 1fr;
   }
   .auto-plan-load {
     max-width: calc(50% - 3px);

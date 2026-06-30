@@ -1830,3 +1830,67 @@ Next pass candidates:
 - Improve Browse with saved profile searches and richer personalized class recommendations.
 - Add a first-run interactive profile flow that creates a personalized four-year plan from major, interests, AP/transfer credits, and target graduation date.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 42
+
+Focus: make generated major plans explain their source quality before a student applies them.
+
+Planned changes:
+- Add generated-plan diagnostics comparing live metadata with template-only fallback data.
+- Surface load balance, GenEd placeholder coverage, placeholder replacement work, and profile personalization in Settings.
+- Add regression coverage for diagnostics.
+- Browser-check the Settings modal on mobile.
+
+Completed:
+- Extended `autoPlanAnalyzeSchedule()` in `js/import.js` with `placeholderSamples`.
+- Extended `buildAutoPlanPreview()` metadata coverage with:
+  - `coveragePct`.
+  - `liveCodes`.
+  - `missingCodes`.
+- Added `autoPlanDiagnostic()`, `autoPlanDiagnostics()`, `autoPlanDiagnosticsHtml()`, and `autoPlanSourceSamplesHtml()` in `js/settings.js`.
+- Settings Auto Plan Review now shows a diagnostics grid for:
+  - live metadata complete vs mixed metadata vs template-only preview.
+  - load balance / heavy terms.
+  - GenEd placeholder coverage.
+  - placeholder replacement credits.
+  - personalized vs neutral elective placeholders.
+- Added source sample rows for live metadata, template fallback, and placeholders to replace.
+- Added responsive diagnostic styling in `styles.css`.
+- Made the Settings button binding more robust by exposing Settings entry points on `window`, binding the topbar Settings button from `js/settings.js`, and guarding the duplicate binding in `js/events.js`.
+- Fixed a mobile topbar hit-target bug where right-justified horizontally scrolling action buttons could overlap the brand and miss clicks.
+- Versioned changed browser assets:
+  - `styles.css?v=40`
+  - `js/settings.js?v=6`
+  - `js/import.js?v=5`
+  - `js/events.js?v=5`
+- Added the `AUTO-PLAN-DIAGNOSTICS` regression fixture.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the new auto-plan diagnostics fixture, the account/share fixture, the account setup fixture, the schedule timing/comparison/advisor fixture, the planner checklist fixture, the planner questions fixture, and the Browse profile fixture.
+- Auto-plan diagnostics fixture confirmed:
+  - template-only preview reports `0%` live coverage.
+  - template-only preview lists fallback codes.
+  - diagnostics include `Template-only preview` and `Replacement work`.
+  - source samples include `Template fallback` and `Placeholders to replace`.
+  - mixed preview counts `3/15` live records.
+  - mixed preview shows partial coverage percent.
+  - mixed diagnostics include `Mixed metadata sources`.
+  - mixed source samples compare `Live metadata` with `Template fallback`.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded a seeded `http://127.0.0.1:5174/?pass42diagnostics=1` state from a temporary static server and confirmed:
+  - `styles.css?v=40`, `js/settings.js?v=6`, `js/import.js?v=5`, and `js/events.js?v=5` loaded.
+  - mobile topbar Settings hit target lands on the Settings icon instead of the brand.
+  - Settings modal opens from the topbar at the browser's 380px viewport.
+  - generated STAT Auto Plan Review renders `auto-plan-review generated`.
+  - diagnostics render five cards: live metadata complete, load balance, GenEd placeholders covered, replacement work, and personalized electives.
+  - source samples render live metadata and placeholder replacement rows.
+  - no browser console warnings/errors.
+  - no horizontal overflow at the browser's 380px viewport.
+- Reset the browser viewport, removed the temporary seed page, and stopped the temporary static server.
+
+Next pass candidates:
+- Improve Browse with saved profile searches and richer personalized class recommendations.
+- Add a first-run interactive profile flow that creates a personalized four-year plan from major, interests, AP/transfer credits, and target graduation date.
+- Add diagnostics actions that jump directly from placeholder source samples to Browse replacement searches.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.

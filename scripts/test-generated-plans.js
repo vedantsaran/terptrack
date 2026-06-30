@@ -52,6 +52,7 @@ function buildContext() {
     'js/state.js',
     'js/api.js',
     'js/import.js',
+    'js/settings.js',
     'js/share.js',
     'js/account.js',
     'js/schedule.js',
@@ -261,6 +262,81 @@ function testAccountAndShareState(context) {
     normalizedInvite: result.inviteEmail,
     importedCourse: 'MATH 140',
     outputPreset: result.outputPreset,
+  };
+}
+
+async function testAutoPlanDiagnostics(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['ai-data'],
+        careerGoal: 'machine learning for public policy',
+        genEdDepts: 'INST, PSYC, GVPT'
+      });
+      const template = await buildAutoPlanPreview('STAT', {
+        noFetch: true,
+        force: true,
+        profilePrefs: getProfilePrefs()
+      });
+      const templateDiagnostics = autoPlanDiagnostics(template);
+      const templateHtml = autoPlanDiagnosticsHtml(template) + autoPlanSourceSamplesHtml(template);
+
+      fetchCoursesBatch = async (codes, onProgress) => {
+        const out = {};
+        codes.slice(0, 3).forEach((code, index) => {
+          out[normalizeCode(code)] = {
+            code: displayCode(code),
+            title: displayCode(code) + ' Live Course',
+            cr: index === 0 ? 4 : 3,
+            prereqs: [],
+            prereqGroups: [],
+            coreqs: [],
+            categories: [],
+            gen_ed: [],
+            avg_gpa: 3.1
+          };
+        });
+        if (onProgress) onProgress(3, codes.length);
+        return out;
+      };
+      const mixed = await buildAutoPlanPreview('STAT', {
+        force: true,
+        profilePrefs: getProfilePrefs()
+      });
+      const mixedDiagnostics = autoPlanDiagnostics(mixed);
+      const mixedHtml = autoPlanDiagnosticsHtml(mixed) + autoPlanSourceSamplesHtml(mixed);
+
+      return {
+        templateCoverage: template.metadataCoverage,
+        templateTitles: templateDiagnostics.map(item => item.title),
+        templateHtml,
+        templatePlaceholderSamples: template.placeholderSamples.map(item => item.code),
+        mixedCoverage: mixed.metadataCoverage,
+        mixedTitles: mixedDiagnostics.map(item => item.title),
+        mixedHtml,
+      };
+    })()
+  `, context));
+
+  assert(result.templateCoverage.coveragePct === 0, 'auto plan diagnostics: template-only preview should show 0% live coverage');
+  assert(result.templateCoverage.missingCodes.length > 0, 'auto plan diagnostics: template-only preview should list fallback codes');
+  assert(result.templateTitles.includes('Template-only preview'), 'auto plan diagnostics: should flag template-only source');
+  assert(result.templateTitles.includes('Replacement work'), 'auto plan diagnostics: should flag placeholder replacement work');
+  assert(/Template fallback/.test(result.templateHtml), 'auto plan diagnostics: source samples should include template fallback row');
+  assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
+  assert(result.templatePlaceholderSamples.length > 0, 'auto plan diagnostics: should include placeholder samples');
+
+  assert(result.mixedCoverage.found === 3, 'auto plan diagnostics: mixed preview should count live records');
+  assert(result.mixedCoverage.missing > 0, 'auto plan diagnostics: mixed preview should preserve fallback count');
+  assert(result.mixedCoverage.coveragePct > 0 && result.mixedCoverage.coveragePct < 100, 'auto plan diagnostics: mixed preview should show partial coverage percent');
+  assert(result.mixedCoverage.liveCodes.length === 3, 'auto plan diagnostics: mixed preview should include live code samples');
+  assert(result.mixedTitles.includes('Mixed metadata sources'), 'auto plan diagnostics: should flag mixed metadata sources');
+  assert(/Live metadata/.test(result.mixedHtml) && /Template fallback/.test(result.mixedHtml), 'auto plan diagnostics: mixed source samples should compare live and fallback rows');
+
+  return {
+    id: 'AUTO-PLAN-DIAGNOSTICS',
+    templateMissing: result.templateCoverage.missing,
+    mixedCoverage: `${result.mixedCoverage.found}/${result.mixedCoverage.total}`,
   };
 }
 
@@ -630,6 +706,7 @@ async function main() {
     rows.push(await testMajorFixture(context, fixture));
   }
   const prereq = testSyntheticPrerequisites(context);
+  const diagnostics = await testAutoPlanDiagnostics(context);
   const account = testAccountAndShareState(context);
   const accountSetup = testAccountCloudSetup(context);
   const timing = testScheduleTimingFit(context);
@@ -639,13 +716,14 @@ async function main() {
 
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
+  console.log(`Auto-plan diagnostics fixture ${diagnostics.id}: template missing ${diagnostics.templateMissing}; mixed ${diagnostics.mixedCoverage}.`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile).`);
 }
 
 main().catch(error => {

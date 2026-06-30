@@ -58,7 +58,10 @@ document.getElementById('settings-modal').addEventListener('click', (e) => {
 document.getElementById('add-semester-modal').addEventListener('click', (e) => {
   if (e.target.id === 'add-semester-modal') closeAddSemester();
 });
-document.getElementById('settings-btn').addEventListener('click', openSettings);
+const _settingsBtn = document.getElementById('settings-btn');
+if (_settingsBtn && typeof window.openSettings === 'function' && !_settingsBtn.dataset.settingsBound) {
+  _settingsBtn.addEventListener('click', window.openSettings);
+}
 document.getElementById('ac-lookup-btn').addEventListener('click', lookupCourseFromPlanetTerp);
 document.getElementById('add-semester-chip').addEventListener('click', openAddSemester);
 document.getElementById('import-chip').addEventListener('click', openImportCourses);
