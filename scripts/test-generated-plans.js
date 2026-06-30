@@ -1152,6 +1152,26 @@ async function testPlaceholderSectionPreview(context) {
       renderPlanChangeHistory();
       const historyHtml = historyRoot.innerHTML;
       const canUndoBefore = plannerChangeCanUndo(recentChange);
+      const originalActiveSchedule = JSON.parse(JSON.stringify(state.activeSchedule));
+      const movedCourse = state.activeSchedule[0].courses.shift();
+      state.activeSchedule.push({
+        id: 'PASS55B',
+        name: 'Pass 55 Later',
+        courses: [movedCourse]
+      });
+      renderPlanChangeHistory();
+      const movedHistoryHtml = historyRoot.innerHTML;
+      const movedCanUndo = plannerChangeCanUndo(recentChange);
+      const movedReviewTarget = plannerChangeReviewTarget(recentChange);
+      const movedTermTarget = plannerChangeTermTarget(recentChange);
+      state.activeSchedule = JSON.parse(JSON.stringify(originalActiveSchedule));
+      state.activeSchedule[0].courses = state.activeSchedule[0].courses.filter(course => normalizeCode(course.code) !== 'GVPT200');
+      renderPlanChangeHistory();
+      const removedHistoryHtml = historyRoot.innerHTML;
+      const removedCanUndo = plannerChangeCanUndo(recentChange);
+      const removedReviewTarget = plannerChangeReviewTarget(recentChange);
+      const removedTermTarget = plannerChangeTermTarget(recentChange);
+      state.activeSchedule = originalActiveSchedule;
       state.selectedSections.PASS55.GVPT200 = {
         ...expectedReplacementSelected,
         section_id: 'GVPT200-0999',
@@ -1194,6 +1214,14 @@ async function testPlaceholderSectionPreview(context) {
         recentChange,
         historyHtml,
         canUndoBefore,
+        movedHistoryHtml,
+        movedCanUndo,
+        movedReviewTarget,
+        movedTermTarget,
+        removedHistoryHtml,
+        removedCanUndo,
+        removedReviewTarget,
+        removedTermTarget,
         staleHistoryHtml,
         canUndoAfterSectionEdit,
         staleReviewTarget,
@@ -1236,6 +1264,14 @@ async function testPlaceholderSectionPreview(context) {
   assert(result.recentChange?.undo?.kind === 'placeholder-replacement', 'placeholder section preview: recent change should include undo payload');
   assert(/data-change-undo/.test(result.historyHtml) && /Undo/.test(result.historyHtml), 'placeholder section preview: recent changes should render undo action');
   assert(result.canUndoBefore === true, 'placeholder section preview: change should be undoable before applying undo');
+  assert(result.movedCanUndo === false && /moved or removed/.test(result.movedHistoryHtml), 'placeholder section preview: moved replacement should disable undo with moved/removed reason');
+  assert(/data-change-review/.test(result.movedHistoryHtml) && /Show edited course/.test(result.movedHistoryHtml), 'placeholder section preview: moved replacement should still offer edited-course jump');
+  assert(/data-change-term/.test(result.movedHistoryHtml) && /Show original term/.test(result.movedHistoryHtml), 'placeholder section preview: moved replacement should offer original-term jump');
+  assert(result.movedReviewTarget?.code === 'GVPT 200' && result.movedTermTarget?.semId === 'PASS55', 'placeholder section preview: moved replacement targets should resolve edited course and original term');
+  assert(result.removedCanUndo === false && /moved or removed/.test(result.removedHistoryHtml), 'placeholder section preview: removed replacement should disable undo with moved/removed reason');
+  assert(!/data-change-review/.test(result.removedHistoryHtml), 'placeholder section preview: removed replacement should not offer edited-course jump');
+  assert(/data-change-term/.test(result.removedHistoryHtml) && /Show original term/.test(result.removedHistoryHtml), 'placeholder section preview: removed replacement should still offer original-term jump');
+  assert(!result.removedReviewTarget && result.removedTermTarget?.semId === 'PASS55', 'placeholder section preview: removed replacement should resolve only original-term target');
   assert(result.canUndoAfterSectionEdit === false, 'placeholder section preview: changed replacement section should disable undo');
   assert(/Undo unavailable/.test(result.staleHistoryHtml) && /section pick changed/.test(result.staleHistoryHtml), 'placeholder section preview: stale undo should explain changed section pick');
   assert(!/data-change-undo/.test(result.staleHistoryHtml), 'placeholder section preview: stale undo should hide undo button');

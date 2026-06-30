@@ -3142,3 +3142,58 @@ Next pass candidates:
 - Broaden prior-credit equivalency coverage with official-source mappings.
 - Add advisor packet quick links from audit issues into Browse or placeholder replacement.
 - Add richer Timeline recovery for moved or removed replacement courses.
+
+## 2026-06-30 Pass 64
+
+Focus: add original-term recovery for moved or removed placeholder replacements.
+
+Planned changes:
+- Keep `Show edited course` for moved replacements when the replacement course still exists elsewhere in the plan.
+- Add a recovery action for cases where the replacement course no longer exists in its original slot.
+- Let students jump back to the original affected Plan term even when the replacement was moved or deleted.
+- Keep section-specific Schedule recovery reserved for section-pick staleness.
+
+Completed:
+- Added Timeline original-term target detection for placeholder replacement undo entries whose replacement course is no longer in the expected slot.
+- Recent Changes now renders `Show original term` for stale moved/removed replacement rows.
+- Added a Plan-semester jump helper that:
+  - resets Plan filters/search.
+  - switches to the Plan tab.
+  - scrolls to the original semester card.
+  - flashes the term with a new focus style.
+- Moved replacements can now show both `Show edited course` and `Show original term`.
+- Removed replacements show `Show original term` without an edited-course jump.
+- Versioned changed browser assets:
+  - `styles.css?v=60`
+  - `js/timeline.js?v=14`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `PLACEHOLDER-SECTIONS` fixture confirms:
+  - moved replacements disable unsafe undo with the moved/removed reason.
+  - moved replacements still render `Show edited course`.
+  - moved replacements render `Show original term`.
+  - moved replacement targets resolve to `GVPT 200` and the original `PASS55` term.
+  - removed replacements disable unsafe undo with the moved/removed reason.
+  - removed replacements do not render `Show edited course`.
+  - removed replacements still render `Show original term` for the original `PASS55` term.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=60` and `js/timeline.js?v=14` loaded.
+  - a seeded moved-replacement row rendered `Undo unavailable: the replacement course was moved or removed.`
+  - the stale row had zero Undo buttons, one `Show edited course` button, and one `Show original term` button.
+  - no `Show schedule term` button appeared for the moved replacement.
+  - clicking `Show original term` switched to the Plan tab.
+  - the Plan search/filter state reset to All with an empty search box.
+  - the original term card was visible and received the term-focus highlight.
+  - there was no horizontal overflow.
+  - Chrome console warnings/errors were clean.
+  - the restored app page no longer showed the seeded QA state.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add source-level notes per prior-credit preset.
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add advisor packet quick links from audit issues into Browse or placeholder replacement.
+- Add actionable Timeline recovery for prior-credit rows whose courses were removed from the plan.

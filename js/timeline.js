@@ -1176,6 +1176,22 @@ function plannerChangeScheduleTarget(change) {
   };
 }
 
+function plannerChangeTermTarget(change) {
+  const undo = change?.undo;
+  if (undo?.kind !== 'placeholder-replacement' || undo.appliedAt) return null;
+  const semId = String(undo.location?.semId || undo.semId || '');
+  if (!semId || !getAllSemesters().some(sem => sem.id === semId)) return null;
+  const slot = plannerUndoCourseSlot(undo);
+  const replacementNorm = normalizeCode(undo.replacementCode || '');
+  const replacementStillInSlot = slot && slot.index >= 0
+    && (!replacementNorm || normalizeCode(slot.list[slot.index]?.code) === replacementNorm);
+  if (replacementStillInSlot) return null;
+  return {
+    semId,
+    label: 'Show original term',
+  };
+}
+
 function plannerResetPlanFilters() {
   currentFilter = 'all';
   searchQuery = '';
@@ -1203,6 +1219,27 @@ function plannerJumpToPlanCourse(code) {
     row.classList.add('roadmap-plan-focus');
     clearTimeout(plannerJumpToPlanCourse._t);
     plannerJumpToPlanCourse._t = setTimeout(() => row.classList.remove('roadmap-plan-focus'), 1800);
+  });
+  return true;
+}
+
+function plannerJumpToPlanSemester(semId) {
+  const targetId = String(semId || '');
+  if (!targetId) return false;
+  plannerResetPlanFilters();
+  if (typeof switchTab === 'function') switchTab('plan');
+  renderSemesters();
+  requestAnimationFrame(() => {
+    const row = Array.from(document.querySelectorAll('#semesters-container .semester[data-sem-id]'))
+      .find(el => el.dataset.semId === targetId);
+    if (!row) {
+      if (typeof toastInfo === 'function') toastInfo('That original term is not visible in the current Plan.');
+      return;
+    }
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    row.classList.add('timeline-plan-term-focus');
+    clearTimeout(plannerJumpToPlanSemester._t);
+    plannerJumpToPlanSemester._t = setTimeout(() => row.classList.remove('timeline-plan-term-focus'), 1800);
   });
   return true;
 }
@@ -1247,6 +1284,16 @@ function plannerOpenChangeScheduleTarget(changeId) {
   plannerOpenSchedule(target.semId);
   if (target.code) plannerFocusScheduleCourse(target.code);
   return true;
+}
+
+function plannerOpenChangeTermTarget(changeId) {
+  const change = recentPlanChanges().find(item => item.id === String(changeId || ''));
+  const target = plannerChangeTermTarget(change);
+  if (!target?.semId) {
+    if (typeof toastInfo === 'function') toastInfo('That original term is no longer in the Plan.');
+    return false;
+  }
+  return plannerJumpToPlanSemester(target.semId);
 }
 
 function plannerApplyPlaceholderUndo(change) {
@@ -1367,6 +1414,7 @@ function renderPlanChangeHistory() {
           const undoStatus = plannerChangeUndoAvailability(change);
           const reviewTarget = !undoStatus.can && undoStatus.reason ? plannerChangeReviewTarget(change) : null;
           const scheduleTarget = !undoStatus.can && undoStatus.reason ? plannerChangeScheduleTarget(change) : null;
+          const termTarget = !undoStatus.can && undoStatus.reason ? plannerChangeTermTarget(change) : null;
           return `
           <div class="change-history-row">
             <span class="change-history-icon">${timelineEscape(plannerChangeIcon(change.type))}</span>
@@ -1380,10 +1428,11 @@ function renderPlanChangeHistory() {
                 </div>
               ` : undoStatus.reason ? `
                 <div class="change-history-unavailable">${timelineEscape(undoStatus.reason)}</div>
-                ${reviewTarget || scheduleTarget ? `
+                ${reviewTarget || scheduleTarget || termTarget ? `
                   <div class="change-history-actions change-history-recovery">
                     ${reviewTarget ? `<button class="btn small" type="button" data-change-review="${timelineEscape(change.id)}">${timelineEscape(reviewTarget.label)}</button>` : ''}
                     ${scheduleTarget ? `<button class="btn small" type="button" data-change-schedule="${timelineEscape(change.id)}">${timelineEscape(scheduleTarget.label)}</button>` : ''}
+                    ${termTarget ? `<button class="btn small" type="button" data-change-term="${timelineEscape(change.id)}">${timelineEscape(termTarget.label)}</button>` : ''}
                   </div>
                 ` : ''}
               ` : ''}
@@ -1493,6 +1542,11 @@ document.addEventListener('click', e => {
   const scheduleChange = e.target.closest('[data-change-schedule]');
   if (scheduleChange) {
     plannerOpenChangeScheduleTarget(scheduleChange.dataset.changeSchedule);
+    return;
+  }
+  const termChange = e.target.closest('[data-change-term]');
+  if (termChange) {
+    plannerOpenChangeTermTarget(termChange.dataset.changeTerm);
     return;
   }
   const move = e.target.closest('[data-planner-move]');
