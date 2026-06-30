@@ -9,6 +9,203 @@ const ONBOARD_STEPS = ['major', 'profile', 'year', 'schedule', 'transfer', 'fini
 const ONBOARD_CLOCK_OPTIONS = ['', '08:00', '09:00', '10:00', '11:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
 const ONBOARD_MODE_OPTIONS = ['balanced', 'compact', 'open-seats', 'mornings', 'afternoons'];
 const ONBOARD_DAY_OPTIONS = ['M', 'Tu', 'W', 'Th', 'F'];
+const ONBOARD_PRIOR_CREDIT_PRESETS = [
+  {
+    id: 'ap-calc-ab-4',
+    source: 'AP',
+    label: 'AP Calc AB 4+',
+    detail: 'MATH 140',
+    courses: [
+      { code: 'MATH 140', title: 'Calculus I', cr: 4, category: 'gened-fsma', categories: ['gened-fsma'], kind: 'core' },
+    ],
+  },
+  {
+    id: 'ap-calc-bc-4',
+    source: 'AP',
+    label: 'AP Calc BC 4+',
+    detail: 'MATH 140 + 141',
+    courses: [
+      { code: 'MATH 140', title: 'Calculus I', cr: 4, category: 'gened-fsma', categories: ['gened-fsma'], kind: 'core' },
+      { code: 'MATH 141', title: 'Calculus II', cr: 4, category: 'major-support', kind: 'core' },
+    ],
+  },
+  {
+    id: 'ap-stat-4',
+    source: 'AP',
+    label: 'AP Statistics 4+',
+    detail: 'STAT 100',
+    courses: [
+      { code: 'STAT 100', title: 'Elementary Statistics and Probability', cr: 3, category: 'gened-fsma', categories: ['gened-fsma', 'gened-fsar'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ap-csa-5',
+    source: 'AP',
+    label: 'AP Computer Science A 5',
+    detail: 'CMSC 131',
+    courses: [
+      { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, category: 'major-support', kind: 'core' },
+    ],
+  },
+  {
+    id: 'ap-english-lang-4',
+    source: 'AP',
+    label: 'AP English Lang 4+',
+    detail: 'FSAW credit',
+    courses: [
+      { code: 'AP FSAW Credit', title: 'Academic Writing prior-learning credit', cr: 3, category: 'gened-fsaw', categories: ['gened-fsaw'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ap-biology-4',
+    source: 'AP',
+    label: 'AP Biology 4+',
+    detail: 'BSCI 160/161/170/171',
+    courses: [
+      { code: 'BSCI 160', title: 'Principles of Ecology and Evolution', cr: 3, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'BSCI 161', title: 'Principles of Ecology and Evolution Lab', cr: 1, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'BSCI 170', title: 'Principles of Molecular and Cellular Biology', cr: 3, category: 'major-support', kind: 'core' },
+      { code: 'BSCI 171', title: 'Principles of Molecular and Cellular Biology Lab', cr: 1, category: 'major-support', kind: 'core' },
+    ],
+  },
+  {
+    id: 'ap-chemistry-4',
+    source: 'AP',
+    label: 'AP Chemistry 4',
+    detail: 'CHEM 131 + 132',
+    courses: [
+      { code: 'CHEM 131', title: 'Chemistry I - Fundamentals of General Chemistry', cr: 3, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'CHEM 132', title: 'Chemistry I Laboratory', cr: 1, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ap-chemistry-5',
+    source: 'AP',
+    label: 'AP Chemistry 5',
+    detail: 'CHEM 131/132/271',
+    courses: [
+      { code: 'CHEM 131', title: 'Chemistry I - Fundamentals of General Chemistry', cr: 3, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'CHEM 132', title: 'Chemistry I Laboratory', cr: 1, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'CHEM 271', title: 'General Chemistry and Energetics', cr: 3, category: 'major-support', kind: 'core' },
+    ],
+  },
+  {
+    id: 'ap-physics-c-mech-4',
+    source: 'AP',
+    label: 'AP Physics C Mech 4+',
+    detail: 'PHYS 161 + 261',
+    courses: [
+      { code: 'PHYS 161', title: 'General Physics: Mechanics and Particle Dynamics', cr: 3, category: 'gened-dsns', categories: ['gened-dsns'], kind: 'gened' },
+      { code: 'PHYS 261', title: 'General Physics: Mechanics Laboratory', cr: 1, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ap-micro-4',
+    source: 'AP',
+    label: 'AP Microeconomics 4+',
+    detail: 'ECON 200',
+    courses: [
+      { code: 'ECON 200', title: 'Principles of Microeconomics', cr: 3, category: 'gened-dshs', categories: ['gened-dshs'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ap-macro-4',
+    source: 'AP',
+    label: 'AP Macroeconomics 4+',
+    detail: 'ECON 201',
+    courses: [
+      { code: 'ECON 201', title: 'Principles of Macroeconomics', cr: 3, category: 'gened-dshs', categories: ['gened-dshs'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ap-us-gov-4',
+    source: 'AP',
+    label: 'AP U.S. Gov 4+',
+    detail: 'GVPT 170',
+    courses: [
+      { code: 'GVPT 170', title: 'American Government', cr: 3, category: 'gened-dshs', categories: ['gened-dshs'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ap-psych-4',
+    source: 'AP',
+    label: 'AP Psychology 4+',
+    detail: 'PSYC 100',
+    courses: [
+      { code: 'PSYC 100', title: 'Introduction to Psychology', cr: 3, category: 'gened-dshs', categories: ['gened-dshs'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ib-math-hl-5',
+    source: 'IB',
+    label: 'IB Math HL 5+',
+    detail: 'MATH 140 + STAT 100',
+    courses: [
+      { code: 'MATH 140', title: 'Calculus I', cr: 4, category: 'gened-fsma', categories: ['gened-fsma'], kind: 'core' },
+      { code: 'STAT 100', title: 'Elementary Statistics and Probability', cr: 3, category: 'gened-fsma', categories: ['gened-fsma', 'gened-fsar'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ib-econ-hl-5',
+    source: 'IB',
+    label: 'IB Economics HL 5+',
+    detail: 'ECON 200 + 201',
+    courses: [
+      { code: 'ECON 200', title: 'Principles of Microeconomics', cr: 3, category: 'gened-dshs', categories: ['gened-dshs'], kind: 'gened' },
+      { code: 'ECON 201', title: 'Principles of Macroeconomics', cr: 3, category: 'gened-dshs', categories: ['gened-dshs'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ib-biology-hl-6',
+    source: 'IB',
+    label: 'IB Biology HL 6+',
+    detail: 'BSCI 160/161/170/171',
+    courses: [
+      { code: 'BSCI 160', title: 'Principles of Ecology and Evolution', cr: 3, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'BSCI 161', title: 'Principles of Ecology and Evolution Lab', cr: 1, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'BSCI 170', title: 'Principles of Molecular and Cellular Biology', cr: 3, category: 'major-support', kind: 'core' },
+      { code: 'BSCI 171', title: 'Principles of Molecular and Cellular Biology Lab', cr: 1, category: 'major-support', kind: 'core' },
+    ],
+  },
+  {
+    id: 'ib-chemistry-hl-5',
+    source: 'IB',
+    label: 'IB Chemistry HL 5',
+    detail: 'CHEM 131 + 132',
+    courses: [
+      { code: 'CHEM 131', title: 'Chemistry I - Fundamentals of General Chemistry', cr: 3, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'CHEM 132', title: 'Chemistry I Laboratory', cr: 1, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ib-physics-hl-5',
+    source: 'IB',
+    label: 'IB Physics HL 5+',
+    detail: 'PHYS 121 + 122',
+    courses: [
+      { code: 'PHYS 121', title: 'Fundamentals of Physics I', cr: 4, category: 'gened-dsnl', categories: ['gened-dsnl'], kind: 'gened' },
+      { code: 'PHYS 122', title: 'Fundamentals of Physics II', cr: 4, category: 'major-support', kind: 'core' },
+    ],
+  },
+  {
+    id: 'ib-psych-6',
+    source: 'IB',
+    label: 'IB Psychology 6+',
+    detail: 'PSYC 100',
+    courses: [
+      { code: 'PSYC 100', title: 'Introduction to Psychology', cr: 3, category: 'gened-dshs', categories: ['gened-dshs'], kind: 'gened' },
+    ],
+  },
+  {
+    id: 'ib-philosophy-5',
+    source: 'IB',
+    label: 'IB Philosophy 5+',
+    detail: 'PHIL 100',
+    courses: [
+      { code: 'PHIL 100', title: 'Introduction to Philosophy', cr: 3, category: 'gened-dshu', categories: ['gened-dshu'], kind: 'gened' },
+    ],
+  },
+];
 
 function onboardEscape(value) {
   if (typeof settingsHtml === 'function') return settingsHtml(value);
@@ -47,6 +244,190 @@ function onboardNormalizeSchedulePrefs(value = {}) {
   return { earliest, latest, minBreak, mode, avoidDays };
 }
 
+function onboardPriorPresetById(id) {
+  return ONBOARD_PRIOR_CREDIT_PRESETS.find(preset => preset.id === id) || null;
+}
+
+function onboardPriorDisplayCode(code) {
+  const raw = String(code || '').trim();
+  if (/^[A-Z]{3,4}\s*\d{3}[A-Z]?$/i.test(raw) || /^[A-Z]{3,4}\d{3}[A-Z]?$/i.test(raw)) {
+    return displayCode(raw);
+  }
+  return raw.replace(/\s+/g, ' ');
+}
+
+function onboardPriorKey(code) {
+  const display = onboardPriorDisplayCode(code);
+  return /^[A-Z]{3,4}\s*\d{3}[A-Z]?$/i.test(display) ? normalizeCode(display) : display.toUpperCase();
+}
+
+function onboardNormalizePriorCourse(course, sourceLabel = 'Prior credit') {
+  const code = onboardPriorDisplayCode(course?.code || '');
+  const categories = Array.from(new Set(Array.isArray(course?.categories) ? course.categories : []))
+    .filter(cat => String(cat || '').startsWith('gened-'));
+  const category = String(course?.category || categories[0] || 'major-support');
+  return {
+    code,
+    title: String(course?.title || code),
+    cr: Number(course?.cr) || 3,
+    prereqs: [],
+    coreqs: [],
+    kind: course?.kind || (category.startsWith('gened-') ? 'gened' : 'core'),
+    category,
+    categories: categories.length ? categories : (category.startsWith('gened-') ? [category] : []),
+    note: String(course?.note || `${sourceLabel}. Verify official UMD prior-learning credit before registration.`),
+    semId: '',
+    isCustom: true,
+    isPriorCredit: true,
+    _needsLookup: !!(course && course._needsLookup),
+  };
+}
+
+function onboardSelectedPriorIds() {
+  return [...document.querySelectorAll('#ob-prior-grid input[type="checkbox"]:checked')]
+    .map(input => input.dataset.priorId)
+    .filter(Boolean);
+}
+
+function onboardResolvePriorCredits(rawCodes = '', presetIds = []) {
+  const byKey = new Map();
+  const selectedPresets = Array.from(new Set(presetIds || []))
+    .map(onboardPriorPresetById)
+    .filter(Boolean);
+  const addCourse = (course, sourceLabel) => {
+    const normalized = onboardNormalizePriorCourse(course, sourceLabel);
+    if (!normalized.code) return;
+    const key = onboardPriorKey(normalized.code);
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.sources = Array.from(new Set([...(existing.sources || []), sourceLabel]));
+      existing.note = `${existing.sources.join(' + ')}. Verify official UMD prior-learning credit before registration.`;
+      const mergedCategories = Array.from(new Set([...(existing.categories || []), ...(normalized.categories || [])]));
+      existing.categories = mergedCategories;
+      if (!existing.category.startsWith('gened-') && normalized.category.startsWith('gened-')) existing.category = normalized.category;
+      return;
+    }
+    byKey.set(key, { ...normalized, sources: [sourceLabel] });
+  };
+  selectedPresets.forEach(preset => {
+    (preset.courses || []).forEach(course => addCourse(course, preset.label));
+  });
+  String(rawCodes || '')
+    .split(/[\s,;\n]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .forEach(code => addCourse({
+      code,
+      title: onboardPriorDisplayCode(code),
+      cr: 3,
+      category: 'major-support',
+      kind: 'core',
+      _needsLookup: true,
+      note: 'Manual prior credit entry. Verify official UMD transfer equivalency before registration.',
+    }, 'Manual entry'));
+  const courses = Array.from(byKey.values()).map(course => {
+    const clean = { ...course };
+    delete clean.sources;
+    return clean;
+  });
+  const totalCredits = courses.reduce((sum, course) => sum + (Number(course.cr) || 0), 0);
+  return {
+    presets: selectedPresets,
+    courses,
+    totalCredits,
+  };
+}
+
+function onboardPriorSummaryText(resolved) {
+  const count = (resolved?.courses || []).length;
+  if (!count) return 'No prior credits selected.';
+  const credits = Number(resolved.totalCredits) || 0;
+  const codes = resolved.courses.map(course => course.code).slice(0, 6).join(', ');
+  const extra = count > 6 ? ` +${count - 6} more` : '';
+  return `${count} course${count === 1 ? '' : 's'} · ${credits} credit${credits === 1 ? '' : 's'} · ${codes}${extra}`;
+}
+
+function onboardRefreshPriorCreditSummary() {
+  const summary = document.getElementById('ob-prior-summary');
+  if (!summary) return;
+  const resolved = onboardResolvePriorCredits(
+    document.getElementById('ob-transfer-codes')?.value || '',
+    onboardSelectedPriorIds(),
+  );
+  summary.textContent = onboardPriorSummaryText(resolved);
+  document.querySelectorAll('.onboard-prior-chip').forEach(chip => {
+    const input = chip.querySelector('input[type="checkbox"]');
+    chip.classList.toggle('selected', !!input?.checked);
+  });
+}
+
+function onboardRenderPriorCreditControls() {
+  const root = document.getElementById('ob-prior-grid');
+  if (!root) return;
+  root.innerHTML = ONBOARD_PRIOR_CREDIT_PRESETS.map(preset => `
+    <label class="onboard-prior-chip">
+      <input type="checkbox" data-prior-id="${onboardEscape(preset.id)}">
+      <span>
+        <strong>${onboardEscape(preset.label)}</strong>
+        <small>${onboardEscape(preset.detail)}</small>
+      </span>
+    </label>
+  `).join('');
+  root.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', onboardRefreshPriorCreditSummary);
+  });
+  const raw = document.getElementById('ob-transfer-codes');
+  if (raw && !raw.dataset.priorBound) {
+    raw.dataset.priorBound = 'true';
+    raw.addEventListener('input', onboardRefreshPriorCreditSummary);
+  }
+  onboardRefreshPriorCreditSummary();
+}
+
+async function onboardApplyPriorCredits(setup) {
+  const resolved = onboardResolvePriorCredits(setup.transferRaw, setup.priorCreditIds);
+  const applied = [];
+  const added = [];
+  state.customCourses = state.customCourses || [];
+  for (const course of resolved.courses) {
+    let finalCourse = { ...course };
+    if (finalCourse._needsLookup && /^[A-Z]{3,4}\s*\d{3}[A-Z]?$/i.test(finalCourse.code)) {
+      const fetched = await fetchCourseFull(finalCourse.code).catch(() => null);
+      if (fetched) {
+        finalCourse = {
+          ...finalCourse,
+          ...fetched,
+          code: fetched.code,
+          semId: '',
+          isCustom: true,
+          isPriorCredit: true,
+          note: finalCourse.note,
+        };
+      }
+    }
+    delete finalCourse._needsLookup;
+    const code = onboardPriorDisplayCode(finalCourse.code);
+    finalCourse.code = code;
+    const existing = findCourse(code);
+    if (!existing) {
+      state.customCourses.push(finalCourse);
+      added.push(code);
+    }
+    state.courses[code] = { status: 'transfer', grade: '' };
+    applied.push(code);
+  }
+  if (applied.length && typeof recordPlanChange === 'function') {
+    recordPlanChange({
+      type: 'prior-credit',
+      source: 'onboarding',
+      title: `Applied ${applied.length} prior-credit course${applied.length === 1 ? '' : 's'}`,
+      detail: applied.slice(0, 8).join(', ') + (applied.length > 8 ? ` +${applied.length - 8} more` : ''),
+      meta: added.length ? `${added.length} added outside plan` : 'All matched existing plan courses',
+    }, { save: false });
+  }
+  return { ...resolved, applied, added };
+}
+
 function onboardReadSchedulePrefs() {
   return onboardNormalizeSchedulePrefs({
     earliest: document.getElementById('ob-pref-earliest')?.value || '',
@@ -72,6 +453,7 @@ function onboardReadSetup() {
     numSemesters: onboardTargetSemesterCount(startYear, gradTerm, gradYear),
     creditCap,
     transferRaw: document.getElementById('ob-transfer-codes')?.value || '',
+    priorCreditIds: typeof document.querySelectorAll === 'function' ? onboardSelectedPriorIds() : [],
     profilePrefs: typeof readProfileForm === 'function' ? readProfileForm('ob') : getProfilePrefs(),
     schedulePrefs: onboardReadSchedulePrefs(),
   };
@@ -88,10 +470,12 @@ function onboardScheduleSummary(prefs) {
 }
 
 function onboardPreviewSummaryHtml(setup) {
+  const prior = onboardResolvePriorCredits(setup.transferRaw, setup.priorCreditIds);
   return `
     <div class="onboard-preview-summary">
       <span><strong>Timeline</strong>${onboardEscape(`Fall ${setup.startYear} to ${setup.gradTerm} ${setup.gradYear} · ${setup.numSemesters} terms · ${setup.creditCap} credit cap`)}</span>
       <span><strong>Schedule defaults</strong>${onboardEscape(onboardScheduleSummary(setup.schedulePrefs))}</span>
+      <span><strong>Prior credit</strong>${onboardEscape(onboardPriorSummaryText(prior))}</span>
     </div>
   `;
 }
@@ -210,6 +594,7 @@ function startOnboarding() {
   document.getElementById('ob-pref-mode').value = 'balanced';
   document.querySelectorAll('.onboard-day-prefs input[type="checkbox"]').forEach(input => { input.checked = false; });
   document.getElementById('ob-transfer-codes').value = '';
+  onboardRenderPriorCreditControls();
   if (typeof writeProfileForm === 'function') writeProfileForm('ob', getProfilePrefs());
 
   document.getElementById('onboard-modal').classList.add('open');
@@ -296,22 +681,7 @@ async function finishOnboarding() {
     });
   }
 
-  // Bulk-import transfer credits
-  const transferCodes = setup.transferRaw.split(/[\s,;\n]+/).map(s => s.trim()).filter(Boolean);
-  if (transferCodes.length) {
-    for (const code of transferCodes) {
-      const display = displayCode(code);
-      // If course already in plan, mark transfer; otherwise add as custom + mark
-      if (!findCourse(display)) {
-        const f = await fetchCourseFull(code).catch(() => null);
-        const obj = f
-          ? { code: f.code, title: f.title, cr: f.cr, prereqs: [], coreqs: [], kind: 'core', category: 'major-support', semId: '', isCustom: true }
-          : { code: display, title: display, cr: 3, prereqs: [], coreqs: [], kind: 'core', category: 'major-support', semId: '', isCustom: true };
-        state.customCourses.push(obj);
-      }
-      state.courses[display] = { status: 'transfer', grade: '' };
-    }
-  }
+  await onboardApplyPriorCredits(setup);
 
   state.onboardingComplete = true;
   saveState();

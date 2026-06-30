@@ -4579,6 +4579,61 @@ h1.hero-title em {
   width: auto !important;
   margin: 0;
 }
+.onboard-prior-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: min(260px, 30vh);
+  overflow: auto;
+  padding: 2px;
+}
+.onboard-prior-chip {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  margin: 0 !important;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  cursor: pointer;
+}
+.onboard-prior-chip input {
+  width: auto !important;
+  margin: 2px 0 0;
+}
+.onboard-prior-chip strong,
+.onboard-prior-chip small {
+  display: block;
+  min-width: 0;
+}
+.onboard-prior-chip strong {
+  color: var(--ink);
+  font-size: .78rem;
+  line-height: 1.2;
+}
+.onboard-prior-chip small {
+  margin-top: 3px;
+  color: var(--slate);
+  font-size: .68rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.onboard-prior-chip.selected {
+  border-color: rgba(46,107,63,.45);
+  background: var(--green-soft);
+}
+.onboard-prior-summary {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cream) 76%, var(--paper));
+  color: var(--ink-soft);
+  font-size: .76rem;
+  line-height: 1.35;
+}
 .onboard-plan-preview {
   max-height: min(430px, 46vh);
   overflow: auto;
@@ -5506,6 +5561,7 @@ h1.hero-title em {
     max-width: calc(50% - 3px);
   }
   .onboard-inline-grid,
+  .onboard-prior-grid,
   .onboard-preview-summary {
     grid-template-columns: 1fr;
   }

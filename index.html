@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=48">
+<link rel="stylesheet" href="styles.css?v=49">
 </head>
 <body data-theme="dark">
 
@@ -760,12 +760,15 @@
 
     <div id="ob-step-transfer" style="display:none">
       <h3>AP / IB / transfer credits?</h3>
-      <p style="color:var(--slate);font-size:.88rem;margin-top:-4px">Paste codes for any courses you've already earned credit for. Skip if none.</p>
-      <label>Course codes (one per line, or comma-separated)</label>
+      <p style="color:var(--slate);font-size:.88rem;margin-top:-4px">Select common prior-learning credits or paste exact UMD course codes. Skip if none.</p>
+      <label>Common AP / IB results</label>
+      <div id="ob-prior-grid" class="onboard-prior-grid"></div>
+      <div id="ob-prior-summary" class="onboard-prior-summary">No prior credits selected.</div>
+      <label>Other course codes (one per line, or comma-separated)</label>
       <textarea id="ob-transfer-codes" rows="4"
         style="width:100%;font-family:'JetBrains Mono', monospace;font-size:.85rem"
         placeholder="MATH140&#10;ENGL101&#10;CHEM131"></textarea>
-      <p style="font-size:.74rem;color:var(--slate);margin-top:6px">We'll mark these as transfer credit. Title + credits are filled in via umd.io.</p>
+      <p style="font-size:.74rem;color:var(--slate);margin-top:6px">Presets follow UMD's 2023-2026 prior-learning charts where direct equivalents are stable; always confirm official credit before registration.</p>
     </div>
 
     <div id="ob-step-finish" style="display:none">
@@ -967,7 +970,7 @@
 <script src="js/prereq-resolver.js"></script>
 <script src="js/recommendations.js?v=11"></script>
 <script src="js/major-builder.js"></script>
-<script src="js/onboarding.js?v=4"></script>
+<script src="js/onboarding.js?v=5"></script>
 <script src="js/browse.js?v=12"></script>
 <script src="js/dnd.js"></script>
 <script src="js/bulk.js"></script>

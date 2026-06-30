@@ -2430,3 +2430,65 @@ Next pass candidates:
 - Add a degree-rule issue drawer that explains why each remaining placeholder exists and what course families can satisfy it.
 - Add section-aware replacement flow that previews real meeting times before replacing a placeholder.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 52
+
+Focus: upgrade onboarding prior-credit intake from raw course codes to a useful AP/IB/transfer-credit workflow.
+
+Planned changes:
+- Add common AP and IB prior-learning presets in the onboarding transfer step.
+- Map selected presets to UMD course equivalents or GenEd prior-credit pseudo-courses.
+- De-duplicate overlapping presets and manually typed course codes.
+- Mark planned courses as transfer credit and add unplanned equivalents to the outside-plan transfer area.
+- Keep the UI compact inside the existing onboarding modal.
+
+Completed:
+- Added 20 AP/IB prior-credit presets covering common direct equivalents such as:
+  - AP Calculus AB/BC, AP Statistics, AP Computer Science A, AP English Language, AP Biology, AP Chemistry, AP Physics C Mechanics, AP Economics, AP U.S. Government, and AP Psychology.
+  - IB Math HL, IB Economics HL, IB Biology HL, IB Chemistry HL, IB Physics HL, IB Psychology, and IB Philosophy.
+- Added prior-credit helpers in onboarding for:
+  - preset lookup.
+  - display-code normalization.
+  - AP/IB/manual-course de-duplication.
+  - summary text generation.
+  - applying prior credits after the selected major plan is generated.
+- Added a compact onboarding preset grid with checkbox chips and a live summary.
+- Added an FSAW pseudo-course path for AP English Language credit, since that credit is a GenEd prior-learning award rather than a stable ENGL 101 course-code replacement.
+- Preserved raw transfer-code support and metadata lookup via `fetchCourseFull` for manually entered UMD course codes.
+- Recorded a recent plan-change entry when onboarding applies prior credits.
+- Versioned changed browser assets:
+  - `styles.css?v=49`
+  - `js/onboarding.js?v=5`
+
+Verification:
+- Checked UMD Registrar prior-learning/AP/IB chart pages while choosing conservative preset mappings.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all existing generated-plan fixtures plus the new `ONBOARDING-PRIOR-CREDIT` fixture.
+- The new regression fixture confirms:
+  - the preset list exposes a broad AP/IB set.
+  - AP Calculus BC plus raw `MATH140` de-duplicates to one `MATH 140`.
+  - AP Calculus BC includes `MATH 141`.
+  - AP English Language creates `AP FSAW Credit` with `gened-fsaw`.
+  - IB Economics HL creates both `ECON 200` and `ECON 201`.
+  - raw `CMSC131` normalizes to `CMSC 131` and uses fetched metadata when available.
+  - planned `MATH 140` is marked transfer without becoming a duplicate custom course.
+  - unplanned equivalents become outside-plan transfer courses.
+  - transfer statuses and recent-change recording are applied.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin reset page, then removed the reset page before commit.
+- Chrome confirmed:
+  - `styles.css?v=49` and `js/onboarding.js?v=5` loaded.
+  - the clean first-run onboarding modal opened.
+  - the transfer step rendered 20 AP/IB preset checkboxes.
+  - selecting AP Calculus BC, AP English Language, IB Economics HL, and raw `CMSC131 MATH140` produced `6 courses · 20 credits · MATH 140, MATH 141, AP FSAW Credit, ECON 200, ECON 201, CMSC 131`.
+  - the finish preview carried the same prior-credit summary.
+  - finishing onboarding marked six rows as transfer.
+  - planned `MATH 140`, `MATH 141`, and `CMSC 131` were marked transfer in-place.
+  - `AP FSAW Credit`, `ECON 200`, and `ECON 201` appeared in the transfer/outside-plan area.
+  - no horizontal overflow and no app-origin Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add a post-onboarding prior-credit editor in Settings so existing users can add AP/IB/transfer credit after first-run setup.
+- Add a degree-rule issue drawer that explains why each remaining placeholder exists and what course families can satisfy it.
+- Add section-aware replacement flow that previews real meeting times before replacing a placeholder.
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor once a broader official-source view exists.

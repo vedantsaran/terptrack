@@ -1428,6 +1428,98 @@ async function testOnboardingPersonalizedSetup(context) {
   };
 }
 
+async function testOnboardingPriorCredit(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      state.activeSchedule = [{
+        id: 'F26',
+        name: 'Fall 2026',
+        year: 'Year 1',
+        courses: [{
+          code: 'MATH 140',
+          title: 'Calculus I',
+          cr: 4,
+          category: 'gened-fsma',
+          kind: 'core'
+        }, {
+          code: 'ENGL 101',
+          title: 'Academic Writing',
+          cr: 3,
+          category: 'gened-fsaw',
+          kind: 'gened'
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.recentChanges = [];
+      fetchCourseFull = async code => {
+        const id = normalizeCode(code);
+        if (id === 'CMSC131') {
+          return {
+            code: 'CMSC 131',
+            title: 'Object-Oriented Programming I',
+            cr: 4,
+            prereqs: [],
+            coreqs: [],
+            kind: 'core',
+            category: 'major-support',
+            categories: ['major-support']
+          };
+        }
+        return null;
+      };
+      const resolved = onboardResolvePriorCredits('MATH140 CMSC131', [
+        'ap-calc-bc-4',
+        'ap-english-lang-4',
+        'ib-econ-hl-5'
+      ]);
+      const applied = await onboardApplyPriorCredits({
+        transferRaw: 'MATH140 CMSC131',
+        priorCreditIds: ['ap-calc-bc-4', 'ap-english-lang-4', 'ib-econ-hl-5']
+      });
+      const customCodes = state.customCourses.map(course => course.code);
+      const byCode = Object.fromEntries(state.customCourses.map(course => [course.code, course]));
+      return {
+        presetCount: ONBOARD_PRIOR_CREDIT_PRESETS.length,
+        resolvedCodes: resolved.courses.map(course => course.code),
+        resolvedCredits: resolved.totalCredits,
+        summary: onboardPriorSummaryText(resolved),
+        applied,
+        customCodes,
+        byCode,
+        mathState: state.courses['MATH 140'],
+        englishCreditState: state.courses['AP FSAW Credit'],
+        cmscState: state.courses['CMSC 131'],
+        econState: state.courses['ECON 200'],
+        recentChange: state.recentChanges[0],
+      };
+    })()
+  `, context));
+
+  assert(result.presetCount >= 18, 'onboarding prior credit: should expose a broad AP/IB preset list');
+  assert(result.resolvedCodes.filter(code => code === 'MATH 140').length === 1, 'onboarding prior credit: should dedupe preset and raw MATH 140');
+  assert(result.resolvedCodes.includes('MATH 141'), 'onboarding prior credit: AP Calc BC should include MATH 141');
+  assert(result.resolvedCodes.includes('AP FSAW Credit'), 'onboarding prior credit: AP English should map to FSAW prior credit');
+  assert(result.resolvedCodes.includes('ECON 200') && result.resolvedCodes.includes('ECON 201'), 'onboarding prior credit: IB economics should map both ECON courses');
+  assert(result.resolvedCodes.includes('CMSC 131'), 'onboarding prior credit: raw codes should normalize display codes');
+  assert(/course/.test(result.summary) && /credit/.test(result.summary), 'onboarding prior credit: summary should include course and credit counts');
+  assert(result.mathState.status === 'transfer', 'onboarding prior credit: existing planned MATH 140 should be marked transfer');
+  assert(!result.customCodes.includes('MATH 140'), 'onboarding prior credit: planned MATH 140 should not be duplicated as custom');
+  assert(result.customCodes.includes('MATH 141'), 'onboarding prior credit: unplanned MATH 141 should be added outside the plan');
+  assert(result.byCode['AP FSAW Credit'].category === 'gened-fsaw', 'onboarding prior credit: AP FSAW pseudo-course should satisfy FSAW category');
+  assert(result.englishCreditState.status === 'transfer', 'onboarding prior credit: AP FSAW pseudo-course should be marked transfer');
+  assert(result.byCode['CMSC 131'].title === 'Object-Oriented Programming I', 'onboarding prior credit: raw code should use fetched metadata when available');
+  assert(result.cmscState.status === 'transfer' && result.econState.status === 'transfer', 'onboarding prior credit: added raw and preset courses should be marked transfer');
+  assert(result.applied.applied.length === result.resolvedCodes.length, 'onboarding prior credit: applied count should match resolved deduped courses');
+  assert(/prior-credit/.test(result.recentChange.type), 'onboarding prior credit: should record a recent change entry');
+
+  return {
+    id: 'ONBOARDING-PRIOR-CREDIT',
+    count: `${result.applied.applied.length}/${result.resolvedCredits}`,
+    samples: result.resolvedCodes.slice(0, 4).join(','),
+  };
+}
+
 async function main() {
   const context = buildContext();
   const fixtures = [
@@ -1457,6 +1549,7 @@ async function main() {
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
   const browseTypedSlots = await testBrowseTypedSlotMatching(context);
+  const priorCredit = await testOnboardingPriorCredit(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
 
   console.table(rows);
@@ -1474,8 +1567,9 @@ async function main() {
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
+  console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + browse typed slot matching + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + browse typed slot matching + onboarding prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
