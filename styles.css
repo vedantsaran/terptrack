@@ -960,6 +960,80 @@ h1.hero-title em {
 .planner-advisor {
   margin-bottom: 24px;
 }
+.plan-change-history {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  padding: 14px;
+  margin: -6px 0 22px;
+}
+.change-history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.change-history-head h3 {
+  margin: 0 0 3px;
+  font-family: 'Fraunces', serif;
+  font-size: 1.08rem;
+}
+.change-history-head p {
+  margin: 0;
+  color: var(--slate);
+  font-size: .78rem;
+  line-height: 1.4;
+}
+.change-history-list {
+  display: grid;
+  gap: 8px;
+}
+.change-history-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.change-history-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.change-history-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--maroon);
+  color: #FAF6EC;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+  font-weight: 800;
+}
+.change-history-row strong {
+  display: block;
+  color: var(--ink);
+  font-size: .82rem;
+}
+.change-history-row p {
+  margin: 2px 0;
+  color: var(--ink-soft);
+  font-size: .76rem;
+  line-height: 1.38;
+}
+.change-history-row span:last-child {
+  color: var(--slate);
+  font-size: .68rem;
+}
+.change-history-empty {
+  margin: 0;
+  color: var(--slate);
+  font-size: .78rem;
+  font-style: italic;
+}
 .planner-head {
   display: flex;
   justify-content: space-between;
@@ -3678,6 +3752,9 @@ h1.hero-title em {
   .alternatives-head {
     flex-direction: column;
     gap: 4px;
+  }
+  .change-history-head {
+    flex-direction: column;
   }
   .planner-head,
   .planner-action,

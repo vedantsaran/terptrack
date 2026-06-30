@@ -352,6 +352,13 @@ function undoScheduleSectionChange() {
   const action = scheduleUndoAction;
   restoreSelectedSection(action.semId, action.code, action.previousSection, action.previousPinned);
   scheduleUndoAction = null;
+  recordPlanChange({
+    type: 'section-swap',
+    source: 'Schedule',
+    title: `Restored ${action.code}`,
+    detail: `${action.code} restored to ${scheduleSectionShortLabel(action.previousSection)} after applying ${scheduleSectionShortLabel(action.nextSection)}.`,
+    meta: 'Undo section swap',
+  }, { save: false });
   saveState();
   renderSchedule();
   renderSemesters();
@@ -1793,6 +1800,13 @@ function applyScheduleAlternative(index) {
     if (!altCodes.has(key) && !bucket[key]?.pinned) delete bucket[key];
   });
   alt.items.forEach(item => setSelectedSection(semId, item.course.code, item.section));
+  recordPlanChange({
+    type: 'auto-pick',
+    source: 'Schedule',
+    title: `Applied alternate schedule ${index + 1}`,
+    detail: `${alt.items.length} sections applied with ${alt.conflicts.length} conflicts and ${alt.warnings.length} warnings.`,
+    meta: `${alt.openSeats} open seats across picked sections`,
+  }, { save: false });
   saveState();
   renderSchedule();
   renderSemesters();
@@ -1961,6 +1975,15 @@ async function autoPickScheduleSections() {
   const candidate = buildScheduleCandidate(courses, sectionsByCode, prefs, 0, currentItems);
   clearScheduleUndo();
   candidate.items.forEach(item => setSelectedSection(semId, item.course.code, item.section));
+  if (candidate.items.length) {
+    recordPlanChange({
+      type: 'auto-pick',
+      source: 'Schedule',
+      title: `Auto-picked ${candidate.items.length} sections`,
+      detail: candidate.items.map(item => `${item.course.code} ${scheduleSectionShortLabel(item.section)}`).slice(0, 6).join(' · '),
+      meta: `${scheduleTermLabel(term)}${candidate.skipped.length ? ` · ${candidate.skipped.length} unscheduled` : ''}`,
+    }, { save: false });
+  }
   saveState();
   renderSchedule();
   renderSemesters();
@@ -1974,6 +1997,13 @@ function clearScheduleSelections() {
   if (!semId) return;
   clearScheduleUndo();
   if ((state.selectedSections || {})[semId]) delete state.selectedSections[semId];
+  recordPlanChange({
+    type: 'clear',
+    source: 'Schedule',
+    title: 'Cleared section picks',
+    detail: `Removed saved section choices for ${getAllSemesters().find(sem => sem.id === semId)?.name || semId}.`,
+    meta: 'Schedule builder',
+  }, { save: false });
   saveState();
   renderSchedule();
   renderSemesters();
@@ -2002,6 +2032,13 @@ function applyBestSectionFromDecision(code, sectionId) {
     previousPinned,
     nextSection: scheduleCloneSection(section),
   });
+  recordPlanChange({
+    type: 'section-swap',
+    source: 'Schedule',
+    title: `Applied top section for ${code}`,
+    detail: `${scheduleSectionShortLabel(previousSection)} changed to ${scheduleSectionShortLabel(section)}.`,
+    meta: scheduleTermLabel(term),
+  }, { save: false });
   saveState();
   renderSchedule();
   renderSemesters();
@@ -2102,8 +2139,18 @@ function initScheduleEvents() {
     const code = e.target.dataset.code;
     const key = `${semId}:${term}:${normalizeCode(code)}`;
     const section = (scheduleSectionsCache[key] || []).find(s => s.section_id === e.target.value);
+    const previous = getSelectedSection(semId, code);
     clearScheduleUndo();
     setSelectedSection(semId, code, section || null);
+    recordPlanChange({
+      type: 'section-pick',
+      source: 'Schedule',
+      title: section ? `Picked ${code} ${scheduleSectionShortLabel(section)}` : `Cleared ${code} section`,
+      detail: section
+        ? `${code} changed from ${scheduleSectionShortLabel(previous)} to ${scheduleSectionShortLabel(section)}.`
+        : `${code} changed from ${scheduleSectionShortLabel(previous)} to no section.`,
+      meta: scheduleTermLabel(term),
+    }, { save: false });
     saveState();
     renderSchedule();
     renderSemesters();
@@ -2120,6 +2167,13 @@ function initScheduleEvents() {
     const code = pinBtn.dataset.pinCode;
     const next = !isSelectedSectionPinned(semId, code);
     if (!setSelectedSectionPinned(semId, code, next)) return;
+    recordPlanChange({
+      type: 'section-pick',
+      source: 'Schedule',
+      title: `${next ? 'Pinned' : 'Unpinned'} ${code}`,
+      detail: `${code} ${next ? 'will be preserved' : 'can be replaced'} by auto-pick.`,
+      meta: 'Schedule builder',
+    }, { save: false });
     saveState();
     renderSchedule();
     renderSemesters();

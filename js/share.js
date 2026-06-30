@@ -16,6 +16,7 @@ function _planSharePayload() {
     selectedSections: state.selectedSections,
     schedulePrefs: state.schedulePrefs,
     roadmapPrefs: state.roadmapPrefs,
+    recentChanges: state.recentChanges,
     majorId: state.majorId,
     settings: state.settings,
   };
@@ -99,6 +100,7 @@ async function loadSharedPlanFromHash() {
       selectedSections: data.selectedSections || {},
       schedulePrefs: data.schedulePrefs || {},
       roadmapPrefs: { filter: 'all', query: '', ...(data.roadmapPrefs || {}) },
+      recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],
       onboardingComplete: true,
     };
     saveState();

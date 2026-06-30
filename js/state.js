@@ -13,6 +13,7 @@ function loadState() {
     selectedSections: {},
     schedulePrefs: {},
     roadmapPrefs: { filter: 'all', query: '' },
+    recentChanges: [],
     majorId: null,
     onboardingComplete: false,
     settings: { ...DEFAULT_SETTINGS },
@@ -31,6 +32,7 @@ function loadState() {
         selectedSections: parsed.selectedSections || {},
         schedulePrefs: parsed.schedulePrefs || {},
         roadmapPrefs: { filter: 'all', query: '', ...(parsed.roadmapPrefs || {}) },
+        recentChanges: Array.isArray(parsed.recentChanges) ? parsed.recentChanges.slice(0, 12) : [],
       };
     }
   } catch {}
@@ -74,6 +76,31 @@ function saveState() {
   ind.classList.add('show');
   clearTimeout(saveState._t);
   saveState._t = setTimeout(() => ind.classList.remove('show'), 1100);
+}
+
+function recordPlanChange(change, opts = {}) {
+  const clean = {
+    id: `change-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+    at: new Date().toISOString(),
+    type: change.type || 'plan',
+    source: change.source || '',
+    title: String(change.title || 'Plan changed').slice(0, 120),
+    detail: String(change.detail || '').slice(0, 220),
+    meta: String(change.meta || '').slice(0, 140),
+  };
+  state.recentChanges = [clean, ...(state.recentChanges || [])].slice(0, 12);
+  if (opts.save !== false) saveState();
+  return clean;
+}
+
+function recentPlanChanges() {
+  return Array.isArray(state.recentChanges) ? state.recentChanges : [];
+}
+
+function clearPlanChanges() {
+  state.recentChanges = [];
+  saveState();
+  if (currentTab === 'timeline' && typeof renderPlanChangeHistory === 'function') renderPlanChangeHistory();
 }
 
 function getCourseState(code) {

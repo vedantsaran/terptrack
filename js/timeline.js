@@ -581,6 +581,7 @@ function renderPlannerAdvisor() {
 
 function renderTimeline() {
   renderPlannerAdvisor();
+  renderPlanChangeHistory();
   const rail = document.getElementById('timeline-rail');
   if (!rail) return;
   rail.innerHTML = '';
@@ -598,6 +599,50 @@ function renderTimeline() {
   });
 }
 
+function plannerChangeIcon(type) {
+  if (type === 'term-move') return '↔';
+  if (type === 'section-swap') return '▦';
+  if (type === 'auto-pick') return '✓';
+  if (type === 'section-pick') return '◉';
+  if (type === 'clear') return '×';
+  return '•';
+}
+
+function plannerChangeTime(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function renderPlanChangeHistory() {
+  const root = document.getElementById('plan-change-history');
+  if (!root) return;
+  const changes = recentPlanChanges();
+  root.innerHTML = `
+    <div class="change-history-head">
+      <div>
+        <h3>Recent Changes</h3>
+        <p>Automatic moves, section picks, and schedule edits you made recently.</p>
+      </div>
+      ${changes.length ? '<button class="btn small" type="button" data-clear-change-history>Clear</button>' : ''}
+    </div>
+    ${changes.length ? `
+      <div class="change-history-list">
+        ${changes.slice(0, 8).map(change => `
+          <div class="change-history-row">
+            <span class="change-history-icon">${timelineEscape(plannerChangeIcon(change.type))}</span>
+            <div>
+              <strong>${timelineEscape(change.title)}</strong>
+              ${change.detail ? `<p>${timelineEscape(change.detail)}</p>` : ''}
+              <span>${timelineEscape([change.meta, plannerChangeTime(change.at)].filter(Boolean).join(' · '))}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    ` : '<p class="change-history-empty">No changes logged yet. Apply a move or schedule edit and it will appear here.</p>'}
+  `;
+}
+
 function plannerClearMovedSelections(code, fromSemId, toSemId) {
   const norm = normalizeCode(code);
   [fromSemId, toSemId].forEach(semId => {
@@ -613,12 +658,20 @@ function plannerApplyMove(code, fromSemId, toSemId) {
   const norm = normalizeCode(code);
   const custom = (state.customCourses || []).find(course => course.semId === from && normalizeCode(course.code) === norm);
   if (custom) {
+    const toName = getAllSemesters().find(sem => sem.id === to)?.name || to;
     custom.semId = to;
     plannerClearMovedSelections(code, from, to);
+    recordPlanChange({
+      type: 'term-move',
+      source: 'Timeline',
+      title: `Moved ${code}`,
+      detail: `${code} moved from ${getAllSemesters().find(sem => sem.id === from)?.name || from} to ${toName}.`,
+      meta: 'Timeline recommendation',
+    }, { save: false });
     saveState();
     render();
     if (currentTab === 'timeline') renderTimeline();
-    toastSuccess(`Moved ${code} to ${getAllSemesters().find(sem => sem.id === to)?.name || to}.`);
+    toastSuccess(`Moved ${code} to ${toName}.`);
     return true;
   }
 
@@ -632,6 +685,13 @@ function plannerApplyMove(code, fromSemId, toSemId) {
   toSem.courses = toSem.courses || [];
   toSem.courses.push(course);
   plannerClearMovedSelections(course.code, from, to);
+  recordPlanChange({
+    type: 'term-move',
+    source: 'Timeline',
+    title: `Moved ${course.code}`,
+    detail: `${course.code} moved from ${fromSem.name} to ${toSem.name}.`,
+    meta: 'Timeline recommendation',
+  }, { save: false });
   saveState();
   render();
   if (currentTab === 'timeline') renderTimeline();
@@ -647,6 +707,10 @@ document.addEventListener('click', e => {
   const move = e.target.closest('[data-planner-move]');
   if (move) {
     plannerApplyMove(move.dataset.plannerMove, move.dataset.fromSem, move.dataset.toSem);
+    return;
+  }
+  if (e.target.closest('[data-clear-change-history]')) {
+    clearPlanChanges();
     return;
   }
   const gened = e.target.closest('[data-planner-gened]');

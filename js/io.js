@@ -33,6 +33,7 @@ document.getElementById('import-file').addEventListener('change', (e) => {
           selectedSections: data.selectedSections || {},
           schedulePrefs: data.schedulePrefs || {},
           roadmapPrefs: { filter: 'all', query: '', ...(data.roadmapPrefs || {}) },
+          recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],
         };
         saveState();
         applyTheme();

@@ -729,3 +729,42 @@ Next pass candidates:
 - Add advisor packet filters for only remaining courses, only GenEds, or only registration-blocking issues.
 - Add a compact change history panel for recent schedule moves, section swaps, and term moves.
 - Add Roadmap jump-to-semester or selected-node centering for very large plans.
+
+## 2026-06-30 Pass 20
+
+Focus: add a Recent Changes audit trail so students can see the schedule and timeline edits they just made.
+
+Planned changes:
+- Store a compact recent-change history in saved state.
+- Log meaningful entries for Timeline term moves, Schedule auto-picks, alternate applications, manual section picks, pin toggles, clears, best-section swaps, and undo restores.
+- Render a Recent Changes panel on Action Timeline with clear-history behavior.
+- Carry recent changes through JSON import/export, share links, and snapshots.
+- Verify the panel on desktop and mobile, then restore/clear local test state.
+
+Completed:
+- Added `recentChanges` to state defaults and load migration with a 12-entry cap.
+- Added `recordPlanChange()`, `recentPlanChanges()`, and `clearPlanChanges()` helpers.
+- Added Timeline rendering for Recent Changes with typed icons, timestamps, empty state, and a scoped Clear button.
+- Logged Timeline recommendation moves before saving moved custom or base-schedule courses.
+- Logged Schedule manual section picks/clears, pin/unpin changes, auto-pick runs, alternate schedule applications, clear-picks actions, top-section swaps, and undo restores.
+- Included `recentChanges` in shared-plan payloads, shared-plan loading, snapshot save/restore, and import migration; JSON export already serializes full state.
+- Added compact Recent Changes styling with mobile header stacking.
+- Versioned `styles.css`, `js/state.js`, `js/timeline.js`, `js/schedule.js`, `js/io.js`, `js/share.js`, and `js/snapshots.js` in `index.html`.
+
+Verification:
+- Ran `node --check` across every file in `js/`.
+- Ran `git diff --check`.
+- Reloaded `http://localhost:5173/?pass20=...` in the in-app browser and confirmed `styles.css?v=21`, `js/state.js?v=3`, `js/timeline.js?v=6`, `js/schedule.js?v=17`, `js/io.js?v=3`, `js/share.js?v=3`, and `js/snapshots.js?v=3` loaded.
+- Opened Schedule and confirmed CMSC 131 started on `CMSC131-0202`.
+- Changed CMSC 131 to `CMSC131-0204` through the real section dropdown and confirmed Action Timeline showed `Picked CMSC 131 0204` with detail `CMSC 131 changed from 0202 to 0204.`
+- Restored CMSC 131 to `CMSC131-0202` through the real section dropdown and confirmed the newest Timeline row showed `Picked CMSC 131 0202` with the reverse detail.
+- Checked a 390px-wide viewport with two history entries: the history panel stayed inside the viewport, the header stacked to a column, rows remained readable, and document-wide horizontal overflow stayed at 0.
+- Clicked Clear and confirmed the panel returned to `No changes logged yet. Apply a move or schedule edit and it will appear here.`
+- Reset the browser viewport to the default 1280px-wide size after mobile verification.
+- Confirmed CMSC 131 ended restored to `CMSC131-0202`, history ended empty, and current-page browser console errors were 0 for the Pass 20 URL.
+
+Next pass candidates:
+- Add a term-availability simulator/test fixture inside the app's dev diagnostics so move suggestions can be regression-tested without waiting for live UMD data to line up.
+- Add advisor packet filters for only remaining courses, only GenEds, or only registration-blocking issues.
+- Add Roadmap jump-to-semester or selected-node centering for very large plans.
+- Add a visible schedule-change digest to advisor packets or exported schedule summaries.
