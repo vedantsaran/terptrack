@@ -473,6 +473,83 @@ function testPlannerRegistrationChecklist(context) {
   };
 }
 
+function testPlannerAdvisorQuestions(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      recoGenEdGaps = () => [{ id: 'DSHU', label: 'Humanities', have: 0, need: 1 }];
+      state.activeSchedule = [
+        {
+          id: 'pass41-fall',
+          name: 'Pass 41 Fall',
+          courses: [
+            { code: 'CMSC 216', title: 'Computer Systems', cr: 4, prereqs: ['CMSC 132'], kind: 'core', category: 'major-core' },
+            { code: 'ENGL 101', title: 'Academic Writing', cr: 3, prereqs: [], kind: 'gened', category: 'gened-fspw' }
+          ]
+        },
+        {
+          id: 'pass41-spring',
+          name: 'Pass 41 Spring',
+          courses: [
+            { code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4, prereqs: ['CMSC 131'], kind: 'core', category: 'major-core' }
+          ]
+        }
+      ];
+      state.customCourses = [];
+      state.selectedSections = {
+        'pass41-fall': {
+          CMSC216: {
+            section_id: 'CMSC216-0101',
+            semester: '202608',
+            number: '0101',
+            open_seats: '4',
+            meetings: [{ days: 'MW', start_time: '8:00am', end_time: '9:15am', building: 'IRB', room: '1101' }]
+          },
+          ENGL101: {
+            section_id: 'ENGL101-0101',
+            semester: '202608',
+            number: '0101',
+            open_seats: '8',
+            meetings: [{ days: 'MW', start_time: '2:00pm', end_time: '3:15pm', building: 'TWS', room: '1200' }]
+          }
+        }
+      };
+      state.schedulePrefs = { 'pass41-fall': { mode: 'compact', minBreak: 15, term: '202608' } };
+      state.courses = {};
+      const advisor = plannerBuildAdvisor();
+      const checklist = plannerRegistrationChecklist(advisor);
+      const questions = plannerAdvisorQuestions(advisor, checklist);
+      const html = plannerAdvisorQuestionsHtml(questions);
+      const text = plannerAdvisorQuestionsText(questions);
+      return {
+        titles: questions.map(item => item.title),
+        levels: questions.map(item => item.level),
+        questions: questions.map(item => item.question).join(' | '),
+        whys: questions.map(item => item.why).join(' | '),
+        text,
+        hasCopyButton: /data-planner-copy-questions/.test(html),
+        hasScheduleButton: /data-planner-schedule/.test(html),
+        hasGenEdButton: /data-planner-gened/.test(html),
+      };
+    })()
+  `, context));
+
+  assert(result.titles.some(title => /credit|load|full-time/i.test(title)), 'planner questions: should include credit-load advisor question');
+  assert(result.titles.some(title => /CMSC 216 prerequisite/i.test(title)), 'planner questions: should include prerequisite advisor question');
+  assert(/switch any Pass 41 Fall sections|timing|schedule/i.test(result.questions), 'planner questions: should include picked-section timing question');
+  assert(/DSHU|Humanities|GenEd/i.test(result.questions + result.whys), 'planner questions: should include GenEd advisor question');
+  assert(result.levels.includes('danger') || result.levels.includes('warn'), 'planner questions: should preserve risk levels');
+  assert(/Advisor questions/.test(result.text) && /CMSC 216/.test(result.text), 'planner questions: export text should include question details');
+  assert(result.hasCopyButton, 'planner questions: should render select questions action');
+  assert(result.hasScheduleButton, 'planner questions: should render an open Schedule action');
+  assert(result.hasGenEdButton, 'planner questions: should render a GenEd search action');
+
+  return {
+    id: 'PLANNER-QUESTIONS',
+    count: result.titles.length,
+    levels: result.levels.join(','),
+  };
+}
+
 async function testBrowseProfileDepartments(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -557,6 +634,7 @@ async function main() {
   const accountSetup = testAccountCloudSetup(context);
   const timing = testScheduleTimingFit(context);
   const planner = testPlannerRegistrationChecklist(context);
+  const questions = testPlannerAdvisorQuestions(context);
   const browse = await testBrowseProfileDepartments(context);
 
   console.table(rows);
@@ -565,8 +643,9 @@ async function main() {
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
+  console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + account setup + schedule timing + planner checklist + browse profile).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile).`);
 }
 
 main().catch(error => {

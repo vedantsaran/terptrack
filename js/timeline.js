@@ -363,6 +363,197 @@ function plannerChecklistHtml(items) {
   `;
 }
 
+function plannerAdvisorQuestion(level, title, question, why = '', meta = '', button = null) {
+  return { level: level || 'info', title, question, why, meta, button };
+}
+
+function plannerAdvisorQuestions(advisor, checklist = []) {
+  const questions = [];
+  const nextSem = advisor.visibleSems.find(sem => (advisor.itemsBySem[sem.id] || []).some(item => !plannerIsComplete(item.course)))
+    || advisor.visibleSems[0] || null;
+  if (!nextSem) {
+    return [plannerAdvisorQuestion(
+      'ok',
+      'Confirm graduation readiness',
+      'Does my official audit show every remaining requirement as satisfied or in progress?',
+      'TerpTrack does not replace the official UMD degree audit.',
+      'Bring official audit',
+    )];
+  }
+
+  const semItems = advisor.itemsBySem[nextSem.id] || [];
+  const load = advisor.loads[nextSem.id] || 0;
+  const remainingItems = semItems.filter(item => !plannerIsComplete(item.course));
+  const semIssues = advisor.issues.filter(issue => issue.item.sem.id === nextSem.id);
+  const scheduleButton = {
+    label: 'Open Schedule',
+    attrs: `data-planner-schedule="${timelineEscape(nextSem.id)}"`,
+  };
+
+  if (load > PLANNER_MAX_CREDITS) {
+    questions.push(plannerAdvisorQuestion(
+      'danger',
+      `${nextSem.name} load`,
+      `Which course should I move out of ${nextSem.name} so I can register for a realistic ${PLANNER_TARGET_CREDITS}-${PLANNER_MAX_CREDITS} credit term?`,
+      `${nextSem.name} currently has ${load} remaining planned credits.`,
+      'Ask before registration',
+    ));
+  } else if (load > 0 && load < PLANNER_MIN_CREDITS) {
+    questions.push(plannerAdvisorQuestion(
+      'warn',
+      `${nextSem.name} full-time status`,
+      `Should I add another ready course to ${nextSem.name}, or is there a reason this term should stay below ${PLANNER_MIN_CREDITS} credits?`,
+      `${nextSem.name} currently has ${load} remaining planned credits.`,
+      'Financial aid and progress check',
+    ));
+  } else if (load > 0) {
+    questions.push(plannerAdvisorQuestion(
+      'ok',
+      `${nextSem.name} credit check`,
+      `Does this ${load}-credit ${nextSem.name} plan match my official major map and graduation timeline?`,
+      'Credit load looks workable in TerpTrack, but requirements should be confirmed officially.',
+      `${remainingItems.length} planned course${remainingItems.length === 1 ? '' : 's'}`,
+    ));
+  }
+
+  semIssues.slice(0, 3).forEach(issue => {
+    const prereqText = issue.missing || 'the listed prerequisite';
+    questions.push(plannerAdvisorQuestion(
+      'danger',
+      `${issue.item.course.code} prerequisite`,
+      issue.prereqItem
+        ? `Can I take ${issue.item.course.code} in ${issue.item.sem.name} if ${prereqText} is planned in ${issue.prereqItem.sem.name}, or should ${issue.item.course.code} move later?`
+        : `What course, placement, or exception can satisfy ${issue.item.course.code}'s ${prereqText} prerequisite before I register?`,
+      issue.prereqItem
+        ? `${issue.item.course.code} is currently before ${issue.prereqItem.course.code}.`
+        : `${issue.item.course.code} has a prerequisite group that is not planned earlier.`,
+      'Prerequisite override/order',
+    ));
+  });
+
+  if (!semIssues.length && advisor.issues.length) {
+    const issue = advisor.issues[0];
+    questions.push(plannerAdvisorQuestion(
+      'warn',
+      'Future prerequisite order',
+      `Does my later plan order need to change because ${issue.item.course.code} depends on ${issue.missing}?`,
+      `${issue.item.course.code} is currently planned in ${issue.item.sem.name}.`,
+      'Future-term audit',
+    ));
+  }
+
+  const selectedItems = plannerRegistrationSelectedItems(nextSem.id, semItems);
+  if (selectedItems.length && typeof scheduleTimingFit === 'function' && typeof detectScheduleConflicts === 'function') {
+    const prefs = typeof getSchedulePrefs === 'function' ? getSchedulePrefs(nextSem.id) : {};
+    const { conflicts } = detectScheduleConflicts(selectedItems);
+    const fit = scheduleTimingFit(selectedItems, prefs, conflicts);
+    if (conflicts.length || fit.score < 76) {
+      questions.push(plannerAdvisorQuestion(
+        conflicts.length || fit.score < 61 ? 'danger' : 'warn',
+        `${nextSem.name} timing`,
+        `Should I switch any ${nextSem.name} sections to make this schedule realistic for commute, work, labs, or back-to-back travel?`,
+        conflicts.length
+          ? `${conflicts.length} picked-section conflict${conflicts.length === 1 ? '' : 's'} detected.`
+          : (fit.insights[0] || `Timing fit is ${fit.score}/100.`),
+        `${selectedItems.length}/${remainingItems.length} sections picked`,
+        scheduleButton,
+      ));
+    }
+  } else if (remainingItems.length) {
+    questions.push(plannerAdvisorQuestion(
+      'info',
+      `${nextSem.name} section strategy`,
+      `Which ${nextSem.name} lectures, labs, discussions, or backups should I prioritize when registration opens?`,
+      'No picked sections are saved for the next registration term yet.',
+      `${remainingItems.length} course${remainingItems.length === 1 ? '' : 's'} need sections`,
+      scheduleButton,
+    ));
+  }
+
+  (advisor.genedGaps || []).slice(0, 2).forEach(gap => {
+    const tag = gap.id === 'DIVERSITY-2' ? 'DVUP' : gap.id;
+    questions.push(plannerAdvisorQuestion(
+      'info',
+      `${gap.label || gap.id} GenEd`,
+      `Which course should I use for ${gap.id} so it fits my major path, interests, and graduation timing?`,
+      `TerpTrack shows ${gap.have}/${gap.need} planned for ${gap.label || gap.id}.`,
+      'GenEd planning',
+      { label: 'Find GenEd', attrs: `data-planner-gened="${timelineEscape(tag)}"` },
+    ));
+  });
+
+  const riskyChecklist = (checklist || []).filter(item => item.level === 'danger' || item.level === 'warn');
+  if (!questions.some(item => item.level === 'danger' || item.level === 'warn') && riskyChecklist.length) {
+    const item = riskyChecklist[0];
+    questions.push(plannerAdvisorQuestion(
+      item.level,
+      'Registration risk',
+      `What should I change first to resolve this TerpTrack warning: ${item.title}?`,
+      item.body || 'The registration checklist flagged this as a follow-up item.',
+      item.meta || 'Checklist follow-up',
+      item.button || null,
+    ));
+  }
+
+  if (!questions.length) {
+    questions.push(plannerAdvisorQuestion(
+      'ok',
+      'Advisor confirmation',
+      'Does this plan satisfy my official audit, major benchmarks, and any college-specific policies I should know before registration?',
+      'TerpTrack checks common planning risks, but official policy decisions live with UMD advising.',
+      `${nextSem.name} reviewed`,
+    ));
+  }
+
+  return questions.slice(0, 7);
+}
+
+function plannerAdvisorQuestionCard(item, idx) {
+  const button = item.button
+    ? `<button class="btn small ${item.level === 'danger' ? 'primary' : ''}" type="button" ${item.button.attrs}>${timelineEscape(item.button.label)}</button>`
+    : '';
+  return `
+    <div class="planner-question ${timelineEscape(item.level)}">
+      <b>Q${idx + 1}</b>
+      <div>
+        <strong>${timelineEscape(item.title)}</strong>
+        <p>${timelineEscape(item.question)}</p>
+        ${item.why ? `<span>${timelineEscape(item.why)}</span>` : ''}
+        ${item.meta ? `<em>${timelineEscape(item.meta)}</em>` : ''}
+      </div>
+      ${button}
+    </div>
+  `;
+}
+
+function plannerAdvisorQuestionsText(items) {
+  const lines = ['Advisor questions'];
+  (items || []).forEach((item, idx) => {
+    lines.push(`${idx + 1}. ${item.question}`);
+    if (item.why) lines.push(`   Why: ${item.why}`);
+    if (item.meta) lines.push(`   Context: ${item.meta}`);
+  });
+  return lines.join('\n');
+}
+
+function plannerAdvisorQuestionsHtml(items) {
+  return `
+    <div class="planner-questions">
+      <div class="planner-questions-head">
+        <div>
+          <h3>Advisor Questions</h3>
+          <span>${items.length} questions generated from checklist risks, requirements, and picked sections</span>
+        </div>
+        <button class="btn small" type="button" data-planner-copy-questions>Select questions</button>
+      </div>
+      <div class="planner-question-grid">
+        ${items.map(plannerAdvisorQuestionCard).join('')}
+      </div>
+      <textarea id="planner-questions-text" class="planner-questions-text" readonly hidden>${timelineEscape(plannerAdvisorQuestionsText(items))}</textarea>
+    </div>
+  `;
+}
+
 function plannerBuildAdvisor() {
   const sems = getAllSemesters();
   const allItems = plannerSemCourseItems();
@@ -689,6 +880,7 @@ function renderPlannerAdvisor() {
   if (!root) return;
   const advisor = plannerBuildAdvisor();
   const checklist = plannerRegistrationChecklist(advisor);
+  const questions = plannerAdvisorQuestions(advisor, checklist);
   const semRows = advisor.visibleSems.slice(0, 8).map(sem => {
     const load = advisor.loads[sem.id] || 0;
     const counts = plannerStatusCounts(advisor.itemsBySem[sem.id] || []);
@@ -716,6 +908,7 @@ function renderPlannerAdvisor() {
       <div class="planner-stat ${advisor.genedGaps.length ? 'warn' : 'ok'}"><strong>${advisor.genedGaps.length}</strong><span>GenEd gaps</span></div>
     </div>
     ${plannerChecklistHtml(checklist)}
+    ${plannerAdvisorQuestionsHtml(questions)}
     <div class="planner-body">
       <div>
         <h3>Recommended Moves</h3>
@@ -869,6 +1062,15 @@ function plannerSelectChecklistText() {
   if (typeof toastInfo === 'function') toastInfo('Registration checklist selected.');
 }
 
+function plannerSelectAdvisorQuestionsText() {
+  const textArea = document.getElementById('planner-questions-text');
+  if (!textArea) return;
+  textArea.hidden = false;
+  textArea.focus();
+  textArea.select();
+  if (typeof toastInfo === 'function') toastInfo('Advisor questions selected.');
+}
+
 document.addEventListener('click', e => {
   const move = e.target.closest('[data-planner-move]');
   if (move) {
@@ -891,6 +1093,10 @@ document.addEventListener('click', e => {
   }
   if (e.target.closest('[data-planner-copy-checklist]')) {
     plannerSelectChecklistText();
+    return;
+  }
+  if (e.target.closest('[data-planner-copy-questions]')) {
+    plannerSelectAdvisorQuestionsText();
     return;
   }
   if (e.target.closest('[data-planner-refresh]')) {

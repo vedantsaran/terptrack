@@ -1773,3 +1773,60 @@ Next pass candidates:
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Improve Browse with saved profile searches and richer personalized class recommendations.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 41
+
+Focus: turn Timeline risks into advisor-ready questions students can copy before registration meetings.
+
+Planned changes:
+- Generate advisor questions from the same credit-load, prerequisite, section-timing, and GenEd signals used by the registration checklist.
+- Render the questions next to Timeline planning guidance.
+- Add a selectable text export for advisor prep.
+- Add regression coverage and a mobile browser smoke test.
+
+Completed:
+- Added `plannerAdvisorQuestion()`, `plannerAdvisorQuestions()`, `plannerAdvisorQuestionCard()`, `plannerAdvisorQuestionsText()`, and `plannerAdvisorQuestionsHtml()` in `js/timeline.js`.
+- Timeline now renders an `Advisor Questions` panel after `Registration Checklist`.
+- Generated questions cover:
+  - next-term underload/overload confirmation.
+  - prerequisite order and override questions.
+  - picked-section timing realism.
+  - missing section strategy.
+  - GenEd course-selection questions.
+  - official audit confirmation when no risk is found.
+- Added `Select questions` with hidden textarea export text.
+- Added `Open Schedule` and `Find GenEd` action hooks inside question cards.
+- Added responsive `planner-questions` styling in `styles.css`.
+- Versioned changed browser assets:
+  - `styles.css?v=38`
+  - `js/timeline.js?v=8`
+- Added the `PLANNER-QUESTIONS` regression fixture.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the account/share fixture, the account setup fixture, the schedule timing/comparison/advisor fixture, the planner checklist fixture, the new planner questions fixture, and the Browse profile fixture.
+- Planner questions fixture confirmed:
+  - credit-load advisor question appears.
+  - `CMSC 216` prerequisite advisor question appears.
+  - picked-section timing question appears.
+  - GenEd advisor question appears.
+  - warning/danger levels are preserved.
+  - export text starts with `Advisor questions` and includes course context.
+  - question HTML includes select, Schedule, and GenEd action hooks.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded a seeded `http://127.0.0.1:5174/?pass41questions=1` state from a temporary static server and confirmed:
+  - `styles.css?v=38` and `js/timeline.js?v=8` loaded.
+  - Timeline opened successfully.
+  - `Advisor Questions` rendered with warning, danger, and info cards.
+  - question cards included underload, prerequisite, timing, and GenEd questions.
+  - `Select questions` exposed copyable export text containing `Advisor questions`, `CMSC 216`, and timing context.
+  - `Open Schedule` routed to `pass41-browser-fall` in the Schedule tab.
+  - no browser console warnings/errors.
+  - no horizontal overflow at the browser's 380px viewport.
+- Reset the browser viewport, removed the temporary seed page, and stopped the temporary static server.
+
+Next pass candidates:
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve Browse with saved profile searches and richer personalized class recommendations.
+- Add a first-run interactive profile flow that creates a personalized four-year plan from major, interests, AP/transfer credits, and target graduation date.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
