@@ -317,6 +317,10 @@ function saveState() {
 }
 
 function recordPlanChange(change, opts = {}) {
+  const highlights = (Array.isArray(change.highlights) ? change.highlights : [])
+    .map(item => String(item || '').trim().slice(0, 180))
+    .filter(Boolean)
+    .slice(0, 6);
   const clean = {
     id: `change-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
     at: new Date().toISOString(),
@@ -326,6 +330,7 @@ function recordPlanChange(change, opts = {}) {
     detail: String(change.detail || '').slice(0, 220),
     meta: String(change.meta || '').slice(0, 140),
   };
+  if (highlights.length) clean.highlights = highlights;
   state.recentChanges = [clean, ...(state.recentChanges || [])].slice(0, 12);
   if (opts.save !== false) saveState();
   return clean;

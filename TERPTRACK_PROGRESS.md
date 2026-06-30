@@ -1617,3 +1617,56 @@ Next pass candidates:
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Improve Browse with saved profile searches and richer personalized class recommendations.
 - Add a term-by-term registration checklist that connects remaining GenEds, prerequisites, and section timing risks.
+
+## 2026-06-30 Pass 38
+
+Focus: preserve alternate-schedule comparison details after a student applies an alternate, so advisor packets still explain why that choice was made.
+
+Planned changes:
+- Let recent plan changes carry short highlight bullets.
+- Save the current-vs-alternate comparison lines when an alternate schedule is applied.
+- Render those highlights in schedule/advisor recent-change exports.
+- Add regression coverage for applied alternate highlights.
+
+Completed:
+- Extended `recordPlanChange()` in `js/state.js` to persist bounded `highlights` arrays.
+- Added `scheduleChangeHighlights()` in `js/schedule.js`.
+- Recent-change digest HTML now renders highlight bullets.
+- Recent-change text exports now include highlight bullets.
+- Applying an alternate schedule now records:
+  - timing fit score.
+  - conflict and warning counts.
+  - current-vs-alternate comparison lines.
+  - applied section list.
+- Added `.schedule-change-highlights` styling in the app and standalone advisor packet CSS.
+- Versioned changed browser assets:
+  - `styles.css?v=35`
+  - `js/state.js?v=12`
+  - `js/schedule.js?v=25`
+- Extended the `SCHEDULE-TIMING` regression fixture to assert applied alternate comparison highlights in HTML and text exports.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the account/share fixture, the schedule timing/comparison/advisor fixture, and the Browse profile fixture.
+- Schedule timing fixture now also confirmed:
+  - applied alternate changes retain comparison highlights.
+  - advisor change digest renders highlight bullets.
+  - advisor change digest includes timing/open-seat comparison details.
+  - recent-change text includes timing/open-seat comparison details.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass38altchange=seeded` from a temporary static server with a seeded browser fixture and confirmed:
+  - `styles.css?v=35`, `js/state.js?v=12`, and `js/schedule.js?v=25` loaded.
+  - Schedule tab opened successfully.
+  - advisor/schedule change digest rendered.
+  - applied alternate highlights rendered as bullets.
+  - text export contains the comparison highlights.
+  - no console errors.
+  - no horizontal overflow at the browser's 380px viewport.
+- Reset the browser viewport, removed the temporary seed page, and stopped the temporary static server.
+
+Next pass candidates:
+- Add real Supabase/Vercel setup instructions and validate a magic-link account round trip on deployment.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve Browse with saved profile searches and richer personalized class recommendations.
+- Add a term-by-term registration checklist that connects remaining GenEds, prerequisites, and section timing risks.
+- Add exportable advisor questions generated from blockers, schedule timing risks, and unmet GenEds.

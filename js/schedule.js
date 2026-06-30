@@ -1541,6 +1541,13 @@ function scheduleChangeTime(iso) {
   return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+function scheduleChangeHighlights(change) {
+  return (Array.isArray(change?.highlights) ? change.highlights : [])
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
 function scheduleChangeDigestHtml(changes, sourceLabel = 'Plan') {
   if (!changes.length) return '';
   return `
@@ -1556,6 +1563,7 @@ function scheduleChangeDigestHtml(changes, sourceLabel = 'Plan') {
             <div>
               <strong>${scheduleEscape(change.title)}</strong>
               ${change.detail ? `<p>${scheduleEscape(change.detail)}</p>` : ''}
+              ${scheduleChangeHighlights(change).length ? `<ul class="schedule-change-highlights">${scheduleChangeHighlights(change).map(item => `<li>${scheduleEscape(item)}</li>`).join('')}</ul>` : ''}
               <span>${scheduleEscape([change.meta, scheduleChangeTime(change.at)].filter(Boolean).join(' · '))}</span>
             </div>
           </div>
@@ -1572,6 +1580,7 @@ function scheduleRecentChangesText(changes) {
     const meta = [change.meta, scheduleChangeTime(change.at)].filter(Boolean).join(' · ');
     lines.push(`- ${scheduleChangeIcon(change.type)}: ${change.title}${meta ? ` (${meta})` : ''}`);
     if (change.detail) lines.push(`  ${change.detail}`);
+    scheduleChangeHighlights(change).forEach(item => lines.push(`  - ${item}`));
   });
   return lines;
 }
@@ -1877,6 +1886,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-change-row:first-child{border-top:none;padding-top:0}
     .schedule-change-row b{font-size:10px;text-transform:uppercase;color:#8b0000}
     .schedule-change-row p{margin:2px 0;color:#5d5962}
+    .schedule-change-highlights{display:grid;gap:2px;margin:4px 0;padding-left:17px;color:#5d5962;line-height:1.35}
     .schedule-change-row span{color:#5d5962;font-size:11px}
     table{width:100%;border-collapse:collapse;font-size:13px}
     th,td{border-top:1px solid #d8cec0;padding:8px 6px;text-align:left;vertical-align:top}
@@ -2493,8 +2503,14 @@ function applyScheduleAlternative(index) {
   if (!alt) return;
   const semId = scheduleCurrentSemId || scheduleDefaultSemesterId();
   const courses = scheduleCoursesForSemester(semId);
+  const prefs = getSchedulePrefs(semId);
   const altCodes = new Set(alt.items.map(item => normalizeCode(item.course.code)));
   const bucket = scheduleSelectionBucket(semId);
+  const timing = alt.timing || scheduleTimingFit(alt.items, prefs, alt.conflicts);
+  const comparison = scheduleAlternativeComparison(alt, alt.compareTo, prefs);
+  const courseLine = alt.items
+    .map(item => `${item.course.code} ${item.section.number || ''}`.trim())
+    .join(' · ');
   clearScheduleUndo();
   courses.forEach(course => {
     const key = normalizeCode(course.code);
@@ -2505,8 +2521,12 @@ function applyScheduleAlternative(index) {
     type: 'auto-pick',
     source: 'Schedule',
     title: `Applied alternate schedule ${index + 1}`,
-    detail: `${alt.items.length} sections applied with ${alt.conflicts.length} conflicts and ${alt.warnings.length} warnings.`,
+    detail: `${alt.items.length} sections applied with ${alt.conflicts.length} conflicts, ${alt.warnings.length} warnings, and ${timing.score}/100 timing fit.`,
     meta: `${alt.openSeats} open seats across picked sections`,
+    highlights: [
+      ...comparison.lines,
+      courseLine ? `Sections: ${courseLine}` : '',
+    ],
   }, { save: false });
   saveState();
   renderSchedule();

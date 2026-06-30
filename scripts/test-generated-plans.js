@@ -303,6 +303,16 @@ function testScheduleTimingFit(context) {
         { items: idleItems, conflicts: [], warnings: ['Long idle gap'], openSeats: 12, timing: idle, locationIssues: 0 },
         timingPrefs
       );
+      const altChange = recordPlanChange({
+        type: 'auto-pick',
+        source: 'Schedule',
+        title: 'Applied alternate schedule 1',
+        detail: '2 sections applied with 0 conflicts, 0 warnings, and 100/100 timing fit.',
+        meta: '22 open seats across picked sections',
+        highlights: comparison.lines,
+      }, { save: false });
+      const changeDigestHtml = scheduleChangeDigestHtml([altChange], 'Advisor context');
+      const changeDigestText = scheduleRecentChangesText([altChange]).join(' | ');
       const advisorDiagnosticHtml = scheduleAdvisorTimingDiagnosticsHtml(idle);
       const advisorDiagnosticText = scheduleAdvisorTimingDiagnosticsText(idle).join(' | ');
       return {
@@ -317,6 +327,9 @@ function testScheduleTimingFit(context) {
         comparisonTimingDelta: comparison.timingDelta,
         comparisonWarningDelta: comparison.warningDelta,
         comparisonOpenSeatDelta: comparison.openSeatDelta,
+        changeHighlightCount: altChange.highlights.length,
+        changeDigestHtml,
+        changeDigestText,
         advisorDiagnosticHtml,
         advisorDiagnosticText,
       };
@@ -332,6 +345,10 @@ function testScheduleTimingFit(context) {
   assert(result.comparisonWarningDelta < 0, 'schedule alternatives: comparison should report warning reduction');
   assert(result.comparisonOpenSeatDelta > 0, 'schedule alternatives: comparison should report open-seat gain');
   assert(/Improves timing fit|Saves|open seats/i.test(result.comparisonLines), 'schedule alternatives: comparison should explain why option is better');
+  assert(result.changeHighlightCount >= 2, 'schedule alternatives: applied alternate change should retain comparison highlights');
+  assert(/schedule-change-highlights/.test(result.changeDigestHtml), 'schedule alternatives: advisor change digest should render highlight bullets');
+  assert(/Improves timing fit|open seats/i.test(result.changeDigestHtml), 'schedule alternatives: advisor change digest should include comparison details');
+  assert(/Improves timing fit|open seats/i.test(result.changeDigestText), 'schedule alternatives: recent-change text should include comparison details');
   assert(/Timing Diagnostics/.test(result.advisorDiagnosticHtml), 'schedule advisor diagnostics: HTML should include a timing diagnostics section');
   assert(/Active days/.test(result.advisorDiagnosticHtml) && /Advisor follow-up/.test(result.advisorDiagnosticHtml), 'schedule advisor diagnostics: HTML should include metrics and follow-up');
   assert(/idle gap|tighter lecture/i.test(result.advisorDiagnosticHtml), 'schedule advisor diagnostics: HTML should explain idle-time review');
