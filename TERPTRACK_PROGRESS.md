@@ -2910,3 +2910,65 @@ Next pass candidates:
 - Add a compact advisor-export summary of open audit issues.
 - Add a safe stale-undo recovery affordance that jumps to the edited course or section.
 - Broaden prior-credit equivalency coverage with official-source mappings.
+
+## 2026-06-30 Pass 60
+
+Focus: add compact degree-audit issue summaries to advisor schedule exports.
+
+Planned changes:
+- Reuse the Degree Audit issue model inside the advisor packet.
+- Show the full open audit issue count while keeping the packet compact.
+- Add an output option for including or hiding audit issues.
+- Include the audit snapshot in visible advisor packets, downloaded advisor HTML, and advisor text.
+- Add deterministic regression and Chrome coverage.
+
+Completed:
+- Added a new `Audit issues` schedule-output include option.
+- Defaulted `auditIssues` to on for new, imported, shared, cloud-loaded, and snapshot-restored plans.
+- Added advisor audit summary helpers that:
+  - pull from `auditDegreeIssues()`.
+  - count all open issues.
+  - list the top 6 compact issues.
+  - include issue level, title, summary, status, and satisfying requirement text.
+- Added a `Degree Audit Snapshot` section to the advisor packet.
+- Added an `Audit issues` stat card alongside credits, current-term picks, conflicts, and timing fit.
+- Added audit snapshot text to advisor text output.
+- Added standalone advisor-document CSS so downloaded HTML packets preserve the audit section.
+- Versioned changed browser assets:
+  - `styles.css?v=56`
+  - `js/state.js?v=15`
+  - `js/schedule.js?v=26`
+  - `js/io.js?v=11`
+  - `js/share.js?v=11`
+  - `js/snapshots.js?v=10`
+  - `js/account.js?v=7`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan fixtures.
+- The updated `AUDIT-ISSUES` fixture confirms:
+  - advisor schedule output defaults `auditIssues` on.
+  - advisor HTML includes `Degree Audit Snapshot`.
+  - advisor HTML reports the full `16 open items` count while showing the top 6.
+  - top issue titles appear in the advisor packet.
+  - advisor text includes audit snapshot details and `Satisfies:` lines.
+  - standalone downloaded advisor HTML includes audit CSS/markup.
+  - turning `auditIssues` off removes the audit snapshot from advisor HTML.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then restored the backed-up local app state and removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=56`, `js/state.js?v=15`, `js/schedule.js?v=26`, `js/io.js?v=11`, `js/share.js?v=11`, `js/snapshots.js?v=10`, and `js/account.js?v=7` loaded.
+  - Schedule Output rendered the new `Audit issues` include option checked by default.
+  - Advisor Packet rendered `Degree Audit Snapshot`.
+  - The audit snapshot showed `16 open items · 3 placeholders · 13 GenEd gaps · showing top 6`.
+  - Six compact audit rows rendered.
+  - Unchecking `Audit issues` hid the audit snapshot and changed the preset indicator to Custom.
+  - There was no horizontal overflow.
+  - The restored app page no longer showed the seeded QA state.
+  - Chrome console warnings/errors were clean.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add policy-source links or a dated equivalency notice inside the prior-credit editor.
+- Add a safe stale-undo recovery affordance that jumps to the edited course or section.
+- Broaden prior-credit equivalency coverage with official-source mappings.
+- Add advisor packet quick links from audit issues into Browse or placeholder replacement.

@@ -3593,7 +3593,8 @@ h1.hero-title em {
 .schedule-advisor-view-note strong {
   color: var(--ink);
 }
-.schedule-advisor-diagnostics {
+.schedule-advisor-diagnostics,
+.schedule-advisor-audit {
   margin: 10px 0 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -3670,6 +3671,46 @@ h1.hero-title em {
 .schedule-advisor-diagnostic-list span + span {
   margin-top: 3px;
 }
+.schedule-advisor-audit-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+}
+.schedule-advisor-audit-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 9px;
+  border-top: 1px solid var(--line);
+  padding-top: 7px;
+  font-size: .72rem;
+}
+.schedule-advisor-audit-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.schedule-advisor-audit-row b {
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.schedule-advisor-audit-row strong {
+  display: block;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.schedule-advisor-audit-row p {
+  margin: 2px 0;
+  color: var(--slate);
+  line-height: 1.35;
+}
+.schedule-advisor-audit-row span {
+  color: var(--slate);
+  display: block;
+  font-size: .66rem;
+  line-height: 1.3;
+}
 .schedule-advisor-section-title {
   display: flex;
   justify-content: space-between;
@@ -3688,7 +3729,7 @@ h1.hero-title em {
 }
 .schedule-advisor-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   margin: 12px 0 10px;
 }
@@ -4510,8 +4551,10 @@ h1.hero-title em {
   body.print-advisor-packet .schedule-advisor-metrics span,
   body.print-advisor-packet .schedule-advisor-stat,
   body.print-advisor-packet .schedule-advisor-diagnostics,
+  body.print-advisor-packet .schedule-advisor-audit,
   body.print-advisor-packet .schedule-advisor-diagnostic-metrics span,
   body.print-advisor-packet .schedule-advisor-diagnostic-list,
+  body.print-advisor-packet .schedule-advisor-audit-row,
   body.print-advisor-packet .schedule-advisor-semester,
   body.print-advisor-packet .schedule-change-row {
     border-color: #bbb;
@@ -5911,6 +5954,13 @@ h1.hero-title em {
   }
   .schedule-advisor-diagnostic-notes {
     grid-template-columns: 1fr;
+  }
+  .schedule-advisor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .schedule-advisor-audit-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
   }
   .schedule-advisor-section-title {
     flex-direction: column;

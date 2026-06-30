@@ -78,12 +78,14 @@ const DEFAULT_SCHEDULE_OUTPUT_OPTIONS = {
   warnings: true,
   unscheduled: true,
   recentChanges: true,
+  auditIssues: true,
 };
 const SCHEDULE_OUTPUT_OPTION_DEFS = [
   { id: 'preferences', label: 'Preferences' },
   { id: 'warnings', label: 'Warnings' },
   { id: 'unscheduled', label: 'Unscheduled' },
   { id: 'recentChanges', label: 'Recent changes' },
+  { id: 'auditIssues', label: 'Audit issues' },
 ];
 const SCHEDULE_OUTPUT_PRESET_DEFS = [
   {
@@ -91,21 +93,21 @@ const SCHEDULE_OUTPUT_PRESET_DEFS = [
     label: 'Personal',
     advisorFilter: 'all',
     description: 'Full schedule, full plan, preferences, warnings, unscheduled work, and recent changes.',
-    options: { preferences: true, warnings: true, unscheduled: true, recentChanges: true },
+    options: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true },
   },
   {
     id: 'advisor',
     label: 'Advisor',
     advisorFilter: 'blockers',
     description: 'Blocker-focused advisor packet with warnings, follow-up items, preferences, and recent changes.',
-    options: { preferences: true, warnings: true, unscheduled: true, recentChanges: true },
+    options: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true },
   },
   {
     id: 'registrar',
     label: 'Registrar',
     advisorFilter: 'remaining',
     description: 'Registration-ready facts without personal preference notes or edit history.',
-    options: { preferences: false, warnings: true, unscheduled: true, recentChanges: false },
+    options: { preferences: false, warnings: true, unscheduled: true, recentChanges: false, auditIssues: true },
   },
 ];
 
@@ -1585,6 +1587,111 @@ function scheduleRecentChangesText(changes) {
   return lines;
 }
 
+function scheduleAdvisorAuditIssues(limit = 6) {
+  if (typeof auditDegreeIssues !== 'function') return [];
+  try {
+    const issues = auditDegreeIssues()
+      .map(issue => ({
+        key: issue.key,
+        type: issue.type || 'audit',
+        level: issue.level || 'info',
+        title: issue.title || 'Degree audit item',
+        status: issue.status || '',
+        summary: issue.summary || '',
+        satisfies: issue.satisfies || '',
+        actionLabel: issue.actionLabel || '',
+        tags: Array.isArray(issue.tags) ? issue.tags.slice(0, 4) : [],
+      }));
+    const shown = issues.slice(0, limit);
+    shown.totalOpen = issues.length;
+    shown.totalCounts = issues.reduce((acc, issue) => {
+      acc.total += 1;
+      acc[issue.type] = (acc[issue.type] || 0) + 1;
+      acc[issue.level] = (acc[issue.level] || 0) + 1;
+      return acc;
+    }, { total: 0, placeholder: 0, gened: 0, danger: 0, warn: 0, info: 0 });
+    return shown;
+  } catch {
+    return [];
+  }
+}
+
+function scheduleAuditIssueCounts(issues) {
+  if (issues?.totalCounts) return { total: issues.totalOpen || issues.totalCounts.total || 0, ...issues.totalCounts };
+  return (issues || []).reduce((acc, issue) => {
+    acc.total += 1;
+    acc[issue.type] = (acc[issue.type] || 0) + 1;
+    acc[issue.level] = (acc[issue.level] || 0) + 1;
+    return acc;
+  }, { total: 0, placeholder: 0, gened: 0, danger: 0, warn: 0, info: 0 });
+}
+
+function scheduleAuditIssueLevelLabel(issue) {
+  if (issue.level === 'danger') return 'Critical';
+  if (issue.level === 'warn') return 'Review';
+  return 'Plan';
+}
+
+function scheduleAdvisorAuditSummaryHtml(issues) {
+  const list = Array.isArray(issues) ? issues : [];
+  const counts = scheduleAuditIssueCounts(list);
+  const shownNote = counts.total > list.length ? ` · showing top ${list.length}` : '';
+  if (!list.length) {
+    return `
+      <section class="schedule-advisor-audit">
+        <div class="schedule-advisor-diagnostics-head">
+          <div>
+            <h4>Degree Audit Snapshot</h4>
+            <span>No open placeholders or GenEd gaps detected in the current plan.</span>
+          </div>
+          <strong>Clear</strong>
+        </div>
+      </section>
+    `;
+  }
+  return `
+    <section class="schedule-advisor-audit">
+      <div class="schedule-advisor-diagnostics-head">
+        <div>
+          <h4>Degree Audit Snapshot</h4>
+          <span>${counts.total} open item${counts.total === 1 ? '' : 's'} · ${counts.placeholder || 0} placeholder${counts.placeholder === 1 ? '' : 's'} · ${counts.gened || 0} GenEd gap${counts.gened === 1 ? '' : 's'}${shownNote}</span>
+        </div>
+        <strong>${counts.danger ? 'Fix first' : 'Review'}</strong>
+      </div>
+      <div class="schedule-advisor-audit-list">
+        ${list.map(issue => `
+          <div class="schedule-advisor-audit-row ${scheduleEscape(issue.level)}">
+            <b>${scheduleEscape(scheduleAuditIssueLevelLabel(issue))}</b>
+            <div>
+              <strong>${scheduleEscape(issue.title)}</strong>
+              <p>${scheduleEscape(issue.summary)}</p>
+              <span>${scheduleEscape([issue.status, issue.satisfies].filter(Boolean).join(' · '))}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function scheduleAdvisorAuditSummaryText(issues) {
+  const list = Array.isArray(issues) ? issues : [];
+  if (!list.length) return ['', 'Degree audit snapshot:', '- No open placeholders or GenEd gaps detected.'];
+  const counts = scheduleAuditIssueCounts(list);
+  const shownNote = counts.total > list.length ? `; top ${list.length} shown` : '';
+  const lines = [
+    '',
+    'Degree audit snapshot:',
+    `- ${counts.total} open item${counts.total === 1 ? '' : 's'} (${counts.placeholder || 0} placeholders / ${counts.gened || 0} GenEd gaps${shownNote})`,
+  ];
+  list.forEach(issue => {
+    lines.push(`- ${scheduleAuditIssueLevelLabel(issue)}: ${issue.title}${issue.status ? ` (${issue.status})` : ''}`);
+    if (issue.summary) lines.push(`  ${issue.summary}`);
+    if (issue.satisfies) lines.push(`  Satisfies: ${issue.satisfies}`);
+  });
+  return lines;
+}
+
 function scheduleCourseIsGenEd(course) {
   const category = String(course?.category || '').toLowerCase();
   return course?.kind === 'gened'
@@ -1797,6 +1904,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
   const outputOptions = normalizeScheduleOutputOptions(options);
+  const auditIssues = outputOptions.auditIssues ? scheduleAdvisorAuditIssues(6) : [];
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const context = scheduleAdvisorFilterContext(
     sem?.id || '',
@@ -1820,6 +1928,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   ];
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
+  if (outputOptions.auditIssues) lines.push(...scheduleAdvisorAuditSummaryText(auditIssues));
   lines.push('', `${filterDef.heading}:`);
 
   getAllSemesters().forEach(planSem => {
@@ -1863,7 +1972,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-print-meta span,.schedule-advisor-metrics span,.schedule-advisor-flags span{border:1px solid #d8cec0;border-radius:999px;background:#fff;padding:3px 8px;font-size:12px}
     .schedule-print-prefs,.schedule-advisor-note{color:#5d5962;font-size:13px}
     .schedule-advisor-view-note{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:9px 10px;color:#5d5962;font-size:12px;margin:10px 0}
-    .schedule-advisor-diagnostics{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-advisor-diagnostics,.schedule-advisor-audit{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-advisor-diagnostics-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-advisor-diagnostics-head h4{margin:0}
     .schedule-advisor-diagnostics-head span,.schedule-advisor-diagnostic-list span,.schedule-advisor-diagnostic-metrics em{display:block;color:#5d5962;font-size:12px;font-style:normal}
@@ -1874,6 +1983,12 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-diagnostic-notes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
     .schedule-advisor-diagnostic-list{border-top:1px solid #eee4d8;padding-top:7px;font-size:12px}
     .schedule-advisor-diagnostic-list strong{display:block;margin-bottom:4px}
+    .schedule-advisor-audit-list{display:grid;gap:6px;margin-top:8px}
+    .schedule-advisor-audit-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
+    .schedule-advisor-audit-row:first-child{border-top:none;padding-top:0}
+    .schedule-advisor-audit-row b{font-size:10px;text-transform:uppercase;color:#8b0000}
+    .schedule-advisor-audit-row p{margin:2px 0;color:#5d5962}
+    .schedule-advisor-audit-row span{display:block;color:#5d5962;font-size:11px}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
@@ -1891,7 +2006,7 @@ function scheduleStandaloneAdvisorCss() {
     table{width:100%;border-collapse:collapse;font-size:13px}
     th,td{border-top:1px solid #d8cec0;padding:8px 6px;text-align:left;vertical-align:top}
     th{font-size:11px;text-transform:uppercase;color:#5d5962}
-    .schedule-advisor-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}
+    .schedule-advisor-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}
     .schedule-advisor-stat{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px}
     .schedule-advisor-stat strong{display:block;font-size:18px}
     .schedule-advisor-section-title{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin:13px 0 8px}
@@ -1903,7 +2018,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-diagnostic-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}}
   `;
 }
@@ -1917,6 +2032,8 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
   const visibleWarnings = outputOptions.warnings ? warnings : [];
   const visibleUnscheduled = outputOptions.unscheduled ? unscheduled : [];
   const visibleChanges = outputOptions.recentChanges ? changes : [];
+  const auditIssues = outputOptions.auditIssues ? scheduleAdvisorAuditIssues(6) : [];
+  const auditCounts = scheduleAuditIssueCounts(auditIssues);
   const filterContext = scheduleAdvisorFilterContext(sem?.id || '', selectedItems, conflicts, visibleWarnings, visibleUnscheduled, filter);
   const plan = scheduleAdvisorPlanHtml(sem?.id || '', selectedItems, filterContext);
   const generated = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -1940,6 +2057,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         <div class="schedule-advisor-stat"><span>Current term</span><strong>${selectedItems.length}/${courses.length}</strong><em>sections picked</em></div>
         <div class="schedule-advisor-stat"><span>Conflicts</span><strong>${conflicts.length}</strong><em>${warnings.length} warning${warnings.length === 1 ? '' : 's'}</em></div>
         <div class="schedule-advisor-stat"><span>Timing fit</span><strong>${timing.score}/100</strong><em>${scheduleEscape(timing.label)}</em></div>
+        <div class="schedule-advisor-stat"><span>Audit issues</span><strong>${outputOptions.auditIssues ? auditCounts.total : 'off'}</strong><em>${outputOptions.auditIssues ? `${auditCounts.placeholder || 0} slots · ${auditCounts.gened || 0} GenEd` : 'hidden'}</em></div>
       </div>
       ${outputOptions.preferences ? `<p class="schedule-advisor-note">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       <div class="schedule-advisor-metrics">
@@ -1956,6 +2074,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
       ${scheduleAdvisorTimingDiagnosticsHtml(timing)}
+      ${outputOptions.auditIssues ? scheduleAdvisorAuditSummaryHtml(auditIssues) : ''}
       ${scheduleChangeDigestHtml(visibleChanges, 'Advisor context')}
       <p class="schedule-advisor-view-note"><strong>${scheduleEscape(filterDef.label)} view:</strong> ${scheduleEscape(filterDef.description)}</p>
       <div class="schedule-advisor-section-title">

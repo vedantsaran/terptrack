@@ -269,7 +269,7 @@ function loadState() {
     schedulePrefs: {},
     scheduleAdvisorFilter: 'all',
     scheduleOutputPreset: 'personal',
-    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true },
+    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true },
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '' },
     browseSavedSearches: [],
     recentChanges: [],

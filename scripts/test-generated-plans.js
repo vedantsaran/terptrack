@@ -1609,6 +1609,11 @@ function testAuditIssueDrawer(context) {
       const genedGap = issues.find(issue => issue.key === 'gened-DSHU');
       auditIssueKey = dshuSlot.key;
       const html = auditIssuesHtml();
+      state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true };
+      state.scheduleAdvisorFilter = 'blockers';
+      const advisorOutput = buildScheduleOutput('PASS54', '202608', state.activeSchedule[0].courses, [], [], [], { ...DEFAULT_SCHEDULE_PREFS });
+      state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: false };
+      const advisorOutputNoAudit = buildScheduleOutput('PASS54', '202608', state.activeSchedule[0].courses, [], [], [], { ...DEFAULT_SCHEDULE_PREFS });
       auditOpenIssuePrimary(dshuSlot.key);
       auditOpenIssueBrowse(genedGap.key);
       return {
@@ -1619,6 +1624,11 @@ function testAuditIssueDrawer(context) {
         freeSlot,
         genedGap,
         html,
+        advisorHtml: advisorOutput.advisorHtml,
+        advisorText: advisorOutput.advisorText,
+        advisorDocument: advisorOutput.advisorDocument,
+        advisorHtmlNoAudit: advisorOutputNoAudit.advisorHtml,
+        advisorOptions: advisorOutput.outputOptions,
         openedPlaceholder,
         currentTab,
         browseDept,
@@ -1635,6 +1645,13 @@ function testAuditIssueDrawer(context) {
   assert(result.freeSlot && /elective|personal/i.test(result.freeSlot.summary + result.freeSlot.detail), 'audit issues: free elective should explain personalization');
   assert(result.genedGap && result.genedGap.type === 'gened', 'audit issues: should include a DSHU requirement gap');
   assert(/Degree|open item|Why it remains|What can satisfy it|Choose Replacement|Open Browse/.test(result.html), 'audit issues: expanded drawer should render explanatory copy and actions');
+  assert(result.advisorOptions.auditIssues === true, 'advisor audit export: audit issues should default into schedule output options');
+  assert(/Degree Audit Snapshot/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include audit snapshot section');
+  assert(/Audit issues/.test(result.advisorHtml) && /16 open items/.test(result.advisorHtml) && /showing top 6/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include full audit issue counts and compact top list');
+  assert(/GenEd DSHU|GVPT 3xx Elective A|Free Elective/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include top audit issue titles');
+  assert(/Degree audit snapshot/.test(result.advisorText) && /Satisfies:/.test(result.advisorText), 'advisor audit export: advisor text should include audit snapshot details');
+  assert(/schedule-advisor-audit/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include audit CSS/markup');
+  assert(!/Degree Audit Snapshot/.test(result.advisorHtmlNoAudit), 'advisor audit export: audit snapshot should hide when auditIssues option is off');
   assert(result.openedPlaceholder.code === 'GenEd DSHU' && result.openedPlaceholder.semId === 'PASS54', 'audit issues: primary placeholder action should open the replacement modal for the exact slot');
   assert(result.currentTab === 'browse', 'audit issues: Browse handoff should switch to Browse');
   assert(result.browseDept === '__PROFILE_DEPTS__', 'audit issues: Browse handoff should use profile departments');

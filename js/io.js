@@ -34,7 +34,7 @@ document.getElementById('import-file').addEventListener('change', (e) => {
           schedulePrefs: data.schedulePrefs || {},
           scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(data.scheduleAdvisorFilter) ? data.scheduleAdvisorFilter : 'all',
           scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(data.scheduleOutputPreset) ? data.scheduleOutputPreset : 'personal',
-          scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(data.scheduleOutputOptions || {}) },
+          scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true, ...(data.scheduleOutputOptions || {}) },
           roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(data.roadmapPrefs || {}) },
           browseSavedSearches: typeof normalizeBrowseSavedSearches === 'function' ? normalizeBrowseSavedSearches(data.browseSavedSearches) : (data.browseSavedSearches || []),
           recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],

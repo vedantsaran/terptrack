@@ -331,7 +331,7 @@ function accountNormalizeLoadedState(cloudState) {
     schedulePrefs: cloudState.schedulePrefs || {},
     scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(cloudState.scheduleAdvisorFilter) ? cloudState.scheduleAdvisorFilter : 'all',
     scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(cloudState.scheduleOutputPreset) ? cloudState.scheduleOutputPreset : 'personal',
-    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(cloudState.scheduleOutputOptions || {}) },
+    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true, ...(cloudState.scheduleOutputOptions || {}) },
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(cloudState.roadmapPrefs || {}) },
     browseSavedSearches: typeof normalizeBrowseSavedSearches === 'function' ? normalizeBrowseSavedSearches(cloudState.browseSavedSearches) : (cloudState.browseSavedSearches || []),
     recentChanges: Array.isArray(cloudState.recentChanges) ? cloudState.recentChanges.slice(0, 12) : [],

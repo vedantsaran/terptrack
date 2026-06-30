@@ -103,7 +103,7 @@ function applySharedPlanData(data, options = {}) {
     schedulePrefs: payload.schedulePrefs || {},
     scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(payload.scheduleAdvisorFilter) ? payload.scheduleAdvisorFilter : 'all',
     scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(payload.scheduleOutputPreset) ? payload.scheduleOutputPreset : 'personal',
-    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(payload.scheduleOutputOptions || {}) },
+    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true, ...(payload.scheduleOutputOptions || {}) },
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(payload.roadmapPrefs || {}) },
     browseSavedSearches: typeof normalizeBrowseSavedSearches === 'function' ? normalizeBrowseSavedSearches(payload.browseSavedSearches) : (payload.browseSavedSearches || []),
     recentChanges: Array.isArray(payload.recentChanges) ? payload.recentChanges.slice(0, 12) : [],
