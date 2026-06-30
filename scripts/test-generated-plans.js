@@ -1236,6 +1236,119 @@ async function testBrowseSlotSelection(context) {
   };
 }
 
+async function testBrowseTypedSlotMatching(context) {
+  const result = clone(await vm.runInContext(`
+    (() => {
+      state.activeSchedule = [{
+        id: 'PASS51A',
+        name: 'Pass 51 Fall',
+        year: 'Year 1',
+        courses: [{
+          code: 'GVPT 3xx Elective A',
+          title: 'Upper-Division GVPT Elective',
+          cr: 3,
+          category: 'major-upper'
+        }, {
+          code: 'Foreign Language 101',
+          title: 'Foreign Language Sequence I',
+          cr: 4,
+          category: 'major-support',
+          note: 'BA req'
+        }, {
+          code: 'PSYC 2xx Support A',
+          title: 'PSYC Supporting Course',
+          cr: 3,
+          category: 'major-support'
+        }, {
+          code: 'Free Elective #1',
+          title: 'Free Elective 1',
+          cr: 3,
+          kind: 'tech',
+          category: 'elective',
+          note: 'Auto-generated credit placeholder'
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['policy-society'],
+        careerGoal: 'public policy',
+        genEdDepts: 'GVPT'
+      });
+      placeholderSearchTarget = null;
+      browseSlotKey = '';
+      const gvptRows = [{
+        course_id: 'GVPT356',
+        name: 'Politics of the Developing World',
+        credits: '3',
+        description: 'Comparative politics and policy.',
+        gen_ed: []
+      }];
+      const spanRows = [{
+        course_id: 'SPAN101',
+        name: 'Elementary Spanish I',
+        credits: '4',
+        description: 'Introductory Spanish language sequence.',
+        gen_ed: []
+      }];
+      const supportRows = [{
+        course_id: 'PSYC221',
+        name: 'Social Psychology',
+        credits: '3',
+        description: 'Social behavior and psychological support methods.',
+        gen_ed: []
+      }];
+      const gvptItem = browseDecorateRows(gvptRows, {
+        nextTerm: { term: '202608', termLabel: 'Fall 2026' },
+        plannedMap: new Map()
+      }).sort(browseCompareRows)[0];
+      const spanItem = browseDecorateRows(spanRows, {
+        nextTerm: { term: '202608', termLabel: 'Fall 2026' },
+        plannedMap: new Map()
+      }).sort(browseCompareRows)[0];
+      const supportItem = browseDecorateRows(supportRows, {
+        nextTerm: { term: '202608', termLabel: 'Fall 2026' },
+        plannedMap: new Map()
+      }).sort(browseCompareRows)[0];
+      const gvptSlots = browseSlotCandidatesFor(gvptItem);
+      const spanSlots = browseSlotCandidatesFor(spanItem);
+      const supportSlots = browseSlotCandidatesFor(supportItem);
+      browseToggleSlotPicker('GVPT356', 'full:slot:GVPT356');
+      const gvptHtml = browseCourseCardHtml(gvptItem, {
+        nextTerm: { term: '202608', termLabel: 'Fall 2026' },
+        whyScope: 'full'
+      });
+      return {
+        gvptSlots: gvptSlots.map(slot => ({ code: slot.course.code, kind: slot.kind, label: slot.label })),
+        spanSlots: spanSlots.map(slot => ({ code: slot.course.code, kind: slot.kind, label: slot.label })),
+        supportSlots: supportSlots.map(slot => ({ code: slot.course.code, kind: slot.kind, label: slot.label })),
+        gvptHtml
+      };
+    })()
+  `, context));
+
+  assert(result.gvptSlots[0].code === 'GVPT 3xx Elective A', 'browse typed slots: GVPT upper elective should rank first for GVPT 300-level course');
+  assert(result.gvptSlots[0].kind === 'major-elective', 'browse typed slots: GVPT slot should be typed as major elective');
+  assert(/GVPT upper elective/.test(result.gvptSlots[0].label), 'browse typed slots: GVPT label should explain upper elective fit');
+  assert(result.gvptSlots.some(slot => slot.code === 'Free Elective #1'), 'browse typed slots: free elective should remain fallback');
+  assert(!result.gvptSlots.some(slot => slot.code === 'Foreign Language 101'), 'browse typed slots: GVPT course should not match language slot');
+  assert(result.spanSlots[0].code === 'Foreign Language 101', 'browse typed slots: SPAN course should rank language slot first');
+  assert(result.spanSlots[0].kind === 'language', 'browse typed slots: language slot should be typed as language');
+  assert(/Language sequence candidate/.test(result.spanSlots[0].label), 'browse typed slots: language label should explain sequence fit');
+  assert(!result.spanSlots.some(slot => slot.code === 'GVPT 3xx Elective A'), 'browse typed slots: SPAN course should not match GVPT upper elective');
+  assert(result.supportSlots[0].code === 'PSYC 2xx Support A', 'browse typed slots: PSYC course should rank support slot first');
+  assert(result.supportSlots[0].kind === 'major-support', 'browse typed slots: support slot should be typed as major support');
+  assert(/PSYC course fit/.test(result.supportSlots[0].label), 'browse typed slots: support label should explain department fit');
+  assert(/Major elective/.test(result.gvptHtml) && /GVPT upper elective/.test(result.gvptHtml), 'browse typed slots: slot panel should render typed slot label');
+
+  return {
+    id: 'BROWSE-TYPED-SLOTS',
+    gvpt: `${result.gvptSlots[0].kind}/${result.gvptSlots[0].code}`,
+    language: `${result.spanSlots[0].kind}/${result.spanSlots[0].code}`,
+    support: `${result.supportSlots[0].kind}/${result.supportSlots[0].code}`,
+  };
+}
+
 async function testOnboardingPersonalizedSetup(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -1343,6 +1456,7 @@ async function main() {
   const browseImpact = await testBrowseImpactPreview(context);
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
+  const browseTypedSlots = await testBrowseTypedSlotMatching(context);
   const onboarding = await testOnboardingPersonalizedSetup(context);
 
   console.table(rows);
@@ -1359,8 +1473,9 @@ async function main() {
   console.log(`Browse impact fixture ${browseImpact.id}: ${browseImpact.mode}; load ${browseImpact.load}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
+  console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + browse replacement + browse slot selection + browse typed slot matching + personalized onboarding).`);
 }
 
 main().catch(error => {

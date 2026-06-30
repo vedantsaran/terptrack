@@ -727,15 +727,75 @@ function browseIsCatalogCourseCode(code) {
   return /^[A-Z]{3,4}\s*\d{3}[A-Z]?$/i.test(String(code || '').trim());
 }
 
+function browseCourseCodeParts(code) {
+  const match = normalizeCode(code).match(/^([A-Z]{3,4})(\d{3})[A-Z]?$/);
+  return match ? { dept: match[1], number: parseInt(match[2], 10), level: Math.floor(parseInt(match[2], 10) / 100) * 100 } : { dept: '', number: 0, level: 0 };
+}
+
+function browseSlotText(course) {
+  const categories = Array.isArray(course?.categories) ? course.categories : [];
+  return [course?.code, course?.title, course?.note, course?.category, course?.kind, ...categories].join(' ').toUpperCase();
+}
+
 function browseIsSlotPlaceholder(course) {
   if (!course || browseIsCatalogCourseCode(course.code)) return false;
-  const categories = Array.isArray(course.categories) ? course.categories : [];
-  const hay = [course.code, course.title, course.note, course.category, ...categories].join(' ').toUpperCase();
+  const hay = browseSlotText(course);
   return /^GENED\s/i.test(course.code || '')
     || /^FREE ELECTIVE/i.test(course.code || '')
+    || /\bELECTIVE\b/.test(hay)
+    || hay.includes('FOREIGN LANGUAGE')
+    || hay.includes('LANGUAGE SEQUENCE')
+    || hay.includes('SPECIALIZATION')
+    || hay.includes('SUPPORT')
     || hay.includes('PLACEHOLDER')
     || hay.includes('AUTO-GENERATED')
-    || String(course.category || '').startsWith('gened-');
+    || hay.includes('3XX')
+    || hay.includes('4XX')
+    || String(course.category || '').startsWith('gened-')
+    || ['major-upper', 'major-support'].includes(String(course.category || ''));
+}
+
+function browseSlotRequiredDept(course) {
+  const text = browseSlotText(course);
+  const codeMatch = String(course?.code || '').toUpperCase().match(/\b([A-Z]{3,4})\s*(?:[1-4]XX|ELECTIVE|SPECIALIZATION|SUPPORT|TECH)/);
+  if (codeMatch) return codeMatch[1];
+  const titleMatch = String(course?.title || '').toUpperCase().match(/\b([A-Z]{3,4})\s+(?:UPPER|SPECIALIZATION|ELECTIVE|SUPPORTING|SUPPORT|TECH)/);
+  if (titleMatch) return titleMatch[1];
+  const allDepts = typeof COMMON_DEPTS !== 'undefined' ? COMMON_DEPTS : [];
+  return allDepts.find(dept => text.includes(`${dept} `) || text.includes(`${dept}-`)) || '';
+}
+
+function browseSlotRequiredLevel(course) {
+  const text = browseSlotText(course);
+  if (/\b4XX\b|400-LEVEL|400 LEVEL/.test(text)) return 400;
+  if (/\b3XX\b|300-LEVEL|300 LEVEL|UPPER-DIVISION|UPPER DIVISION|ADVANCED/.test(text)) return 300;
+  if (/\b2XX\b|200-LEVEL|200 LEVEL/.test(text)) return 200;
+  if (/\b1XX\b|100-LEVEL|100 LEVEL/.test(text)) return 100;
+  return 0;
+}
+
+function browseSlotKind(course) {
+  const text = browseSlotText(course);
+  const tags = browseSlotPlaceholderTags(course);
+  if (tags.length) return 'gened';
+  if (/^FREE ELECTIVE/i.test(course?.code || '') || String(course?.category || '') === 'elective') return 'free-elective';
+  if (text.includes('FOREIGN LANGUAGE') || text.includes('LANGUAGE SEQUENCE')) return 'language';
+  if (text.includes('TECH ELECTIVE') || text.includes('TECHNICAL ELECTIVE') || String(course?.category || '').startsWith('tech-')) return 'technical-elective';
+  if (String(course?.category || '') === 'major-support' || text.includes('SUPPORT')) return 'major-support';
+  if (String(course?.category || '') === 'major-upper' || text.includes('UPPER-DIVISION') || text.includes('UPPER DIVISION') || text.includes('SPECIALIZATION') || text.includes('4XX') || text.includes('3XX')) return 'major-elective';
+  return 'placeholder';
+}
+
+function browseSlotKindLabel(kind) {
+  return {
+    gened: 'GenEd slot',
+    'free-elective': 'Free elective',
+    language: 'Language sequence',
+    'technical-elective': 'Technical elective',
+    'major-elective': 'Major elective',
+    'major-support': 'Supporting course',
+    placeholder: 'Placeholder',
+  }[kind] || 'Placeholder';
 }
 
 function browseSlotPlaceholderTags(course) {
@@ -769,6 +829,9 @@ function browsePlaceholderSlots() {
         semName: sem.name || semId,
         index: courseIndex,
         tags: browseSlotPlaceholderTags(course),
+        kind: browseSlotKind(course),
+        requiredDept: browseSlotRequiredDept(course),
+        requiredLevel: browseSlotRequiredLevel(course),
         custom: false,
       });
     });
@@ -782,6 +845,9 @@ function browsePlaceholderSlots() {
       semName: course.semName || 'Custom courses',
       index,
       tags: browseSlotPlaceholderTags(course),
+      kind: browseSlotKind(course),
+      requiredDept: browseSlotRequiredDept(course),
+      requiredLevel: browseSlotRequiredLevel(course),
       custom: true,
     });
   });
@@ -789,6 +855,7 @@ function browsePlaceholderSlots() {
 }
 
 function browseSlotMatchDetail(item, slot) {
+  const codeParts = browseCourseCodeParts(item.code || item.row?.course_id || '');
   const courseTags = item.genEdTags || browseCourseGenEdTags(item.row || item);
   const courseTagSet = new Set(courseTags);
   const slotTags = slot.tags || [];
@@ -801,10 +868,46 @@ function browseSlotMatchDetail(item, slot) {
       matchedTags: hits,
     };
   }
-  if (/^FREE ELECTIVE/i.test(slot.course.code || '') || String(slot.course.category || '') === 'elective') {
+  const deptMatches = !slot.requiredDept || slot.requiredDept === codeParts.dept;
+  const levelMatches = !slot.requiredLevel || codeParts.number >= slot.requiredLevel;
+  if (slot.kind === 'language') {
+    const languageDepts = new Set(['ARAB','CHIN','FREN','GERM','GERS','GREK','HEBR','ITAL','JAPN','KORA','LATN','PERS','PORT','RUSS','SPAN']);
+    if (!languageDepts.has(codeParts.dept)) return null;
     return {
-      score: 60,
-      label: 'Open elective slot',
+      score: 250 + (codeParts.number < 300 ? 40 : 0),
+      label: 'Language sequence candidate',
+      matchedTags: [],
+    };
+  }
+  if (slot.kind === 'major-elective') {
+    if (!deptMatches || !levelMatches) return null;
+    return {
+      score: 260 + (slot.requiredDept ? 45 : 0) + (slot.requiredLevel ? 25 : 0),
+      label: `${slot.requiredDept || 'Major'} upper elective`,
+      matchedTags: [],
+    };
+  }
+  if (slot.kind === 'technical-elective') {
+    if (!levelMatches) return null;
+    return {
+      score: 220 + (deptMatches ? 35 : 0),
+      label: `${slot.requiredDept || codeParts.dept || 'Technical'} elective fit`,
+      matchedTags: [],
+    };
+  }
+  if (slot.kind === 'major-support') {
+    if (!deptMatches && slot.requiredDept) return null;
+    return {
+      score: 170 + (deptMatches ? 35 : 0),
+      label: `${slot.requiredDept || 'Supporting'} course fit`,
+      matchedTags: [],
+    };
+  }
+  if (slot.kind === 'free-elective') {
+    const profileScore = Number(item.profileMatch?.score) || 0;
+    return {
+      score: 60 + Math.min(40, Math.round(profileScore / 8)),
+      label: profileScore ? 'Profile elective fit' : 'Open elective slot',
       matchedTags: [],
     };
   }
@@ -852,7 +955,7 @@ function browseSlotPickerHtml(item, slots, panelId) {
         ${slots.map(slot => `
           <button class="browse-slot-option" type="button" onclick="browseReplaceIntoSlot('${browseEscape(normalizeCode(code))}', '${browseEscape(slot.key)}')">
             <strong>${browseEscape(slot.course.code || 'Placeholder')}</strong>
-            <span>${browseEscape([slot.semName, slot.label, slot.course.title || ''].filter(Boolean).join(' · '))}</span>
+            <span>${browseEscape([slot.semName, browseSlotKindLabel(slot.kind), slot.label, slot.course.title || ''].filter(Boolean).join(' · '))}</span>
           </button>
         `).join('')}
       </div>

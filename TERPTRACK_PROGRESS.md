@@ -2370,3 +2370,63 @@ Next pass candidates:
 - Add a post-onboarding checklist that asks for AP/IB score details and maps common scores to UMD course credit.
 - Add an impact preview variant that estimates prerequisite-chain additions before opening the resolver modal.
 - Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
+
+## 2026-06-30 Pass 51
+
+Focus: make Browse placeholder slot recommendations type-aware for major, technical, language, support, GenEd, and free-elective slots.
+
+Planned changes:
+- Classify placeholder slots beyond broad GenEd/free-elective matching.
+- Respect department and course-level hints such as `GVPT 3xx` and `ENME 4xx Tech Elective`.
+- Keep open free electives as a lower-priority fallback.
+- Render the slot type in the Choose slot panel.
+- Add regression coverage for typed slot ranking.
+
+Completed:
+- Added Browse slot parsing helpers for:
+  - catalog course code department/number/level.
+  - placeholder search text across code, title, note, category, kind, and categories.
+  - required department hints from slot code/title text.
+  - required level hints from `1xx`, `2xx`, `3xx`, `4xx`, and upper-division text.
+  - slot kind labels for GenEd, free elective, language sequence, technical elective, major elective, supporting course, and generic placeholder.
+- Expanded placeholder detection so non-catalog elective, language, 3xx/4xx, and generated placeholders appear in the slot picker.
+- Updated slot matching:
+  - GenEd placeholders still require exact GenEd tag overlap and stay highest confidence.
+  - language sequence slots only match language departments such as SPAN, FREN, CHIN, JAPN, etc.
+  - major elective slots require department and level compatibility when the placeholder provides those hints.
+  - technical elective slots require level compatibility and get a department bonus when applicable.
+  - major-support slots honor required department hints.
+  - free electives remain available as a low-confidence/profile-weighted fallback.
+- Updated the Choose slot panel rows to include the slot type before the fit explanation.
+- Versioned changed browser assets:
+  - `js/browse.js?v=12`
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all existing generated-plan fixtures plus the new `BROWSE-TYPED-SLOTS` fixture.
+- The new regression fixture confirms:
+  - `GVPT 356` ranks `GVPT 3xx Elective A` first.
+  - the GVPT slot is typed as `major-elective`.
+  - the panel explanation includes `GVPT upper elective`.
+  - `Free Elective #1` remains as fallback.
+  - a GVPT course does not match the foreign language slot.
+  - `SPAN 101` ranks `Foreign Language 101` first.
+  - a SPAN course does not match the GVPT upper-elective slot.
+  - `PSYC 221` ranks `PSYC 2xx Support A` first.
+  - the PSYC slot is typed as `major-support` and explains the department fit.
+- Used Chrome with the existing local server at `http://127.0.0.1:5173/` and a temporary same-origin seed page, then removed the seed page before commit.
+- Chrome confirmed:
+  - `styles.css?v=48`, `js/browse.js?v=12`, and `js/placeholder-search.js?v=5` loaded.
+  - a seeded plan with `GVPT 3xx Elective A`, `Foreign Language 101`, and `Free Elective #1` opened Browse successfully.
+  - filtering to `GVPT356` rendered `GVPT 356` with `Choose slot`.
+  - the Full results slot picker showed `GVPT 3xx Elective A` with `Major elective · GVPT upper elective`.
+  - `Free Elective #1` stayed present as a fallback.
+  - `Foreign Language 101` was excluded for the GVPT course.
+  - no horizontal overflow and no Chrome console warnings/errors.
+- Finalized the Chrome tab after QA.
+
+Next pass candidates:
+- Add AP/IB and transfer-credit intake that maps common credits to UMD course equivalents before schedule generation.
+- Add a degree-rule issue drawer that explains why each remaining placeholder exists and what course families can satisfy it.
+- Add section-aware replacement flow that previews real meeting times before replacing a placeholder.
+- Validate a real deployed magic-link account round trip once Supabase/Vercel credentials are available.
