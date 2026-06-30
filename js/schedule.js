@@ -67,6 +67,12 @@ const LOCATION_WEIGHT_MULTIPLIERS = {
   normal: 1,
   strong: 1.55,
 };
+const SCHEDULE_ADVISOR_FILTERS = [
+  { id: 'all', label: 'All', heading: 'Full Semester Plan', description: 'Every planned course across every term.' },
+  { id: 'remaining', label: 'Remaining', heading: 'Remaining Plan', description: 'Courses not yet passed or transferred.' },
+  { id: 'gened', label: 'Gen-Eds', heading: 'GenEd Plan', description: 'Only courses counting toward General Education coverage.' },
+  { id: 'blockers', label: 'Blockers', heading: 'Registration Blockers', description: 'Locked courses, unscheduled current-term courses, conflicts, warnings, and repeats.' },
+];
 
 let scheduleCurrentSemId = '';
 let schedulePostedTerms = null;
@@ -106,6 +112,30 @@ function parseClockValue(value) {
 
 function scheduleDefById(defs, id) {
   return defs.find(def => def.id === id) || defs[0];
+}
+
+function normalizeScheduleAdvisorFilter(value) {
+  const raw = String(value || 'all');
+  return SCHEDULE_ADVISOR_FILTERS.some(filter => filter.id === raw) ? raw : 'all';
+}
+
+function scheduleAdvisorFilterDef(value) {
+  const id = normalizeScheduleAdvisorFilter(value);
+  return SCHEDULE_ADVISOR_FILTERS.find(filter => filter.id === id) || SCHEDULE_ADVISOR_FILTERS[0];
+}
+
+function getScheduleAdvisorFilter() {
+  const next = normalizeScheduleAdvisorFilter(state.scheduleAdvisorFilter);
+  if (state.scheduleAdvisorFilter !== next) state.scheduleAdvisorFilter = next;
+  return next;
+}
+
+function setScheduleAdvisorFilter(value) {
+  const next = normalizeScheduleAdvisorFilter(value);
+  if (getScheduleAdvisorFilter() === next) return;
+  state.scheduleAdvisorFilter = next;
+  saveState();
+  renderSchedule();
 }
 
 function normalizeScheduleChoice(defs, value) {
@@ -1192,6 +1222,20 @@ function scheduleAdvisorCourseStatus(course) {
   return pre.met ? 'Planned' : `Locked: ${pre.missing || 'prereq needed'}`;
 }
 
+function scheduleAdvisorCourseIsRemaining(course) {
+  const status = getCourseState(course.code).status;
+  return status !== 'passed' && status !== 'transfer';
+}
+
+function scheduleAdvisorWarningCodes(warnings) {
+  const codes = new Set();
+  (warnings || []).forEach(warning => {
+    const match = String(warning || '').match(/^([A-Z]{2,4})\s*([0-9]{3}[A-Z]?)/);
+    if (match) codes.add(normalizeCode(`${match[1]} ${match[2]}`));
+  });
+  return codes;
+}
+
 function scheduleAdvisorStats() {
   const courses = flatCourses();
   const totalRequired = Number(getSettings().totalCredits) || courses.reduce((sum, course) => sum + (Number(course.cr) || 0), 0);
@@ -1254,19 +1298,77 @@ function scheduleAdvisorSelectedSectionMap(semId, selectedItems) {
   return map;
 }
 
-function scheduleAdvisorPlanHtml(currentSemId, selectedItems) {
+function scheduleAdvisorFilterContext(currentSemId, selectedItems, conflicts, warnings, unscheduled, filter) {
+  const conflictCodes = new Set();
+  (conflicts || []).forEach(conflict => {
+    if (conflict.a?.code) conflictCodes.add(normalizeCode(conflict.a.code));
+    if (conflict.b?.code) conflictCodes.add(normalizeCode(conflict.b.code));
+  });
+  return {
+    filter: normalizeScheduleAdvisorFilter(filter),
+    currentSemId,
+    currentSemName: getAllSemesters().find(sem => sem.id === currentSemId)?.name || '',
+    selectedMap: scheduleAdvisorSelectedSectionMap(currentSemId, selectedItems || []),
+    conflictCodes,
+    warningCodes: scheduleAdvisorWarningCodes(warnings),
+    unscheduledCodes: new Set((unscheduled || []).map(course => normalizeCode(course.code))),
+  };
+}
+
+function scheduleAdvisorCourseFilter(course, semId, context) {
+  const filter = normalizeScheduleAdvisorFilter(context?.filter);
+  const key = normalizeCode(course.code);
+  const status = getCourseState(course.code).status;
+  const pre = prereqsMet(course);
+  const remaining = scheduleAdvisorCourseIsRemaining(course);
+  const reasons = [];
+  if (semId === context.currentSemId && context.unscheduledCodes.has(key)) {
+    reasons.push(`Needs ${context.currentSemName || 'current term'} section`);
+  }
+  if (context.conflictCodes.has(key)) reasons.push('Time conflict');
+  if (context.warningCodes.has(key)) reasons.push('Schedule warning');
+  if (remaining && !pre.met) reasons.push(`Missing ${pre.missing || 'prereq needed'}`);
+  if (status === 'failed') reasons.push('Needs repeat');
+
+  if (filter === 'remaining') return { include: remaining, reasons };
+  if (filter === 'gened') return { include: scheduleCourseIsGenEd(course), reasons };
+  if (filter === 'blockers') return { include: reasons.length > 0, reasons };
+  return { include: true, reasons };
+}
+
+function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
   const selectedMap = scheduleAdvisorSelectedSectionMap(currentSemId, selectedItems);
-  return getAllSemesters().map(sem => {
+  const ctx = {
+    ...scheduleAdvisorFilterContext(currentSemId, selectedItems, [], [], [], 'all'),
+    ...(context || {}),
+    selectedMap,
+    filter: normalizeScheduleAdvisorFilter(context?.filter),
+  };
+  let totalCourses = 0;
+  let shownCourses = 0;
+  let totalCredits = 0;
+  let shownCredits = 0;
+  const semesterHtml = getAllSemesters().map(sem => {
     const courses = [
       ...(sem.courses || []),
       ...(state.customCourses || []).filter(course => course.semId === sem.id),
     ];
     const credits = courses.reduce((sum, course) => sum + (Number(course.cr) || 0), 0);
+    totalCourses += courses.length;
+    totalCredits += credits;
+    let visibleCredits = 0;
     const rows = courses.map(course => {
+      const filterResult = scheduleAdvisorCourseFilter(course, sem.id, ctx);
+      if (!filterResult.include) return '';
+      const cr = Number(course.cr) || 0;
+      visibleCredits += cr;
+      shownCourses += 1;
+      shownCredits += cr;
       const key = `${sem.id}:${normalizeCode(course.code)}`;
       const section = selectedMap[key] || getSelectedSection(sem.id, course.code);
       const sectionLine = section ? `<span>${scheduleEscape(section.number || section.section_id || 'Section')} - ${scheduleEscape(scheduleSectionMeetingLines(section).join(' / '))}</span>` : '';
       const note = course.note ? `<em>${scheduleEscape(course.note)}</em>` : '';
+      const reasonLine = filterResult.reasons.length ? `<em>${scheduleEscape(filterResult.reasons.join(' · '))}</em>` : '';
       return `
         <li class="schedule-advisor-course">
           <div>
@@ -1274,42 +1376,52 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems) {
             <span>${scheduleEscape(course.title || '')}</span>
             ${sectionLine}
             ${note}
+            ${reasonLine}
           </div>
           <div>
-            <span>${Number(course.cr) || 0} cr</span>
+            <span>${cr} cr</span>
             <span>${scheduleEscape(scheduleAdvisorCourseType(course))}</span>
             <span>${scheduleEscape(scheduleAdvisorCourseStatus(course))}</span>
           </div>
         </li>
       `;
     }).join('');
+    if (ctx.filter !== 'all' && !rows.trim()) return '';
+    const creditLine = ctx.filter === 'all' ? `${credits} cr` : `${visibleCredits} of ${credits} cr`;
     return `
       <section class="schedule-advisor-semester">
         <div class="schedule-advisor-semester-head">
           <strong>${scheduleEscape(sem.name)}</strong>
-          <span>${credits} cr</span>
+          <span>${scheduleEscape(creditLine)}</span>
         </div>
         <ul>${rows || '<li class="schedule-advisor-course"><div><span>No courses planned.</span></div></li>'}</ul>
       </section>
     `;
   }).join('');
+  const filterDef = scheduleAdvisorFilterDef(ctx.filter);
+  const html = semesterHtml.trim() || `<div class="schedule-output-empty">No courses match the ${scheduleEscape(filterDef.label)} advisor view.</div>`;
+  return { html, totalCourses, shownCourses, totalCredits, shownCredits };
 }
 
-function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText) {
+function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = []) {
   const stats = scheduleAdvisorStats();
+  const filter = normalizeScheduleAdvisorFilter(advisorFilter);
+  const filterDef = scheduleAdvisorFilterDef(filter);
+  const context = scheduleAdvisorFilterContext(sem?.id || '', selectedItems, conflicts, warnings, unscheduled, filter);
   const lines = [
     scheduleText,
     '',
     'Advisor packet',
     `Program: ${getSettings().programName || 'UMD degree plan'}`,
     `Plan term: ${sem?.name || 'Selected semester'} / ${scheduleTermLabel(term)}`,
+    `Advisor view: ${filterDef.label} - ${filterDef.description}`,
     `Review status: ${scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings)}`,
     `Credits: ${stats.earnedCredits} earned / ${stats.plannedCredits} planned / ${stats.totalRequired} required`,
     `GPA: ${stats.gpa}`,
     `Goal courses: ${stats.goalDone}/${stats.goalTotal}`,
     `Preferences: ${schedulePreferenceSummary(prefs)}`,
     '',
-    'Full semester plan:',
+    `${filterDef.heading}:`,
   ];
 
   getAllSemesters().forEach(planSem => {
@@ -1318,16 +1430,25 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
       ...(state.customCourses || []).filter(course => course.semId === planSem.id),
     ];
     const credits = semCourses.reduce((sum, course) => sum + (Number(course.cr) || 0), 0);
+    const courseLines = [];
     lines.push(`${planSem.name} (${credits} cr)`);
     if (!semCourses.length) lines.push('- No courses planned.');
     semCourses.forEach(course => {
+      const filterResult = scheduleAdvisorCourseFilter(course, planSem.id, context);
+      if (!filterResult.include) return;
       const status = scheduleAdvisorCourseStatus(course);
       const section = planSem.id === sem?.id
         ? selectedItems.find(item => normalizeCode(item.course.code) === normalizeCode(course.code))?.section
         : getSelectedSection(planSem.id, course.code);
       const sectionText = section ? `; section ${section.number || section.section_id || 'TBA'}; ${scheduleSectionMeetingLines(section).join(' / ')}` : '';
-      lines.push(`- ${course.code} ${course.title || ''} (${Number(course.cr) || 0} cr; ${scheduleAdvisorCourseType(course)}; ${status}${sectionText})`);
+      const reasonText = filterResult.reasons.length ? `; review: ${filterResult.reasons.join(' / ')}` : '';
+      courseLines.push(`- ${course.code} ${course.title || ''} (${Number(course.cr) || 0} cr; ${scheduleAdvisorCourseType(course)}; ${status}${sectionText}${reasonText})`);
     });
+    if (filter !== 'all' && semCourses.length && !courseLines.length) {
+      lines.pop();
+      return;
+    }
+    lines.push(...courseLines);
   });
 
   return lines.join('\n');
@@ -1343,6 +1464,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-print-meta,.schedule-advisor-metrics,.schedule-advisor-flags{display:flex;flex-wrap:wrap;gap:6px}
     .schedule-print-meta span,.schedule-advisor-metrics span,.schedule-advisor-flags span{border:1px solid #d8cec0;border-radius:999px;background:#fff;padding:3px 8px;font-size:12px}
     .schedule-print-prefs,.schedule-advisor-note{color:#5d5962;font-size:13px}
+    .schedule-advisor-view-note{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:9px 10px;color:#5d5962;font-size:12px;margin:10px 0}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
@@ -1366,9 +1488,13 @@ function scheduleStandaloneAdvisorCss() {
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter()) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
+  const filter = normalizeScheduleAdvisorFilter(advisorFilter);
+  const filterDef = scheduleAdvisorFilterDef(filter);
+  const filterContext = scheduleAdvisorFilterContext(sem?.id || '', selectedItems, conflicts, warnings, unscheduled, filter);
+  const plan = scheduleAdvisorPlanHtml(sem?.id || '', selectedItems, filterContext);
   const generated = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   return `
     <article class="schedule-advisor-packet" id="schedule-advisor-packet">
@@ -1381,6 +1507,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
           <span>${scheduleEscape(label)}</span>
           <span>${scheduleEscape(sem?.name || 'Selected semester')}</span>
           <span>${scheduleEscape(scheduleTermLabel(term))}</span>
+          <span>${scheduleEscape(filterDef.label)} view</span>
         </div>
       </div>
       <div class="schedule-advisor-grid">
@@ -1395,16 +1522,19 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         <span>${stats.remainingCredits} remaining planned credits</span>
         <span>${stats.genEdCredits} GenEd credits in plan</span>
         <span>${totalOpenSeats} open seats in picked sections</span>
+        <span>${plan.shownCourses}/${plan.totalCourses} courses shown</span>
+        <span>${plan.shownCredits}/${plan.totalCredits} credits shown</span>
         ${unscheduled.length ? `<span>${unscheduled.length} unscheduled course${unscheduled.length === 1 ? '' : 's'}</span>` : '<span>All current-term courses scheduled</span>'}
       </div>
       ${unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
+      <p class="schedule-advisor-view-note"><strong>${scheduleEscape(filterDef.label)} view:</strong> ${scheduleEscape(filterDef.description)}</p>
       <div class="schedule-advisor-section-title">
-        <h4>Full Semester Plan</h4>
-        <span>${stats.plannedCredits} planned credits across ${getAllSemesters().length} terms</span>
+        <h4>${scheduleEscape(filterDef.heading)}</h4>
+        <span>${plan.shownCredits}/${plan.totalCredits} planned credits shown across ${getAllSemesters().length} terms</span>
       </div>
       <div class="schedule-advisor-semesters">
-        ${scheduleAdvisorPlanHtml(sem?.id || '', selectedItems)}
+        ${plan.html}
       </div>
     </article>
   `;
@@ -1512,6 +1642,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const sem = getAllSemesters().find(s => s.id === semId);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
+  const advisorFilter = getScheduleAdvisorFilter();
   const totalOpenSeats = selectedItems.reduce((sum, item) => {
     const open = parseInt(item.section.open_seats, 10);
     return sum + (Number.isFinite(open) ? open : 0);
@@ -1560,9 +1691,9 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${warnings.length ? `<div class="schedule-output-list warn"><strong>Warnings</strong>${warnings.slice(0, 8).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
-  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text);
+  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled);
 
   return {
     text,
@@ -1570,9 +1701,24 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     html: scheduleHtml,
     advisorHtml,
     advisorText,
+    advisorFilter,
     advisorFilename: scheduleAdvisorFilename(term),
     advisorDocument: buildScheduleAdvisorDocument(advisorTitle, scheduleHtml, advisorHtml),
   };
+}
+
+function renderScheduleAdvisorFilterControls(activeFilter) {
+  const active = normalizeScheduleAdvisorFilter(activeFilter);
+  return `
+    <div class="schedule-advisor-filter-controls" aria-label="Advisor packet view">
+      <span>Advisor view</span>
+      <div class="schedule-advisor-filter-group" role="group" aria-label="Filter advisor packet">
+        ${SCHEDULE_ADVISOR_FILTERS.map(filter => `
+          <button class="schedule-advisor-filter ${filter.id === active ? 'active' : ''}" type="button" data-advisor-filter="${scheduleEscape(filter.id)}" aria-pressed="${filter.id === active ? 'true' : 'false'}" title="${scheduleEscape(filter.description)}">${scheduleEscape(filter.label)}</button>
+        `).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflicts, warnings, prefs) {
@@ -1595,6 +1741,7 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
         </div>
       </div>
       ${scheduleOutputCache.html}
+      ${renderScheduleAdvisorFilterControls(scheduleOutputCache.advisorFilter)}
       ${scheduleOutputCache.advisorHtml}
       <textarea id="schedule-output-text" class="schedule-output-text" readonly hidden>${scheduleEscape(scheduleOutputCache.text)}</textarea>
     </div>
@@ -1609,6 +1756,12 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       if (action === 'print') printScheduleOutputSummary();
       if (action === 'advisor-download') downloadScheduleAdvisorPacket();
       if (action === 'advisor-print') printScheduleAdvisorPacket();
+    });
+  });
+  root.querySelectorAll('[data-advisor-filter]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      setScheduleAdvisorFilter(btn.dataset.advisorFilter);
     });
   });
 }

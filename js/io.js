@@ -32,6 +32,7 @@ document.getElementById('import-file').addEventListener('change', (e) => {
           customSemesters: data.customSemesters || state.customSemesters || [],
           selectedSections: data.selectedSections || {},
           schedulePrefs: data.schedulePrefs || {},
+          scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(data.scheduleAdvisorFilter) ? data.scheduleAdvisorFilter : 'all',
           roadmapPrefs: { filter: 'all', query: '', ...(data.roadmapPrefs || {}) },
           recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],
         };

@@ -768,3 +768,51 @@ Next pass candidates:
 - Add advisor packet filters for only remaining courses, only GenEds, or only registration-blocking issues.
 - Add Roadmap jump-to-semester or selected-node centering for very large plans.
 - Add a visible schedule-change digest to advisor packets or exported schedule summaries.
+
+## 2026-06-30 Pass 21
+
+Focus: make advisor packets easier to review by adding persistent packet filters for full plan, remaining work, GenEds, and registration blockers.
+
+Planned changes:
+- Add a compact Advisor view control to Schedule Output.
+- Filter the advisor packet plan while keeping the weekly schedule summary unchanged.
+- Support All, Remaining, Gen-Eds, and Blockers views.
+- Show course/credit counts for the active packet view.
+- Persist the selected advisor view through reloads, imports, share links, and snapshots.
+- Verify filter behavior, persistence, mobile layout, current-page console state, and local checks.
+
+Completed:
+- Added `scheduleAdvisorFilter` to state defaults and load migration.
+- Included `scheduleAdvisorFilter` in import, share payload/load, snapshot save, and snapshot restore.
+- Added advisor filter definitions and normalization helpers.
+- Added an Advisor view segmented control above the advisor packet.
+- Updated advisor packet generation to render the active view label, view note, shown-course counts, and shown-credit counts.
+- Added filtered plan generation for:
+  - All: every planned course.
+  - Remaining: courses not passed or transferred.
+  - Gen-Eds: courses counting toward General Education coverage.
+  - Blockers: locked courses, current-term unscheduled courses, conflicts, schedule-warning courses, and failed repeats.
+- Kept the downloaded advisor HTML aligned with the active filter.
+- Updated the advisor text cache to use the active filter and matching heading.
+- Styled the controls for desktop, mobile wrapping, print hiding, and standalone advisor packet notes.
+- Versioned `styles.css`, `js/state.js`, `js/schedule.js`, `js/io.js`, `js/share.js`, and `js/snapshots.js` in `index.html`.
+
+Verification:
+- Ran `node --check` across every file in `js/`.
+- Ran `git diff --check`.
+- Reloaded `http://localhost:5173/?pass21=...` in the in-app browser and confirmed `styles.css?v=22`, `js/state.js?v=4`, `js/schedule.js?v=18`, `js/io.js?v=4`, `js/share.js?v=4`, and `js/snapshots.js?v=4` loaded.
+- Opened Schedule and confirmed Advisor view controls rendered with All active by default, heading `Full Semester Plan`, and metrics `42/42 courses shown` and `134/134 credits shown`.
+- Clicked Gen-Eds and confirmed heading `GenEd Plan`, note `Only courses counting toward General Education coverage.`, metrics `13/42 courses shown` and `42/134 credits shown`, and visible GenEd course codes such as MATH 140, ENGL 101, PHYS 161, and COMM 107.
+- Clicked Blockers and confirmed heading `Registration Blockers`, metrics `27/42 courses shown` and `88/134 credits shown`, plus CHEM 135 `Needs Fall 2026 section`, locked prerequisite rows, and schedule-warning reasons.
+- Reloaded the app and confirmed the Blockers advisor view persisted.
+- Clicked Remaining and confirmed heading `Remaining Plan`, note `Courses not yet passed or transferred.`, and default-plan counts remained `42/42 courses shown`.
+- Reset Advisor view to All before finishing.
+- Checked a 390px-wide viewport: Advisor view controls stacked to a column, buttons fit two per row, packet stayed readable, and document-wide horizontal overflow stayed at 0.
+- Reset the browser viewport to the default 1280px-wide size after mobile verification.
+- Confirmed current-page browser console errors were 0 for the Pass 21 URL.
+
+Next pass candidates:
+- Add a term-availability simulator/test fixture inside the app's dev diagnostics so move suggestions can be regression-tested without waiting for live UMD data to line up.
+- Add Roadmap jump-to-semester or selected-node centering for very large plans.
+- Add a visible schedule-change digest to advisor packets or exported schedule summaries.
+- Add advisor-packet print presets for registrar/advisor vs student personal review.

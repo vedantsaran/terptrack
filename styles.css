@@ -2273,6 +2273,60 @@ h1.hero-title em {
   font-size: .66rem;
   color: var(--slate);
 }
+.schedule-advisor-filter-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 -2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 76%, var(--cream));
+  padding: 8px;
+}
+.schedule-advisor-filter-controls > span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-advisor-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.schedule-advisor-filter {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--slate);
+  cursor: pointer;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 800;
+  padding: 5px 10px;
+}
+.schedule-advisor-filter.active {
+  border-color: var(--maroon);
+  background: var(--maroon);
+  color: #FAF6EC;
+}
+.schedule-advisor-view-note {
+  margin: 10px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--slate);
+  font-size: .74rem;
+  line-height: 1.4;
+  padding: 8px 10px;
+}
+.schedule-advisor-view-note strong {
+  color: var(--ink);
+}
 .schedule-advisor-section-title {
   display: flex;
   justify-content: space-between;
@@ -3052,6 +3106,9 @@ h1.hero-title em {
   body.print-schedule .schedule-advisor-packet {
     display: none !important;
   }
+  .schedule-advisor-filter-controls {
+    display: none !important;
+  }
   body.print-advisor-packet .view { display: none !important; }
   body.print-advisor-packet #view-schedule { display: block !important; }
   body.print-advisor-packet #view-schedule > :not(#schedule-output) { display: none !important; }
@@ -3721,8 +3778,22 @@ h1.hero-title em {
     flex-direction: column;
   }
   .schedule-advisor-flags,
-  .schedule-advisor-metrics {
+  .schedule-advisor-metrics,
+  .schedule-advisor-filter-controls,
+  .schedule-advisor-filter-group {
     justify-content: flex-start;
+  }
+  .schedule-advisor-filter-controls {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .schedule-advisor-filter-controls > span {
+    white-space: normal;
+  }
+  .schedule-advisor-filter {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
   }
   .schedule-advisor-section-title {
     flex-direction: column;

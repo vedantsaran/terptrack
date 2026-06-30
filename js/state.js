@@ -12,6 +12,7 @@ function loadState() {
     activeSchedule: null,
     selectedSections: {},
     schedulePrefs: {},
+    scheduleAdvisorFilter: 'all',
     roadmapPrefs: { filter: 'all', query: '' },
     recentChanges: [],
     majorId: null,
@@ -31,6 +32,7 @@ function loadState() {
         customSemesters: parsed.customSemesters || [],
         selectedSections: parsed.selectedSections || {},
         schedulePrefs: parsed.schedulePrefs || {},
+        scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(parsed.scheduleAdvisorFilter) ? parsed.scheduleAdvisorFilter : 'all',
         roadmapPrefs: { filter: 'all', query: '', ...(parsed.roadmapPrefs || {}) },
         recentChanges: Array.isArray(parsed.recentChanges) ? parsed.recentChanges.slice(0, 12) : [],
       };
