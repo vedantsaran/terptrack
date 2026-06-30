@@ -18,15 +18,23 @@ function populateMajorSelect() {
     sel.appendChild(og);
   });
   sel.value = state.majorId || 'CE';
+  sel.onchange = () => renderMajorSelectNote(sel.value);
+  renderMajorSelectNote(sel.value);
+}
+
+function renderMajorSelectNote(majorId) {
   const note = document.getElementById('set-major-note');
-  const tpl = getMajorTemplate(sel.value);
-  if (note && tpl) {
-    const baked = isMajorFullyBaked(tpl);
-    const badge = baked
-      ? '<span style="color:var(--green);font-weight:600">★ Curated 4-year schedule</span>'
-      : '<span style="color:var(--amber);font-weight:600">✱ Auto-generated (sparser — fill electives manually)</span>';
-    note.innerHTML = `${badge} · ${tpl.notes || ''}`;
+  const tpl = getMajorTemplate(majorId);
+  if (!note) return;
+  if (!tpl) {
+    note.textContent = '';
+    return;
   }
+  const baked = isMajorFullyBaked(tpl);
+  const badge = baked
+    ? '<span style="color:var(--green);font-weight:600">★ Curated 4-year schedule</span>'
+    : '<span style="color:var(--amber);font-weight:600">✱ Auto-generated full 4-year draft</span>';
+  note.innerHTML = `${badge} · ${tpl.notes || ''}`;
 }
 
 function openSettings() {
@@ -63,7 +71,7 @@ async function applyMajorFromSettings() {
     const baked = isMajorFullyBaked(tpl);
     status.style.color = 'var(--green)';
     status.textContent = `Applied ${tpl.name} · ${courseCount} courses across ${(state.activeSchedule || []).length || 8} semesters.`;
-    toastSuccess(`${baked ? '★' : '✱'} ${tpl.name} applied (${courseCount} courses).${baked ? '' : ' Auto-generated — fill electives manually.'}`);
+    toastSuccess(`${baked ? '★' : '✱'} ${tpl.name} applied (${courseCount} courses).${baked ? '' : ' Auto-generated full draft with editable placeholders.'}`);
     // Refresh the visible settings inputs to reflect new program metadata
     const s = getSettings();
     document.getElementById('set-program').value = s.programName || '';
@@ -128,4 +136,3 @@ function applySettings() {
     semSel.value = cur;
   }
 }
-

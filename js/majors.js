@@ -969,8 +969,7 @@ function isMajorFullyBaked(m) {
 }
 
 // Display string used in dropdowns. Fully-baked majors get a ★;
-// auto-gen majors get a faint ✱ marker so users know they'll see a
-// sparser layout until they fill in electives.
+// auto-gen majors get a ✱ marker for a generated full-plan draft.
 function majorDisplayLabel(m) {
   const star = isMajorFullyBaked(m) ? '★ ' : '✱ ';
   const tail = m.useDefaultSchedule ? ' (curated)' : (m.isCustom ? ' (custom)' : '');

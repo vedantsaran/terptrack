@@ -1025,3 +1025,53 @@ Next pass candidates:
 - Add an optional interest/profile intake flow that feeds recommendations, schedule generation, and elective picks.
 - Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
 - Add a term-availability simulator/test fixture inside the app's dev diagnostics so auto-planning can be regression-tested without waiting for live UMD data to line up.
+
+## 2026-06-30 Pass 27
+
+Focus: upgrade auto-generated major schedules from sparse code-list layouts into full four-year draft plans.
+
+Planned changes:
+- Keep curated schedules untouched.
+- Make non-curated major templates generate eight-semester drafts that include major requirements, missing GenEd placeholders, I-Series coverage, diversity coverage, and enough free-elective placeholders to meet the major target credits.
+- Preserve prerequisite-aware placement for real courses while balancing generated placeholders across terms.
+- Make generated placeholders uniquely keyed so status/progress does not bleed across repeated electives.
+- Update onboarding/settings language so students understand generated plans are full editable drafts.
+- Verify synthetic and real-template generation, browser asset loading, and user-facing copy.
+
+Completed:
+- Added deterministic GenEd requirement filling for FSAW, FSPW, FSOC, FSMA, FSAR, DSHS, DSHU, DSNS, DSNL, DSSP, DVUP, DVCC, and SCIS.
+- Added generated GenEd placeholders that use existing `gened-*` categories so the GenEd matrix and placeholder search can understand and replace them.
+- Added generated free-elective placeholders to fill each auto-generated plan up to the template's `totalCredits`.
+- Preserved fetched `categories` and `gen_ed` metadata on generated course rows so real UMD course tags can satisfy GenEd requirements before placeholders are added.
+- Added an internal known GenEd map for common courses already represented in TerpTrack's curated data, so offline/fallback generation does not over-add requirements when metadata is partial.
+- Added soft 17-credit placement with an 18-credit hard cap for generated filler rows when a high-credit major cannot mathematically fit all 3-credit placeholders under 17 every term.
+- Made the Settings major note update when the selected major changes.
+- Updated settings/onboarding copy from sparse auto-generation language to full four-year draft language.
+- Versioned `js/settings.js` to `v=2` and `js/import.js` to `v=2`.
+
+Verification:
+- Ran `node --check` on `js/import.js`, `js/settings.js`, and `js/majors.js`.
+- Ran `git diff --check`.
+- Ran an isolated VM generator test against a sparse synthetic course list and confirmed:
+  - 8 semesters generated.
+  - 122 planned credits.
+  - Loads of `16, 15, 15, 16, 15, 15, 15, 15`.
+  - Every GenEd/I-Series tag was represented.
+  - GenEd placeholders and free-elective placeholders were generated with no duplicate course keys.
+- Ran an isolated VM generator test using the real Aerospace Engineering template and confirmed:
+  - 8 semesters generated.
+  - 126 planned credits against a 124-credit target.
+  - Loads of `15, 15, 18, 15, 18, 15, 15, 15`.
+  - Every GenEd/I-Series tag was represented.
+  - No duplicate course keys.
+- Loaded `http://localhost:5174/?pass27iso=...` from a temporary isolated static server and confirmed `js/settings.js?v=2` and `js/import.js?v=2` loaded.
+- Confirmed onboarding copy says auto-generated majors create full four-year drafts.
+- Skipped onboarding on the isolated origin, opened Settings, and confirmed the Settings helper copy says generated plans are full four-year drafts with searchable GenEd/elective placeholders.
+- Confirmed current-page browser console errors were 0 for the isolated Pass 27 URL.
+- Stopped the temporary `localhost:5174` server after verification.
+
+Next pass candidates:
+- Add an optional student profile/interests intake and use it to choose free electives, GenEd replacement search defaults, and recommended upper electives.
+- Add an in-app Auto Plan Review panel that explains generated placeholders, term loads, credit target, and GenEd coverage before a student applies a major.
+- Add generated-plan regression fixtures for representative high-credit, low-credit, BA-language, and STEM majors.
+- Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.

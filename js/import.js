@@ -20,14 +20,210 @@ function generateSemesterLabels(startTerm, startYear, count) {
   return out;
 }
 
+const AUTO_PLAN_GENED_REQUIREMENTS = [
+  { id: 'FSAW', label: 'Academic Writing', need: 1, preferred: 0 },
+  { id: 'FSOC', label: 'Oral Communication', need: 1, preferred: 0 },
+  { id: 'FSMA', label: 'Mathematics', need: 1, preferred: 0 },
+  { id: 'FSAR', label: 'Analytic Reasoning', need: 1, preferred: 1 },
+  { id: 'DSHS', label: 'History/Social Sciences', need: 2, preferred: 1 },
+  { id: 'DSHU', label: 'Humanities', need: 2, preferred: 1 },
+  { id: 'DSNS', label: 'Natural Sciences', need: 1, preferred: 2 },
+  { id: 'DSNL', label: 'Natural Sciences with Lab', need: 1, preferred: 3, credits: 4 },
+  { id: 'DSSP', label: 'Scholarship in Practice', need: 2, preferred: 4 },
+  { id: 'DVUP', label: 'Understanding Plural Societies', need: 1, preferred: 4 },
+  { id: 'DVCC', label: 'Cultural Competence', need: 1, preferred: 5 },
+  { id: 'SCIS', label: 'I-Series Signature Course', need: 1, preferred: 2 },
+  { id: 'FSPW', label: 'Professional Writing', need: 1, preferred: 4 },
+];
+
+const AUTO_PLAN_KNOWN_GENED_BY_CODE = {
+  ENGL101: ['FSAW'],
+  ENGL393: ['FSPW'],
+  COMM107: ['FSOC'],
+  COMM200: ['FSOC'],
+  MATH113: ['FSMA'],
+  MATH120: ['FSMA'],
+  MATH130: ['FSMA'],
+  MATH136: ['FSMA'],
+  MATH140: ['FSMA'],
+  MATH220: ['FSMA'],
+  CMSC250: ['FSAR'],
+  MATH240: ['FSAR'],
+  STAT100: ['FSAR'],
+  STAT400: ['FSAR'],
+  BSCI105: ['DSNS'],
+  BSCI106: ['DSNL'],
+  BIOL106: ['DSNL'],
+  CHEM131: ['DSNS'],
+  CHEM132: ['DSNL'],
+  PHYS121: ['DSNS'],
+  PHYS122: ['DSNL'],
+  PHYS161: ['DSNS'],
+  PHYS260: ['DSNL'],
+  PHYS261: ['DSNL'],
+};
+
+function autoPlanCredits(course) {
+  const cr = Number(course && course.cr);
+  return Number.isFinite(cr) && cr > 0 ? cr : 3;
+}
+
+function autoPlanTotalCredits(semesters) {
+  return (semesters || []).reduce((sum, sem) => (
+    sum + (sem.courses || []).reduce((s, c) => s + autoPlanCredits(c), 0)
+  ), 0);
+}
+
+function autoPlanCourseTags(course) {
+  const tags = new Set();
+  if (!course) return tags;
+  if (Array.isArray(course.gen_ed)) {
+    course.gen_ed.flat().filter(Boolean).forEach(t => tags.add(String(t).toUpperCase()));
+  }
+  if (Array.isArray(course.categories)) {
+    course.categories
+      .filter(cat => cat && String(cat).startsWith('gened-'))
+      .forEach(cat => tags.add(String(cat).replace('gened-', '').toUpperCase()));
+  }
+  if (course.category && String(course.category).startsWith('gened-')) {
+    tags.add(String(course.category).replace('gened-', '').toUpperCase());
+  }
+  const known = AUTO_PLAN_KNOWN_GENED_BY_CODE[normalizeCode(course.code)] || [];
+  known.forEach(tag => tags.add(tag));
+  const hay = [course.code, course.title, course.note].join(' ').toUpperCase();
+  AUTO_PLAN_GENED_REQUIREMENTS.forEach(req => {
+    if (hay.includes(req.id)) tags.add(req.id);
+  });
+  return tags;
+}
+
+function autoPlanRequirementCounts(semesters) {
+  const counts = {};
+  AUTO_PLAN_GENED_REQUIREMENTS.forEach(req => { counts[req.id] = 0; });
+  (semesters || []).forEach(sem => (sem.courses || []).forEach(course => {
+    autoPlanCourseTags(course).forEach(tag => {
+      if (counts[tag] !== undefined) counts[tag]++;
+    });
+  }));
+  return counts;
+}
+
+function autoPlanPlaceholderCode(prefix, index) {
+  return index > 1 ? `${prefix} #${index}` : prefix;
+}
+
+function makeAutoPlanGenEdPlaceholder(req, index) {
+  const category = `gened-${req.id.toLowerCase()}`;
+  const suffix = req.need > 1 ? ` #${index}` : '';
+  return {
+    code: autoPlanPlaceholderCode(`GenEd ${req.id}`, index),
+    title: `${req.label}${suffix}`,
+    cr: req.credits || 3,
+    prereqs: [],
+    coreqs: [],
+    kind: 'gened',
+    category,
+    categories: [category],
+    note: `Auto-generated ${req.id} placeholder. Click to search and replace with a real UMD course.`,
+  };
+}
+
+function makeAutoPlanFreeElective(index) {
+  return {
+    code: `Free Elective #${index}`,
+    title: `Free Elective ${index}`,
+    cr: 3,
+    prereqs: [],
+    coreqs: [],
+    kind: 'tech',
+    category: 'elective',
+    note: 'Auto-generated credit placeholder. Replace with a minor, certificate, interest, or open elective course.',
+  };
+}
+
+function autoPlanHardCreditCap(creditCap) {
+  return Math.max(18, creditCap || 17);
+}
+
+function placeAutoPlanCourse(semesters, course, preferredIndex, creditCap, hardCreditCap) {
+  const start = Math.min(Math.max(preferredIndex || 0, 0), Math.max(semesters.length - 1, 0));
+  const credits = autoPlanCredits(course);
+  const hardCap = hardCreditCap || autoPlanHardCreditCap(creditCap);
+  let target = -1;
+  let bestLoad = Infinity;
+  for (let i = start; i < semesters.length; i++) {
+    if (semesters[i]._credits + credits <= creditCap && semesters[i]._credits < bestLoad) {
+      target = i;
+      bestLoad = semesters[i]._credits;
+    }
+  }
+  if (target === -1) {
+    for (let i = 0; i < semesters.length; i++) {
+      if (semesters[i]._credits + credits <= creditCap && semesters[i]._credits < bestLoad) {
+        target = i;
+        bestLoad = semesters[i]._credits;
+      }
+    }
+  }
+  if (target === -1) {
+    for (let i = start; i < semesters.length; i++) {
+      if (semesters[i]._credits + credits <= hardCap && semesters[i]._credits < bestLoad) {
+        target = i;
+        bestLoad = semesters[i]._credits;
+      }
+    }
+  }
+  if (target === -1) {
+    for (let i = 0; i < semesters.length; i++) {
+      if (semesters[i]._credits + credits <= hardCap && semesters[i]._credits < bestLoad) {
+        target = i;
+        bestLoad = semesters[i]._credits;
+      }
+    }
+  }
+  if (target === -1) {
+    target = semesters.reduce((best, sem, i) => sem._credits < semesters[best]._credits ? i : best, 0);
+  }
+  semesters[target].courses.push(course);
+  semesters[target]._credits += credits;
+  return target;
+}
+
+function completeAutoGeneratedPlan(semesters, opts) {
+  const creditCap = opts.creditCap || 17;
+  const hardCreditCap = autoPlanHardCreditCap(creditCap);
+  const targetCredits = opts.targetCredits || 120;
+  const counts = autoPlanRequirementCounts(semesters);
+
+  AUTO_PLAN_GENED_REQUIREMENTS.forEach(req => {
+    const have = counts[req.id] || 0;
+    for (let i = have + 1; i <= req.need; i++) {
+      const placeholder = makeAutoPlanGenEdPlaceholder(req, i);
+      placeAutoPlanCourse(semesters, placeholder, req.preferred, creditCap, hardCreditCap);
+      counts[req.id] = (counts[req.id] || 0) + 1;
+    }
+  });
+
+  let total = autoPlanTotalCredits(semesters);
+  let freeIndex = 1;
+  while (total < targetCredits) {
+    const course = makeAutoPlanFreeElective(freeIndex++);
+    placeAutoPlanCourse(semesters, course, 0, creditCap, hardCreditCap);
+    total += autoPlanCredits(course);
+  }
+  return semesters;
+}
+
 // Topo-distribute courses into N semesters with a credit cap.
 // Input: array of course objects with .code, .cr, .prereqs (codes already display-formatted)
 // Returns: array of { id, name, year, courses: [...] }
 function autoSchedule(courses, opts) {
+  opts = opts || {};
   const numSemesters = opts.numSemesters || 8;
   const creditCap    = opts.creditCap    || 17;
   const startTerm    = opts.startTerm    || 'Fall';
   const startYear    = opts.startYear    || 2026;
+  const targetCredits = opts.targetCredits || 120;
 
   const labels = generateSemesterLabels(startTerm, startYear, numSemesters);
   const codeSet = new Set(courses.map(c => normalizeCode(c.code)));
@@ -79,7 +275,7 @@ function autoSchedule(courses, opts) {
     }, 0);
     let target = -1;
     for (let i = earliest; i < numSemesters; i++) {
-      if (semesters[i]._credits + c.cr <= creditCap) { target = i; break; }
+      if (semesters[i]._credits + autoPlanCredits(c) <= creditCap) { target = i; break; }
     }
     if (target === -1) { unplaced.push(c); continue; }
     semesters[target].courses.push({
@@ -87,14 +283,17 @@ function autoSchedule(courses, opts) {
       prereqs: c.prereqs || [],
       coreqs: c.coreqs || [],
     });
-    semesters[target]._credits += c.cr;
+    semesters[target]._credits += autoPlanCredits(c);
     placed[norm] = target;
   }
 
   // Append unplaced as overflow in last semester (rare)
   if (unplaced.length) {
     semesters[numSemesters - 1].courses.push(...unplaced);
+    semesters[numSemesters - 1]._credits += unplaced.reduce((sum, c) => sum + autoPlanCredits(c), 0);
   }
+
+  completeAutoGeneratedPlan(semesters, { creditCap, targetCredits });
 
   return semesters.map(s => {
     const { _credits, ...rest } = s;
@@ -186,6 +385,8 @@ async function applyMajorTemplate(majorId, opts) {
         coreqs: f.coreqs,
         kind: item.kind,
         category: item.category, // keep template's role bucket; gen-ed override only for non-major courses
+        categories: Array.isArray(f.categories) ? f.categories : [],
+        gen_ed: f.gen_ed,
         avg_gpa: f.avg_gpa,
       };
     }
@@ -200,6 +401,7 @@ async function applyMajorTemplate(majorId, opts) {
   const schedule = autoSchedule(courseObjs, {
     numSemesters: opts && opts.numSemesters || 8,
     creditCap:    opts && opts.creditCap    || 17,
+    targetCredits: tpl.totalCredits || 120,
     startTerm:    opts && opts.startTerm    || 'Fall',
     startYear:    opts && opts.startYear    || 2026,
   });
@@ -215,7 +417,7 @@ async function applyMajorTemplate(majorId, opts) {
   saveState();
   applySettings();
   render();
-  setStatus(`Applied ${tpl.name} (${courseObjs.length} courses across ${schedule.length} semesters).`, 'var(--green)');
+  setStatus(`Applied ${tpl.name} (${courseObjs.length} requirements; ${autoPlanTotalCredits(schedule)} planned credits across ${schedule.length} semesters).`, 'var(--green)');
   return { ok: true, schedule };
 }
 
