@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=27">
+<link rel="stylesheet" href="styles.css?v=28">
 </head>
 <body data-theme="dark">
 
@@ -594,6 +594,16 @@
     <input type="text" id="set-goals" placeholder="e.g., ENEE436, CMSC451, CMSC472">
     <p style="font-size:.76rem;color:var(--slate);margin:4px 0 0">These appear in the Goal Tracker and are starred in your plan.</p>
 
+    <div class="profile-section">
+      <label>Personalization Profile</label>
+      <p class="profile-help">Used for generated elective placeholders and Smart next picks. Leave it blank for a neutral plan.</p>
+      <div id="set-interest-grid" class="profile-interest-grid"></div>
+      <label>Career or exploration goal</label>
+      <input type="text" id="set-career-goal" placeholder="e.g., machine learning for public health">
+      <label>Preferred GenEd departments</label>
+      <input type="text" id="set-gened-depts" placeholder="e.g., INST, PSYC, COMM">
+    </div>
+
     <label>Footer Note (optional)</label>
     <input type="text" id="set-footer" placeholder="e.g., Confirm with your advisor before registration">
 
@@ -638,6 +648,17 @@
       </p>
       <label>Starting Fall semester (year)</label>
       <input type="number" id="ob-start-year" min="2020" max="2035" step="1">
+    </div>
+
+    <div id="ob-step-profile" style="display:none">
+      <h3>What should your plan lean toward?</h3>
+      <p style="color:var(--slate);font-size:.88rem;margin-top:-4px">Optional. TerpTrack uses this to label electives and rank next-course suggestions.</p>
+      <label>Interests</label>
+      <div id="ob-interest-grid" class="profile-interest-grid"></div>
+      <label>Career or exploration goal</label>
+      <input type="text" id="ob-career-goal" placeholder="e.g., product design, pre-health, climate policy">
+      <label>Preferred GenEd departments</label>
+      <input type="text" id="ob-gened-depts" placeholder="e.g., INST, PSYC, COMM">
     </div>
 
     <div id="ob-step-year" style="display:none">
@@ -843,7 +864,7 @@
 <script src="js/data.js"></script>
 <script src="js/major-schedules.js"></script>
 <script src="js/majors.js"></script>
-<script src="js/state.js?v=8"></script>
+<script src="js/state.js?v=9"></script>
 <script src="js/theme.js"></script>
 <script src="js/tabs.js"></script>
 <script src="js/render.js?v=2"></script>
@@ -854,23 +875,23 @@
 <script src="js/api.js"></script>
 <script src="js/schedule.js?v=21"></script>
 <script src="js/courses.js"></script>
-<script src="js/settings.js?v=2"></script>
+<script src="js/settings.js?v=3"></script>
 <script src="js/semesters.js"></script>
-<script src="js/io.js?v=7"></script>
-<script src="js/import.js?v=2"></script>
+<script src="js/io.js?v=8"></script>
+<script src="js/import.js?v=3"></script>
 <script src="js/prereq-resolver.js"></script>
-<script src="js/recommendations.js?v=10"></script>
+<script src="js/recommendations.js?v=11"></script>
 <script src="js/major-builder.js"></script>
-<script src="js/onboarding.js"></script>
+<script src="js/onboarding.js?v=2"></script>
 <script src="js/browse.js"></script>
 <script src="js/dnd.js"></script>
 <script src="js/bulk.js"></script>
-<script src="js/share.js?v=7"></script>
+<script src="js/share.js?v=8"></script>
 <script src="js/gened.js"></script>
 <script src="js/placeholder-search.js?v=2"></script>
 <script src="js/gpa-sim.js"></script>
-<script src="js/snapshots.js?v=7"></script>
-<script src="js/account.js?v=1"></script>
+<script src="js/snapshots.js?v=8"></script>
+<script src="js/account.js?v=2"></script>
 <script src="js/events.js?v=2"></script>
 <script src="js/table.js"></script>
 <script src="js/main.js?v=2"></script>

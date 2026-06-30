@@ -21,6 +21,7 @@ function _planSharePayload() {
     roadmapPrefs: state.roadmapPrefs,
     recentChanges: state.recentChanges,
     majorId: state.majorId,
+    profilePrefs: state.profilePrefs,
     settings: state.settings,
   };
 }
@@ -107,6 +108,7 @@ async function loadSharedPlanFromHash() {
       scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, ...(data.scheduleOutputOptions || {}) },
       roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(data.roadmapPrefs || {}) },
       recentChanges: Array.isArray(data.recentChanges) ? data.recentChanges.slice(0, 12) : [],
+      profilePrefs: normalizeProfilePrefs(data.profilePrefs || {}),
       onboardingComplete: true,
     };
     saveState();

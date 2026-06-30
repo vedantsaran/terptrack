@@ -170,6 +170,7 @@ function accountNormalizeLoadedState(cloudState) {
     roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(cloudState.roadmapPrefs || {}) },
     recentChanges: Array.isArray(cloudState.recentChanges) ? cloudState.recentChanges.slice(0, 12) : [],
     accountPrefs: { ...getAccountPrefs(), ...(cloudState.accountPrefs || {}) },
+    profilePrefs: typeof normalizeProfilePrefs === 'function' ? normalizeProfilePrefs(cloudState.profilePrefs || {}) : (cloudState.profilePrefs || {}),
   };
 }
 

@@ -2,6 +2,166 @@
 /* ============================================================
    STATE
    ============================================================ */
+
+const PROFILE_INTEREST_DEFS = [
+  {
+    id: 'ai-data',
+    label: 'AI + data',
+    depts: ['CMSC', 'STAT', 'INST', 'INFO', 'MATH'],
+    keywords: ['artificial intelligence', 'machine learning', 'data', 'analytics', 'statistics', 'programming', 'algorithm'],
+  },
+  {
+    id: 'health-life',
+    label: 'Health + life science',
+    depts: ['BSCI', 'BIOL', 'HLTH', 'HESP', 'KNES', 'PSYC', 'BCHM'],
+    keywords: ['health', 'biology', 'neuroscience', 'medicine', 'clinical', 'public health', 'physiology'],
+  },
+  {
+    id: 'business',
+    label: 'Business + startups',
+    depts: ['BMGT', 'ECON', 'AREC', 'COMM', 'INST'],
+    keywords: ['business', 'finance', 'marketing', 'entrepreneur', 'management', 'strategy', 'accounting'],
+  },
+  {
+    id: 'policy-society',
+    label: 'Policy + society',
+    depts: ['GVPT', 'CCJS', 'SOCY', 'AASP', 'WMST', 'HIST', 'AMST'],
+    keywords: ['policy', 'justice', 'law', 'government', 'society', 'community', 'equity', 'culture'],
+  },
+  {
+    id: 'design-media',
+    label: 'Design + media',
+    depts: ['ARTT', 'CINE', 'COMM', 'JOUR', 'THET', 'MUSC', 'ARCH'],
+    keywords: ['design', 'media', 'film', 'journalism', 'creative', 'studio', 'visual', 'performance'],
+  },
+  {
+    id: 'sustainability',
+    label: 'Climate + sustainability',
+    depts: ['ENST', 'GEOG', 'GEOL', 'AOSC', 'PLSC', 'ANSC', 'AREC'],
+    keywords: ['climate', 'environment', 'sustainability', 'earth', 'agriculture', 'energy', 'conservation'],
+  },
+  {
+    id: 'education-community',
+    label: 'Education + community',
+    depts: ['EDUC', 'EDHD', 'EDCI', 'FMSC', 'COMM', 'HLTH'],
+    keywords: ['education', 'teaching', 'learning', 'family', 'community', 'development', 'youth'],
+  },
+  {
+    id: 'engineering-build',
+    label: 'Engineering + building',
+    depts: ['ENAE', 'ENME', 'ENCE', 'ENEE', 'ENCH', 'ENMA', 'ENFP'],
+    keywords: ['engineering', 'design', 'systems', 'manufacturing', 'materials', 'aerospace', 'robotics'],
+  },
+];
+
+const PROFILE_KNOWN_DEPTS = new Set([
+  ...PROFILE_INTEREST_DEFS.flatMap(def => def.depts || []),
+  'ENGL', 'COMM', 'HIST', 'GVPT', 'PSYC', 'SOCY', 'ANTH', 'PHIL', 'ARTH', 'THET',
+  'MUSC', 'RELS', 'WMST', 'AASP', 'AMST', 'GEOG', 'ECON', 'JOUR', 'CINE', 'FMSC',
+  'NUTR', 'NFSC', 'BSCI', 'CHEM', 'PHYS', 'PLCY',
+]);
+
+function defaultProfilePrefs() {
+  return { interests: [], careerGoal: '', genEdDepts: [] };
+}
+
+function normalizeProfilePrefs(value) {
+  const validInterests = new Set(PROFILE_INTEREST_DEFS.map(def => def.id));
+  const interests = Array.from(new Set(Array.isArray(value?.interests) ? value.interests : []))
+    .map(id => String(id || '').trim())
+    .filter(id => validInterests.has(id));
+  const careerGoal = String(value?.careerGoal || '').trim().slice(0, 160);
+  const genEdDepts = Array.from(new Set(String(Array.isArray(value?.genEdDepts) ? value.genEdDepts.join(',') : value?.genEdDepts || '')
+    .split(/[\s,;]+/)
+    .map(s => s.trim().toUpperCase())
+    .filter(s => /^[A-Z]{3,4}$/.test(s) && PROFILE_KNOWN_DEPTS.has(s))))
+    .slice(0, 8);
+  return { interests, careerGoal, genEdDepts };
+}
+
+function getProfilePrefs() {
+  state.profilePrefs = normalizeProfilePrefs({ ...defaultProfilePrefs(), ...(state.profilePrefs || {}) });
+  return state.profilePrefs;
+}
+
+function profileSelectedInterestDefs(prefs = getProfilePrefs()) {
+  const selected = new Set(prefs.interests || []);
+  return PROFILE_INTEREST_DEFS.filter(def => selected.has(def.id));
+}
+
+function profilePrimaryInterest(prefs = getProfilePrefs()) {
+  return profileSelectedInterestDefs(prefs)[0] || null;
+}
+
+function profilePreferredDepartments(prefs = getProfilePrefs()) {
+  const ordered = [];
+  const add = dept => {
+    if (dept && !ordered.includes(dept)) ordered.push(dept);
+  };
+  (prefs.genEdDepts || []).forEach(add);
+  profileSelectedInterestDefs(prefs).forEach(def => (def.depts || []).forEach(add));
+  return ordered.slice(0, 10);
+}
+
+function profileCourseMatch(course, prefs = getProfilePrefs()) {
+  const selected = profileSelectedInterestDefs(prefs);
+  if (!selected.length && !prefs.careerGoal && !(prefs.genEdDepts || []).length) {
+    return { score: 0, labels: [] };
+  }
+  const norm = normalizeCode(course?.code || '');
+  const dept = (norm.match(/^[A-Z]{3,4}/) || [''])[0];
+  const hay = [
+    course?.code,
+    course?.title,
+    course?.description,
+    course?.note,
+    course?.category,
+    ...(Array.isArray(course?.categories) ? course.categories : []),
+  ].join(' ').toLowerCase();
+  let score = 0;
+  const labels = [];
+  selected.forEach(def => {
+    let matched = false;
+    if ((def.depts || []).includes(dept)) {
+      score += 85;
+      matched = true;
+    }
+    const hits = (def.keywords || []).filter(keyword => hay.includes(keyword));
+    if (hits.length) {
+      score += Math.min(95, hits.length * 35);
+      matched = true;
+    }
+    if (matched) labels.push(def.label);
+  });
+  if ((prefs.genEdDepts || []).includes(dept)) {
+    score += 60;
+    labels.push(`${dept} GenEd preference`);
+  }
+  const goalWords = String(prefs.careerGoal || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 4);
+  const goalHits = goalWords.filter(w => hay.includes(w)).slice(0, 3);
+  if (goalHits.length) {
+    score += goalHits.length * 28;
+    labels.push('career fit');
+  }
+  return { score, labels: Array.from(new Set(labels)).slice(0, 3) };
+}
+
+function profileElectiveLabel(index, prefs = getProfilePrefs()) {
+  const primary = profilePrimaryInterest(prefs);
+  return primary ? `${primary.label} Elective ${index}` : `Free Elective ${index}`;
+}
+
+function profileElectiveNote(index, prefs = getProfilePrefs()) {
+  const depts = profilePreferredDepartments(prefs).slice(0, 5);
+  if (!depts.length && !prefs.careerGoal) {
+    return 'Auto-generated credit placeholder. Replace with a minor, certificate, interest, or open elective course.';
+  }
+  const parts = [];
+  if (depts.length) parts.push(`Start with ${depts.join(', ')}`);
+  if (prefs.careerGoal) parts.push(`Goal: ${prefs.careerGoal}`);
+  return `Personalized elective placeholder #${index}. ${parts.join(' · ')}.`;
+}
+
 function loadState() {
   const fallback = {
     courses: {},
@@ -19,6 +179,7 @@ function loadState() {
     recentChanges: [],
     majorId: null,
     accountPrefs: { planName: 'Primary TerpTrack plan', lastCloudSaveAt: '', lastCloudLoadAt: '' },
+    profilePrefs: defaultProfilePrefs(),
     onboardingComplete: false,
     settings: { ...DEFAULT_SETTINGS },
     welcomeDismissed: false,
@@ -41,6 +202,7 @@ function loadState() {
         roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(parsed.roadmapPrefs || {}) },
         recentChanges: Array.isArray(parsed.recentChanges) ? parsed.recentChanges.slice(0, 12) : [],
         accountPrefs: { ...fallback.accountPrefs, ...(parsed.accountPrefs || {}) },
+        profilePrefs: normalizeProfilePrefs({ ...fallback.profilePrefs, ...(parsed.profilePrefs || {}) }),
       };
     }
   } catch {}

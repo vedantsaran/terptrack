@@ -129,15 +129,20 @@ function makeAutoPlanGenEdPlaceholder(req, index) {
 }
 
 function makeAutoPlanFreeElective(index) {
+  const prefs = typeof getProfilePrefs === 'function' ? getProfilePrefs() : null;
+  const personalizedTitle = typeof profileElectiveLabel === 'function' ? profileElectiveLabel(index, prefs) : `Free Elective ${index}`;
+  const personalizedNote = typeof profileElectiveNote === 'function'
+    ? profileElectiveNote(index, prefs)
+    : 'Auto-generated credit placeholder. Replace with a minor, certificate, interest, or open elective course.';
   return {
     code: `Free Elective #${index}`,
-    title: `Free Elective ${index}`,
+    title: personalizedTitle,
     cr: 3,
     prereqs: [],
     coreqs: [],
     kind: 'tech',
     category: 'elective',
-    note: 'Auto-generated credit placeholder. Replace with a minor, certificate, interest, or open elective course.',
+    note: personalizedNote,
   };
 }
 

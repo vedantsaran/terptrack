@@ -4,7 +4,7 @@
    ============================================================ */
 
 let onboardStep = 0;
-const ONBOARD_STEPS = ['major', 'year', 'transfer', 'finish'];
+const ONBOARD_STEPS = ['major', 'profile', 'year', 'transfer', 'finish'];
 
 function shouldShowOnboarding() {
   if (state.onboardingComplete) return false;
@@ -43,6 +43,7 @@ function startOnboarding() {
   document.getElementById('ob-start-year').value = now.getMonth() < 6 ? now.getFullYear() : now.getFullYear() + 1;
   document.getElementById('ob-current-year').value = '1';
   document.getElementById('ob-transfer-codes').value = '';
+  if (typeof writeProfileForm === 'function') writeProfileForm('ob', getProfilePrefs());
 
   document.getElementById('onboard-modal').classList.add('open');
   showOnboardStep(0);
@@ -85,6 +86,7 @@ async function finishOnboarding() {
   const startYear = parseInt(document.getElementById('ob-start-year').value) || new Date().getFullYear();
   const currentYear = parseInt(document.getElementById('ob-current-year').value) || 1;
   const transferRaw = document.getElementById('ob-transfer-codes').value;
+  state.profilePrefs = typeof readProfileForm === 'function' ? readProfileForm('ob') : getProfilePrefs();
 
   document.getElementById('ob-finish-status').textContent = 'Setting up your plan…';
 

@@ -118,6 +118,9 @@ function recoBaseCandidates() {
         : null;
     const isGoal = isGoalCourse(course);
     const isCritical = course.kind === 'critical' || String(course.category || '').includes('major');
+    const profileMatch = typeof profileCourseMatch === 'function'
+      ? profileCourseMatch(course)
+      : { score: 0, labels: [] };
     const score = 580
       - Math.max(0, semIndex) * 28
       + (isGoal ? 320 : 0)
@@ -125,6 +128,7 @@ function recoBaseCandidates() {
       + impact.unlocks * 95
       + impact.goalUnlocks * 210
       + gapHits.length * 105
+      + profileMatch.score
       + (gpa ? Math.round(gpa * 18) : 0)
       + (Number(course.cr) || 3) * 8;
 
@@ -136,6 +140,7 @@ function recoBaseCandidates() {
       gpa,
       isGoal,
       isCritical,
+      profileLabels: profileMatch.labels || [],
       semIndex,
       score,
       sections: null,
@@ -215,6 +220,7 @@ function recoBadges(item) {
   if (item.impact.unlocks) badges.push({ label: `Unlocks ${item.impact.unlocks}` });
   if (item.impact.goalUnlocks) badges.push({ label: 'Unlocks a goal' });
   if (item.gapHits.length) badges.push({ label: `Covers ${item.gapHits.join(' + ')}` });
+  (item.profileLabels || []).forEach(label => badges.push({ label }));
   if (item.gpa) badges.push({ label: `Avg GPA ${item.gpa.toFixed(2)}` });
   if (item.sections) badges.push({ label: `${item.sections.length} posted` });
   if (item.seatRisk) badges.push({ label: item.seatRisk.label, cls: `seat-risk-${item.seatRisk.level}` });
@@ -225,6 +231,7 @@ function recoReason(item) {
   const reasons = [];
   if (item.impact.unlocks) reasons.push(`opens ${item.impact.unlocks} downstream course${item.impact.unlocks === 1 ? '' : 's'}`);
   if (item.gapHits.length) reasons.push(`fills ${item.gapHits.join(' + ')} GenEd gap${item.gapHits.length === 1 ? '' : 's'}`);
+  if (item.profileLabels && item.profileLabels.length) reasons.push(`matches ${item.profileLabels.join(' + ')}`);
   if (item.isCritical) reasons.push('keeps major path moving');
   if (item.bestSection && typeof sectionSummary === 'function') reasons.push(sectionSummary(item.bestSection));
   if (!reasons.length) reasons.push('ready now and fits the current plan order');
@@ -299,7 +306,7 @@ function recoRenderPayload(payload, loadingLive) {
           <h4>Smart next picks</h4>
           <span>${loadingLive ? 'loading live seats' : (ctx.termLabel || 'live term')}</span>
         </div>
-        <p class="reco-sub">Ranked by prerequisites, goal impact, GenEd gaps, GPA signals, and posted sections.</p>
+        <p class="reco-sub">Ranked by prerequisites, goal impact, profile fit, GenEd gaps, GPA signals, and posted sections.</p>
         <div class="reco-picks">
           ${payload.candidates.slice(0, 5).map((item, idx) => recoRenderPick(item, idx, ctx)).join('')}
         </div>

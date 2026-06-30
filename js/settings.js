@@ -37,14 +37,52 @@ function renderMajorSelectNote(majorId) {
   note.innerHTML = `${badge} · ${tpl.notes || ''}`;
 }
 
+function profileInterestGridHtml(selectedIds = [], name = 'profile-interest') {
+  const selected = new Set(selectedIds || []);
+  return PROFILE_INTEREST_DEFS.map(def => `
+    <label class="profile-interest-chip ${selected.has(def.id) ? 'selected' : ''}">
+      <input type="checkbox" name="${name}" value="${def.id}" ${selected.has(def.id) ? 'checked' : ''}>
+      <span>${def.label}</span>
+    </label>
+  `).join('');
+}
+
+function renderProfileInterestGrid(containerId, selectedIds, name) {
+  const root = document.getElementById(containerId);
+  if (!root) return;
+  root.innerHTML = profileInterestGridHtml(selectedIds, name);
+  root.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', () => {
+      input.closest('.profile-interest-chip')?.classList.toggle('selected', input.checked);
+    });
+  });
+}
+
+function readProfileForm(prefix) {
+  const interests = [...document.querySelectorAll(`input[name="${prefix}-interest"]:checked`)].map(input => input.value);
+  const careerGoal = document.getElementById(`${prefix}-career-goal`)?.value || '';
+  const genEdDepts = document.getElementById(`${prefix}-gened-depts`)?.value || '';
+  return normalizeProfilePrefs({ interests, careerGoal, genEdDepts });
+}
+
+function writeProfileForm(prefix, prefs = getProfilePrefs()) {
+  renderProfileInterestGrid(`${prefix}-interest-grid`, prefs.interests, `${prefix}-interest`);
+  const careerGoal = document.getElementById(`${prefix}-career-goal`);
+  if (careerGoal) careerGoal.value = prefs.careerGoal || '';
+  const genEdDepts = document.getElementById(`${prefix}-gened-depts`);
+  if (genEdDepts) genEdDepts.value = (prefs.genEdDepts || []).join(', ');
+}
+
 function openSettings() {
   const s = getSettings();
+  const profile = getProfilePrefs();
   populateMajorSelect();
   document.getElementById('set-program').value = s.programName || '';
   document.getElementById('set-eyebrow').value = s.eyebrow || '';
   document.getElementById('set-total-credits').value = s.totalCredits || 125;
   document.getElementById('set-goals').value = (s.goalCourses || []).join(', ');
   document.getElementById('set-footer').value = s.footerNote || '';
+  writeProfileForm('set', profile);
   const status = document.getElementById('set-major-status');
   if (status) status.textContent = '';
   document.getElementById('settings-modal').classList.add('open');
@@ -95,6 +133,7 @@ function saveSettings() {
     .split(',').map(s => s.trim()).filter(Boolean);
   const footerNote = document.getElementById('set-footer').value.trim();
   state.settings = { ...DEFAULT_SETTINGS, ...state.settings, programName, eyebrow, totalCredits, goalCourses, footerNote };
+  state.profilePrefs = readProfileForm('set');
   saveState();
   applySettings();
   closeSettings();

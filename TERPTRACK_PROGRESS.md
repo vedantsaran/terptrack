@@ -1075,3 +1075,49 @@ Next pass candidates:
 - Add an in-app Auto Plan Review panel that explains generated placeholders, term loads, credit target, and GenEd coverage before a student applies a major.
 - Add generated-plan regression fixtures for representative high-credit, low-credit, BA-language, and STEM majors.
 - Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
+
+## 2026-06-30 Pass 28
+
+Focus: add a reusable student profile so planning and recommendations can become individualized.
+
+Planned changes:
+- Add an optional profile step to onboarding.
+- Add a profile section to Settings for interests, career/exploration goals, and preferred GenEd departments.
+- Persist profile preferences across local state, imports, share links, snapshots, and cloud loads.
+- Use profile preferences in auto-generated elective placeholders.
+- Use profile preferences in Smart next-pick scoring and explanations.
+- Verify profile normalization, generated elective personalization, recommendation matching, desktop UI, and mobile layout.
+
+Completed:
+- Added `profilePrefs` state with normalized `interests`, `careerGoal`, and `genEdDepts`.
+- Added eight interest lanes: AI + data, Health + life science, Business + startups, Policy + society, Design + media, Climate + sustainability, Education + community, and Engineering + building.
+- Added profile matching helpers that score courses by department, title/description keywords, preferred GenEd departments, and career-goal terms.
+- Added personalized generated elective labels and notes, including preferred department hints and the student's career/exploration goal.
+- Added profile-fit scoring, badges, and reasons to Smart next picks.
+- Added a new optional onboarding profile step before year/transfer setup.
+- Added a Settings Personalization Profile section with reusable interest chips plus career and GenEd department inputs.
+- Carried `profilePrefs` through JSON import, share links, snapshots, and Supabase cloud-load normalization.
+- Versioned `styles.css` to `v=28`, `js/state.js` to `v=9`, `js/settings.js` to `v=3`, `js/io.js` to `v=8`, `js/import.js` to `v=3`, `js/recommendations.js` to `v=11`, `js/onboarding.js` to `v=2`, `js/share.js` to `v=8`, `js/snapshots.js` to `v=8`, and `js/account.js` to `v=2`.
+
+Verification:
+- Ran `node --check` on `js/state.js`, `js/settings.js`, `js/onboarding.js`, `js/import.js`, `js/recommendations.js`, `js/share.js`, `js/snapshots.js`, `js/io.js`, and `js/account.js`.
+- Ran `git diff --check`.
+- Ran a focused VM behavior test confirming:
+  - Invalid/duplicate interests are removed.
+  - Preferred GenEd departments normalize to known departments.
+  - Generated free electives become profile-labeled (`AI + data Elective 1` in the test case).
+  - Generated free-elective notes include preferred departments and career goal.
+  - `profileCourseMatch` boosts matching CMSC machine-learning and policy/society courses.
+  - The generated test plan still reaches at least 120 credits.
+- Loaded `http://127.0.0.1:5174/?pass28fresh=...` from a temporary isolated static server and confirmed all Pass 28 asset versions loaded.
+- Confirmed the onboarding profile step appears after the first Next click and renders all eight interest chips.
+- Skipped onboarding on the isolated origin, opened Settings, and confirmed the Personalization Profile section renders all eight chips, career goal input, and preferred GenEd department input.
+- Confirmed current-page browser console errors were 0 for the Pass 28 isolated URL.
+- Checked a 390px-wide viewport with Settings already open: profile chips collapse to one column, no chip text overflows, and document-wide horizontal overflow stays at 0.
+- Reset the browser viewport to default and stopped the temporary `localhost:5174` server after verification.
+
+Next pass candidates:
+- Add an Auto Plan Review panel that explains generated placeholders, profile fit, term loads, credit target, GenEd coverage, and any 18-credit terms before a student applies a major.
+- Use the profile to pre-filter GenEd placeholder search departments and Browse Courses defaults.
+- Add generated-plan regression fixtures for representative high-credit, low-credit, BA-language, and STEM majors.
+- Wire a real Supabase project on Vercel and test magic-link sign-in plus cloud save/load end to end.
