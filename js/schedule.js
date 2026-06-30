@@ -2247,6 +2247,60 @@ function renderMiniSchedulePreview(items, unavailableBlocks = []) {
   `;
 }
 
+function scheduleDeltaLabel(value, unit = '') {
+  const n = Math.round(Number(value) || 0);
+  if (!n) return '';
+  return `${n > 0 ? '+' : ''}${n}${unit}`;
+}
+
+function scheduleAlternativeComparison(alt, current, prefs) {
+  const baseline = current || { items: [], conflicts: [], warnings: [], openSeats: 0, timing: null, locationIssues: 0 };
+  const altTiming = alt.timing || scheduleTimingFit(alt.items, prefs, alt.conflicts);
+  const currentTiming = baseline.timing || scheduleTimingFit(baseline.items || [], prefs, baseline.conflicts || []);
+  const lines = [];
+  const timingDelta = altTiming.score - currentTiming.score;
+  const conflictDelta = (alt.conflicts || []).length - (baseline.conflicts || []).length;
+  const warningDelta = (alt.warnings || []).length - (baseline.warnings || []).length;
+  const idleDelta = (altTiming.metrics.totalIdle || 0) - (currentTiming.metrics.totalIdle || 0);
+  const activeDayDelta = (altTiming.metrics.activeDays || 0) - (currentTiming.metrics.activeDays || 0);
+  const openSeatDelta = (alt.openSeats || 0) - (baseline.openSeats || 0);
+  const locationDelta = (Number(alt.locationIssues) || 0) - (Number(baseline.locationIssues) || 0);
+
+  if (timingDelta) {
+    lines.push(`${timingDelta > 0 ? 'Improves' : 'Lowers'} timing fit by ${Math.abs(timingDelta)} points (${altTiming.score}/100).`);
+  } else {
+    lines.push(`Keeps the same ${altTiming.score}/100 timing fit.`);
+  }
+  if (conflictDelta) {
+    lines.push(`${conflictDelta < 0 ? 'Removes' : 'Adds'} ${Math.abs(conflictDelta)} conflict${Math.abs(conflictDelta) === 1 ? '' : 's'}.`);
+  }
+  if (warningDelta) {
+    lines.push(`${warningDelta < 0 ? 'Reduces' : 'Adds'} ${Math.abs(warningDelta)} warning${Math.abs(warningDelta) === 1 ? '' : 's'}.`);
+  }
+  if (idleDelta) {
+    lines.push(`${idleDelta < 0 ? 'Saves' : 'Adds'} ${scheduleDurationLabel(Math.abs(idleDelta))} idle time.`);
+  }
+  if (activeDayDelta && prefs.mode === 'compact') {
+    lines.push(`${activeDayDelta < 0 ? 'Uses' : 'Requires'} ${Math.abs(activeDayDelta)} ${activeDayDelta < 0 ? 'fewer' : 'more'} active day${Math.abs(activeDayDelta) === 1 ? '' : 's'}.`);
+  }
+  if (openSeatDelta) {
+    lines.push(`${scheduleDeltaLabel(openSeatDelta)} open seats versus current picks.`);
+  }
+  if (locationDelta && scheduleLocationPrefsActive(prefs)) {
+    lines.push(`${locationDelta < 0 ? 'Removes' : 'Adds'} ${Math.abs(locationDelta)} campus-fit alert${Math.abs(locationDelta) === 1 ? '' : 's'}.`);
+  }
+  return {
+    timingDelta,
+    conflictDelta,
+    warningDelta,
+    idleDelta,
+    activeDayDelta,
+    openSeatDelta,
+    locationDelta,
+    lines: lines.slice(0, 4),
+  };
+}
+
 function renderScheduleAlternatives(alternatives) {
   const root = document.getElementById('schedule-alternatives');
   if (!root) return;
@@ -2273,6 +2327,7 @@ function renderScheduleAlternatives(alternatives) {
           ? alt.locationIssues
           : scheduleCandidateLocationReport(alt.items, currentPrefs).alertCount;
         const timing = alt.timing || scheduleTimingFit(alt.items, currentPrefs, alt.conflicts);
+        const comparison = scheduleAlternativeComparison(alt, alt.compareTo, currentPrefs);
         const courseLine = alt.items
           .map(item => `${item.course.code} ${item.section.number || ''}`.trim())
           .join(' · ');
@@ -2292,6 +2347,10 @@ function renderScheduleAlternatives(alternatives) {
               ${blockConflicts ? `<span class="bad">${blockConflicts} block conflict${blockConflicts === 1 ? '' : 's'}</span>` : (blocked.length ? '<span class="good">blocks clear</span>' : '')}
               ${scheduleLocationPrefsActive(currentPrefs) ? (locationIssues ? `<span class="warn">${locationIssues} location alert${locationIssues === 1 ? '' : 's'}</span>` : '<span class="good">campus-fit</span>') : ''}
               ${pinned ? `<span>${pinned} pinned</span>` : ''}
+            </div>
+            <div class="alt-why">
+              <strong>Why this option</strong>
+              ${comparison.lines.map(line => `<span>${scheduleEscape(line)}</span>`).join('')}
             </div>
             ${renderMiniSchedulePreview(alt.items, blocked)}
             <p>${scheduleEscape(courseLine)}</p>
@@ -2313,12 +2372,22 @@ async function generateScheduleAlternatives() {
   if (status) status.textContent = 'Generating alternate schedules from posted sections...';
   const sectionsByCode = await scheduleFetchSectionsFor(semId, term, courses);
   const currentItems = scheduleSelectedItemsFor(semId, term, courses, sectionsByCode);
+  const currentEvaluation = evaluateScheduleCandidate(currentItems, prefs);
+  const currentBaseline = {
+    items: currentItems,
+    conflicts: currentEvaluation.conflicts,
+    warnings: currentEvaluation.warnings,
+    openSeats: currentEvaluation.openSeats,
+    timing: currentEvaluation.timing,
+    locationIssues: currentEvaluation.locationIssues,
+  };
   const seen = new Set();
   const alternatives = [];
   for (let variant = 0; variant < 12; variant++) {
     const candidate = buildScheduleCandidate(courses, sectionsByCode, prefs, variant, currentItems);
     if (!candidate.items.length || seen.has(candidate.signature)) continue;
     seen.add(candidate.signature);
+    candidate.compareTo = currentBaseline;
     alternatives.push(candidate);
   }
   alternatives.sort((a, b) => {

@@ -297,6 +297,11 @@ function testScheduleTimingFit(context) {
       const compact = scheduleTimingFit(compactItems, timingPrefs, []);
       const idle = scheduleTimingFit(idleItems, timingPrefs, []);
       const tight = scheduleTimingFit(tightItems, timingPrefs, []);
+      const comparison = scheduleAlternativeComparison(
+        { items: compactItems, conflicts: [], warnings: [], openSeats: 22, timing: compact, locationIssues: 0 },
+        { items: idleItems, conflicts: [], warnings: ['Long idle gap'], openSeats: 12, timing: idle, locationIssues: 0 },
+        timingPrefs
+      );
       return {
         compactScore: compact.score,
         idleScore: idle.score,
@@ -305,6 +310,10 @@ function testScheduleTimingFit(context) {
         idleInsight: idle.insights.join(' | '),
         tightTransitions: tight.metrics.tightTransitions,
         tightInsight: tight.insights.join(' | '),
+        comparisonLines: comparison.lines.join(' | '),
+        comparisonTimingDelta: comparison.timingDelta,
+        comparisonWarningDelta: comparison.warningDelta,
+        comparisonOpenSeatDelta: comparison.openSeatDelta,
       };
     })()
   `, context));
@@ -314,12 +323,17 @@ function testScheduleTimingFit(context) {
   assert(/idle gap|idle time/i.test(result.idleInsight), 'schedule timing: idle insight should mention idle time');
   assert(result.tightTransitions >= 1, 'schedule timing: tight cross-campus transition should be counted');
   assert(/estimated walk|between CMSC 131 and ENGL 101/i.test(result.tightInsight), 'schedule timing: tight insight should explain transition');
+  assert(result.comparisonTimingDelta > 0, 'schedule alternatives: comparison should report timing improvement');
+  assert(result.comparisonWarningDelta < 0, 'schedule alternatives: comparison should report warning reduction');
+  assert(result.comparisonOpenSeatDelta > 0, 'schedule alternatives: comparison should report open-seat gain');
+  assert(/Improves timing fit|Saves|open seats/i.test(result.comparisonLines), 'schedule alternatives: comparison should explain why option is better');
 
   return {
     id: 'SCHEDULE-TIMING',
     compactScore: result.compactScore,
     idleScore: result.idleScore,
     tightTransitions: result.tightTransitions,
+    comparisonTimingDelta: result.comparisonTimingDelta,
   };
 }
 
@@ -345,7 +359,7 @@ async function main() {
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
-  console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}.`);
+  console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + account/share state + schedule timing).`);
 }
 

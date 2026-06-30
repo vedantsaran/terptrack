@@ -3225,6 +3225,24 @@ h1.hero-title em {
 .alt-metrics .good { color: var(--green); border-color: var(--green); }
 .alt-metrics .warn { color: var(--amber); border-color: var(--amber); }
 .alt-metrics .bad { color: var(--red); border-color: var(--red); }
+.alt-why {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cream) 72%, var(--paper));
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 10px;
+  padding: 8px;
+}
+.alt-why strong {
+  color: var(--ink);
+  font-size: .72rem;
+}
+.alt-why span {
+  color: var(--ink-soft);
+  font-size: .7rem;
+  line-height: 1.35;
+}
 .alt-mini-week {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

@@ -1452,3 +1452,58 @@ Next pass candidates:
 - Add real Supabase/Vercel setup instructions and validate a magic-link account round trip on deployment.
 - Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
 - Improve Browse with multi-department profile search and richer personalized class recommendations.
+
+## 2026-06-30 Pass 35
+
+Focus: make alternate schedules explain why they are better than the current picks.
+
+Planned changes:
+- Compare each generated alternate schedule against the current selected schedule.
+- Explain timing, warnings, idle time, active days, open seats, and campus-fit differences in plain language.
+- Add the explanation to each alternate card without disrupting the compact calendar preview.
+- Add regression coverage for the comparison helper.
+
+Completed:
+- Added `scheduleDeltaLabel()` and `scheduleAlternativeComparison()` in `js/schedule.js`.
+- `generateScheduleAlternatives()` now evaluates the current picked schedule once and attaches it as each alternate's comparison baseline.
+- Alternate schedule cards now include a `Why this option` block.
+- Comparison lines can explain:
+  - timing fit point changes.
+  - conflict count changes.
+  - warning count changes.
+  - idle time saved/added.
+  - fewer/more active days in compact mode.
+  - open-seat changes.
+  - campus-fit alert changes when location preferences are active.
+- Added `.alt-why` styles for compact, readable card explanations.
+- Versioned changed browser assets:
+  - `styles.css?v=33`
+  - `js/schedule.js?v=23`
+- Extended the `SCHEDULE-TIMING` regression fixture to assert comparison deltas and explanation text.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`; it passed all six generated-plan fixtures, the prerequisite-chain fixture, the account/share fixture, and the schedule timing/comparison fixture.
+- Schedule timing/comparison fixture confirmed:
+  - compact schedule score remains above idle schedule score.
+  - tight cross-campus transition remains detected.
+  - comparison timing delta is positive (`+32` in the fixture).
+  - comparison reports warning reduction and open-seat gain.
+  - comparison text explains why the option is better.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `git diff --check`.
+- Loaded `http://127.0.0.1:5174/?pass35altwhy=1` from a temporary static server and confirmed:
+  - `styles.css?v=33` and `js/schedule.js?v=23` loaded.
+  - no console errors on load.
+  - Schedule tab opened successfully.
+  - generated four alternate cards.
+  - all four cards rendered `Why this option`.
+  - first card explained timing improvement, warning reduction, idle time saved, and open-seat gain.
+  - no horizontal overflow at the browser's 380px viewport.
+- Stopped the temporary static server.
+
+Next pass candidates:
+- Add the current-vs-alternate comparison details to the advisor packet/export when an alternate is applied.
+- Add a schedule diagnostics export section with timing fit insights in the advisor packet body, not only the header metrics.
+- Add real Supabase/Vercel setup instructions and validate a magic-link account round trip on deployment.
+- Add a generated-plan diagnostics screen for comparing live-metadata vs template-only plans.
+- Improve Browse with multi-department profile search and richer personalized class recommendations.
