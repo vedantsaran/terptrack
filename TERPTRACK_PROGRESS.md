@@ -4315,3 +4315,61 @@ Next pass candidates:
 - Broaden the live verifier to compare generated course credits and titles against rendered UI snapshots, not just template metadata.
 - Add a lightweight CI/offline fixture for the live-verifier shape with an opt-in network mode for release passes.
 - Add a Settings history drawer for the last few generated-template audit seeds and results.
+
+## 2026-06-30 Pass 85
+
+Focus: make generated-schedule verification catch real metadata drift, not just fake course codes.
+
+Planned changes:
+- Strengthen `scripts/verify-random-schedules.js` so every generated required course must be present in the generated schedule, resolve on PlanetTerp, and keep the live title/credit metadata used by the app.
+- Prefer PlanetTerp credits in the app's combined course metadata, while keeping umd.io for structured prereqs and GenEd tags.
+- Add retry handling for transient PlanetTerp course endpoint failures in both the app and the verifier.
+- Update the Settings freshness report to cite the new stronger all-major audit.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added live metadata checks to `scripts/verify-random-schedules.js`:
+  - Verifies every required template course is actually scheduled.
+  - Verifies every required generated course resolves through PlanetTerp.
+  - Verifies each scheduled course's title and credits match the live app metadata object.
+  - Verifies scheduled credits also match PlanetTerp credits when PlanetTerp returns a numeric value.
+  - Reports `live title/credit pairs matched` per major.
+- Added retry/backoff for transient PlanetTerp verification failures, which avoids failing a real course on one temporary `HTTP 500`.
+- Updated `fetchCourseFull` in `js/api.js` to prefer PlanetTerp credits over umd.io credits.
+  - This fixed source drift found by the stronger verifier for `ARTT489C`, `KNES385`, `PHYS402`, `PHYS410`, and `PLSC201`.
+  - umd.io still supplies structured prereqs, coreqs, and GenEd metadata.
+- Added retry/backoff to `planetTerpFetchCourse` in `js/planetterp.js`.
+  - Permanent 4xx responses are not retried.
+  - Transient fetch/5xx failures retry up to three times.
+- Updated the Settings generated-catalog freshness audit seed from `pass84-all` to `pass85-all-final`.
+- Bumped cache tags:
+  - `js/planetterp.js?v=2`.
+  - `js/api.js?v=2`.
+  - `js/settings.js?v=17`.
+- Updated the generated-plan fixture to assert the new freshness seed.
+
+Verification:
+- Ran direct live checks against PlanetTerp and umd.io for the courses exposed by the stronger verifier:
+  - `ARTT489C`, `KNES385`, `PHYS402`, `PHYS410`, `PLSC201`, `ENAE432`, and `ENCE215`.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan and planner fixtures.
+- Ran `node scripts/verify-random-schedules.js --majors ARTT,ENAE,ENCE,KNES,PHYS,PLSC --keep-going --seed pass85-fixed-targets`; it passed all six previously failing targets after the PlanetTerp-credit and retry changes.
+- Ran `node scripts/verify-random-schedules.js --majors ARTT,KNES,PHYS,PLSC --keep-going --seed pass85-post-metadata`; it passed the main credit-drift targets after the Settings metadata update.
+- Ran `node scripts/verify-random-schedules.js --majors ENAE,ENCE,PHYS,PLSC --keep-going --seed pass85-final-targets`; it passed after retry-flow cleanup.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass85-all-final`.
+  - Verified all 50 generated schedules against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/`, then finalized Chrome and stopped the server before commit.
+- Chrome confirmed before the browser-control timeout:
+  - The app loaded `js/planetterp.js?v=2` and `js/api.js?v=2`.
+  - Settings opened for Physics.
+  - The Physics generated review rendered `121/120` planned credits, `20/20 live course records`, full tracked GenEd coverage, and the freshness panel.
+  - The live metadata row included the formerly credit-drifting Physics requirements `PHYS402` and `PHYS410`.
+- Chrome limitation:
+  - A later attempt to apply Studio Art in Chrome opened the app's local replacement confirmation and the browser-control command timed out while applying. Chrome was reconnected, finalized, and the server was stopped. The full live verifier is the authoritative evidence for generated-plan title/credit correctness in this pass.
+
+Next pass candidates:
+- Add official per-major citation links beside generated requirement groups and Settings freshness rows.
+- Add a dedicated browser/UI verifier that applies generated templates in a disposable browser profile and inspects rendered course cards without relying on manual Chrome interactions.
+- Add a Settings history drawer for the last few generated-template audit seeds and results.
+- Add a lightweight CI/offline fixture for the live-verifier shape with an opt-in network mode for release passes.

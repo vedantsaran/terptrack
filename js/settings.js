@@ -44,11 +44,11 @@ let autoPlanReviewSeq = 0;
 let autoPlanReviewTimer = null;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'June 30, 2026',
-  seed: 'pass84-all',
+  seed: 'pass85-all-final',
   source: 'PlanetTerp',
   verifiedSchedules: 50,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass84-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass85-all-final',
 });
 
 function settingsHtml(value) {

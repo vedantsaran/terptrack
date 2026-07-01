@@ -155,6 +155,31 @@ function normalizeCode(code) {
   return String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
+function normalizeTitle(title) {
+  return String(title || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function titlesCompatible(appTitle, planetTerpTitle) {
+  const app = normalizeTitle(appTitle);
+  const live = normalizeTitle(planetTerpTitle);
+  if (!app || !live) return true;
+  return app === live || app.includes(live) || live.includes(app);
+}
+
+function creditValue(value) {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function isPlaceholderCourse(course) {
   const code = String(course?.code || '');
   const hay = [course?.code, course?.title, course?.note, course?.category, course?.kind].join(' ').toUpperCase();
@@ -189,28 +214,44 @@ async function fetchPlanetTerpCourse(code) {
   const id = normalizeCode(code);
   if (planetTerpVerifyCache.has(id)) return planetTerpVerifyCache.get(id);
   const url = `https://planetterp.com/api/v1/course?name=${encodeURIComponent(id)}`;
-  const resp = await fetch(url, { headers: { accept: 'application/json' } });
-  if (!resp.ok) {
-    let detail = `HTTP ${resp.status}`;
+  let lastResult = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let resp;
     try {
-      const body = await resp.json();
-      if (body?.error) detail = body.error;
-    } catch {}
-    const result = { ok: false, code: id, detail };
+      resp = await fetch(url, { headers: { accept: 'application/json' } });
+    } catch (error) {
+      lastResult = { ok: false, code: id, detail: error?.message || String(error) };
+      if (attempt < 3) await wait(250 * attempt);
+      continue;
+    }
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try {
+        const body = await resp.json();
+        if (body?.error) detail = body.error;
+      } catch {}
+      lastResult = { ok: false, code: id, detail };
+      if (resp.status >= 500 && attempt < 3) {
+        await wait(250 * attempt);
+        continue;
+      }
+      planetTerpVerifyCache.set(id, lastResult);
+      return lastResult;
+    }
+    const data = await resp.json();
+    const result = {
+      ok: normalizeCode(data?.name || '') === id,
+      code: id,
+      title: data?.title || '',
+      credits: data?.credits,
+      isRecent: data?.is_recent,
+      detail: normalizeCode(data?.name || '') === id ? '' : `PlanetTerp returned ${data?.name || 'unknown course'}`,
+    };
     planetTerpVerifyCache.set(id, result);
     return result;
   }
-  const data = await resp.json();
-  const result = {
-    ok: normalizeCode(data?.name || '') === id,
-    code: id,
-    title: data?.title || '',
-    credits: data?.credits,
-    isRecent: data?.is_recent,
-    detail: normalizeCode(data?.name || '') === id ? '' : `PlanetTerp returned ${data?.name || 'unknown course'}`,
-  };
-  planetTerpVerifyCache.set(id, result);
-  return result;
+  planetTerpVerifyCache.set(id, lastResult);
+  return lastResult;
 }
 
 async function verifyMajor(context, major, rand) {
@@ -230,7 +271,18 @@ async function verifyMajor(context, major, rand) {
         startYear: ${JSON.stringify(startYear)},
         creditCap: ${creditCap}
       });
-      return { required, review };
+      const live = await fetchCoursesBatch(required);
+      const liveMetadata = {};
+      required.forEach(code => {
+        const course = live[normalizeCode(code)];
+        if (!course) return;
+        liveMetadata[normalizeCode(code)] = {
+          code: course.code,
+          title: course.title,
+          cr: course.cr,
+        };
+      });
+      return { required, review, liveMetadata };
     })()
   `, context));
   const review = result.review;
@@ -238,11 +290,13 @@ async function verifyMajor(context, major, rand) {
   const nonPlaceholder = courses.filter(course => !isPlaceholderCourse(course));
   const seen = new Set();
   const duplicates = [];
+  const scheduledByCode = new Map();
   nonPlaceholder.forEach(course => {
     const key = normalizeCode(course.code);
     if (!key) duplicates.push('(blank)');
     if (seen.has(key)) duplicates.push(displayCode(key));
     seen.add(key);
+    if (key) scheduledByCode.set(key, course);
   });
   const termLoads = review.termLoads || [];
   const maxTermLoad = Math.max(...termLoads.map(term => term.credits));
@@ -256,10 +310,36 @@ async function verifyMajor(context, major, rand) {
   assert((review.genEdSummary || []).every(req => req.complete), `${major.id}: incomplete generated GenEd coverage`);
   assert(!duplicates.length, `${major.id}: duplicate generated real course codes: ${duplicates.join(', ')}`);
   assert(review.metadataCoverage?.found === review.metadataCoverage?.total, `${major.id}: live metadata coverage ${review.metadataCoverage?.found}/${review.metadataCoverage?.total}; missing ${(review.metadataCoverage?.missingCodes || []).join(', ')}`);
+  const missingScheduled = (result.required || []).filter(code => !scheduledByCode.has(normalizeCode(code)));
+  assert(!missingScheduled.length, `${major.id}: required courses missing from generated schedule: ${missingScheduled.map(displayCode).join(', ')}`);
 
   const checks = await Promise.all((result.required || []).map(fetchPlanetTerpCourse));
   const missing = checks.filter(check => !check.ok);
   assert(!missing.length, `${major.id}: PlanetTerp missing required courses: ${missing.map(item => `${displayCode(item.code)} (${item.detail})`).join(', ')}`);
+  const checksByCode = new Map(checks.map(check => [normalizeCode(check.code), check]));
+  const missingLiveMetadata = (result.required || []).filter(code => !result.liveMetadata?.[normalizeCode(code)]);
+  assert(!missingLiveMetadata.length, `${major.id}: live app metadata missing for required courses: ${missingLiveMetadata.map(displayCode).join(', ')}`);
+  const metadataMismatches = [];
+  (result.required || []).forEach(code => {
+    const id = normalizeCode(code);
+    const course = scheduledByCode.get(id);
+    const check = checksByCode.get(id);
+    const live = result.liveMetadata?.[id];
+    if (!course || !check?.ok || !live) return;
+    const generatedCredits = creditValue(course.cr);
+    const liveCredits = creditValue(live.cr);
+    if (generatedCredits && liveCredits && generatedCredits !== liveCredits) {
+      metadataMismatches.push(`${displayCode(id)} credits ${generatedCredits} != live metadata ${liveCredits}`);
+    }
+    const planetCredits = creditValue(check.credits);
+    if (generatedCredits && planetCredits && generatedCredits !== planetCredits) {
+      metadataMismatches.push(`${displayCode(id)} credits ${generatedCredits} != PlanetTerp ${planetCredits}`);
+    }
+    if (!titlesCompatible(course.title, live.title)) {
+      metadataMismatches.push(`${displayCode(id)} title "${course.title}" != live metadata "${live.title}"`);
+    }
+  });
+  assert(!metadataMismatches.length, `${major.id}: generated course metadata does not match live sources: ${metadataMismatches.slice(0, 8).join('; ')}${metadataMismatches.length > 8 ? `; +${metadataMismatches.length - 8} more` : ''}`);
 
   return {
     id: major.id,
@@ -272,6 +352,7 @@ async function verifyMajor(context, major, rand) {
     placeholders: courses.length - nonPlaceholder.length,
     credits: review.totalCredits,
     maxTermLoad,
+    titleCreditChecked: checks.length,
   };
 }
 
@@ -296,7 +377,7 @@ async function main() {
     try {
       const row = await verifyMajor(context, major, rand);
       rows.push(row);
-      console.log(`${row.id}: ${row.credits} credits, ${row.required} required courses verified in PlanetTerp, ${row.placeholders} placeholders, max ${row.maxTermLoad} cr (${row.profile}, ${row.start})`);
+      console.log(`${row.id}: ${row.credits} credits, ${row.required} required courses verified in PlanetTerp, ${row.titleCreditChecked} live title/credit pairs matched, ${row.placeholders} placeholders, max ${row.maxTermLoad} cr (${row.profile}, ${row.start})`);
     } catch (error) {
       if (!opts.keepGoing) throw error;
       const message = error?.message || String(error);

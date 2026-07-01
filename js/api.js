@@ -247,8 +247,8 @@ function genEdTags(genEdArray) {
   return Array.from(new Set(genEdArray.flat().filter(Boolean).map(t => String(t).toLowerCase())));
 }
 
-// Combined fetch: umd.io for canonical metadata + structured prereqs + gen_ed,
-// PlanetTerp (in parallel) for avg_gpa.
+// Combined fetch: PlanetTerp for credits/GPA, umd.io for structured prereqs
+// and GenEd metadata.
 async function fetchCourseFull(code) {
   const id = normalizeCode(code);
   const [umd, pt] = await Promise.all([
@@ -257,7 +257,7 @@ async function fetchCourseFull(code) {
   ]);
   if (!umd && !pt) return null;
   const display = displayCode(id);
-  const credits = parseInt((umd && umd.credits) || (pt && pt.credits) || '3', 10) || 3;
+  const credits = parseInt((pt && pt.credits) || (umd && umd.credits) || '3', 10) || 3;
   const title = (umd && umd.name) || (pt && pt.title) || display;
   const prereqText = umd && umd.relationships ? umd.relationships.prereqs : (pt && pt.prerequisites);
   const prereqGroups = parsePrereqGroups(prereqText);

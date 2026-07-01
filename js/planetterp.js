@@ -28,13 +28,26 @@ async function planetTerpFetchCourse(code) {
   const cached = ptCacheGet(key);
   if (cached) return cached;
   const url = `https://planetterp.com/api/v1/course?name=${encodeURIComponent(key)}`;
-  const resp = await fetch(url);
-  if (!resp.ok) {
-    let msg = `HTTP ${resp.status}`;
-    try { const body = await resp.json(); if (body && body.error) msg = body.error; } catch {}
-    throw new Error(msg);
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        let msg = `HTTP ${resp.status}`;
+        try { const body = await resp.json(); if (body && body.error) msg = body.error; } catch {}
+        lastError = new Error(msg);
+        if (resp.status < 500) break;
+        if (attempt === 3) throw lastError;
+      } else {
+        const data = await resp.json();
+        ptCachePut(key, data);
+        return data;
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt === 3) break;
+    }
+    await new Promise(resolve => setTimeout(resolve, 250 * attempt));
   }
-  const data = await resp.json();
-  ptCachePut(key, data);
-  return data;
+  throw lastError || new Error('PlanetTerp request failed');
 }
