@@ -1018,12 +1018,13 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Before submitting in Testudo:[\s\S]*Confirm open seats/.test(result.outputRegistrationText), 'registration list: text should include final Testudo checks');
   assert(/^terp-track-calendar-.*fall-2026\.ics$/.test(result.outputCalendarFilename), 'schedule calendar: filename should be an .ics calendar export');
   assert(result.outputCalendarEventCount === 3, 'schedule calendar: two CMSC meetings and one MATH meeting should produce three VEVENTs');
-  assert(result.outputCalendarSummary?.label === 'Calendar ready' && result.outputCalendarSummary.eventCount === 3, 'calendar export readiness: summary should report ready calendar event count');
+  assert(result.outputCalendarSummary?.label === 'Calendar incomplete' && result.outputCalendarSummary.eventCount === 3, 'calendar export readiness: summary should report incomplete calendar event count');
   assert(result.outputCalendarSummary?.windowLabel === 'Sep 2, 2026 to Dec 14, 2026', 'calendar export readiness: summary should expose custom calendar range');
-  assert(result.outputCalendarSummary?.timedCourseCount === 2 && result.outputCalendarSummary?.pickedCount === 2 && result.outputCalendarSummary?.tbaCount === 0, 'calendar export readiness: summary should count timed picked sections');
+  assert(result.outputCalendarSummary?.timedCourseCount === 2 && result.outputCalendarSummary?.courseCount === 3 && result.outputCalendarSummary?.missingCount === 1 && result.outputCalendarSummary?.omittedCount === 1, 'calendar export readiness: summary should count timed and omitted planned courses');
   assert(/Calendar Export[\s\S]*Sep 2, 2026 to Dec 14, 2026[\s\S]*calendar events/.test(result.outputHtml), 'calendar export readiness: schedule output HTML should include event count and range');
-  assert(/Calendar export:[\s\S]*Calendar ready: 3 weekly events across 2\/2 picked sections/.test(result.outputText), 'calendar export readiness: schedule text should include event count and timed picked coverage');
+  assert(/Calendar export:[\s\S]*Calendar incomplete: 3 weekly events across 2\/3 planned courses; 1 course still needs a section/.test(result.outputText), 'calendar export readiness: schedule text should include event count and omitted planned course');
   assert(/Calendar export:[\s\S]*Range: Sep 2, 2026 to Dec 14, 2026/.test(result.outputRegistrationText), 'calendar export readiness: registration list should include calendar range');
+  assert(/Calendar export:[\s\S]*ENGL 101 Missing section: omitted from calendar until a section is picked/.test(result.outputRegistrationText), 'calendar export readiness: registration list should include missing-section omission');
   assert(/BEGIN:VCALENDAR/.test(result.outputCalendarUnfolded) && /BEGIN:VEVENT/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include calendar and event records');
   assert(/SUMMARY:CMSC 131 0101/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include course and section summary');
   assert(/DTSTART;TZID=America\/New_York:20260902T090000/.test(result.outputCalendarUnfolded), 'schedule calendar: custom Fall 2026 range should start Wednesday classes on the configured start date');
@@ -1037,7 +1038,7 @@ function testScheduleRegistrationReadiness(context) {
 	  assert(/schedule-advisor-readiness-map/.test(result.advisorHtml) && /Plan Readiness Map/.test(result.advisorHtml) && /Spring 2027/.test(result.advisorHtml), 'readiness map export: advisor HTML should include plan-wide readiness map');
 	  assert(/Registration Appointment/.test(result.advisorHtml) && /Aug 25, 2099 at 9:30am/.test(result.advisorHtml), 'registration appointment: advisor HTML should include saved appointment');
   assert(/Seat Data Freshness/.test(result.advisorHtml) && /Refresh seats/.test(result.advisorHtml), 'seat freshness: advisor HTML should include freshness card');
-  assert(/Calendar Export/.test(result.advisorHtml) && /Calendar ready/.test(result.advisorHtml), 'calendar export readiness: advisor HTML should include calendar readiness card');
+  assert(/Calendar Export/.test(result.advisorHtml) && /Calendar incomplete/.test(result.advisorHtml), 'calendar export readiness: advisor HTML should include calendar omission card');
   assert(/data-seat-freshness-action="refresh"/.test(result.advisorHtml), 'seat freshness: advisor HTML should include refresh action');
   assert(/Testudo Entry Queue/.test(result.advisorHtml) && /Section ID MATH140-0201/.test(result.advisorHtml), 'testudo queue: advisor HTML should include exact section IDs');
   assert(/Quick actions/.test(result.advisorHtml) && /Review section picks/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness quick actions');
@@ -1046,6 +1047,7 @@ function testScheduleRegistrationReadiness(context) {
 	  assert(/Registration appointment:[\s\S]*Use the registration list to submit exact section IDs/.test(result.advisorText), 'registration appointment: advisor text should include appointment checklist');
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.advisorText), 'seat freshness: advisor text should include stale course refresh status');
   assert(/Calendar export:[\s\S]*CMSC 131 0101: 2 calendar events/.test(result.advisorText), 'calendar export readiness: advisor text should include course event rows');
+  assert(/Calendar export:[\s\S]*ENGL 101 Missing section: omitted from calendar until a section is picked/.test(result.advisorText), 'calendar export readiness: advisor text should include missing-section omission');
   assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.advisorText), 'seat freshness: advisor text should include refresh action guidance');
   assert(/Testudo entry queue:[\s\S]*Section ID: MATH140-0201/.test(result.advisorText), 'testudo queue: advisor text should include exact section IDs');
   assert(/Fix: Pick sections for ENGL 101/.test(result.advisorText), 'registration readiness: advisor text should include recommended fixes');

@@ -2943,10 +2943,12 @@ function scheduleCalendarDateLabel(date) {
   return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
 }
 
-function scheduleCalendarExportSummary(sem, term, selectedItems = [], prefs = DEFAULT_SCHEDULE_PREFS, ics = '') {
+function scheduleCalendarExportSummary(sem, term, courses = [], selectedItems = [], prefs = DEFAULT_SCHEDULE_PREFS, ics = '') {
+  const courseList = Array.isArray(courses) ? courses : [];
   const picked = Array.isArray(selectedItems) ? selectedItems : [];
   const termWindow = scheduleCalendarTermWindow(term, prefs);
-  const rows = picked.map(item => {
+  const pickedCodes = new Set(picked.map(item => normalizeCode(item.course?.code || item.section?.course || '')));
+  const pickedRows = picked.map(item => {
     const blocks = sectionBlocks(item.section, item.course);
     return {
       courseCode: item.course?.code || displayCode(item.section?.course || ''),
@@ -2954,25 +2956,46 @@ function scheduleCalendarExportSummary(sem, term, selectedItems = [], prefs = DE
       sectionLabel: scheduleSectionShortLabel(item.section),
       eventCount: blocks.length,
       meetings: scheduleSectionMeetingLines(item.section),
+      missing: false,
     };
   });
-  const eventCount = ics ? scheduleCalendarEventCount(ics) : rows.reduce((sum, row) => sum + row.eventCount, 0);
-  const timedCourseCount = rows.filter(row => row.eventCount > 0).length;
-  const tbaRows = rows.filter(row => row.eventCount === 0);
+  const missingRows = courseList
+    .filter(course => !pickedCodes.has(normalizeCode(course.code || '')))
+    .map(course => ({
+      courseCode: course.code || 'Course',
+      title: course.title || '',
+      sectionLabel: 'Missing section',
+      eventCount: 0,
+      meetings: ['No section picked'],
+      missing: true,
+    }));
+  const rows = [...pickedRows, ...missingRows];
+  const eventCount = ics ? scheduleCalendarEventCount(ics) : pickedRows.reduce((sum, row) => sum + row.eventCount, 0);
+  const timedCourseCount = pickedRows.filter(row => row.eventCount > 0).length;
+  const tbaRows = pickedRows.filter(row => row.eventCount === 0);
+  const courseCount = courseList.length || picked.length;
+  const omittedCount = missingRows.length + tbaRows.length;
   const windowLabel = `${scheduleCalendarDateLabel(termWindow.start)} to ${scheduleCalendarDateLabel(termWindow.end)}`;
-  const level = !picked.length ? 'warn'
+  const level = !courseCount ? 'ok'
+    : !picked.length ? 'danger'
     : !eventCount ? 'danger'
-      : tbaRows.length ? 'warn'
+      : missingRows.length || tbaRows.length ? 'warn'
         : 'ok';
-  const label = !picked.length ? 'Pick timed sections'
+  const label = !courseCount ? 'No calendar courses'
+    : !picked.length ? 'No calendar events'
     : !eventCount ? 'No timed events'
+      : missingRows.length ? 'Calendar incomplete'
       : tbaRows.length ? 'Review TBA meetings'
         : 'Calendar ready';
-  const detail = !picked.length
-    ? 'Pick posted sections before exporting a calendar.'
-    : eventCount
-      ? `${eventCount} weekly event${eventCount === 1 ? '' : 's'} across ${timedCourseCount}/${picked.length} picked section${picked.length === 1 ? '' : 's'}.`
-      : 'Picked sections do not have posted meeting times yet.';
+  const detail = !courseCount
+    ? 'No schedule-ready courses need calendar events.'
+    : !eventCount
+      ? `${courseCount - timedCourseCount}/${courseCount} planned course${courseCount === 1 ? '' : 's'} will be omitted until sections with posted times are picked.`
+      : missingRows.length
+        ? `${eventCount} weekly event${eventCount === 1 ? '' : 's'} across ${timedCourseCount}/${courseCount} planned course${courseCount === 1 ? '' : 's'}; ${missingRows.length} course${missingRows.length === 1 ? '' : 's'} still need${missingRows.length === 1 ? 's' : ''} a section.`
+        : tbaRows.length
+          ? `${eventCount} weekly event${eventCount === 1 ? '' : 's'} across ${timedCourseCount}/${courseCount} planned course${courseCount === 1 ? '' : 's'}; ${tbaRows.length} picked section${tbaRows.length === 1 ? '' : 's'} have no posted meeting time.`
+          : `${eventCount} weekly event${eventCount === 1 ? '' : 's'} across ${timedCourseCount}/${courseCount} planned course${courseCount === 1 ? '' : 's'}.`;
   return {
     level,
     label,
@@ -2983,11 +3006,15 @@ function scheduleCalendarExportSummary(sem, term, selectedItems = [], prefs = DE
     windowNote: termWindow.note,
     customRange: !!termWindow.custom,
     eventCount,
+    courseCount,
     pickedCount: picked.length,
     timedCourseCount,
     tbaCount: tbaRows.length,
+    missingCount: missingRows.length,
+    omittedCount,
     rows,
     tbaRows,
+    missingRows,
   };
 }
 
@@ -3006,15 +3033,15 @@ function renderScheduleCalendarExportHtml(summary, heading = 'Calendar Export') 
       <p>${scheduleEscape(summary.detail)} ${scheduleEscape(summary.windowNote)}</p>
       <div class="schedule-calendar-export-metrics">
         <span><strong>${summary.eventCount}</strong><em>calendar events</em></span>
-        <span><strong>${summary.timedCourseCount}/${summary.pickedCount}</strong><em>timed picks</em></span>
-        <span><strong>${summary.tbaCount}</strong><em>TBA picks</em></span>
+        <span><strong>${summary.timedCourseCount}/${summary.courseCount || summary.pickedCount}</strong><em>timed courses</em></span>
+        <span><strong>${summary.omittedCount || 0}</strong><em>omitted courses</em></span>
       </div>
       ${rows.length ? `
         <div class="schedule-calendar-export-list">
           ${rows.slice(0, 8).map(row => `
-            <div class="schedule-calendar-export-row ${row.eventCount ? 'ok' : 'warn'}">
+            <div class="schedule-calendar-export-row ${row.missing ? 'danger' : row.eventCount ? 'ok' : 'warn'}">
               <strong>${scheduleEscape(row.courseCode)} ${scheduleEscape(row.sectionLabel)}</strong>
-              <span>${row.eventCount ? `${row.eventCount} calendar event${row.eventCount === 1 ? '' : 's'}` : 'No timed calendar event'}</span>
+              <span>${row.missing ? 'Omitted from calendar until a section is picked' : row.eventCount ? `${row.eventCount} calendar event${row.eventCount === 1 ? '' : 's'}` : 'No timed calendar event'}</span>
               <em>${scheduleEscape(row.meetings.join(' / '))}</em>
             </div>
           `).join('')}
@@ -3034,10 +3061,13 @@ function scheduleCalendarExportText(summary) {
     `- Note: ${summary.windowNote}`,
   ];
   (summary.rows || []).forEach(row => {
-    lines.push(`- ${row.courseCode} ${row.sectionLabel}: ${row.eventCount} calendar event${row.eventCount === 1 ? '' : 's'}; ${row.meetings.join('; ')}.`);
+    if (row.missing) lines.push(`- ${row.courseCode} ${row.sectionLabel}: omitted from calendar until a section is picked; ${row.meetings.join('; ')}.`);
+    else lines.push(`- ${row.courseCode} ${row.sectionLabel}: ${row.eventCount} calendar event${row.eventCount === 1 ? '' : 's'}; ${row.meetings.join('; ')}.`);
   });
-  if (summary.tbaCount) {
-    lines.push(`- TBA/no-event picks: ${summary.tbaRows.map(row => `${row.courseCode} ${row.sectionLabel}`).join(', ')}.`);
+  if (summary.omittedCount) {
+    const omitted = [...(summary.tbaRows || []), ...(summary.missingRows || [])]
+      .map(row => `${row.courseCode} ${row.sectionLabel}`);
+    lines.push(`- Omitted courses: ${omitted.join(', ')}.`);
   }
   return lines;
 }
@@ -3896,6 +3926,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-calendar-export-list{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
     .schedule-calendar-export-row{border:1px solid #d8cec0;border-radius:7px;background:#fbf7ef;padding:7px}
     .schedule-calendar-export-row.warn{border-color:#f1c45c;background:#fffaf0}
+    .schedule-calendar-export-row.danger{border-color:#f0b4a9;background:#fff5f3}
     .schedule-calendar-export-row strong{display:block;color:#241f1f}
     .schedule-registration-handoff{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-registration-handoff-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
@@ -4262,7 +4293,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const readinessRows = scheduleReadinessMapRows(semId, term, courses, selectedItems, conflicts, warnings, sectionsByCode);
   const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
-  const calendarSummary = scheduleCalendarExportSummary(sem, term, selectedItems, prefs, calendar);
+  const calendarSummary = scheduleCalendarExportSummary(sem, term, courses, selectedItems, prefs, calendar);
   const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary);
   const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary);
   const courseRows = selectedItems

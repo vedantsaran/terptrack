@@ -4501,6 +4501,10 @@ h1.hero-title em {
   border-color: color-mix(in srgb, var(--amber) 40%, var(--line));
   background: color-mix(in srgb, var(--paper) 80%, var(--amber-soft));
 }
+.schedule-calendar-export-row.danger {
+  border-color: color-mix(in srgb, var(--red) 36%, var(--line));
+  background: color-mix(in srgb, var(--paper) 82%, var(--red-soft));
+}
 .schedule-calendar-export-row strong {
   display: block;
   color: var(--ink);

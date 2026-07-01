@@ -176,8 +176,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=101'), 'workflow app did not load styles.css?v=101');
-  assert(snapshot.scripts.includes('js/schedule.js?v=54'), 'workflow app did not load js/schedule.js?v=54');
+  assert(snapshot.styles.includes('styles.css?v=102'), 'workflow app did not load styles.css?v=102');
+  assert(snapshot.scripts.includes('js/schedule.js?v=55'), 'workflow app did not load js/schedule.js?v=55');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -752,8 +752,9 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Refresh seats')
       && text.includes('Refresh sections now')
       && text.includes('Calendar Export')
-      && text.includes('Calendar ready')
+      && text.includes('Calendar incomplete')
       && text.includes('calendar events')
+      && text.includes('omitted courses')
       && text.includes('Sep 2, 2026 to Dec 14, 2026')
       && text.includes('Testudo Entry Queue')
       && text.includes('Section ID MATH140-0201')
@@ -895,8 +896,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Missing section picks:[\s\S]*ENGL 101/.test(result.registrationText), 'advisor packet: registration export should include missing picks');
   assert(/^terp-track-calendar-.*fall-2026\.ics$/i.test(result.calendarFilename), 'advisor packet: calendar export should have an .ics filename');
   assert(result.calendarEventCount === 4, 'advisor packet: calendar export should include four timed class events');
-  assert(result.calendarSummary?.label === 'Calendar ready' && result.calendarSummary?.eventCount === 4, 'advisor packet: output cache should include calendar readiness summary');
-  assert(result.calendarSummary?.windowLabel === 'Sep 2, 2026 to Dec 14, 2026' && result.calendarSummary?.timedCourseCount === 2, 'advisor packet: calendar readiness should expose range and timed section coverage');
+  assert(result.calendarSummary?.label === 'Calendar incomplete' && result.calendarSummary?.eventCount === 4, 'advisor packet: output cache should include calendar omission summary');
+  assert(result.calendarSummary?.windowLabel === 'Sep 2, 2026 to Dec 14, 2026' && result.calendarSummary?.timedCourseCount === 2 && result.calendarSummary?.courseCount === 3 && result.calendarSummary?.missingCount === 1, 'advisor packet: calendar readiness should expose range and omitted planned-course coverage');
   assert(/BEGIN:VCALENDAR/.test(result.calendarText) && /SUMMARY:CMSC 131 0101/.test(result.calendarText), 'advisor packet: calendar export should include picked section events');
   assert(result.calendarStartInput === '2026-09-02' && result.calendarEndInput === '2026-12-14', 'advisor packet: calendar date inputs should render saved custom range');
   assert(/DTSTART;TZID=America\/New_York:20260902T090000/.test(result.calendarText), 'advisor packet: calendar export should include configured Fall 2026 class dates');
@@ -920,7 +921,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Registration readiness/.test(result.advisorText) && /Sections: 2\/3/.test(result.advisorText), 'advisor packet: exported text should include registration readiness gates');
   assert(/Registration appointment:[\s\S]*Use the registration list to submit exact section IDs/.test(result.advisorText), 'advisor packet: exported text should include appointment checklist');
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.advisorText), 'advisor packet: exported text should include seat freshness');
-  assert(/Calendar export:[\s\S]*Calendar ready: 4 weekly events across 2\/2 picked sections/.test(result.advisorText), 'advisor packet: exported text should include calendar readiness summary');
+  assert(/Calendar export:[\s\S]*Calendar incomplete: 4 weekly events across 2\/3 planned courses; 1 course still needs a section/.test(result.advisorText), 'advisor packet: exported text should include calendar omission summary');
+  assert(/Calendar export:[\s\S]*ENGL 101 Missing section: omitted from calendar until a section is picked/.test(result.advisorText), 'advisor packet: exported text should include omitted missing-section course');
   assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.advisorText), 'advisor packet: exported text should include seat-refresh action guidance');
   assert(/Testudo entry queue:[\s\S]*Section ID: MATH140-0201/.test(result.advisorText), 'advisor packet: exported text should include Testudo queue');
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.advisorText), 'advisor packet: exported text should include enrollment order');
@@ -930,7 +932,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Registration Readiness/.test(result.outputText) && /Fix before registration/.test(result.outputText), 'advisor packet: rendered packet should include registration readiness gates');
   assert(/Registration Appointment/.test(result.outputText) && /Aug 25, 2099 at 9:30am/.test(result.outputText), 'advisor packet: rendered packet should include appointment');
   assert(/Seat Data Freshness/.test(result.outputText) && /Refresh seats/.test(result.outputText), 'advisor packet: rendered packet should include seat freshness');
-  assert(/Calendar Export/.test(result.outputText) && /Calendar ready/.test(result.outputText), 'advisor packet: rendered packet should include calendar readiness');
+  assert(/Calendar Export/.test(result.outputText) && /Calendar incomplete/.test(result.outputText), 'advisor packet: rendered packet should include calendar omission readiness');
   assert(/Testudo Entry Queue/.test(result.outputText) && /Section ID MATH140-0201/.test(result.outputText), 'advisor packet: rendered packet should include Testudo queue');
   assert(/Enrollment Order/.test(result.outputText) && /MATH 140 0201/.test(result.outputText), 'advisor packet: rendered packet should include enrollment order');
   assert(/Backup Plan/.test(result.outputText) && /Backup 0301/.test(result.outputText), 'advisor packet: rendered packet should include backup plan');
