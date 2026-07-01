@@ -127,21 +127,31 @@ function startServer() {
 function snapshotScript() {
   return `(() => {
     const modal = document.querySelector('#onboard-modal.open .modal, #settings-modal.open .modal, .modal-backdrop.open .modal');
+    const accountModal = document.querySelector('#account-modal.open .modal');
     const browse = document.querySelector('#view-browse');
     const preview = document.querySelector('#ob-plan-preview');
     const grid = document.querySelector('#br-grid');
+    const schedule = document.querySelector('#view-schedule');
+    const scheduleOutput = document.querySelector('#schedule-output');
+    const advisorPacket = document.querySelector('#schedule-advisor-packet');
     return {
       scripts: Array.from(document.scripts).map(script => script.getAttribute('src')).filter(Boolean),
       styles: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link => link.getAttribute('href')),
       onboardText: preview ? preview.textContent.replace(/\\s+/g, ' ').trim() : '',
+      accountText: accountModal ? accountModal.textContent.replace(/\\s+/g, ' ').trim() : '',
       browseText: grid ? grid.textContent.replace(/\\s+/g, ' ').trim() : '',
+      scheduleText: scheduleOutput ? scheduleOutput.textContent.replace(/\\s+/g, ' ').trim() : '',
       overflow: {
         document: document.documentElement.scrollWidth > window.innerWidth + 1,
         body: document.body.scrollWidth > window.innerWidth + 1,
         modal: modal ? modal.scrollWidth > modal.clientWidth + 1 : false,
+        accountModal: accountModal ? accountModal.scrollWidth > accountModal.clientWidth + 1 : false,
         preview: preview && !preview.hidden ? preview.scrollWidth > preview.clientWidth + 1 : false,
         browse: browse ? browse.scrollWidth > browse.clientWidth + 1 : false,
         grid: grid ? grid.scrollWidth > grid.clientWidth + 1 : false,
+        schedule: schedule ? schedule.scrollWidth > schedule.clientWidth + 1 : false,
+        scheduleOutput: scheduleOutput ? scheduleOutput.scrollWidth > scheduleOutput.clientWidth + 1 : false,
+        advisorPacket: advisorPacket ? advisorPacket.scrollWidth > advisorPacket.clientWidth + 1 : false,
       },
     };
   })()`;
@@ -263,6 +273,210 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   console.log('Browse replacement [mobile]: rendered replacement banner, result card, actions, and no overflow.');
 }
 
+async function verifyAccountSetupMobile(page, url, opts) {
+  await openFreshApp(page, url, opts, 'account');
+  await page.evaluate(() => {
+    localStorage.removeItem(ACCOUNT_CONFIG_STORAGE);
+    accountResetConfigCache();
+    state.onboardingComplete = true;
+    state.accountPrefs = normalizeAccountPrefs({
+      ...defaultAccountPrefs(),
+      displayName: '',
+      friendInviteEmail: '',
+      friendInviteNote: '',
+      friendInvites: [],
+    });
+    document.querySelector('#onboard-modal')?.classList.remove('open');
+    saveState();
+    accountRenderTopbar();
+  });
+  await page.locator('#account-btn').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#account-modal.open')?.textContent?.replace(/\s+/g, ' ') || '';
+    return text.includes('Cloud config')
+      && text.includes('Cloud setup')
+      && text.includes('SUPABASE_URL')
+      && text.includes('Student profile')
+      && text.includes('Friends & shared plans')
+      && text.includes('Needs config');
+  }, null, { timeout: opts.timeoutMs });
+  const emailDisabled = await page.locator('#account-email').evaluate(input => input.disabled);
+  const syncDisabled = await page.locator('button:has-text("Sync requests")').evaluate(button => button.disabled);
+  assert(emailDisabled, 'account setup: sign-in email should be disabled without cloud config');
+  assert(syncDisabled, 'account setup: cloud friend sync should be disabled without sign-in');
+
+  await page.fill('#account-display-name', 'Pass 98 Student');
+  await page.locator('button:has-text("Save profile")').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => document.querySelector('#account-status')?.textContent?.includes('Profile saved locally.'), null, { timeout: opts.timeoutMs });
+  await page.fill('#account-friend-email', 'roommate@umd.edu');
+  await page.fill('#account-friend-note', 'review cmsc plan');
+  await page.locator('button:has-text("Add invite")').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const modalText = document.querySelector('#account-modal.open')?.textContent?.replace(/\s+/g, ' ') || '';
+    const status = document.querySelector('#account-status')?.textContent || '';
+    return status.includes('Friend invite saved locally.')
+      && modalText.includes('Friend invite')
+      && modalText.includes('roommate@umd.edu')
+      && modalText.includes('review cmsc plan');
+  }, null, { timeout: opts.timeoutMs });
+
+  const snapshot = await page.evaluate(snapshotScript());
+  const prefs = await page.evaluate(() => getAccountPrefs());
+  assert(prefs.displayName === 'Pass 98 Student', 'account setup: profile display name should persist locally');
+  assert((prefs.friendInvites || []).some(invite => invite.email === 'roommate@umd.edu'), 'account setup: friend invite should persist locally');
+  assert(snapshot.accountText.includes('Local only'), 'account setup: modal should identify local-only config');
+  assert(snapshot.accountText.includes('Friend invite saved locally.'), 'account setup: modal should preserve local invite status');
+  assert(snapshot.accountText.includes('No loaded friend plans'), 'account setup: modal should show empty friend-plan state');
+  assertNoOverflow('account setup mobile', snapshot);
+  console.log('Account setup [mobile]: rendered local-first cloud checklist, profile save, friend invite, and no overflow.');
+}
+
+async function verifyAdvisorPacketMobile(page, url, opts) {
+  await openFreshApp(page, url, opts, 'advisor-packet');
+  await page.evaluate(async () => {
+    const cmscSection = {
+      section_id: 'CMSC131-0101',
+      semester: '202608',
+      number: '0101',
+      instructors: ['Ada Lovelace'],
+      meetings: [{ days: 'MW', start_time: '9:00am', end_time: '10:15am', building: 'IRB', room: '1101' }],
+      open_seats: '12',
+      seats: '24',
+      waitlist: '0',
+    };
+    const mathSection = {
+      section_id: 'MATH140-0201',
+      semester: '202608',
+      number: '0201',
+      instructors: ['Katherine Johnson'],
+      meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'CSI', room: '2110' }],
+      open_seats: '8',
+      seats: '30',
+      waitlist: '0',
+    };
+    const englSection = {
+      section_id: 'ENGL101-0301',
+      semester: '202608',
+      number: '0301',
+      instructors: ['Juan Felipe'],
+      meetings: [{ days: 'MWF', start_time: '1:00pm', end_time: '1:50pm', building: 'TWS', room: '1200' }],
+      open_seats: '4',
+      seats: '19',
+      waitlist: '0',
+    };
+    state.onboardingComplete = true;
+    document.querySelector('#onboard-modal')?.classList.remove('open');
+    state.majorId = 'CMSC';
+    state.settings = normalizeSettings({
+      ...DEFAULT_SETTINGS,
+      programName: 'Pass 98 Computer Science',
+      catalogYear: '2024-2025',
+      totalCredits: 120,
+    });
+    state.activeSchedule = [{
+      id: 'PASS98F',
+      name: 'Fall 2026',
+      year: 'Year 1',
+      courses: [
+        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, kind: 'core', category: 'major-core' },
+        { code: 'MATH 140', title: 'Calculus I', cr: 4, kind: 'core', category: 'gened-fsma' },
+        { code: 'ENGL 101', title: 'Academic Writing', cr: 3, kind: 'gened', category: 'gened-fspw' },
+        { code: 'GenEd DSHU', title: 'Humanities placeholder', cr: 3, kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu'], note: 'Auto-generated DSHU placeholder' },
+      ],
+    }, {
+      id: 'PASS98S',
+      name: 'Spring 2027',
+      year: 'Year 1',
+      courses: [
+        { code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4, kind: 'core', category: 'major-core', prereqs: ['CMSC 131'] },
+        { code: 'COMM 107', title: 'Oral Communication', cr: 3, kind: 'gened', category: 'gened-fsoc' },
+      ],
+    }];
+    state.customCourses = [];
+    state.courses = {};
+    state.selectedSections = {
+      PASS98F: {
+        CMSC131: cmscSection,
+        MATH140: mathSection,
+      },
+    };
+    state.schedulePrefs = {
+      PASS98F: {
+        ...DEFAULT_SCHEDULE_PREFS,
+        term: '202608',
+        earliest: '09:00',
+        latest: '17:00',
+        minBreak: 15,
+        mode: 'compact',
+        campusZone: 'north',
+        blocked: [{ id: 'pass98-work', day: 'F', start: '12:00', end: '13:00', label: 'Work' }],
+      },
+    };
+    state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true };
+    state.scheduleAdvisorFilter = 'all';
+    state.scheduleOutputPreset = 'personal';
+    state.recentChanges = [{
+      id: 'pass98-section-pick',
+      type: 'section-pick',
+      source: 'Schedule',
+      title: 'Picked CMSC 131 0101',
+      detail: 'CMSC 131 added to Fall 2026.',
+      meta: 'Fall 2026',
+      at: '2026-07-01T12:00:00.000Z',
+    }];
+    scheduleSectionsCache['PASS98F:202608:CMSC131'] = [cmscSection];
+    scheduleSectionsCache['PASS98F:202608:MATH140'] = [mathSection];
+    scheduleSectionsCache['PASS98F:202608:ENGL101'] = [englSection];
+    schedulePostedTerms = ['202608'];
+    scheduleCurrentSemId = 'PASS98F';
+    currentTab = 'schedule';
+    document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === 'view-schedule'));
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === 'schedule'));
+    await renderSchedule();
+  });
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ') || '';
+    return text.includes('Schedule Output')
+      && text.includes('Advisor Packet')
+      && text.includes('Download advisor packet')
+      && text.includes('Confirm 2024-2025 catalog requirements')
+      && text.includes('ENGL 101 needs a section choice')
+      && text.includes('Picked CMSC 131 0101');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-advisor-filter="blockers"]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const active = document.querySelector('[data-advisor-filter="blockers"]');
+    const text = document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ') || '';
+    return active?.classList.contains('active')
+      && active.getAttribute('aria-pressed') === 'true'
+      && text.includes('Registration Blockers')
+      && text.includes('Locked courses, unscheduled current-term courses');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-output="advisor-download"]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => document.querySelector('#schedule-output')?.dataset.lastAction === 'advisor-download', null, { timeout: opts.timeoutMs });
+
+  const result = await page.evaluate(() => ({
+    outputText: document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+    advisorFilter: scheduleOutputCache?.advisorFilter || '',
+    advisorFilename: scheduleOutputCache?.advisorFilename || '',
+    advisorDocument: scheduleOutputCache?.advisorDocument || '',
+    advisorText: scheduleOutputCache?.advisorText || '',
+    lastAction: document.querySelector('#schedule-output')?.dataset.lastAction || '',
+  }));
+  assert(result.advisorFilter === 'blockers', 'advisor packet: blocker filter should persist after click');
+  assert(result.lastAction === 'advisor-download', 'advisor packet: download action should be recorded');
+  assert(/^terp-track-advisor-.*\.html$/i.test(result.advisorFilename), 'advisor packet: export filename should be an HTML advisor packet');
+  assert(/schedule-advisor-catalog-warning/.test(result.advisorDocument), 'advisor packet: exported HTML should include catalog warning markup');
+  assert(/Registration Blockers/.test(result.advisorDocument), 'advisor packet: exported HTML should include blocker view heading');
+  assert(/Catalog-year verification/.test(result.advisorText), 'advisor packet: exported text should include catalog-year verification');
+  assert(/ENGL 101 needs a section choice/.test(result.outputText), 'advisor packet: rendered packet should include unscheduled follow-up');
+  const snapshot = await page.evaluate(snapshotScript());
+  assert(snapshot.scheduleText.includes('Advisor view'), 'advisor packet: rendered output should include advisor controls');
+  assert(snapshot.scheduleText.includes('Registration Blockers'), 'advisor packet: rendered output should show blocker view');
+  assertNoOverflow('advisor packet mobile', snapshot);
+  console.log('Advisor packet [mobile]: rendered blocker view, catalog warning, export action, and no overflow.');
+}
+
 async function main() {
   const opts = parseArgs(process.argv);
   const { chromium } = loadPlaywright();
@@ -285,9 +499,11 @@ async function main() {
     page.on('pageerror', error => pageErrors.push(error.message));
     await verifyOnboardingMobile(page, url, opts);
     await verifyBrowseReplacementMobile(page, url, opts);
+    await verifyAccountSetupMobile(page, url, opts);
+    await verifyAdvisorPacketMobile(page, url, opts);
     assert(!pageErrors.length, `Workflow page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
     assert(!consoleErrors.length, `Workflow console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
-    console.log('Verified rendered mobile onboarding and Browse replacement workflows.');
+    console.log('Verified rendered mobile onboarding, Browse replacement, Account setup, and advisor packet workflows.');
     if (opts.keepOpen) await page.waitForTimeout(60_000);
   } finally {
     await browser.close().catch(() => {});

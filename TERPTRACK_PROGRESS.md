@@ -5157,3 +5157,50 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass97-catalog-warning-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 98
+
+Focus: expand rendered mobile workflow coverage to Account setup and advisor packet export so release checks protect more complete student workflows.
+
+Planned changes:
+- Extend `scripts/verify-rendered-workflows.js` beyond onboarding and Browse replacement.
+- Add a mobile Account setup workflow covering local/cloud setup guidance, disabled cloud-only actions, profile saving, and local friend invites.
+- Add a mobile advisor packet workflow covering seeded real section picks, catalog-year warnings, blocker filtering, and advisor packet download action wiring.
+- Extend mobile overflow checks to Account modals and Schedule advisor packet output while preserving intentional inner table scrolling.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added Account modal text and overflow capture to the rendered workflow snapshot helper.
+- Added Schedule output/advisor packet text and overflow capture to the same helper.
+- Added `verifyAccountSetupMobile()`:
+  - clears manual Supabase config.
+  - confirms local-only cloud setup guidance and disabled cloud sign-in/sync actions.
+  - saves a local display name.
+  - creates a local friend invite.
+  - confirms the modal remains mobile-safe with no horizontal overflow.
+- Added `verifyAdvisorPacketMobile()`:
+  - seeds a deterministic Fall 2026 schedule with real course codes and posted section records.
+  - renders the real Schedule tab and advisor packet output.
+  - confirms the Pass 97 catalog-year warning appears in the advisor packet.
+  - switches the advisor packet to the Blockers view.
+  - clicks `Download advisor packet` and verifies the generated standalone HTML/text export cache.
+  - confirms the mobile Schedule/advisor packet layout has no document-level horizontal overflow.
+- Updated the workflow verifier success summary to include Account setup and advisor packet workflows.
+
+Verification:
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet export.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan and planner fixtures.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass98-rendered-workflows-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
