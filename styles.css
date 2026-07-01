@@ -4283,7 +4283,7 @@ h1.hero-title em {
 }
 .schedule-readiness-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 10px;
 }
@@ -6177,6 +6177,34 @@ h1.hero-title em {
   font-size: .72rem;
   line-height: 1.35;
 }
+.section-eligibility-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  border-radius: 7px;
+  padding: 6px 8px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-size: .72rem;
+  line-height: 1.35;
+}
+.section-eligibility-row.danger {
+  background: var(--red-soft);
+  color: var(--red);
+}
+.section-eligibility-row.warn {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+.section-eligibility-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
 .section-location-row {
   margin-top: 8px;
   border-radius: 7px;
@@ -6311,6 +6339,9 @@ h1.hero-title em {
   border-color: rgba(139,0,0,.32);
   background: var(--red-soft);
   color: var(--red);
+}
+.schedule-chip.eligibility-danger {
+  box-shadow: inset 0 0 0 1px rgba(139,0,0,.3);
 }
 
 /* ===========================================================

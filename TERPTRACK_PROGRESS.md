@@ -7795,3 +7795,69 @@ Verification:
   - It randomly verified `ENMA`, `SPAN`, `AOSC`, `ENST`, `SOCY`, and `NEUR` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 142
+
+Focus: add registration eligibility awareness so students can see major, college, reserved-seat, and permission restrictions before relying on a section as Testudo-ready.
+
+Planned changes:
+- Preserve restriction-like section metadata when students save picked sections.
+- Extract eligibility/permission notes from posted section fields without inventing warnings when upstream UMD section data does not include those fields.
+- Add eligibility to Schedule cards, registration readiness, Testudo entry order/queue, schedule exports, registration-list exports, advisor packets, and advisor text.
+- Verify focused fixtures, rendered browser workflows, release checks, and deterministic plus random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added shared section eligibility helpers in `js/schedule.js`.
+  - They normalize restriction, permission, registration, enrollment, note, and section-info fields from strings, arrays, and small objects.
+  - They ignore empty and explicit no-restriction text, and boolean `false` flags do not become warnings.
+  - Saved section picks now retain the eligibility-related fields needed after reloads, undo, pinning, exports, and advisor packets.
+- Added eligibility visibility throughout the Schedule workflow.
+  - Picked section cards now show a `Check eligibility` / `Review eligibility` row when a section carries restriction metadata.
+  - Schedule chips include eligibility context in their tooltip and state class.
+  - Registration readiness now has a first-class `Eligibility` gate, separate from seats, timing, and preferences.
+  - Eligibility warnings no longer double-count inside the generic preferences gate.
+  - Recommended fixes and quick actions now call out Testudo eligibility, permission, or less-restricted section review.
+- Added eligibility to registration handoff surfaces.
+  - Enrollment order raises restricted sections in priority and labels them `Eligibility first` or `Review eligibility` when appropriate.
+  - Testudo entry queue marks restricted sections as blocked/review until eligibility is confirmed.
+  - Schedule output text, registration-list text, advisor HTML/text, advisor document HTML, and course tables include eligibility notes beside exact section IDs.
+- Updated CSS.
+  - Added section eligibility row styling.
+  - Changed readiness grids from five cramped columns to three desktop columns, while preserving two-column mobile behavior.
+- Bumped cache tags:
+  - `styles.css?v=108`.
+  - `js/schedule.js?v=62`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now fixtures a CMSC section restricted to Computer Science majors or department permission.
+  - The fixture asserts the `eligibility:danger` readiness gate, eligibility fix guidance, Testudo handoff blocking, registration-list text, schedule output, advisor HTML/text, and exported advisor document markup.
+  - The rendered mobile advisor packet workflow now waits for the eligibility gate and section-card eligibility row, verifies restricted-section handoff cache data, and checks registration/advisor exports and rendered packet text.
+  - Rendered workflow logs now name `eligibility gate` coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with `eligibility:danger` coverage.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with eligibility gate, workload balance, final registration checklist, ready backup apply, calendar omission auto-fill, clear-picks undo, calendar omission review, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js --live --live-seed=pass142-registration-eligibility-live`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including eligibility gate coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with eligibility gate coverage.
+  - It live-verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp with every generated required course reporting a matching live title/credit pair.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass142-registration-eligibility-random-live`.
+  - It randomly verified `HLTH`, `GEOG`, `ACCOUNTING`, `ASTR`, `HESP`, and `ANSC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

@@ -26,6 +26,28 @@ const DEFAULT_SCHEDULE_PREFS = {
   registrationDate: '',
   registrationTime: '',
 };
+const SCHEDULE_SECTION_ELIGIBILITY_FIELDS = [
+  'restriction',
+  'restrictions',
+  'course_restrictions',
+  'section_restrictions',
+  'registration_restrictions',
+  'enrollment_restrictions',
+  'eligibility',
+  'permissions',
+  'permission',
+  'section_info',
+  'section_notes',
+  'registration_notes',
+  'enrollment_notes',
+  'notes',
+  'note',
+  'special_notes',
+  'additional_info',
+  'additional_information',
+];
+const SCHEDULE_SECTION_ELIGIBILITY_KEYWORD = /\b(restrict|permission|consent|approval|major|majors|college|program|department|school|honors|scholars|freshman|sophomore|junior|senior|graduate|undergraduate|student|students|admitted|admission|enrolled|reserved|reserve|requires?|must|only)\b/i;
+const SCHEDULE_SECTION_ELIGIBILITY_IGNORE = /\b(no|none|not)\s+(section\s+)?(restriction|restrictions|permission|permissions|required|requirements?)\b/i;
 const BUILDING_COORDS = {
   IRB: [0, 0],
   CSI: [1, 0],
@@ -147,6 +169,89 @@ function scheduleCloneSection(section) {
 function scheduleSectionShortLabel(section) {
   if (!section) return 'no section';
   return section.number || section.section_id || 'section';
+}
+
+function scheduleNoteFieldLabel(key) {
+  return String(key || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, ch => ch.toUpperCase());
+}
+
+function scheduleFlattenNoteValue(value, prefix = '', depth = 0) {
+  if (value == null || depth > 4) return [];
+  if (typeof value === 'boolean') {
+    return value ? [prefix ? `${prefix}: yes` : 'Yes'] : [];
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const text = String(value).replace(/\s+/g, ' ').trim();
+    if (!text) return [];
+    return [prefix ? `${prefix}: ${text}` : text];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(item => scheduleFlattenNoteValue(item, prefix, depth + 1));
+  }
+  if (typeof value === 'object') {
+    return Object.entries(value).flatMap(([key, child]) => {
+      const label = scheduleNoteFieldLabel(key);
+      if (child == null || child === '') return [];
+      if (typeof child === 'string' || typeof child === 'number' || typeof child === 'boolean') {
+        return scheduleFlattenNoteValue(child, label || prefix, depth + 1);
+      }
+      return scheduleFlattenNoteValue(child, label || prefix, depth + 1);
+    });
+  }
+  return [];
+}
+
+function sectionEligibilityTexts(section) {
+  if (!section || typeof section !== 'object') return [];
+  const texts = [];
+  Object.entries(section).forEach(([key, value]) => {
+    const normalizedKey = String(key || '').toLowerCase();
+    const isEligibilityField = SCHEDULE_SECTION_ELIGIBILITY_FIELDS.includes(normalizedKey)
+      || /(?:restrict|permission|eligib|enrollment|registration).*?(?:note|info|require|restrict|permission)?/.test(normalizedKey);
+    if (!isEligibilityField) return;
+    const fieldRequiresKeyword = !/(restrict|permission|eligib)/.test(normalizedKey);
+    scheduleFlattenNoteValue(value).forEach(text => {
+      const clean = text.replace(/\s+/g, ' ').trim();
+      if (!clean || SCHEDULE_SECTION_ELIGIBILITY_IGNORE.test(clean)) return;
+      if (fieldRequiresKeyword && !SCHEDULE_SECTION_ELIGIBILITY_KEYWORD.test(clean)) return;
+      texts.push(clean);
+    });
+  });
+  return Array.from(new Set(texts)).slice(0, 5);
+}
+
+function sectionEligibilityStatus(section) {
+  const notes = sectionEligibilityTexts(section);
+  if (!notes.length) {
+    return {
+      level: 'ok',
+      label: 'No posted restriction',
+      detail: 'No section restrictions posted in available UMD data.',
+      notes,
+    };
+  }
+  const danger = notes.some(note => /\b(restricted|permission|consent|approval|department|major|majors|college|program|honors|reserved|reserve|requires?|must|only)\b/i.test(note));
+  return {
+    level: danger ? 'danger' : 'warn',
+    label: danger ? 'Check eligibility' : 'Review eligibility',
+    detail: notes.slice(0, 2).join(' · '),
+    notes,
+  };
+}
+
+function renderSectionEligibilityRow(section) {
+  const eligibility = sectionEligibilityStatus(section);
+  if (!eligibility.notes.length) return '';
+  return `
+    <div class="section-eligibility-row ${scheduleEscape(eligibility.level)}">
+      <span class="section-eligibility-badge">${scheduleEscape(eligibility.label)}</span>
+      <span>${scheduleEscape(eligibility.detail)}</span>
+    </div>
+  `;
 }
 
 function parseClockValue(value) {
@@ -449,6 +554,9 @@ function setSelectedSection(semId, code, section) {
       pinned: !!existing.pinned,
       updatedAt: new Date().toISOString(),
     };
+    SCHEDULE_SECTION_ELIGIBILITY_FIELDS.forEach(field => {
+      if (section[field] !== undefined) bucket[key][field] = scheduleCloneSection(section[field]);
+    });
   }
 }
 
@@ -803,9 +911,11 @@ function scheduleCourseSummary(semId, code) {
   if (!section) return '';
   const summary = sectionSummary(section);
   const risk = typeof sectionSeatRisk === 'function' ? sectionSeatRisk(section) : null;
-  const title = [summary, risk?.detail].filter(Boolean).join(' · ');
+  const eligibility = sectionEligibilityStatus(section);
+  const title = [summary, risk?.detail, eligibility.notes.length ? `Eligibility: ${eligibility.detail}` : ''].filter(Boolean).join(' · ');
   const riskClass = risk ? ` seat-risk-${risk.level}` : '';
-  return `<span class="schedule-chip${riskClass}" title="${scheduleEscape(title)}"><span>${scheduleEscape(summary)}</span>${risk ? `<b>${scheduleEscape(risk.label)}</b>` : ''}</span>`;
+  const eligibilityClass = eligibility.notes.length ? ` eligibility-${eligibility.level}` : '';
+  return `<span class="schedule-chip${riskClass}${eligibilityClass}" title="${scheduleEscape(title)}"><span>${scheduleEscape(summary)}</span>${risk ? `<b>${scheduleEscape(risk.label)}</b>` : ''}</span>`;
 }
 
 function renderScheduleBlockedTimeControls(semId) {
@@ -1207,9 +1317,33 @@ function selectedSeatRiskWarnings(selectedItems) {
     .filter(Boolean);
 }
 
+function selectedSectionEligibilityRows(selectedItems) {
+  return (selectedItems || [])
+    .map(item => {
+      const eligibility = sectionEligibilityStatus(item.section);
+      if (!eligibility.notes.length) return null;
+      const code = item.course?.code || displayCode(item.section?.course || '');
+      const section = scheduleSectionShortLabel(item.section);
+      return {
+        item,
+        eligibility,
+        code,
+        section,
+        label: `${code} ${section}`.trim(),
+      };
+    })
+    .filter(Boolean);
+}
+
+function selectedSectionEligibilityWarnings(selectedItems) {
+  return selectedSectionEligibilityRows(selectedItems)
+    .map(row => `${row.label}: ${row.eligibility.detail}. Confirm eligibility in Testudo before registration.`);
+}
+
 function selectedScheduleWarnings(selectedItems, prefs) {
   const warnings = [];
   selectedSeatRiskWarnings(selectedItems).forEach(warning => warnings.push(warning));
+  selectedSectionEligibilityWarnings(selectedItems).forEach(warning => warnings.push(warning));
   selectedItems.forEach(item => {
     sectionPreferenceNotes(item.section, prefs, item.course).forEach(note => {
       if (note.type === 'warn') warnings.push(`${item.course.code}: ${note.text}.`);
@@ -2087,7 +2221,7 @@ function scheduleRegistrationGate(id, label, level, value, detail) {
   return { id, label, level, value, detail };
 }
 
-function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings) {
+function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = []) {
   if (!courseList.length) return ['No registration fixes are needed for this semester.'];
   const fixes = [];
   const gateById = Object.fromEntries((gates || []).map(gate => [gate.id, gate]));
@@ -2105,6 +2239,13 @@ function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats
     const names = (watchSeats || []).slice(0, 3).map(row => row.label).join(', ');
     fixes.push(`Keep a backup ready for ${names || 'watched sections'} and recheck seats before your registration time.`);
   }
+  if (gateById.eligibility?.level === 'danger') {
+    const names = (eligibilityRows || []).slice(0, 3).map(row => row.label).join(', ');
+    fixes.push(`Confirm Testudo eligibility, permission, or a less restricted section for ${names || 'restricted picks'} before registration.`);
+  } else if (gateById.eligibility?.level === 'warn') {
+    const names = (eligibilityRows || []).slice(0, 3).map(row => row.label).join(', ');
+    fixes.push(`Review posted section eligibility notes for ${names || 'picked sections'} before submitting in Testudo.`);
+  }
   if (gateById.timing?.level === 'danger') {
     fixes.push('Generate alternatives around saved timing preferences before registering.');
   } else if (gateById.timing?.level === 'warn') {
@@ -2120,7 +2261,7 @@ function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats
   return Array.from(new Set(fixes)).slice(0, 5);
 }
 
-function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings) {
+function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = []) {
   if (!courseList.length) return [];
   const gateById = Object.fromEntries((gates || []).map(gate => [gate.id, gate]));
   const actions = [];
@@ -2175,6 +2316,18 @@ function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSe
     });
   }
 
+  if (gateById.eligibility?.level === 'danger' || gateById.eligibility?.level === 'warn') {
+    const names = (eligibilityRows || []).slice(0, 2).map(row => row.label).join(', ');
+    addAction({
+      id: 'review-sections',
+      label: 'Review section picks',
+      detail: names
+        ? `Open section details and choose unrestricted alternates for ${names} if needed.`
+        : 'Open section details and review posted eligibility notes.',
+      kind: actions.length ? 'secondary' : 'primary',
+    });
+  }
+
   if (gateById.timing?.level === 'danger' || gateById.timing?.level === 'warn' || gateById.preferences?.level === 'warn') {
     const untimed = timing?.metrics?.untimedCount || 0;
     addAction({
@@ -2202,7 +2355,9 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
   const conflictList = Array.isArray(conflicts) ? conflicts : [];
   const warningList = Array.isArray(warnings) ? warnings : selectedScheduleWarnings(selectedList, prefs);
   const seatWarningSet = new Set(selectedSeatRiskWarnings(selectedList));
-  const nonSeatWarnings = warningList.filter(warning => !seatWarningSet.has(warning));
+  const eligibilityRows = selectedSectionEligibilityRows(selectedList);
+  const eligibilityWarningSet = new Set(selectedSectionEligibilityWarnings(selectedList));
+  const nonSeatWarnings = warningList.filter(warning => !seatWarningSet.has(warning) && !eligibilityWarningSet.has(warning));
   const timing = scheduleTimingFit(selectedList, prefs, conflictList);
   const seatRows = selectedList.map(item => ({
     item,
@@ -2211,6 +2366,8 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
   }));
   const urgentSeats = seatRows.filter(row => row.risk.level === 'closed' || row.risk.level === 'risk');
   const watchSeats = seatRows.filter(row => row.risk.level === 'watch' || row.risk.level === 'unknown');
+  const urgentEligibility = eligibilityRows.filter(row => row.eligibility.level === 'danger');
+  const watchEligibility = eligibilityRows.filter(row => row.eligibility.level === 'warn');
   const untimedCount = timing.metrics?.untimedCount || 0;
   const gates = [];
 
@@ -2253,6 +2410,22 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
   ));
 
   gates.push(scheduleRegistrationGate(
+    'eligibility',
+    'Eligibility',
+    !courseList.length ? 'ok' : !selectedList.length ? 'ok' : urgentEligibility.length ? 'danger' : watchEligibility.length ? 'warn' : 'ok',
+    selectedList.length ? `${selectedList.length - eligibilityRows.length}/${selectedList.length}` : 'n/a',
+    !courseList.length
+      ? 'No section eligibility needs review for this semester.'
+      : !selectedList.length
+      ? 'Pick sections to check posted restrictions and permission notes.'
+      : urgentEligibility.length
+        ? `Eligibility review: ${urgentEligibility.slice(0, 3).map(row => `${row.label}: ${row.eligibility.detail}`).join(' · ')}${urgentEligibility.length > 3 ? ` · +${urgentEligibility.length - 3} more` : ''}.`
+        : watchEligibility.length
+          ? `Review eligibility notes: ${watchEligibility.slice(0, 3).map(row => `${row.label}: ${row.eligibility.detail}`).join(' · ')}${watchEligibility.length > 3 ? ` · +${watchEligibility.length - 3} more` : ''}.`
+          : 'No section restrictions posted in available UMD data.'
+  ));
+
+  gates.push(scheduleRegistrationGate(
     'timing',
     'Timing',
     !courseList.length ? 'ok' : !selectedList.length ? 'warn' : timing.score < 61 ? 'danger' : timing.score < 76 || untimedCount ? 'warn' : 'ok',
@@ -2287,8 +2460,8 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
     : dangerCount ? `${dangerCount} blocker${dangerCount === 1 ? '' : 's'} need action before registration.`
       : warnCount ? `${warnCount} item${warnCount === 1 ? '' : 's'} should be reviewed before registering.`
         : 'All picked sections clear core registration checks.';
-  const fixes = scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings);
-  const actions = scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings);
+  const fixes = scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows);
+  const actions = scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows);
 
   return {
     level,
@@ -2299,6 +2472,7 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
     actions,
     unscheduled,
     timing,
+    eligibilityRows,
     warningCount: warningList.length,
     dangerCount,
     warnCount,
@@ -2421,6 +2595,7 @@ function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
   return (selectedItems || [])
     .map((item, index) => {
       const risk = sectionSeatRisk(item.section);
+      const eligibility = sectionEligibilityStatus(item.section);
       const conflictCount = scheduleRegistrationConflictCount(item, conflicts);
       const unlockCount = scheduleFutureUnlockCount(item.course, semId);
       const priority = scheduleRegistrationCoursePriority(item.course, unlockCount);
@@ -2430,6 +2605,7 @@ function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
       if (risk.level === 'closed') reasons.push(risk.wait ? `${risk.wait} waitlisted` : 'closed section');
       else if (risk.level === 'risk') reasons.push(risk.detail);
       else if (risk.level === 'watch' || risk.level === 'unknown') reasons.push(risk.detail);
+      if (eligibility.notes.length) reasons.push(eligibility.detail);
       if (priority.label) reasons.push(priority.label);
       if (!sectionHasTimedMeetings(item.section)) reasons.push('time TBA');
       const openBonus = risk.open === null ? 0 : Math.max(0, 42 - risk.open);
@@ -2437,11 +2613,14 @@ function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
         + openBonus
         + priority.score
         + (conflictCount * 260)
+        + (eligibility.level === 'danger' ? 700 : eligibility.level === 'warn' ? 260 : 0)
         + (item.section?.pinned ? 25 : 0);
       const label = conflictCount ? 'Resolve first'
         : risk.level === 'closed' ? 'Backup/waitlist first'
           : risk.level === 'risk' ? 'Enroll first'
             : risk.level === 'watch' || risk.level === 'unknown' ? 'Enroll early'
+              : eligibility.level === 'danger' ? 'Eligibility first'
+                : eligibility.level === 'warn' ? 'Review eligibility'
               : unlockCount || priority.score >= 70 ? 'High priority'
                 : 'Normal priority';
       return {
@@ -2454,6 +2633,9 @@ function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
         sectionId: item.section?.section_id || '',
         seatDetail: risk.detail,
         riskLevel: risk.level,
+        eligibilityLevel: eligibility.level,
+        eligibilityDetail: eligibility.notes.length ? eligibility.detail : '',
+        eligibilityNotes: eligibility.notes,
         conflictCount,
         unlockCount,
         reasons: Array.from(new Set(reasons)).slice(0, 4),
@@ -2470,7 +2652,7 @@ function renderScheduleRegistrationOrderHtml(rows, heading = 'Enrollment Order')
       <div class="schedule-registration-order-head">
         <div>
           <h4>${scheduleEscape(heading)}</h4>
-          <span>Use after fixing blockers. Submit tight seats, waitlists, and prerequisite anchors first.</span>
+          <span>Use after fixing blockers. Submit tight seats, eligibility checks, waitlists, and prerequisite anchors first.</span>
         </div>
         <strong>${ordered.length ? `${ordered.length} picked` : 'No picks'}</strong>
       </div>
@@ -2482,6 +2664,7 @@ function renderScheduleRegistrationOrderHtml(rows, heading = 'Enrollment Order')
               <div>
                 <strong>${scheduleEscape(row.courseCode)} ${scheduleEscape(row.sectionLabel)}</strong>
                 <span>${scheduleEscape(row.label)} · ${scheduleEscape(row.seatDetail)}</span>
+                ${row.eligibilityDetail ? `<span>Eligibility: ${scheduleEscape(row.eligibilityDetail)}</span>` : ''}
                 <em>${scheduleEscape(row.reasons.join(' · ') || 'Confirm in Testudo before submitting.')}</em>
               </div>
             </li>
@@ -2501,6 +2684,7 @@ function scheduleRegistrationOrderText(rows) {
   }
   ordered.forEach(row => {
     lines.push(`${row.order}. ${row.courseCode} ${row.sectionLabel} - ${row.label}; ${row.seatDetail}${row.sectionId ? `; Section ID ${row.sectionId}` : ''}.`);
+    if (row.eligibilityDetail) lines.push(`   Eligibility: ${row.eligibilityDetail}`);
     if (row.reasons.length) lines.push(`   Why: ${row.reasons.join(' / ')}`);
   });
   return lines;
@@ -2513,14 +2697,17 @@ function scheduleRegistrationHandoff(orderRows = [], backupRows = []) {
     const backup = backupsByCourse.get(normalizeCode(row.courseCode || '')) || null;
     const missingId = !row.sectionId;
     const status = missingId ? 'missing'
-      : row.conflictCount || row.riskLevel === 'closed' ? 'blocked'
+      : row.conflictCount || row.riskLevel === 'closed' || row.eligibilityLevel === 'danger' ? 'blocked'
         : row.riskLevel === 'risk' || row.riskLevel === 'watch' || row.riskLevel === 'unknown' ? 'review'
+          : row.eligibilityLevel === 'warn' ? 'review'
           : 'ready';
     const action = missingId ? 'Find exact section ID before registration'
       : row.conflictCount ? 'Resolve conflict before entering'
         : row.riskLevel === 'closed' ? 'Use backup, waitlist, or alternate'
           : row.riskLevel === 'risk' ? 'Enter early and keep backup ready'
             : row.riskLevel === 'watch' || row.riskLevel === 'unknown' ? 'Confirm seats shortly before submitting'
+              : row.eligibilityLevel === 'danger' ? 'Confirm eligibility or permission before entering'
+                : row.eligibilityLevel === 'warn' ? 'Review posted eligibility before submitting'
               : 'Ready to enter in Testudo';
     return {
       order: row.order,
@@ -2531,6 +2718,8 @@ function scheduleRegistrationHandoff(orderRows = [], backupRows = []) {
       sectionLabel: row.sectionLabel,
       sectionId: row.sectionId || '',
       seatDetail: row.seatDetail,
+      eligibilityLevel: row.eligibilityLevel || 'ok',
+      eligibilityDetail: row.eligibilityDetail || '',
       label: row.label,
       conflictCount: row.conflictCount || 0,
       backupId: backup?.backupId || '',
@@ -2549,7 +2738,7 @@ function renderScheduleRegistrationHandoffHtml(rows, heading = 'Testudo Entry Qu
       <div class="schedule-registration-handoff-head">
         <div>
           <h4>${scheduleEscape(heading)}</h4>
-          <span>Enter these exact section IDs in Testudo after fixing blockers and refreshing seats.</span>
+          <span>Enter these exact section IDs in Testudo after fixing blockers, eligibility notes, and seat freshness.</span>
         </div>
         <strong>${handoff.length ? `${readyCount}/${handoff.length} entry-ready` : 'No entries'}</strong>
       </div>
@@ -2562,6 +2751,7 @@ function renderScheduleRegistrationHandoffHtml(rows, heading = 'Testudo Entry Qu
                 <strong>${scheduleEscape(row.courseCode)} ${scheduleEscape(row.sectionLabel)}</strong>
                 <code>${row.sectionId ? `Section ID ${scheduleEscape(row.sectionId)}` : 'Section ID missing'}</code>
                 <span>${scheduleEscape(row.action)} · ${scheduleEscape(row.seatDetail)}</span>
+                ${row.eligibilityDetail ? `<em>Eligibility: ${scheduleEscape(row.eligibilityDetail)}</em>` : ''}
                 ${row.backupId ? `<em>Backup ID ${scheduleEscape(row.backupId)} (${scheduleEscape(row.backupLabel)} · ${scheduleEscape(row.backupSeatDetail)})</em>` : ''}
               </div>
             </li>
@@ -2581,6 +2771,7 @@ function scheduleRegistrationHandoffText(rows) {
   }
   handoff.forEach(row => {
     lines.push(`${row.order}. ${row.courseCode} ${row.sectionLabel} | Section ID: ${row.sectionId || 'missing'} | ${row.action}; ${row.seatDetail}.`);
+    if (row.eligibilityDetail) lines.push(`   Eligibility: ${row.eligibilityDetail}`);
     if (row.backupId) lines.push(`   Backup ID: ${row.backupId}; ${row.backupLabel}; ${row.backupSeatDetail}.`);
   });
   return lines;
@@ -3997,6 +4188,8 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
       const key = `${sem.id}:${normalizeCode(course.code)}`;
       const section = selectedMap[key] || getSelectedSection(sem.id, course.code);
       const sectionLine = section ? `<span>${scheduleEscape(section.number || section.section_id || 'Section')} - ${scheduleEscape(scheduleSectionMeetingLines(section).join(' / '))}</span>` : '';
+      const eligibility = section ? sectionEligibilityStatus(section) : null;
+      const eligibilityLine = eligibility?.notes?.length ? `<em>Eligibility: ${scheduleEscape(eligibility.detail)}</em>` : '';
       const note = course.note ? `<em>${scheduleEscape(course.note)}</em>` : '';
       const reasonLine = filterResult.reasons.length ? `<em>${scheduleEscape(filterResult.reasons.join(' · '))}</em>` : '';
       return `
@@ -4005,6 +4198,7 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
             <strong>${scheduleEscape(course.code)}</strong>
             <span>${scheduleEscape(course.title || '')}</span>
             ${sectionLine}
+            ${eligibilityLine}
             ${note}
             ${reasonLine}
           </div>
@@ -4100,8 +4294,10 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
         ? selectedItems.find(item => normalizeCode(item.course.code) === normalizeCode(course.code))?.section
         : getSelectedSection(planSem.id, course.code);
       const sectionText = section ? `; section ${section.number || section.section_id || 'TBA'}; ${scheduleSectionMeetingLines(section).join(' / ')}` : '';
+      const eligibility = section ? sectionEligibilityStatus(section) : null;
+      const eligibilityText = eligibility?.notes?.length ? `; eligibility: ${eligibility.detail}` : '';
       const reasonText = filterResult.reasons.length ? `; review: ${filterResult.reasons.join(' / ')}` : '';
-      courseLines.push(`- ${course.code} ${course.title || ''} (${Number(course.cr) || 0} cr; ${scheduleAdvisorCourseType(course)}; ${status}${sectionText}${reasonText})`);
+      courseLines.push(`- ${course.code} ${course.title || ''} (${Number(course.cr) || 0} cr; ${scheduleAdvisorCourseType(course)}; ${status}${sectionText}${eligibilityText}${reasonText})`);
     });
     if (filter !== 'all' && semCourses.length && !courseLines.length) {
       lines.pop();
@@ -4186,7 +4382,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-readiness-head h4{margin:0}
     .schedule-readiness-head span,.schedule-readiness-gate span{display:block;color:#5d5962;font-size:12px;line-height:1.35}
     .schedule-readiness-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
-    .schedule-readiness-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+    .schedule-readiness-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
     .schedule-readiness-gate{border:1px solid #d8cec0;border-radius:8px;background:#fbf7ef;padding:7px}
     .schedule-readiness-gate b{display:block;color:#5d5962;font-size:10px;text-transform:uppercase}
     .schedule-readiness-gate strong{display:block;font-size:14px;margin:2px 0}
@@ -4476,11 +4672,13 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
     .forEach(item => {
       const risk = sectionSeatRisk(item.section);
+      const eligibility = sectionEligibilityStatus(item.section);
       lines.push(`- ${item.course.code} ${item.course.title || ''}`);
       lines.push(`  Section: ${item.section.number || item.section.section_id || 'TBA'}`);
       lines.push(`  Instructors: ${scheduleInstructorLine(item.section)}`);
       lines.push(`  Meetings: ${scheduleSectionMeetingLines(item.section).join('; ')}`);
       lines.push(`  Seats: ${risk.detail}`);
+      if (eligibility.notes.length) lines.push(`  Eligibility: ${eligibility.detail}`);
     });
 
   if (outputOptions.unscheduled && unscheduled.length) {
@@ -4530,11 +4728,13 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
     .forEach(item => {
       const sectionLabel = item.section.number || item.section.section_id || 'TBA';
       const risk = sectionSeatRisk(item.section);
+      const eligibility = sectionEligibilityStatus(item.section);
       lines.push(`- ${item.course.code} | Section ${sectionLabel} | Section ID ${item.section.section_id || 'not posted'} | ${Number(item.course.cr) || 0} cr`);
       if (item.course.title) lines.push(`  Title: ${item.course.title}`);
       lines.push(`  Meetings: ${scheduleSectionMeetingLines(item.section).join('; ')}`);
       lines.push(`  Instructor: ${scheduleInstructorLine(item.section)}`);
       lines.push(`  Seats: ${risk.detail}`);
+      if (eligibility.notes.length) lines.push(`  Eligibility: ${eligibility.detail}`);
     });
 
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
@@ -4650,6 +4850,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
     .map(item => {
       const risk = sectionSeatRisk(item.section);
+      const eligibility = sectionEligibilityStatus(item.section);
       return `
         <tr>
           <td><strong>${scheduleEscape(item.course.code)}</strong><span>${scheduleEscape(item.course.title || '')}</span></td>
@@ -4657,6 +4858,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
           <td>${scheduleEscape(scheduleSectionMeetingLines(item.section).join(' / '))}</td>
           <td>${scheduleEscape(scheduleInstructorLine(item.section))}</td>
           <td>${scheduleEscape(risk.detail)}</td>
+          <td>${eligibility.notes.length ? scheduleEscape(eligibility.detail) : '<span>No posted restriction</span>'}</td>
         </tr>
       `;
     }).join('');
@@ -4687,8 +4889,8 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${renderScheduleRegistrationBackupsHtml(registrationBackupPlan)}
       ${renderScheduleOutputWeek(blocks)}
       <table class="schedule-output-table">
-        <thead><tr><th>Course</th><th>Section</th><th>Meetings</th><th>Instructor</th><th>Seats</th></tr></thead>
-        <tbody>${courseRows || '<tr><td colspan="5">No picked sections yet.</td></tr>'}</tbody>
+        <thead><tr><th>Course</th><th>Section</th><th>Meetings</th><th>Instructor</th><th>Seats</th><th>Eligibility</th></tr></thead>
+        <tbody>${courseRows || '<tr><td colspan="6">No picked sections yet.</td></tr>'}</tbody>
       </table>
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list"><strong>Unscheduled</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} ${scheduleEscape(course.title || '')}</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Warnings</strong>${warnings.slice(0, 8).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
@@ -5544,6 +5746,7 @@ function renderSectionList(semId, term, courses, sectionsByCode, selectedItems, 
         </div>
         <select class="section-select" data-code="${scheduleEscape(course.code)}">${options}</select>
         ${posted ? renderSectionSeatOverview(sections, picked) : ''}
+        ${picked ? renderSectionEligibilityRow(picked) : ''}
         ${picked ? renderSectionLocationFit(picked, prefs, course) : ''}
         ${picked ? renderSectionDecision(sections, picked, prefs, course, selectedItems) : ''}
         <div class="section-note">
