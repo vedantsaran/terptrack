@@ -3047,6 +3047,12 @@ function renderScheduleCalendarExportHtml(summary, heading = 'Calendar Export') 
           `).join('')}
         </div>
       ` : ''}
+      ${(summary.omittedCount || 0) > 0 ? `
+        <div class="schedule-calendar-export-actions">
+          <strong>Before download</strong>
+          <button class="btn small primary" type="button" data-calendar-export-action="review-omissions">Review omitted courses</button>
+        </div>
+      ` : ''}
     </section>
   `;
 }
@@ -3068,6 +3074,7 @@ function scheduleCalendarExportText(summary) {
     const omitted = [...(summary.tbaRows || []), ...(summary.missingRows || [])]
       .map(row => `${row.courseCode} ${row.sectionLabel}`);
     lines.push(`- Omitted courses: ${omitted.join(', ')}.`);
+    lines.push('- Action: Pick sections or replace TBA meetings for omitted courses before relying on the calendar export.');
   }
   return lines;
 }
@@ -3928,6 +3935,9 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-calendar-export-row.warn{border-color:#f1c45c;background:#fffaf0}
     .schedule-calendar-export-row.danger{border-color:#f0b4a9;background:#fff5f3}
     .schedule-calendar-export-row strong{display:block;color:#241f1f}
+    .schedule-calendar-export-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-calendar-export-actions strong{font-size:10px;text-transform:uppercase;color:#8b0000}
+    .schedule-calendar-export-actions .btn{border:1px solid #8b0000;border-radius:999px;background:#8b0000;color:#fff;font-size:11px;font-weight:700;padding:5px 8px}
     .schedule-registration-handoff{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-registration-handoff-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-registration-handoff-head h4{margin:0}
@@ -3993,7 +4003,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
     @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid,.schedule-calendar-export-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-readiness-map-list,.schedule-seat-freshness-list,.schedule-calendar-export-list{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-seat-freshness-head,.schedule-calendar-export-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head,.schedule-advisor-readiness-map-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
-    @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
+    @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions,.schedule-calendar-export-actions{display:none}}
   `;
 }
 
@@ -4492,6 +4502,12 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       handleScheduleSeatFreshnessAction(btn.dataset.seatFreshnessAction);
     });
   });
+  root.querySelectorAll('[data-calendar-export-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      handleScheduleCalendarExportAction(btn.dataset.calendarExportAction);
+    });
+  });
   root.querySelectorAll('[data-schedule-audit-primary]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
@@ -4556,7 +4572,12 @@ function downloadScheduleCalendar() {
   a.download = scheduleOutputCache.calendarFilename;
   a.click();
   URL.revokeObjectURL(url);
-  toastSuccess(`Calendar downloaded with ${scheduleOutputCache.calendarEventCount} class event${scheduleOutputCache.calendarEventCount === 1 ? '' : 's'}.`);
+  const omitted = Number(scheduleOutputCache.calendarSummary?.omittedCount) || 0;
+  if (omitted) {
+    toastInfo(`Calendar downloaded with ${scheduleOutputCache.calendarEventCount} event${scheduleOutputCache.calendarEventCount === 1 ? '' : 's'}; ${omitted} planned course${omitted === 1 ? ' is' : 's are'} omitted.`);
+  } else {
+    toastSuccess(`Calendar downloaded with ${scheduleOutputCache.calendarEventCount} class event${scheduleOutputCache.calendarEventCount === 1 ? '' : 's'}.`);
+  }
 }
 
 function downloadScheduleAdvisorPacket() {
@@ -4612,6 +4633,30 @@ async function handleScheduleReadinessAction(action) {
   }
 }
 
+function handleScheduleCalendarExportAction(action) {
+  const root = document.getElementById('schedule-output');
+  if (root) root.dataset.lastCalendarAction = action || '';
+  if (action !== 'review-omissions') return;
+  const summary = scheduleOutputCache?.calendarSummary || {};
+  const rows = [...(summary.missingRows || []), ...(summary.tbaRows || [])];
+  const firstCode = normalizeCode(rows[0]?.courseCode || '');
+  const list = document.getElementById('schedule-section-list');
+  if (!list) return;
+  const panel = list.closest('.schedule-sections') || list;
+  const picks = [...list.querySelectorAll('.section-pick')];
+  const target = firstCode
+    ? picks.find(pick => normalizeCode(pick.dataset.code || '') === firstCode)
+    : null;
+  panel.classList.add('readiness-focus');
+  if (target) target.classList.add('calendar-omission-focus');
+  (target || list).scrollIntoView({ block: 'start', behavior: 'smooth' });
+  setTimeout(() => {
+    panel.classList.remove('readiness-focus');
+    if (target) target.classList.remove('calendar-omission-focus');
+  }, 1800);
+  toastInfo(rows.length ? 'Review omitted courses before relying on the calendar export.' : 'Calendar export includes every picked timed course.');
+}
+
 async function handleScheduleSeatFreshnessAction(action) {
   const root = document.getElementById('schedule-output');
   if (root) root.dataset.lastSeatFreshnessAction = action || '';
@@ -4631,6 +4676,7 @@ if (typeof window !== 'undefined') {
   window.printScheduleOutputSummary = printScheduleOutputSummary;
   window.printScheduleAdvisorPacket = printScheduleAdvisorPacket;
   window.handleScheduleReadinessAction = handleScheduleReadinessAction;
+  window.handleScheduleCalendarExportAction = handleScheduleCalendarExportAction;
   window.handleScheduleSeatFreshnessAction = handleScheduleSeatFreshnessAction;
 }
 

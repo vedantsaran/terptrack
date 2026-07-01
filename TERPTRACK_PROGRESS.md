@@ -7447,3 +7447,60 @@ Verification:
   - It randomly verified `ENGL`, `ENCE`, `AOSC`, `EDUC`, `SOCY`, and `ENFP` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 136
+
+Focus: make calendar omissions actionable and make partial calendar downloads explicit.
+
+Planned changes:
+- Add a direct action from the `Calendar Export` card to the omitted current-term course.
+- Warn students when a downloaded calendar is partial because planned courses are omitted.
+- Verify the action in rendered mobile workflow coverage, not only in static export strings.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added a `Review omitted courses` action to the calendar export card when `omittedCount > 0`.
+- Added `handleScheduleCalendarExportAction()` in `js/schedule.js`.
+  - It records `data-last-calendar-action` on the Schedule output panel.
+  - It scrolls to the Schedule section picker.
+  - It highlights the first omitted course with a `calendar-omission-focus` state.
+  - It shows a direct toast telling the student to review omitted courses before relying on the calendar export.
+- Updated `downloadScheduleCalendar()`.
+  - Complete calendars still show the existing success message.
+  - Partial calendars now download but warn how many planned courses are omitted.
+- Added styles for calendar export action rows and omitted-course focus states, including mobile stacking and print hiding.
+- Bumped cache tags:
+  - `styles.css?v=103`.
+  - `js/schedule.js?v=56`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts the calendar omission action appears in schedule output, advisor HTML, advisor text guidance, and exported advisor documents.
+  - The rendered mobile advisor packet workflow now clicks `Review omitted courses`, verifies the section-list focus and omitted `ENGL 101` highlight, downloads the partial calendar, and asserts the partial-download warning toast.
+  - Rendered workflow logs now name `calendar omission action` coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with calendar omission action markup and text guidance.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule chips, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with the calendar omission action, partial-calendar warning toast, full-term calendar omission readiness, Readiness Map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including calendar omission action coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with calendar omission action coverage.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass136-calendar-omission-action-live`.
+  - It randomly verified `STAT`, `ANSC`, `HESP`, `WMST`, `AREC`, and `AAST` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

@@ -1021,8 +1021,9 @@ function testScheduleRegistrationReadiness(context) {
   assert(result.outputCalendarSummary?.label === 'Calendar incomplete' && result.outputCalendarSummary.eventCount === 3, 'calendar export readiness: summary should report incomplete calendar event count');
   assert(result.outputCalendarSummary?.windowLabel === 'Sep 2, 2026 to Dec 14, 2026', 'calendar export readiness: summary should expose custom calendar range');
   assert(result.outputCalendarSummary?.timedCourseCount === 2 && result.outputCalendarSummary?.courseCount === 3 && result.outputCalendarSummary?.missingCount === 1 && result.outputCalendarSummary?.omittedCount === 1, 'calendar export readiness: summary should count timed and omitted planned courses');
-  assert(/Calendar Export[\s\S]*Sep 2, 2026 to Dec 14, 2026[\s\S]*calendar events/.test(result.outputHtml), 'calendar export readiness: schedule output HTML should include event count and range');
+  assert(/Calendar Export[\s\S]*Sep 2, 2026 to Dec 14, 2026[\s\S]*calendar events[\s\S]*data-calendar-export-action="review-omissions"/.test(result.outputHtml), 'calendar export readiness: schedule output HTML should include event count, range, and omission action');
   assert(/Calendar export:[\s\S]*Calendar incomplete: 3 weekly events across 2\/3 planned courses; 1 course still needs a section/.test(result.outputText), 'calendar export readiness: schedule text should include event count and omitted planned course');
+  assert(/Action: Pick sections or replace TBA meetings for omitted courses before relying on the calendar export/.test(result.outputText), 'calendar export readiness: schedule text should include omission action guidance');
   assert(/Calendar export:[\s\S]*Range: Sep 2, 2026 to Dec 14, 2026/.test(result.outputRegistrationText), 'calendar export readiness: registration list should include calendar range');
   assert(/Calendar export:[\s\S]*ENGL 101 Missing section: omitted from calendar until a section is picked/.test(result.outputRegistrationText), 'calendar export readiness: registration list should include missing-section omission');
   assert(/BEGIN:VCALENDAR/.test(result.outputCalendarUnfolded) && /BEGIN:VEVENT/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include calendar and event records');
@@ -1038,7 +1039,7 @@ function testScheduleRegistrationReadiness(context) {
 	  assert(/schedule-advisor-readiness-map/.test(result.advisorHtml) && /Plan Readiness Map/.test(result.advisorHtml) && /Spring 2027/.test(result.advisorHtml), 'readiness map export: advisor HTML should include plan-wide readiness map');
 	  assert(/Registration Appointment/.test(result.advisorHtml) && /Aug 25, 2099 at 9:30am/.test(result.advisorHtml), 'registration appointment: advisor HTML should include saved appointment');
   assert(/Seat Data Freshness/.test(result.advisorHtml) && /Refresh seats/.test(result.advisorHtml), 'seat freshness: advisor HTML should include freshness card');
-  assert(/Calendar Export/.test(result.advisorHtml) && /Calendar incomplete/.test(result.advisorHtml), 'calendar export readiness: advisor HTML should include calendar omission card');
+  assert(/Calendar Export/.test(result.advisorHtml) && /Calendar incomplete/.test(result.advisorHtml) && /Review omitted courses/.test(result.advisorHtml), 'calendar export readiness: advisor HTML should include calendar omission action');
   assert(/data-seat-freshness-action="refresh"/.test(result.advisorHtml), 'seat freshness: advisor HTML should include refresh action');
   assert(/Testudo Entry Queue/.test(result.advisorHtml) && /Section ID MATH140-0201/.test(result.advisorHtml), 'testudo queue: advisor HTML should include exact section IDs');
   assert(/Quick actions/.test(result.advisorHtml) && /Review section picks/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness quick actions');
@@ -1055,7 +1056,7 @@ function testScheduleRegistrationReadiness(context) {
 	  assert(/schedule-advisor-readiness-map/.test(result.advisorDocument) && /Plan Readiness Map/.test(result.advisorDocument), 'readiness map export: exported advisor document should include plan-wide readiness markup');
 	  assert(/schedule-registration-appointment/.test(result.advisorDocument), 'registration appointment: exported advisor document should include appointment markup');
   assert(/schedule-seat-freshness/.test(result.advisorDocument), 'seat freshness: exported advisor document should include freshness markup');
-  assert(/schedule-calendar-export/.test(result.advisorDocument) && /Calendar Export/.test(result.advisorDocument), 'calendar export readiness: exported advisor document should include calendar markup');
+  assert(/schedule-calendar-export/.test(result.advisorDocument) && /Calendar Export/.test(result.advisorDocument) && /data-calendar-export-action="review-omissions"/.test(result.advisorDocument), 'calendar export readiness: exported advisor document should include calendar action markup');
   assert(/schedule-registration-handoff/.test(result.advisorDocument), 'testudo queue: exported advisor document should include queue markup');
   assert(/schedule-readiness-actions/.test(result.advisorDocument) && /data-readiness-action="review-sections"/.test(result.advisorDocument), 'registration readiness: exported advisor document should include quick-action markup');
   assert(result.map.count === 2, 'readiness map: should include every plan term');
