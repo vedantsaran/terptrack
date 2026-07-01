@@ -3908,6 +3908,96 @@ h1.hero-title em {
   margin-top: 8px;
   padding-top: 8px;
 }
+.schedule-registration-handoff {
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 10px;
+}
+.schedule-registration-handoff-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.schedule-registration-handoff-head h4 {
+  margin: 0;
+  font-family: 'Fraunces', serif;
+}
+.schedule-registration-handoff-head span,
+.schedule-registration-handoff p {
+  display: block;
+  margin: 2px 0 0;
+  color: var(--slate);
+  font-size: .74rem;
+  line-height: 1.35;
+}
+.schedule-registration-handoff-head strong {
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-registration-handoff-list {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.schedule-registration-handoff-list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.schedule-registration-handoff-list li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.schedule-registration-handoff-list b {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #FAF6EC;
+  font-size: .72rem;
+}
+.schedule-registration-handoff-list li.blocked b {
+  background: var(--red);
+}
+.schedule-registration-handoff-list li.review b {
+  background: var(--amber);
+  color: var(--ink);
+}
+.schedule-registration-handoff-list strong,
+.schedule-registration-handoff-list code,
+.schedule-registration-handoff-list span,
+.schedule-registration-handoff-list em {
+  display: block;
+}
+.schedule-registration-handoff-list strong {
+  font-size: .8rem;
+}
+.schedule-registration-handoff-list code {
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  overflow-wrap: anywhere;
+}
+.schedule-registration-handoff-list span,
+.schedule-registration-handoff-list em {
+  color: var(--slate);
+  font-size: .72rem;
+  font-style: normal;
+  line-height: 1.35;
+}
 .schedule-registration-order {
   margin: 10px 0;
   border: 1px solid var(--line);
@@ -7367,6 +7457,13 @@ h1.hero-title em {
   .schedule-registration-appointment-head {
     flex-direction: column;
     gap: 4px;
+  }
+  .schedule-registration-handoff-head {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .schedule-registration-handoff-list li {
+    grid-template-columns: 1fr;
   }
   .schedule-registration-backups-head {
     flex-direction: column;

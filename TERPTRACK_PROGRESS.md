@@ -6598,3 +6598,66 @@ Verification:
   - It randomly verified `BIOE`, `ENAE`, `MUSC`, `PLSC`, `JOUR`, and `ENGL` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 122
+
+Focus: add a Testudo Entry Queue so students can act on the schedule with exact section IDs in registration priority order.
+
+Planned changes:
+- Derive a Testudo entry queue from the saved enrollment order and backup plan.
+- Show exact section IDs, queue status, seat risk, and backup IDs in the schedule output and advisor packet.
+- Include the queue in schedule text, registration-list text, advisor text, and standalone advisor HTML exports.
+- Verify the queue in fixture and rendered mobile workflows.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleRegistrationHandoff()` in `js/schedule.js`.
+  - It converts enrollment-order rows into a Testudo-facing queue.
+  - It marks entries as ready, review, blocked, or missing based on conflicts, seat risk, and missing section IDs.
+  - It joins backup-plan rows so risky entries show backup section IDs.
+- Added `renderScheduleRegistrationHandoffHtml()` for the Testudo Entry Queue card.
+- Added `scheduleRegistrationHandoffText()` for text exports.
+- Added the Testudo Entry Queue card to:
+  - The main schedule output.
+  - The advisor packet.
+  - The standalone advisor HTML export.
+- Added queue lines to:
+  - The schedule summary `.txt`.
+  - The Testudo registration list `.txt`.
+  - The advisor text export.
+- Returned `registrationHandoff` from `buildScheduleOutput()` for regression and rendered-workflow coverage.
+- Added production and standalone export CSS for the queue, including blocked/review/ready status styling and mobile stacking.
+- Bumped cache tags:
+  - `styles.css?v=92`.
+  - `js/schedule.js?v=46`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts the queue orders MATH 140 first with exact section ID `MATH140-0201`.
+  - The fixture asserts Testudo Entry Queue HTML, schedule text, registration-list text, advisor text, advisor HTML, backup ID, and exported document markup.
+  - Rendered mobile advisor packet now asserts the queue in the DOM, output cache, registration export, advisor text, advisor HTML, mobile snapshot, and no-overflow path.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with Testudo Entry Queue assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, registration appointment, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including Testudo Entry Queue coverage.
+  - It passed 12 rendered generated-plan viewport runs with clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with Testudo queue.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass122-testudo-entry-queue-live`.
+  - It randomly verified `ENEE`, `ANTH`, `HIST`, `PHSC`, `PHYS`, and `ENCH` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

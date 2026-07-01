@@ -1979,6 +1979,86 @@ function scheduleRegistrationOrderText(rows) {
   return lines;
 }
 
+function scheduleRegistrationHandoff(orderRows = [], backupRows = []) {
+  const backupsByCourse = new Map();
+  (backupRows || []).forEach(row => backupsByCourse.set(normalizeCode(row.courseCode || ''), row));
+  return (orderRows || []).map(row => {
+    const backup = backupsByCourse.get(normalizeCode(row.courseCode || '')) || null;
+    const missingId = !row.sectionId;
+    const status = missingId ? 'missing'
+      : row.conflictCount || row.riskLevel === 'closed' ? 'blocked'
+        : row.riskLevel === 'risk' || row.riskLevel === 'watch' || row.riskLevel === 'unknown' ? 'review'
+          : 'ready';
+    const action = missingId ? 'Find exact section ID before registration'
+      : row.conflictCount ? 'Resolve conflict before entering'
+        : row.riskLevel === 'closed' ? 'Use backup, waitlist, or alternate'
+          : row.riskLevel === 'risk' ? 'Enter early and keep backup ready'
+            : row.riskLevel === 'watch' || row.riskLevel === 'unknown' ? 'Confirm seats shortly before submitting'
+              : 'Ready to enter in Testudo';
+    return {
+      order: row.order,
+      status,
+      action,
+      courseCode: row.courseCode,
+      title: row.title || '',
+      sectionLabel: row.sectionLabel,
+      sectionId: row.sectionId || '',
+      seatDetail: row.seatDetail,
+      label: row.label,
+      conflictCount: row.conflictCount || 0,
+      backupId: backup?.backupId || '',
+      backupLabel: backup?.backupLabel || '',
+      backupSeatDetail: backup?.backupSeatDetail || '',
+      backupStatus: backup?.status || '',
+    };
+  });
+}
+
+function renderScheduleRegistrationHandoffHtml(rows, heading = 'Testudo Entry Queue') {
+  const handoff = Array.isArray(rows) ? rows : [];
+  const readyCount = handoff.filter(row => row.status === 'ready' || row.status === 'review').length;
+  return `
+    <section class="schedule-registration-handoff">
+      <div class="schedule-registration-handoff-head">
+        <div>
+          <h4>${scheduleEscape(heading)}</h4>
+          <span>Enter these exact section IDs in Testudo after fixing blockers and refreshing seats.</span>
+        </div>
+        <strong>${handoff.length ? `${readyCount}/${handoff.length} entry-ready` : 'No entries'}</strong>
+      </div>
+      ${handoff.length ? `
+        <ol class="schedule-registration-handoff-list">
+          ${handoff.slice(0, 10).map(row => `
+            <li class="${scheduleEscape(row.status)}">
+              <b>${scheduleEscape(row.order)}</b>
+              <div>
+                <strong>${scheduleEscape(row.courseCode)} ${scheduleEscape(row.sectionLabel)}</strong>
+                <code>${row.sectionId ? `Section ID ${scheduleEscape(row.sectionId)}` : 'Section ID missing'}</code>
+                <span>${scheduleEscape(row.action)} · ${scheduleEscape(row.seatDetail)}</span>
+                ${row.backupId ? `<em>Backup ID ${scheduleEscape(row.backupId)} (${scheduleEscape(row.backupLabel)} · ${scheduleEscape(row.backupSeatDetail)})</em>` : ''}
+              </div>
+            </li>
+          `).join('')}
+        </ol>
+      ` : '<p>Pick real sections to build a Testudo entry queue.</p>'}
+    </section>
+  `;
+}
+
+function scheduleRegistrationHandoffText(rows) {
+  const handoff = Array.isArray(rows) ? rows : [];
+  const lines = ['', 'Testudo entry queue:'];
+  if (!handoff.length) {
+    lines.push('- Pick real sections to build a Testudo entry queue.');
+    return lines;
+  }
+  handoff.forEach(row => {
+    lines.push(`${row.order}. ${row.courseCode} ${row.sectionLabel} | Section ID: ${row.sectionId || 'missing'} | ${row.action}; ${row.seatDetail}.`);
+    if (row.backupId) lines.push(`   Backup ID: ${row.backupId}; ${row.backupLabel}; ${row.backupSeatDetail}.`);
+  });
+  return lines;
+}
+
 function scheduleRegistrationBackupPlan(selectedItems = [], sectionsByCode = {}, prefs = DEFAULT_SCHEDULE_PREFS, conflicts = []) {
   const riskScores = { closed: 4, risk: 3, watch: 2, unknown: 1, ok: 0 };
   return (selectedItems || [])
@@ -3054,6 +3134,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
+  const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   const context = scheduleAdvisorFilterContext(
     sem?.id || '',
     selectedItems,
@@ -3079,6 +3160,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleRegistrationAppointmentText(appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows)));
+  lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push(...scheduleAdvisorCatalogYearText());
@@ -3188,6 +3270,20 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-registration-appointment-head span,.schedule-registration-appointment p,.schedule-registration-appointment-list span{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
     .schedule-registration-appointment-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
     .schedule-registration-appointment-list{display:grid;gap:4px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-registration-handoff{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-registration-handoff-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-registration-handoff-head h4{margin:0}
+    .schedule-registration-handoff-head span,.schedule-registration-handoff p{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
+    .schedule-registration-handoff-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-registration-handoff-list{display:grid;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+    .schedule-registration-handoff-list li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;border-top:1px solid #eee4d8;padding-top:6px}
+    .schedule-registration-handoff-list li:first-child{border-top:none;padding-top:0}
+    .schedule-registration-handoff-list b{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;background:#2e5c8b;color:#fff;font-size:12px}
+    .schedule-registration-handoff-list li.blocked b{background:#8b0000}
+    .schedule-registration-handoff-list li.review b{background:#c99700;color:#241f1f}
+    .schedule-registration-handoff-list strong,.schedule-registration-handoff-list code,.schedule-registration-handoff-list span,.schedule-registration-handoff-list em{display:block}
+    .schedule-registration-handoff-list code{font-family:Menlo,Consolas,monospace;color:#241f1f;font-size:12px;overflow-wrap:anywhere}
+    .schedule-registration-handoff-list span,.schedule-registration-handoff-list em{color:#5d5962;font-size:12px;font-style:normal;line-height:1.35}
     .schedule-registration-order{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-registration-order-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-registration-order-head h4{margin:0}
@@ -3238,7 +3334,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
@@ -3261,6 +3357,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
+  const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   return `
     <article class="schedule-advisor-packet" id="schedule-advisor-packet">
       <div class="schedule-advisor-head">
@@ -3299,6 +3396,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       </div>
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
+      ${renderScheduleRegistrationHandoffHtml(registrationHandoff)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(backupRows)}
       ${scheduleAdvisorCatalogYearHtml()}
@@ -3346,6 +3444,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
+  const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   const lines = [
     `Terp Track Schedule`,
     `Plan semester: ${sem?.name || 'Selected semester'}`,
@@ -3359,6 +3458,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
+  lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push('', 'Picked sections:');
@@ -3402,6 +3502,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
   const readiness = scheduleRegistrationReadiness(courseList, selectedList, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedList, conflicts);
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
+  const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   const lines = [
     'Terp Track Registration List',
     'Use this as a Testudo checklist. Confirm every section, seat, restriction, and prerequisite in Testudo before enrolling.',
@@ -3430,6 +3531,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
+  lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
 
   if (unscheduled.length) {
     lines.push('', 'Missing section picks:');
@@ -3519,6 +3621,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const registrationOrder = scheduleRegistrationOrder(sem?.id || semId, selectedItems, conflicts);
   const registrationBackupPlan = scheduleRegistrationBackupPlan(selectedItems, sectionsByCode, prefs, conflicts);
   const registrationAppointment = scheduleRegistrationAppointment(prefs, readiness, registrationBackupPlan);
+  const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, registrationBackupPlan);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment);
   const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment);
@@ -3556,6 +3659,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${outputOptions.preferences ? `<p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
+      ${renderScheduleRegistrationHandoffHtml(registrationHandoff)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(registrationBackupPlan)}
       ${renderScheduleOutputWeek(blocks)}
@@ -3576,6 +3680,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     text,
     filename: scheduleOutputFilename(term),
     registrationAppointment,
+    registrationHandoff,
     registrationOrder,
     registrationBackupPlan,
     registrationText,
