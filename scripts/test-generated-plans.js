@@ -817,6 +817,7 @@ function testScheduleRegistrationReadiness(context) {
         level: readiness.level,
         label: readiness.label,
         detail: readiness.detail,
+        fixes: readiness.fixes,
         gateLevels: Object.fromEntries(readiness.gates.map(gate => [gate.id, gate.level])),
         sectionsDetail: gateMap.sections.detail,
         conflictsDetail: gateMap.conflicts.detail,
@@ -840,13 +841,22 @@ function testScheduleRegistrationReadiness(context) {
   assert(/ENGL 101/.test(result.sectionsDetail), 'registration readiness: sections gate should name the unpicked course');
   assert(/1 overlap/.test(result.conflictsDetail), 'registration readiness: conflicts gate should summarize overlap count');
   assert(/MATH 140 0201: 2 seats open/.test(result.seatsDetail), 'registration readiness: seats gate should name the risky section');
+  assert(result.fixes.length >= 3, 'registration readiness: blocker scenario should produce multiple recommended fixes');
+  assert(result.fixes.some(fix => /Pick sections for ENGL 101/.test(fix)), 'registration readiness: fixes should include missing section action');
+  assert(result.fixes.some(fix => /overlapping section|0 conflicts/.test(fix)), 'registration readiness: fixes should include conflict action');
+  assert(result.fixes.some(fix => /backup section|higher-seat/.test(fix)), 'registration readiness: fixes should include seat-risk action');
   assert(/Registration Readiness/.test(result.html) && /Fix before registration/.test(result.html), 'registration readiness: HTML should render overall status');
+  assert(/Recommended fixes/.test(result.html) && /Pick sections for ENGL 101/.test(result.html), 'registration readiness: HTML should render recommended fixes');
   assert(/Registration readiness/.test(result.text) && result.text.includes('Sections: 2/3'), 'registration readiness: text should include gate lines');
+  assert(/Fix: Pick sections for ENGL 101/.test(result.text), 'registration readiness: text should include recommended fixes');
   assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
+  assert(/Recommended fixes/.test(result.outputHtml) && /Generate alternatives/.test(result.outputHtml), 'registration readiness: schedule output HTML should include fix guidance');
   assert(/Registration readiness/.test(result.outputText) && /Conflicts: 1/.test(result.outputText), 'registration readiness: schedule text should include readiness gates');
+  assert(/Fix: Apply a backup section/.test(result.outputText), 'registration readiness: schedule text should include fix guidance');
   assert(/Registration Readiness/.test(result.advisorHtml) && /Fix before registration/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness gates');
   assert(/Registration readiness/.test(result.advisorText) && result.advisorText.includes('Sections: 2/3'), 'registration readiness: advisor text should include readiness gates');
-  assert(/schedule-readiness/.test(result.advisorDocument), 'registration readiness: exported advisor document should include readiness markup');
+  assert(/Fix: Pick sections for ENGL 101/.test(result.advisorText), 'registration readiness: advisor text should include recommended fixes');
+  assert(/schedule-readiness/.test(result.advisorDocument) && /Recommended fixes/.test(result.advisorDocument), 'registration readiness: exported advisor document should include readiness markup and fixes');
 
   return {
     id: 'SCHEDULE-READINESS',

@@ -1530,6 +1530,39 @@ function scheduleRegistrationGate(id, label, level, value, detail) {
   return { id, label, level, value, detail };
 }
 
+function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings) {
+  if (!courseList.length) return ['No registration fixes are needed for this semester.'];
+  const fixes = [];
+  const gateById = Object.fromEntries((gates || []).map(gate => [gate.id, gate]));
+  if (gateById.sections?.level === 'danger') {
+    const names = (unscheduled || []).slice(0, 4).map(course => course.code).join(', ');
+    fixes.push(`Pick sections for ${names || 'all remaining courses'}; use Auto-pick first, then choose manually for courses without posted sections.`);
+  }
+  if (gateById.conflicts?.level === 'danger') {
+    fixes.push('Generate alternatives or switch one overlapping section until the weekly grid has 0 conflicts.');
+  }
+  if (gateById.seats?.level === 'danger') {
+    const names = (urgentSeats || []).slice(0, 3).map(row => row.label).join(', ');
+    fixes.push(`Apply a backup section or choose a higher-seat section for ${names || 'risky seat picks'} before registration.`);
+  } else if (gateById.seats?.level === 'warn') {
+    const names = (watchSeats || []).slice(0, 3).map(row => row.label).join(', ');
+    fixes.push(`Keep a backup ready for ${names || 'watched sections'} and recheck seats before your registration time.`);
+  }
+  if (gateById.timing?.level === 'danger') {
+    fixes.push('Generate alternatives around saved timing preferences before registering.');
+  } else if (gateById.timing?.level === 'warn') {
+    const tba = timing?.metrics?.untimedCount || 0;
+    fixes.push(tba ? 'Recheck TBA meeting times and rerun readiness once UMD posts them.' : 'Review timing notes and compare alternatives if the weekly pattern looks hard to sustain.');
+  }
+  if (gateById.preferences?.level === 'warn') {
+    fixes.push((nonSeatWarnings || []).length
+      ? 'Swap sections or adjust saved preferences for blocked time, avoided days, campus fit, or tight walks.'
+      : 'Review saved schedule preferences before registration.');
+  }
+  if (!fixes.length) fixes.push('No readiness fixes needed after normal advisor and Testudo review.');
+  return Array.from(new Set(fixes)).slice(0, 5);
+}
+
 function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflicts = [], warnings = [], prefs = DEFAULT_SCHEDULE_PREFS, unscheduledOverride = null) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
@@ -1625,12 +1658,14 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
     : dangerCount ? `${dangerCount} blocker${dangerCount === 1 ? '' : 's'} need action before registration.`
       : warnCount ? `${warnCount} item${warnCount === 1 ? '' : 's'} should be reviewed before registering.`
         : 'All picked sections clear core registration checks.';
+  const fixes = scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings);
 
   return {
     level,
     label,
     detail,
     gates,
+    fixes,
     unscheduled,
     timing,
     warningCount: warningList.length,
@@ -1659,6 +1694,10 @@ function scheduleRegistrationReadinessHtml(readiness, heading = 'Registration Re
           </div>
         `).join('')}
       </div>
+      <div class="schedule-readiness-fixes">
+        <strong>Recommended fixes</strong>
+        ${(readiness.fixes || []).map(fix => `<span>${scheduleEscape(fix)}</span>`).join('')}
+      </div>
     </section>
   `;
 }
@@ -1670,6 +1709,7 @@ function scheduleRegistrationReadinessText(readiness) {
     'Registration readiness:',
     `- Overall: ${readiness.label}. ${readiness.detail}`,
     ...(readiness.gates || []).map(gate => `- ${gate.label}: ${gate.value} - ${gate.detail}`),
+    ...(readiness.fixes || []).map(fix => `- Fix: ${fix}`),
   ];
 }
 
@@ -2512,6 +2552,9 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-readiness-gate.ok strong{color:#2f6f4e}
     .schedule-readiness-gate.warn strong{color:#8a6300}
     .schedule-readiness-gate.danger strong{color:#8b0000}
+    .schedule-readiness-fixes{display:grid;gap:4px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px;font-size:12px}
+    .schedule-readiness-fixes strong{font-size:10px;text-transform:uppercase;color:#8b0000}
+    .schedule-readiness-fixes span{display:block;color:#5d5962;line-height:1.35}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}

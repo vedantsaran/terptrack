@@ -6088,3 +6088,67 @@ Verification:
   - It randomly verified `SCM`, `PHYS`, `ENST`, `IS`, `MGMT`, and `EDUC` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 114
+
+Focus: turn Schedule registration-readiness verdicts into concrete recommended fixes.
+
+Planned changes:
+- Keep the existing readiness gates as the source of truth.
+- Add a deduplicated fix list for blocked/review states.
+- Surface fixes in the visible Schedule Output card, advisor packet, downloaded advisor HTML, and text exports.
+- Verify the fix list in unit-style readiness tests and rendered mobile advisor-packet workflow.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleRegistrationFixList()` in `js/schedule.js`.
+  - Missing section picks now recommend Auto-pick first, then manual picks for courses without posted sections.
+  - Time conflicts now recommend alternatives or switching an overlapping section until the grid has 0 conflicts.
+  - Low/closed seats now recommend backup or higher-seat sections for the affected picked sections.
+  - Watch-level seats now recommend keeping a backup ready and rechecking before registration time.
+  - Timing and preference warnings now recommend alternatives, TBA rechecks, or preference/section adjustments.
+- Added `fixes` to the object returned by `scheduleRegistrationReadiness()`.
+- Rendered `Recommended fixes` under the readiness gate grid in:
+  - the visible Schedule Output card.
+  - the advisor packet in the app.
+  - the downloaded advisor-packet HTML document.
+  - plain-text schedule and advisor exports via `Fix:` lines.
+- Added responsive styles for `.schedule-readiness-fixes`.
+- Added matching standalone advisor-packet CSS for exported/printed packets.
+- Bumped cache tags:
+  - `styles.css?v=86`.
+  - `js/schedule.js?v=38`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts missing-section, conflict, and seat-risk fix recommendations.
+  - Rendered mobile advisor packet now asserts `Recommended fixes` and the `Pick sections for ENGL 101` fix in the DOM, exported advisor HTML, and exported advisor text.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with recommended-fix assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, recommended fixes, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - The first run passed syntax, proxy, and generated-plan fixtures, then hit a rendered generated-plan timeout on mobile `PLSC` while metadata was still loading.
+- Re-ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=120000`.
+  - It passed all 12 generated-template viewport runs, including mobile `PLSC`.
+- Re-ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including recommended-fix readiness coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with recommended fixes.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass114-readiness-fixes-live`.
+  - It randomly verified `PLSC`, `AMST`, `ASTR`, `STAT`, `HLTH`, and `EDUC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
