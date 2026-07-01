@@ -50,6 +50,40 @@ const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   failedSchedules: 0,
   command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass87-all',
 });
+const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'June 30, 2026',
+    seed: 'pass87-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 50,
+    failedSchedules: 0,
+    scope: 'All generated templates after adding the same-origin umd.io proxy.',
+  },
+  {
+    checkedAt: 'June 30, 2026',
+    seed: 'pass86-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 50,
+    failedSchedules: 0,
+    scope: 'All generated templates after adding rendered browser card verification.',
+  },
+  {
+    checkedAt: 'June 30, 2026',
+    seed: 'pass85-all-final',
+    source: 'PlanetTerp',
+    verifiedSchedules: 50,
+    failedSchedules: 0,
+    scope: 'All generated templates after live metadata drift cleanup.',
+  },
+  {
+    checkedAt: 'June 30, 2026',
+    seed: 'pass84-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 50,
+    failedSchedules: 0,
+    scope: 'All generated templates for the initial Settings freshness panel.',
+  },
+]);
 
 function settingsHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -145,6 +179,37 @@ function autoPlanOfficialSourceLinksHtml(review, opts = {}) {
   `;
 }
 
+function generatedTemplateAuditHistoryHtml(summary) {
+  const history = GENERATED_TEMPLATE_AUDIT_HISTORY || [];
+  if (!history.length) return '';
+  const generatedCount = summary?.generatedCount || GENERATED_TEMPLATE_AUDIT.verifiedSchedules || 50;
+  const rows = history.map(item => {
+    const failures = item.failedSchedules || 0;
+    const result = failures
+      ? `${failures} issue${failures === 1 ? '' : 's'}`
+      : '0 issues';
+    return `
+      <div class="auto-plan-audit-history-row">
+        <span>
+          <strong>${settingsHtml(item.seed)}</strong>
+          <em>${settingsHtml(item.checkedAt)} · ${settingsHtml(item.source || 'live source')}</em>
+        </span>
+        <b>${settingsHtml(item.verifiedSchedules)}/${settingsHtml(generatedCount)} · ${settingsHtml(result)}</b>
+        <p>${settingsHtml(item.scope || 'Generated catalog live verification.')}</p>
+      </div>
+    `;
+  }).join('');
+  return `
+    <details class="auto-plan-audit-history">
+      <summary>
+        <span>Audit history</span>
+        <strong>${settingsHtml(history.length)} verified runs</strong>
+      </summary>
+      <div>${rows}</div>
+    </details>
+  `;
+}
+
 function generatedTemplateFreshnessHtml(review) {
   const summary = generatedTemplateFreshnessSummary(review);
   const audit = GENERATED_TEMPLATE_AUDIT;
@@ -167,6 +232,7 @@ function generatedTemplateFreshnessHtml(review) {
         ${autoPlanFreshnessStat('selected preview', summary.selectedValue, summary.selectedDetail)}
       </div>
       ${autoPlanOfficialSourceLinksHtml(review, { includeGeneral: true })}
+      ${generatedTemplateAuditHistoryHtml(summary)}
     </div>
   `;
 }

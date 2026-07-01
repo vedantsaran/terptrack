@@ -389,6 +389,8 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Official sources/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render official source links');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/programs/'), 'auto plan diagnostics: freshness report should link the UMD catalog program index');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/approved-courses/'), 'auto plan diagnostics: freshness report should link the UMD course catalog');
+  assert(/Audit history/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render audit history');
+  assert(/pass86-all/.test(result.templateFreshnessHtml) && /pass85-all-final/.test(result.templateFreshnessHtml), 'auto plan diagnostics: audit history should show prior verification seeds');
   assert(result.templateOfficialSources.some(link => /Mathematics Major/.test(link.label) && /academiccatalog\.umd\.edu/.test(link.url)), 'auto plan diagnostics: preview should carry selected official catalog source');
   assert(result.builtInSourceMissing.length === 0, `auto plan diagnostics: missing official catalog sources for ${result.builtInSourceMissing.join(', ')}`);
   assert(result.templatePlaceholderSamples.length > 0, 'auto plan diagnostics: should include placeholder samples');

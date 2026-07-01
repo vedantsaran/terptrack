@@ -4627,3 +4627,63 @@ Next pass candidates:
 - Add catalog-year/source-year metadata to generated templates and Settings source links.
 - Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
 - Add a mobile rendered verifier for onboarding and Browse replacement flows, not just Settings-generated plans.
+
+## 2026-06-30 Pass 90
+
+Focus: add a Settings audit history drawer for generated-template live verification evidence.
+
+Planned changes:
+- Keep the latest generated-template audit as the primary freshness status.
+- Add a compact history drawer showing recent all-major live verification seeds.
+- Make the drawer mobile-safe inside the existing Settings freshness panel.
+- Update tests and rendered verification to require the history.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `GENERATED_TEMPLATE_AUDIT_HISTORY` in `js/settings.js` with four recent verified all-major runs:
+  - `pass87-all`.
+  - `pass86-all`.
+  - `pass85-all-final`.
+  - `pass84-all`.
+- Added `generatedTemplateAuditHistoryHtml()` to render the history as a native `details` drawer inside the freshness panel.
+- The drawer shows each run's seed, checked date, live source, verified schedule count, issue count, and short scope note.
+- Added drawer styles in `styles.css`:
+  - compact summary row.
+  - wrapped history rows.
+  - mobile one-column row layout.
+  - cross-browser summary marker reset.
+- Bumped cache tags:
+  - `styles.css?v=72`.
+  - `js/settings.js?v=21`.
+- Updated the generated-plan fixture to assert the audit history and prior seeds render.
+- Updated the rendered verifier to assert:
+  - `styles.css?v=72`.
+  - `js/settings.js?v=21`.
+  - `Audit history`.
+  - `pass86-all`.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan and planner fixtures.
+  - It asserted the freshness HTML includes `Audit history`, `pass86-all`, and `pass85-all-final`.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It passed 12 rendered template viewport runs: 6 majors x 2 viewports.
+  - It confirmed the audit history text rendered in real Settings reviews.
+  - It confirmed the updated cache tags loaded.
+  - It kept the proxy-backed browser console clean.
+  - It found no checked horizontal overflow on desktop or mobile.
+- Ran `node scripts/verify-random-schedules.js --majors PHYS,ARTT,PLSC,KNES,ENAE,ENCE --keep-going --seed pass90-audit-history`.
+  - Verified all six rendered targets against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+- Ran `git diff --check`.
+
+Findings for next pass:
+- The history drawer is static release evidence. A future pass can store these runs as structured data with catalog-year metadata.
+- The strongest remaining automated UI gap is onboarding/Browse mobile rendering, because generated Settings now has desktop and mobile coverage.
+
+Next pass candidates:
+- Add catalog-year/source-year metadata to generated templates and Settings source links.
+- Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
+- Add a mobile rendered verifier for onboarding and Browse replacement flows, not just Settings-generated plans.
+- Add a release checklist panel in Settings that summarizes source links, live audit history, and account/cloud setup status.

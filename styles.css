@@ -2677,6 +2677,93 @@ h1.hero-title em {
 .auto-plan-official-sources.compact > div {
   justify-content: flex-start;
 }
+.auto-plan-audit-history {
+  margin-top: 8px;
+  border-top: 1px solid rgba(47,125,75,.18);
+  padding-top: 8px;
+}
+.auto-plan-audit-history summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.auto-plan-audit-history summary::-webkit-details-marker {
+  display: none;
+}
+.auto-plan-audit-history summary::before {
+  content: '+';
+  color: var(--green);
+  font-weight: 800;
+}
+.auto-plan-audit-history[open] summary::before {
+  content: '-';
+}
+.auto-plan-audit-history summary span {
+  flex: 1 1 auto;
+}
+.auto-plan-audit-history summary strong {
+  flex: 0 0 auto;
+  color: var(--green);
+  font-size: .62rem;
+}
+.auto-plan-audit-history > div {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.auto-plan-audit-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid rgba(47,125,75,.16);
+  border-radius: 8px;
+  background: rgba(47,125,75,.04);
+}
+.auto-plan-audit-history-row span,
+.auto-plan-audit-history-row strong,
+.auto-plan-audit-history-row em,
+.auto-plan-audit-history-row b {
+  min-width: 0;
+}
+.auto-plan-audit-history-row strong {
+  display: block;
+  color: var(--ink);
+  font-size: .7rem;
+  line-height: 1.2;
+}
+.auto-plan-audit-history-row em {
+  display: block;
+  color: var(--slate);
+  font-style: normal;
+  font-size: .62rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.auto-plan-audit-history-row b {
+  color: var(--green);
+  font-size: .66rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.auto-plan-audit-history-row p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--slate);
+  font-size: .66rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
 .auto-plan-source-samples {
   display: grid;
   gap: 6px;
@@ -6352,6 +6439,16 @@ h1.hero-title em {
   }
   .auto-plan-official-sources > div {
     justify-content: flex-start;
+  }
+  .auto-plan-audit-history summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .auto-plan-audit-history-row {
+    grid-template-columns: 1fr;
+  }
+  .auto-plan-audit-history-row b {
+    white-space: normal;
   }
   .auto-plan-load {
     max-width: calc(50% - 3px);

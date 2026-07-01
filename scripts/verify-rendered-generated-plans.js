@@ -353,6 +353,7 @@ async function applyMajor(page, target, timeoutMs) {
   assert(reviewText.includes('13/13'), `${target.major}: rendered preview missing full GenEd coverage`);
   assert(reviewText.includes('Official sources'), `${target.major}: rendered preview missing official source links`);
   assert(reviewText.includes('Requirement source'), `${target.major}: rendered preview missing requirement source links`);
+  assert(reviewText.includes('Audit history') && reviewText.includes('pass86-all'), `${target.major}: rendered preview missing audit history`);
   verifyReviewCredits(target, reviewText);
 
   page.once('dialog', dialog => dialog.accept());
@@ -405,11 +406,11 @@ async function runViewport(browser, url, viewport, selected, opts) {
     await page.locator('#settings-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.styles.includes('styles.css?v=71'), `${viewport.label}: rendered app did not load styles.css?v=71`);
+    assert(initialSnapshot.styles.includes('styles.css?v=72'), `${viewport.label}: rendered app did not load styles.css?v=72`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=1'), `${viewport.label}: rendered app did not load js/majors.js?v=1`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=2'), `${viewport.label}: rendered app did not load js/planetterp.js?v=2`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=3'), `${viewport.label}: rendered app did not load js/api.js?v=3`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=20'), `${viewport.label}: rendered app did not load js/settings.js?v=20`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=21'), `${viewport.label}: rendered app did not load js/settings.js?v=21`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=9'), `${viewport.label}: rendered app did not load js/import.js?v=9`);
     Object.entries(initialSnapshot.overflow || {}).forEach(([key, value]) => {
       assert(!value, `${viewport.label}: initial ${key} has horizontal overflow`);
