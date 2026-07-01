@@ -14,7 +14,7 @@ const TARGETS = [
     major: 'PHYS',
     name: 'Physics',
     coverage: '20/20 live course records',
-    totalCredits: '121/120',
+    targetCredits: 120,
     cards: [
       { code: 'PHYS402', credits: 4, title: 'Quantum Physics II' },
       { code: 'PHYS410', credits: 4, title: 'Classical Mechanics' },
@@ -24,7 +24,7 @@ const TARGETS = [
     major: 'ARTT',
     name: 'Studio Art',
     coverage: '12/12 live course records',
-    totalCredits: '121/120',
+    targetCredits: 120,
     cards: [
       { code: 'ARTT489C', credits: 3, title: 'Markets and Collecting' },
     ],
@@ -33,7 +33,7 @@ const TARGETS = [
     major: 'PLSC',
     name: 'Plant Sciences',
     coverage: '17/17 live course records',
-    totalCredits: '120/120',
+    targetCredits: 120,
     cards: [
       { code: 'PLSC201', credits: 4, title: 'Plant Structure and Function' },
     ],
@@ -42,7 +42,7 @@ const TARGETS = [
     major: 'KNES',
     name: 'Kinesiology',
     coverage: '16/16 live course records',
-    totalCredits: '120/120',
+    targetCredits: 120,
     cards: [
       { code: 'KNES385', credits: 3, title: 'Motor Control and Learning' },
     ],
@@ -51,7 +51,7 @@ const TARGETS = [
     major: 'ENAE',
     name: 'Aerospace Engineering',
     coverage: '30/30 live course records',
-    totalCredits: '125/125',
+    targetCredits: 125,
     cards: [
       { code: 'ENAE432', credits: 3, title: 'Control of Aerospace Systems' },
     ],
@@ -60,12 +60,30 @@ const TARGETS = [
     major: 'ENCE',
     name: 'Civil Engineering',
     coverage: '25/25 live course records',
-    totalCredits: '124/124',
+    targetCredits: 124,
     cards: [
       { code: 'ENCE215', credits: 3, title: 'Engineering for Sustainability' },
     ],
   },
 ];
+
+const VIEWPORTS = {
+  desktop: {
+    id: 'desktop',
+    label: 'desktop',
+    context: { viewport: { width: 1440, height: 960 } },
+  },
+  mobile: {
+    id: 'mobile',
+    label: 'mobile',
+    context: {
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 2,
+    },
+  },
+};
 
 const MIME = {
   '.css': 'text/css; charset=utf-8',
@@ -90,6 +108,7 @@ function assert(condition, message) {
 function parseArgs(argv) {
   const opts = {
     majors: [],
+    viewports: [],
     headed: false,
     keepOpen: false,
     timeoutMs: Number(process.env.TERPTRACK_RENDER_TIMEOUT_MS || 45000),
@@ -107,6 +126,13 @@ function parseArgs(argv) {
       opts.majors.push(...arg.slice('--major='.length).split(','));
     } else if (arg.startsWith('--majors=')) {
       opts.majors.push(...arg.slice('--majors='.length).split(','));
+    } else if (arg === '--viewport' || arg === '--viewports') {
+      const value = argv[++i] || '';
+      opts.viewports.push(...value.split(','));
+    } else if (arg.startsWith('--viewport=')) {
+      opts.viewports.push(...arg.slice('--viewport='.length).split(','));
+    } else if (arg.startsWith('--viewports=')) {
+      opts.viewports.push(...arg.slice('--viewports='.length).split(','));
     } else if (arg === '--timeout-ms') {
       opts.timeoutMs = Number(argv[++i] || opts.timeoutMs);
     } else if (arg.startsWith('--timeout-ms=')) {
@@ -116,6 +142,16 @@ function parseArgs(argv) {
     }
   }
   opts.majors = Array.from(new Set(opts.majors.map(item => String(item || '').trim().toUpperCase()).filter(Boolean)));
+  opts.viewports = Array.from(new Set(opts.viewports.flatMap(item => {
+    const value = String(item || '').trim().toLowerCase();
+    if (!value) return [];
+    if (value === 'all') return Object.keys(VIEWPORTS);
+    return [value];
+  })));
+  if (!opts.viewports.length) opts.viewports = Object.keys(VIEWPORTS);
+  for (const viewport of opts.viewports) {
+    if (!VIEWPORTS[viewport]) fail(`Unknown viewport: ${viewport}`);
+  }
   opts.timeoutMs = Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0 ? opts.timeoutMs : 45000;
   return opts;
 }
@@ -280,21 +316,32 @@ function cardSnapshotScript() {
 async function waitForReview(page, target, timeoutMs) {
   try {
     await page.waitForFunction(
-      ({ coverage, totalCredits }) => {
+      ({ name, coverage, targetCredits }) => {
         const review = document.querySelector('#set-auto-plan-review');
         const text = review ? review.textContent.replace(/\s+/g, ' ') : '';
-        return text.includes(coverage)
-          && text.includes(totalCredits)
+        return text.includes(name)
+          && text.includes(coverage)
+          && text.includes(`/${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
           && text.includes('pass87-all');
       },
-      { coverage: target.coverage, totalCredits: target.totalCredits },
+      { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
     );
   } catch (error) {
     const text = await page.locator('#set-auto-plan-review').textContent({ timeout: 2000 }).catch(() => '');
-    fail(`${target.major}: review did not reach ${target.coverage} / ${target.totalCredits}. Current text: ${String(text || '').replace(/\s+/g, ' ').trim().slice(0, 900)}`);
+    fail(`${target.major}: review did not reach ${target.coverage} and /${target.targetCredits} planned credits. Current text: ${String(text || '').replace(/\s+/g, ' ').trim().slice(0, 900)}`);
   }
+}
+
+function verifyReviewCredits(target, reviewText) {
+  const match = String(reviewText || '').match(/Generated\s+(\d+)\/(\d+)\s+planned credits/);
+  assert(match, `${target.major}: review did not expose planned/target credits`);
+  const planned = Number(match[1]);
+  const targetCredits = Number(match[2]);
+  assert(targetCredits === target.targetCredits, `${target.major}: review target credits ${targetCredits}, expected ${target.targetCredits}`);
+  assert(planned >= targetCredits, `${target.major}: rendered ${planned}/${targetCredits} planned credits below target`);
+  assert(planned <= targetCredits + 2, `${target.major}: rendered ${planned}/${targetCredits} planned credits, more than 2 over target`);
 }
 
 async function applyMajor(page, target, timeoutMs) {
@@ -304,6 +351,7 @@ async function applyMajor(page, target, timeoutMs) {
   assert(reviewText.includes(target.name), `${target.major}: review did not include major name ${target.name}`);
   assert(!reviewText.includes('Template fallback'), `${target.major}: rendered preview still shows template fallback`);
   assert(reviewText.includes('13/13'), `${target.major}: rendered preview missing full GenEd coverage`);
+  verifyReviewCredits(target, reviewText);
 
   page.once('dialog', dialog => dialog.accept());
   await page.locator('#settings-modal button[onclick="applyMajorFromSettings()"]').click({ timeout: timeoutMs });
@@ -327,20 +375,13 @@ function verifyCards(target, snapshot) {
   });
 }
 
-async function main() {
-  const opts = parseArgs(process.argv);
-  const selected = opts.majors.length
-    ? opts.majors.map(id => TARGETS.find(target => target.major === id) || fail(`Unknown rendered verifier target: ${id}`))
-    : TARGETS;
-  const { chromium } = loadPlaywright();
-  const { server, url } = await startServer();
-  const browser = await chromium.launch({ headless: !opts.headed });
+async function runViewport(browser, url, viewport, selected, opts) {
+  const context = await browser.newContext({
+    ...viewport.context,
+    reducedMotion: 'reduce',
+  });
   const rows = [];
   try {
-    const context = await browser.newContext({
-      viewport: { width: 1440, height: 960 },
-      reducedMotion: 'reduce',
-    });
     const page = await context.newPage();
     const consoleErrors = [];
     const ignoredConsoleErrors = [];
@@ -352,7 +393,7 @@ async function main() {
       else consoleErrors.push(text);
     });
     page.on('pageerror', error => pageErrors.push(error.message));
-    await page.goto(`${url}?render-verifier=pass87`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
+    await page.goto(`${url}?render-verifier=pass88-${viewport.id}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
     const onboardingSkip = page.locator('#ob-skip');
     if (await onboardingSkip.isVisible({ timeout: 3000 }).catch(() => false)) {
       await onboardingSkip.click({ timeout: opts.timeoutMs });
@@ -362,9 +403,12 @@ async function main() {
     await page.locator('#settings-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.scripts.includes('js/planetterp.js?v=2'), 'Rendered app did not load js/planetterp.js?v=2');
-    assert(initialSnapshot.scripts.includes('js/api.js?v=3'), 'Rendered app did not load js/api.js?v=3');
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=19'), 'Rendered app did not load js/settings.js?v=19');
+    assert(initialSnapshot.scripts.includes('js/planetterp.js?v=2'), `${viewport.label}: rendered app did not load js/planetterp.js?v=2`);
+    assert(initialSnapshot.scripts.includes('js/api.js?v=3'), `${viewport.label}: rendered app did not load js/api.js?v=3`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=19'), `${viewport.label}: rendered app did not load js/settings.js?v=19`);
+    Object.entries(initialSnapshot.overflow || {}).forEach(([key, value]) => {
+      assert(!value, `${viewport.label}: initial ${key} has horizontal overflow`);
+    });
 
     for (const target of selected) {
       await applyMajor(page, target, opts.timeoutMs);
@@ -372,17 +416,39 @@ async function main() {
       verifyCards(target, snapshot);
       rows.push({
         id: target.major,
+        viewport: viewport.id,
         coverage: target.coverage,
         cards: target.cards.map(card => `${card.code}:${card.credits}cr`).join(','),
       });
-      console.log(`${target.major}: rendered ${target.coverage}; cards ${rows[rows.length - 1].cards}`);
+      console.log(`${target.major} [${viewport.label}]: rendered ${target.coverage}; cards ${rows[rows.length - 1].cards}`);
     }
 
-    assert(!pageErrors.length, `Browser page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
-    assert(!consoleErrors.length, `Unexpected browser console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
-    assert(!ignoredConsoleErrors.length, `Expected the umd.io proxy to prevent network console noise: ${ignoredConsoleErrors.slice(0, 5).join(' | ')}`);
-    console.log(`Verified ${rows.length} generated templates in rendered browser UI with clean proxy-backed console.`);
+    assert(!pageErrors.length, `${viewport.label}: browser page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
+    assert(!consoleErrors.length, `${viewport.label}: unexpected browser console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
+    assert(!ignoredConsoleErrors.length, `${viewport.label}: expected the umd.io proxy to prevent network console noise: ${ignoredConsoleErrors.slice(0, 5).join(' | ')}`);
     if (opts.keepOpen) await page.waitForTimeout(60_000);
+    return rows;
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
+async function main() {
+  const opts = parseArgs(process.argv);
+  const selected = opts.majors.length
+    ? opts.majors.map(id => TARGETS.find(target => target.major === id) || fail(`Unknown rendered verifier target: ${id}`))
+    : TARGETS;
+  const selectedViewports = opts.viewports.map(id => VIEWPORTS[id]);
+  const { chromium } = loadPlaywright();
+  const { server, url } = await startServer();
+  const browser = await chromium.launch({ headless: !opts.headed });
+  const rows = [];
+  try {
+    for (const viewport of selectedViewports) {
+      rows.push(...await runViewport(browser, url, viewport, selected, opts));
+    }
+
+    console.log(`Verified ${rows.length} generated template viewport runs (${selected.length} majors x ${selectedViewports.length} viewports) in rendered browser UI with clean proxy-backed console.`);
   } finally {
     await browser.close().catch(() => {});
     server.close();

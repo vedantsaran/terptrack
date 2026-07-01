@@ -4501,3 +4501,61 @@ Next pass candidates:
 - Add a Settings history drawer for the last few generated-template audit seeds and results.
 - Broaden the rendered verifier with a mobile viewport pass for Settings previews and applied course cards.
 - Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
+
+## 2026-06-30 Pass 88
+
+Focus: broaden rendered generated-plan verification to mobile, so the high-risk Settings previews and applied course cards are checked at student phone width as well as desktop.
+
+Planned changes:
+- Add named rendered verifier viewport profiles.
+- Run the existing high-risk generated-major card checks on both desktop and mobile by default.
+- Keep a targeted `--viewports` option for faster debugging.
+- Replace brittle exact planned-credit assertions with semantic degree-credit checks.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added rendered verifier viewport profiles:
+  - `desktop`: `1440x960`.
+  - `mobile`: `390x844`, touch-enabled, `deviceScaleFactor: 2`.
+- Added `--viewport` / `--viewports` arguments; `all`, `desktop`, and `mobile` are supported.
+- Changed the default rendered verifier run to execute every selected target across both viewport profiles.
+- Refactored the verifier into a per-viewport runner with isolated browser contexts, console-error collection, page-error collection, and overflow checks.
+- Added initial Settings modal overflow checks before any major is applied.
+- Kept the existing applied-course card assertions for:
+  - `PHYS402` and `PHYS410`.
+  - `ARTT489C`.
+  - `PLSC201`.
+  - `KNES385`.
+  - `ENAE432`.
+  - `ENCE215`.
+- Replaced exact generated total strings such as `120/120` with semantic planned-credit validation:
+  - the target degree-credit number must match.
+  - planned credits must meet the target.
+  - planned credits may not exceed target by more than 2.
+- This fixed a valid Kinesiology preview variation where the live rendered preview produced `121/120` instead of the previously hard-coded `120/120`.
+
+Verification:
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/verify-rendered-generated-plans.js --majors PHYS --viewports mobile --timeout-ms 120000`.
+  - It passed Physics on the mobile viewport with a clean proxy-backed console.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It passed 12 rendered template viewport runs: 6 majors x 2 viewports.
+  - Desktop passed `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - Mobile passed `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - The run kept the proxy-backed browser console clean.
+  - The run found no document, body, modal, or review horizontal overflow in the checked states.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan and planner fixtures.
+- Ran `node scripts/verify-random-schedules.js --majors PHYS,ARTT,PLSC,KNES,ENAE,ENCE --keep-going --seed pass88-rendered-viewports`.
+  - Verified all six rendered targets against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+
+Findings for next pass:
+- The rendered generated-plan safety net now covers mobile and desktop, but the app still lacks user-visible official source links for generated requirement groups.
+- The verifier is now stronger but slower by default; the new `--viewports desktop` or `--viewports mobile` option should be used for targeted debug loops.
+
+Next pass candidates:
+- Add official per-major citation links beside generated requirement groups and Settings freshness rows.
+- Add a Settings history drawer for the last few generated-template audit seeds and results.
+- Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
+- Add a mobile rendered verifier for onboarding and Browse replacement flows, not just Settings-generated plans.
