@@ -113,6 +113,38 @@ function autoPlanFreshnessStat(label, value, detail) {
   `;
 }
 
+function autoPlanOfficialSourceLinks(review, opts = {}) {
+  const majorId = review?.majorId || state?.majorId || '';
+  let links = [];
+  if (typeof majorOfficialSources === 'function') {
+    links = majorOfficialSources(majorId, { includeGeneral: opts.includeGeneral !== false });
+  }
+  if (!links.length && Array.isArray(review?.officialSources)) links = review.officialSources;
+  const seen = new Set();
+  return links.filter(link => {
+    const url = String(link?.url || '').trim();
+    if (!url || seen.has(url)) return false;
+    seen.add(url);
+    return true;
+  }).slice(0, opts.limit || 4);
+}
+
+function autoPlanOfficialSourceLinksHtml(review, opts = {}) {
+  const links = autoPlanOfficialSourceLinks(review, opts);
+  if (!links.length) return '';
+  const label = opts.label || 'Official sources';
+  return `
+    <div class="auto-plan-official-sources ${opts.compact ? 'compact' : ''}">
+      <span>${settingsHtml(label)}</span>
+      <div>
+        ${links.map(link => `
+          <a href="${settingsHtml(link.url)}" target="_blank" rel="noopener noreferrer">${settingsHtml(link.label || 'UMD source')}</a>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function generatedTemplateFreshnessHtml(review) {
   const summary = generatedTemplateFreshnessSummary(review);
   const audit = GENERATED_TEMPLATE_AUDIT;
@@ -134,6 +166,7 @@ function generatedTemplateFreshnessHtml(review) {
         ${autoPlanFreshnessStat('last live audit', audit.checkedAt, audit.seed)}
         ${autoPlanFreshnessStat('selected preview', summary.selectedValue, summary.selectedDetail)}
       </div>
+      ${autoPlanOfficialSourceLinksHtml(review, { includeGeneral: true })}
     </div>
   `;
 }
@@ -370,6 +403,7 @@ function autoPlanSourceSamplesHtml(review, opts = {}) {
   if (!live.length && !missing.length && !placeholderSamples.length) return '';
   return `
     <div class="auto-plan-source-samples">
+      ${autoPlanOfficialSourceLinksHtml(review, { includeGeneral: false, compact: true, label: 'Requirement source' })}
       ${live.length ? `<span><strong>Live metadata</strong>${settingsHtml(live.join(', '))}</span>` : ''}
       ${missing.length ? `<span><strong>Template fallback</strong>${settingsHtml(missing.join(', '))}${metadata.missing > missing.length ? ` +${settingsHtml(metadata.missing - missing.length)} more` : ''}</span>` : ''}
       ${placeholderSamples.length ? `

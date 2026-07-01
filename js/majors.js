@@ -23,6 +23,74 @@ const COLLEGES = {
   JOUR:  'Philip Merrill College of Journalism',
 };
 
+const UMD_CATALOG_ORIGIN = 'https://academiccatalog.umd.edu';
+const UMD_CATALOG_PROGRAMS_URL = `${UMD_CATALOG_ORIGIN}/undergraduate/programs/`;
+const UMD_COURSE_CATALOG_URL = `${UMD_CATALOG_ORIGIN}/undergraduate/approved-courses/`;
+
+const MAJOR_CATALOG_SOURCES = Object.freeze({
+  AAST: { label: 'African American and Africana Studies Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/african-american-africana-studies/african-american-africana-studies-major/' },
+  ACCOUNTING: { label: 'Accounting Major', path: '/undergraduate/colleges-schools/business/accounting/accounting-major/' },
+  AMST: { label: 'American Studies Major', path: '/undergraduate/colleges-schools/arts-humanities/american-studies/american-studies-major/' },
+  ANSC: { label: 'Animal Sciences Major', path: '/undergraduate/colleges-schools/agriculture-natural-resources/animal-sciences/animal-sciences-major/' },
+  ANTH: { label: 'Anthropology Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/anthropology/anthropology-major/' },
+  AOSC: { label: 'Atmospheric and Oceanic Science Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/atmospheric-oceanic-science/atmospheric-oceanic-science-major/' },
+  ARCH: { label: 'Architecture Major', path: '/undergraduate/colleges-schools/architecture-planning-preservation/architecture-major/' },
+  AREC: { label: 'Agricultural and Resource Economics Major', path: '/undergraduate/colleges-schools/agriculture-natural-resources/agricultural-resource-economics/agricultural-resource-economics-major/' },
+  ARTH: { label: 'Art History Major', path: '/undergraduate/colleges-schools/arts-humanities/art-history-archaeology/art-history-major/' },
+  ARTT: { label: 'Studio Art Major', path: '/undergraduate/colleges-schools/arts-humanities/art/art-major/' },
+  ASTR: { label: 'Astronomy Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/astronomy/astronomy-major/' },
+  BCHM: { label: 'Biochemistry Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/chemistry-biochemistry/biochemistry-major/' },
+  BIOE: { label: 'Bioengineering Major', path: '/undergraduate/colleges-schools/engineering/bioengineering/bioengineering-major/' },
+  BIOL: { label: 'Biological Sciences Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/biological-sciences/' },
+  CCJS: { label: 'Criminology and Criminal Justice Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/criminology-criminal-justice/criminology-criminal-justice-major/' },
+  CE: { label: 'Computer Engineering Major', path: '/undergraduate/colleges-schools/engineering/electrical-and-computer/computer-engineering-major/' },
+  CHEM: { label: 'Chemistry Major (B.A., B.S.)', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/chemistry-biochemistry/chemistry-major/' },
+  CINE: { label: 'Cinema and Media Studies Major (SLLC)', path: '/undergraduate/colleges-schools/arts-humanities/languages-literatures-cultures/cinema-media-studies-major/' },
+  COMM: { label: 'Communication Major', path: '/undergraduate/colleges-schools/arts-humanities/communication/communication-major/' },
+  CS: { label: 'Computer Science Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/computer-science/computer-science-major/' },
+  ECON: { label: 'Economics Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/economics/economics-major/' },
+  EDUC: { label: 'Elementary Education Major', path: '/undergraduate/colleges-schools/education/teaching-learning-policy-leadership/elementary-education-major/' },
+  ENAE: { label: 'Aerospace Engineering Major', path: '/undergraduate/colleges-schools/engineering/aerospace-engineering/aerospace-engineering-major/' },
+  ENCE: { label: 'Civil Engineering Major', path: '/undergraduate/colleges-schools/engineering/civil-environmental-engineering/civil-environmental-engineering-major/' },
+  ENCH: { label: 'Chemical Engineering Major', path: '/undergraduate/colleges-schools/engineering/chemical-biomolecular-engineering/chemical-biomolecular-engineering-major/' },
+  ENEE: { label: 'Electrical Engineering Major', path: '/undergraduate/colleges-schools/engineering/electrical-and-computer/electrical-engineering-major/' },
+  ENFP: { label: 'Fire Protection Engineering Major', path: '/undergraduate/colleges-schools/engineering/fire-protection-engineering/fire-protection-engineering-major/' },
+  ENGL: { label: 'English Language and Literature Major', path: '/undergraduate/colleges-schools/arts-humanities/english-language-literature/english-major/' },
+  ENMA: { label: 'Materials Science and Engineering Major', path: '/undergraduate/colleges-schools/engineering/materials-science-engineering/materials-science-engineering-major/' },
+  ENME: { label: 'Mechanical Engineering Major', path: '/undergraduate/colleges-schools/engineering/mechanical-engineering/mechanical-engineering-major/' },
+  ENST: { label: 'Environmental Science and Technology Major', path: '/undergraduate/colleges-schools/agriculture-natural-resources/environmental-science-technology/environmental-science-technology-major/' },
+  FINANCE: { label: 'Finance Major', path: '/undergraduate/colleges-schools/business/finance/finance-major/' },
+  FMSC: { label: 'Family Health Major', path: '/undergraduate/colleges-schools/public-health/family-science/family-health-major/' },
+  GEOG: { label: 'Geographical Sciences Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/geographical-sciences/geographical-sciences-major/' },
+  GEOL: { label: 'Geology Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/geological-environmental-planetary-sciences/geology-major/' },
+  GVPT: { label: 'Government and Politics Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/government-politics/government-politics-major/' },
+  HESP: { label: 'Hearing and Speech Sciences Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/hearing-speech-sciences/hearing-speech-sciences-major/' },
+  HIST: { label: 'History Major', path: '/undergraduate/colleges-schools/arts-humanities/history/history-major/' },
+  HLTH: { label: 'Public Health Practice Major', path: '/undergraduate/colleges-schools/public-health/behavioral-community-health/public-health-practice-major/' },
+  INST: { label: 'Information Science Major', path: '/undergraduate/colleges-schools/information/information-science-major/' },
+  IS: { label: 'Information Systems Major', path: '/undergraduate/colleges-schools/business/decision-operations-information-technologies/information-systems-major/' },
+  JOUR: { label: 'Journalism Major', path: '/undergraduate/colleges-schools/journalism/journalism-major/' },
+  KNES: { label: 'Kinesiology Major', path: '/undergraduate/colleges-schools/public-health/kinesiology/kinesiology-major/' },
+  LING: { label: 'Linguistics Major', path: '/undergraduate/colleges-schools/arts-humanities/linguistics/linguistics-major/' },
+  MARKETING: { label: 'Marketing Major', path: '/undergraduate/colleges-schools/business/marketing/marketing-major/' },
+  MATH: { label: 'Mathematics Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/mathematics/mathematics-major/' },
+  MGMT: { label: 'Management Major', path: '/undergraduate/colleges-schools/business/management/management-major/' },
+  MUSC: { label: 'Music Major', path: '/undergraduate/colleges-schools/arts-humanities/music/music-major/' },
+  NEUR: { label: 'Neuroscience Major (CMNS)', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/biology/neuroscience-major/' },
+  NFSC: { label: 'Nutrition and Food Science Major', path: '/undergraduate/colleges-schools/agriculture-natural-resources/nutrition-food-science/nutrition-food-science-major/' },
+  PHIL: { label: 'Philosophy Major', path: '/undergraduate/colleges-schools/arts-humanities/philosophy/philosophy-major/' },
+  PHSC: { label: 'Public Health Science Major', path: '/undergraduate/colleges-schools/public-health/public-health-science/public-health-science-major/' },
+  PHYS: { label: 'Physics Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/physics/physics-major/' },
+  PLSC: { label: 'Plant Sciences Major', path: '/undergraduate/colleges-schools/agriculture-natural-resources/plant-sciences-landscape-architecture/plant-sciences-major/' },
+  PSYC: { label: 'Psychology Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/psychology/psychology-major/' },
+  SCM: { label: 'Supply Chain Management Major', path: '/undergraduate/colleges-schools/business/logistics-business-public-policy/supply-chain-management-major/' },
+  SOCY: { label: 'Sociology Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/sociology/sociology-major/' },
+  SPAN: { label: 'Spanish Language, Literatures, and Culture Major', path: '/undergraduate/colleges-schools/arts-humanities/languages-literatures-cultures/spanish-language-literatures-culture/spanish-language-literatures-culture-major/' },
+  STAT: { label: 'Mathematics Major', path: '/undergraduate/colleges-schools/computer-mathematical-natural-sciences/mathematics/mathematics-major/' },
+  THET: { label: 'Theatre Major', path: '/undergraduate/colleges-schools/arts-humanities/theatre-dance-performance-studies/theatre-major/' },
+  WMST: { label: 'Women, Gender, and Sexuality Studies Major', path: '/undergraduate/colleges-schools/arts-humanities/women-gender-sexuality-studies/womens-gender-sexuality-studies-major/' },
+});
+
 const MAJOR_TEMPLATES = {
   /* ---------- ENGINEERING ---------- */
   CE: {
@@ -1005,4 +1073,33 @@ function majorAllCodes(template) {
   (template.supportCodes || []).forEach(c => out.push({ code: c, category: 'major-support', kind: 'tech' }));
   (template.upperElectiveCodes || []).forEach(c => out.push({ code: c, category: 'major-upper', kind: 'tech' }));
   return out;
+}
+
+function majorOfficialSources(majorOrId, opts = {}) {
+  const tpl = typeof majorOrId === 'string'
+    ? getMajorTemplate(majorOrId)
+    : majorOrId;
+  const id = String(tpl?.id || majorOrId || '').trim().toUpperCase();
+  const links = [];
+  const source = MAJOR_CATALOG_SOURCES[id];
+  if (source && source.path) {
+    links.push({
+      label: source.label || 'UMD Catalog major',
+      url: `${UMD_CATALOG_ORIGIN}${source.path}`,
+      kind: 'major-catalog',
+    });
+  }
+  if (opts.includeGeneral !== false) {
+    links.push(
+      { label: 'UMD Catalog programs', url: UMD_CATALOG_PROGRAMS_URL, kind: 'catalog-index' },
+      { label: 'UMD course catalog', url: UMD_COURSE_CATALOG_URL, kind: 'course-catalog' },
+    );
+  }
+  const seen = new Set();
+  return links.filter(link => {
+    const key = String(link.url || '');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

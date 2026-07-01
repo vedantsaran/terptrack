@@ -2623,6 +2623,60 @@ h1.hero-title em {
   font-size: .66rem;
   line-height: 1.25;
 }
+.auto-plan-official-sources {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(47,125,75,.18);
+}
+.auto-plan-official-sources > span {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.auto-plan-official-sources > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+.auto-plan-official-sources a {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--blue);
+  font-size: .65rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.auto-plan-official-sources a:hover {
+  border-color: rgba(47,92,139,.34);
+  background: rgba(47,92,139,.07);
+}
+.auto-plan-official-sources.compact {
+  align-items: center;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.auto-plan-official-sources.compact > div {
+  justify-content: flex-start;
+}
 .auto-plan-source-samples {
   display: grid;
   gap: 6px;
@@ -6291,6 +6345,13 @@ h1.hero-title em {
   }
   .auto-plan-freshness-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .auto-plan-official-sources {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .auto-plan-official-sources > div {
+    justify-content: flex-start;
   }
   .auto-plan-load {
     max-width: calc(50% - 3px);

@@ -4559,3 +4559,71 @@ Next pass candidates:
 - Add a Settings history drawer for the last few generated-template audit seeds and results.
 - Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
 - Add a mobile rendered verifier for onboarding and Browse replacement flows, not just Settings-generated plans.
+
+## 2026-06-30 Pass 89
+
+Focus: add user-visible official UMD catalog source links to generated-plan evidence so students can jump from TerpTrack previews to the matching catalog requirement source.
+
+Planned changes:
+- Add a central official catalog source model for built-in majors.
+- Render selected-major official links inside Settings generated-catalog freshness rows.
+- Render selected-major source links beside generated requirement evidence.
+- Keep source links mobile-safe and included in rendered UI verification.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Scraped the official UMD Undergraduate Catalog program index to match TerpTrack built-in majors to catalog pages.
+- Added explicit source overrides where TerpTrack names differ from the current catalog labels:
+  - `STAT` uses the Mathematics Major catalog page.
+  - `ENGL` uses English Language and Literature Major.
+  - `FMSC` uses Family Health Major.
+  - `MGMT` uses Management Major.
+  - `AAST` uses African American and Africana Studies Major.
+  - `SPAN` uses Spanish Language, Literatures, and Culture Major.
+  - `HLTH` uses Public Health Practice Major.
+- Added `MAJOR_CATALOG_SOURCES` and `majorOfficialSources()` in `js/majors.js`.
+- Attached selected-major source links to auto-plan preview objects in `js/import.js`.
+- Added Settings helpers:
+  - `autoPlanOfficialSourceLinks()`.
+  - `autoPlanOfficialSourceLinksHtml()`.
+- The generated catalog freshness panel now shows:
+  - the selected official major catalog page.
+  - the UMD Catalog programs index.
+  - the UMD course catalog.
+- The generated requirement evidence block now shows a compact `Requirement source` link for the selected major.
+- Added responsive styles for official-source chips so they wrap cleanly inside Settings on mobile.
+- Bumped cache tags:
+  - `styles.css?v=71`.
+  - `js/majors.js?v=1`.
+  - `js/settings.js?v=20`.
+  - `js/import.js?v=9`.
+- Updated the rendered verifier to assert the new cache tags and source labels.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan and planner fixtures.
+  - It asserted every built-in major has a selected-major official catalog source.
+  - It asserted the Settings freshness HTML links the UMD programs index and UMD course catalog.
+  - It asserted the generated requirement evidence HTML includes the selected official source.
+- Ran a catalog URL smoke script against every `MAJOR_CATALOG_SOURCES` entry.
+  - Verified all 61 official catalog source URLs returned successful responses.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It passed 12 rendered template viewport runs: 6 majors x 2 viewports.
+  - It confirmed `styles.css?v=71`, `js/majors.js?v=1`, `js/settings.js?v=20`, and `js/import.js?v=9` loaded.
+  - It confirmed `Official sources` and `Requirement source` rendered in the real Settings review.
+  - It kept the proxy-backed browser console clean.
+  - It found no checked horizontal overflow on desktop or mobile.
+- Ran `node scripts/verify-random-schedules.js --majors PHYS,ARTT,PLSC,KNES,ENAE,ENCE --keep-going --seed pass89-official-sources`.
+  - Verified all six rendered targets against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+
+Findings for next pass:
+- Source links now exist, but users still cannot see a history of prior generated-template live audits inside Settings.
+- The official source map is static; future catalog-year support should let the app show which catalog year a template targets.
+
+Next pass candidates:
+- Add a Settings history drawer for generated-template audit seeds and results.
+- Add catalog-year/source-year metadata to generated templates and Settings source links.
+- Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
+- Add a mobile rendered verifier for onboarding and Browse replacement flows, not just Settings-generated plans.

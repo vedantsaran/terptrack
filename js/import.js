@@ -383,6 +383,9 @@ async function buildAutoPlanPreview(majorId, opts = {}) {
       programName: tpl.programName || tpl.name,
       targetCredits,
       notes: tpl.notes || '',
+      officialSources: typeof majorOfficialSources === 'function'
+        ? majorOfficialSources(tpl, { includeGeneral: false })
+        : [],
     };
     const curatedSchedule = tpl.useDefaultSchedule && typeof SCHEDULE !== 'undefined'
       ? SCHEDULE

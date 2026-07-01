@@ -348,9 +348,14 @@ async function testAutoPlanDiagnostics(context) {
       const mixedDiagnostics = autoPlanDiagnostics(mixed);
       const mixedHtml = autoPlanDiagnosticsHtml(mixed) + autoPlanSourceSamplesHtml(mixed);
       const mixedFreshnessHtml = generatedTemplateFreshnessHtml(mixed);
+      const builtInSourceMissing = listMajors()
+        .filter(major => major && !major.isCustom)
+        .filter(major => !majorOfficialSources(major, { includeGeneral: false }).length)
+        .map(major => major.id);
 
       return {
         templateCoverage: template.metadataCoverage,
+        templateOfficialSources: template.officialSources,
         templateTitles: templateDiagnostics.map(item => item.title),
         templateHtml,
         templateFreshnessSummary,
@@ -362,6 +367,7 @@ async function testAutoPlanDiagnostics(context) {
         mixedTitles: mixedDiagnostics.map(item => item.title),
         mixedHtml,
         mixedFreshnessHtml,
+        builtInSourceMissing,
       };
     })()
   `, context));
@@ -372,6 +378,7 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.templateTitles.includes('Replacement work'), 'auto plan diagnostics: should flag placeholder replacement work');
   assert(/Template fallback/.test(result.templateHtml), 'auto plan diagnostics: source samples should include template fallback row');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
+  assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
   assert(result.templateFreshnessSummary.generatedCount === 50, 'auto plan diagnostics: freshness report should count generated templates');
   assert(result.templateFreshnessSummary.requirementRows === 843, 'auto plan diagnostics: freshness report should count generated requirement rows');
@@ -379,6 +386,11 @@ async function testAutoPlanDiagnostics(context) {
   assert(/50\/50/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
   assert(/PlanetTerp/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should name the live source');
   assert(/pass87-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
+  assert(/Official sources/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render official source links');
+  assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/programs/'), 'auto plan diagnostics: freshness report should link the UMD catalog program index');
+  assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/approved-courses/'), 'auto plan diagnostics: freshness report should link the UMD course catalog');
+  assert(result.templateOfficialSources.some(link => /Mathematics Major/.test(link.label) && /academiccatalog\.umd\.edu/.test(link.url)), 'auto plan diagnostics: preview should carry selected official catalog source');
+  assert(result.builtInSourceMissing.length === 0, `auto plan diagnostics: missing official catalog sources for ${result.builtInSourceMissing.join(', ')}`);
   assert(result.templatePlaceholderSamples.length > 0, 'auto plan diagnostics: should include placeholder samples');
   assert(result.placeholderAction.genEd, 'auto plan diagnostics: placeholder action should infer a GenEd filter');
   assert(result.placeholderAction.dept === '__PROFILE_DEPTS__', 'auto plan diagnostics: placeholder action should use profile departments when profile is active');
