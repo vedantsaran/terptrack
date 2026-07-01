@@ -1031,11 +1031,33 @@ function sectionSwapSafety(section, course, selectedItems, prefs) {
   return { ok: !conflicts.length && !blocked.length, reasons };
 }
 
+function sectionBackupCandidate(sections, picked, prefs, course, selectedItems = []) {
+  if (!picked || !(sections || []).length) return null;
+  const pickedRisk = sectionSeatRisk(picked);
+  if (!sectionSeatBackupAction(pickedRisk)) return null;
+  return (sections || [])
+    .filter(section => section.section_id && section.section_id !== picked.section_id)
+    .map(section => ({
+      section,
+      risk: sectionSeatRisk(section),
+      safety: sectionSwapSafety(section, course, selectedItems, prefs),
+      score: sectionScore(section, prefs, course, selectedItems),
+    }))
+    .filter(item => item.safety.ok && ['ok', 'watch'].includes(item.risk.level))
+    .sort((a, b) => {
+      const riskRank = { ok: 2, watch: 1 };
+      return (riskRank[b.risk.level] || 0) - (riskRank[a.risk.level] || 0)
+        || b.score - a.score;
+    })[0] || null;
+}
+
 function renderSectionDecision(sections, picked, prefs, course, selectedItems = []) {
   if (!picked || !(sections || []).length) return '';
   const info = sectionRankInfo(sections, picked, prefs, course);
   const best = info.best && info.best.section_id !== picked.section_id ? info.best : null;
   const bestSafety = best ? sectionSwapSafety(best, course, selectedItems, prefs) : null;
+  const backup = sectionBackupCandidate(sections, picked, prefs, course, selectedItems);
+  const showTopAction = best && (!backup || backup.section.section_id !== best.section_id);
   const rankText = info.rank ? `Ranked ${info.rank}/${info.total} by current preferences` : 'Saved section is not in the latest posted list';
   const bestText = best
     ? `Top match: ${sectionSummary(best)} · ${sectionSeatRisk(best).detail}`
@@ -1049,7 +1071,11 @@ function renderSectionDecision(sections, picked, prefs, course, selectedItems = 
       <div class="section-decision-reasons">
         ${sectionDecisionReasons(picked, prefs, course).map(reason => `<span class="${scheduleEscape(reason.level)}">${scheduleEscape(reason.text)}</span>`).join('')}
       </div>
-      ${best ? `<div class="section-decision-action">
+      ${backup ? `<div class="section-decision-action backup">
+        <span><strong>Backup option:</strong> ${scheduleEscape(sectionSummary(backup.section))} · ${scheduleEscape(backup.risk.detail)}</span>
+        <button class="btn small primary" type="button" data-apply-best-section="${scheduleEscape(backup.section.section_id)}" data-section-action="backup" data-code="${scheduleEscape(course.code)}">Apply backup</button>
+      </div>` : ''}
+      ${showTopAction ? `<div class="section-decision-action">
         ${bestSafety.ok
           ? `<button class="btn small" type="button" data-apply-best-section="${scheduleEscape(best.section_id)}" data-code="${scheduleEscape(course.code)}">Apply top section</button>`
           : `<span>Top section not auto-applied: ${scheduleEscape(bestSafety.reasons.join(' · ') || 'not conflict-safe')}</span>`}
@@ -3201,7 +3227,7 @@ function clearScheduleSelections() {
   renderSemesters();
 }
 
-function applyBestSectionFromDecision(code, sectionId) {
+function applyBestSectionFromDecision(code, sectionId, action = 'top') {
   const semId = scheduleCurrentSemId || scheduleDefaultSemesterId();
   const term = (document.getElementById('schedule-term') || {}).value || '';
   if (!semId || !term || !code || !sectionId) return;
@@ -3224,17 +3250,18 @@ function applyBestSectionFromDecision(code, sectionId) {
     previousPinned,
     nextSection: scheduleCloneSection(section),
   });
+  const isBackup = action === 'backup';
   recordPlanChange({
     type: 'section-swap',
     source: 'Schedule',
-    title: `Applied top section for ${code}`,
+    title: `Applied ${isBackup ? 'backup' : 'top'} section for ${code}`,
     detail: `${scheduleSectionShortLabel(previousSection)} changed to ${scheduleSectionShortLabel(section)}.`,
     meta: scheduleTermLabel(term),
   }, { save: false });
   saveState();
   renderSchedule();
   renderSemesters();
-  toastSuccess(`Applied top section for ${code}. Use Undo to restore ${scheduleSectionShortLabel(previousSection)}.`);
+  toastSuccess(`Applied ${isBackup ? 'backup' : 'top'} section for ${code}. Use Undo to restore ${scheduleSectionShortLabel(previousSection)}.`);
 }
 
 function initScheduleEvents() {
@@ -3350,7 +3377,7 @@ function initScheduleEvents() {
   if (list) list.addEventListener('click', e => {
     const bestBtn = e.target.closest('[data-apply-best-section]');
     if (bestBtn) {
-      applyBestSectionFromDecision(bestBtn.dataset.code, bestBtn.dataset.applyBestSection);
+      applyBestSectionFromDecision(bestBtn.dataset.code, bestBtn.dataset.applyBestSection, bestBtn.dataset.sectionAction || 'top');
       return;
     }
     const pinBtn = e.target.closest('[data-pin-code]');

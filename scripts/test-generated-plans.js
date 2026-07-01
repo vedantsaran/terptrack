@@ -717,9 +717,36 @@ function testScheduleSeatRiskBackups(context) {
       };
       const advisor = plannerBuildAdvisor();
       const selectedItems = plannerRegistrationSelectedItems('pass103-fall', advisor.itemsBySem['pass103-fall'] || []);
+      const prefs = getSchedulePrefs('pass103-fall');
+      const cmscCourse = state.activeSchedule[0].courses[0];
+      const mathCourse = state.activeSchedule[0].courses[1];
+      const cmscPicked = state.selectedSections['pass103-fall'].CMSC132;
+      const mathPicked = state.selectedSections['pass103-fall'].MATH140;
+      const cmscBackup = {
+        section_id: 'CMSC132-0201',
+        semester: '202608',
+        number: '0201',
+        open_seats: '18',
+        seats: '30',
+        waitlist: '0',
+        meetings: [{ days: 'MW', start_time: '12:00pm', end_time: '1:15pm', building: 'IRB', room: '1201' }]
+      };
+      const mathBackup = {
+        section_id: 'MATH140-0301',
+        semester: '202608',
+        number: '0301',
+        open_seats: '14',
+        seats: '32',
+        waitlist: '0',
+        meetings: [{ days: 'TuTh', start_time: '1:00pm', end_time: '2:15pm', building: 'MTH', room: '0101' }]
+      };
       const warnings = selectedScheduleWarnings(selectedItems, getSchedulePrefs('pass103-fall'));
       const checklist = plannerRegistrationChecklist(advisor);
       const questions = plannerAdvisorQuestions(advisor, checklist);
+      const cmscBackupPick = sectionBackupCandidate([cmscPicked, cmscBackup], cmscPicked, prefs, cmscCourse, selectedItems);
+      const mathBackupPick = sectionBackupCandidate([mathPicked, mathBackup], mathPicked, prefs, mathCourse, selectedItems);
+      const cmscDecisionHtml = renderSectionDecision([cmscPicked, cmscBackup], cmscPicked, prefs, cmscCourse, selectedItems);
+      const mathDecisionHtml = renderSectionDecision([mathPicked, mathBackup], mathPicked, prefs, mathCourse, selectedItems);
       return {
         warnings,
         checklistText: plannerRegistrationChecklistText(checklist),
@@ -728,6 +755,10 @@ function testScheduleSeatRiskBackups(context) {
         questionLevels: questions.map(item => item.level),
         checklistHtml: plannerChecklistHtml(checklist),
         questionHtml: plannerAdvisorQuestionsHtml(questions),
+        cmscBackupId: cmscBackupPick && cmscBackupPick.section.section_id,
+        mathBackupId: mathBackupPick && mathBackupPick.section.section_id,
+        cmscDecisionHtml,
+        mathDecisionHtml,
       };
     })()
   `, context));
@@ -740,6 +771,10 @@ function testScheduleSeatRiskBackups(context) {
   assert(/What backup section or alternate course should I use if MATH 140 0201 fills before I register/i.test(result.questionText), 'planner questions: should ask an advisor about a low-seat backup');
   assert(result.checklistLevels.includes('danger') && result.questionLevels.includes('danger'), 'schedule seat risk: backup items should preserve urgent risk levels');
   assert(/data-planner-schedule/.test(result.checklistHtml) && /data-planner-schedule/.test(result.questionHtml), 'schedule seat risk: backup items should keep Open Schedule actions');
+  assert(result.cmscBackupId === 'CMSC132-0201', 'schedule seat risk: closed picked section should find a conflict-free backup candidate');
+  assert(result.mathBackupId === 'MATH140-0301', 'schedule seat risk: low-seat picked section should find a conflict-free backup candidate');
+  assert(/Backup option:/.test(result.cmscDecisionHtml) && /0201/.test(result.cmscDecisionHtml) && /Apply backup/.test(result.cmscDecisionHtml), 'schedule seat risk: closed picked section should render an apply-backup action');
+  assert(/Backup option:/.test(result.mathDecisionHtml) && /0301/.test(result.mathDecisionHtml) && /data-section-action="backup"/.test(result.mathDecisionHtml), 'schedule seat risk: low-seat picked section should render a backup action marker');
 
   return {
     id: 'SCHEDULE-SEAT-RISK',

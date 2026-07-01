@@ -455,6 +455,16 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       seats: '30',
       waitlist: '0',
     };
+    const mathBackup = {
+      section_id: 'MATH140-0301',
+      semester: '202608',
+      number: '0301',
+      instructors: ['Sofya Kovalevskaya'],
+      meetings: [{ days: 'TuTh', start_time: '1:00pm', end_time: '2:15pm', building: 'CSI', room: '2110' }],
+      open_seats: '18',
+      seats: '30',
+      waitlist: '0',
+    };
     const englSection = {
       section_id: 'ENGL101-0301',
       semester: '202608',
@@ -526,7 +536,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       at: '2026-07-01T12:00:00.000Z',
     }];
     scheduleSectionsCache['PASS98F:202608:CMSC131'] = [cmscSection];
-    scheduleSectionsCache['PASS98F:202608:MATH140'] = [mathSection];
+    scheduleSectionsCache['PASS98F:202608:MATH140'] = [mathSection, mathBackup];
     scheduleSectionsCache['PASS98F:202608:ENGL101'] = [englSection];
     schedulePostedTerms = ['202608'];
     scheduleCurrentSemId = 'PASS98F';
@@ -537,6 +547,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   });
   await page.waitForFunction(() => {
     const text = document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ') || '';
+    const sectionText = document.querySelector('#schedule-section-list')?.textContent?.replace(/\s+/g, ' ') || '';
     return text.includes('Schedule Output')
       && text.includes('Advisor Packet')
       && text.includes('Download advisor packet')
@@ -544,6 +555,9 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('ENGL 101 needs a section choice')
       && text.includes('MATH 140 0201: 2 seats open')
       && text.includes('Pick a backup section now before it fills')
+      && sectionText.includes('Backup option')
+      && sectionText.includes('0301')
+      && sectionText.includes('Apply backup')
       && text.includes('Picked CMSC 131 0101');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-advisor-filter="blockers"]').click({ timeout: opts.timeoutMs });
@@ -581,7 +595,27 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(snapshot.scheduleText.includes('Registration Blockers'), 'advisor packet: rendered output should show blocker view');
   assert(snapshot.scheduleText.includes('MATH 140 0201: 2 seats open'), 'advisor packet: mobile snapshot should include low-seat backup warning');
   assertNoOverflow('advisor packet mobile', snapshot);
-  console.log('Advisor packet [mobile]: rendered blocker view, catalog warning, low-seat backup warning, export action, and no overflow.');
+
+  await page.locator('[data-section-action="backup"][data-code="MATH 140"]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const picked = getSelectedSection('PASS98F', 'MATH 140');
+    const change = (state.recentChanges || [])[0] || {};
+    const text = document.querySelector('#schedule-section-list')?.textContent?.replace(/\s+/g, ' ') || '';
+    return picked?.section_id === 'MATH140-0301'
+      && /Applied backup section for MATH 140/.test(change.title || '')
+      && text.includes('18 seats open');
+  }, null, { timeout: opts.timeoutMs });
+  const backupResult = await page.evaluate(() => ({
+    selected: getSelectedSection('PASS98F', 'MATH 140')?.section_id || '',
+    changeTitle: (state.recentChanges || [])[0]?.title || '',
+    outputText: document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+  }));
+  assert(backupResult.selected === 'MATH140-0301', 'advisor packet: Apply backup should save the safer section');
+  assert(/Applied backup section for MATH 140/.test(backupResult.changeTitle), 'advisor packet: Apply backup should record a backup-specific change');
+  assert(!/MATH 140 0201: 2 seats open/.test(backupResult.outputText), 'advisor packet: backup apply should clear the prior low-seat warning');
+  const backupSnapshot = await page.evaluate(snapshotScript());
+  assertNoOverflow('advisor packet backup apply mobile', backupSnapshot);
+  console.log('Advisor packet [mobile]: rendered blocker view, catalog warning, low-seat backup warning, backup apply action, export action, and no overflow.');
 }
 
 async function main() {

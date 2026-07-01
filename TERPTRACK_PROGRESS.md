@@ -5481,3 +5481,63 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass103-seat-risk-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 104
+
+Focus: make risky picked-section warnings actionable by recommending a conflict-free backup section students can apply immediately.
+
+Planned changes:
+- Find a safer posted backup when a saved section is closed, low-seat, or watch-list.
+- Only recommend backups that fit existing selected-section conflicts and unavailable-time preferences.
+- Render the backup candidate directly inside the existing section decision card.
+- Reuse the existing section-swap save, undo, and recent-change path for `Apply backup`.
+- Extend generated and rendered workflow coverage so the backup option is visible and the apply action works.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `sectionBackupCandidate()` in `js/schedule.js`.
+  - It activates only for risky picked sections.
+  - It filters to conflict-free posted sections with `ok` or `watch` seat risk.
+  - It ranks safe candidates by seat risk and current section score.
+- Updated `renderSectionDecision()`:
+  - risky picks now show `Backup option` with section summary and seat detail.
+  - the backup action uses a primary `Apply backup` button.
+  - duplicate top-section actions are suppressed when the backup is already the top match.
+- Updated `applyBestSectionFromDecision()`:
+  - accepts a backup/top action hint.
+  - records `Applied backup section for ...` in recent changes when the backup button is used.
+  - shows backup-specific success copy while preserving undo.
+- Bumped cache tag:
+  - `js/schedule.js?v=36`.
+- Extended `SCHEDULE-SEAT-RISK` fixture coverage:
+  - verifies backup-candidate selection for a closed picked section.
+  - verifies backup-candidate selection for a low-seat picked section.
+  - verifies the rendered decision card includes `Backup option`, `Apply backup`, and the backup action marker.
+- Extended rendered mobile advisor packet verification:
+  - seeds a safer `MATH 140 0301` backup.
+  - verifies the Schedule section list shows the backup option.
+  - verifies the advisor packet still exports the original low-seat warning before applying the backup.
+  - clicks `Apply backup`, verifies `MATH140-0301` is saved, verifies a backup-specific recent change, and confirms the old low-seat warning clears.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the extended `SCHEDULE-SEAT-RISK` fixture plus the existing generated-plan regression suite.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet export and the new backup apply action.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the extended `SCHEDULE-SEAT-RISK` backup coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass104-backup-section-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
