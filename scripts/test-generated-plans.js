@@ -791,7 +791,20 @@ function testScheduleRegistrationReadiness(context) {
         seats: '30',
         waitlist: '0',
       };
-      state.activeSchedule = [{ id: 'PASS112F', name: 'Fall 2026', year: 'Year 1', courses }];
+      state.activeSchedule = [{
+        id: 'PASS112F',
+        name: 'Fall 2026',
+        year: 'Year 1',
+        courses
+      }, {
+        id: 'PASS112S',
+        name: 'Spring 2027',
+        year: 'Year 1',
+        courses: [
+          { code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4, kind: 'core', category: 'major-core', prereqs: ['CMSC 131'] },
+          { code: 'MATH 141', title: 'Calculus II', cr: 4, kind: 'core', category: 'major-core', prereqs: ['MATH 140'] },
+        ],
+      }];
       state.customCourses = [];
       state.courses = {};
       state.selectedSections = {};
@@ -828,6 +841,7 @@ function testScheduleRegistrationReadiness(context) {
         text,
         outputHtml: output.html,
         outputText: output.text,
+        outputRegistrationOrder: output.registrationOrder,
         outputRegistrationText: output.registrationText,
         outputRegistrationFilename: output.registrationFilename,
         outputCalendar: output.calendar,
@@ -863,6 +877,11 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
   assert(/Recommended fixes/.test(result.outputHtml) && /Generate alternatives/.test(result.outputHtml), 'registration readiness: schedule output HTML should include fix guidance');
   assert(/Quick actions/.test(result.outputHtml) && /data-readiness-action="alternatives"/.test(result.outputHtml), 'registration readiness: schedule output HTML should include action buttons');
+  assert(result.outputRegistrationOrder[0]?.courseCode === 'MATH 140' && result.outputRegistrationOrder[0]?.label === 'Resolve first', 'registration order: low-seat conflicting section should be first');
+  assert(result.outputRegistrationOrder.some(row => row.courseCode === 'CMSC 131' && row.unlockCount === 1), 'registration order: should count later prerequisite unlocks');
+  assert(/Enrollment Order/.test(result.outputHtml) && /MATH 140 0201/.test(result.outputHtml), 'registration order: schedule output HTML should include ranked section rows');
+  assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.outputText), 'registration order: schedule text should include ordered registration handoff');
+  assert(/Why: [^\n]*unlocks 1 later course/.test(result.outputText), 'registration order: schedule text should explain prerequisite unlocks');
   assert(/^terp-track-registration-.*fall-2026\.txt$/.test(result.outputRegistrationFilename), 'registration list: filename should be a term-specific .txt export');
   assert(/Terp Track Registration List/.test(result.outputRegistrationText) && /Testudo checklist/.test(result.outputRegistrationText), 'registration list: text should identify itself as a Testudo checklist');
   assert(/Posted UMD term: Fall 2026 \(202608\)/.test(result.outputRegistrationText), 'registration list: text should include posted UMD term code');
@@ -870,6 +889,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Missing section picks:[\s\S]*ENGL 101/.test(result.outputRegistrationText), 'registration list: text should include missing section picks');
   assert(/Conflicts to resolve before registration:[\s\S]*CMSC 131 overlaps MATH 140/.test(result.outputRegistrationText), 'registration list: text should include conflict handoff');
   assert(/MATH 140 0201: 2 seats open/.test(result.outputRegistrationText), 'registration list: text should include low-seat warning');
+  assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.outputRegistrationText), 'registration list: text should include the enrollment order');
   assert(/Before submitting in Testudo:[\s\S]*Confirm open seats/.test(result.outputRegistrationText), 'registration list: text should include final Testudo checks');
   assert(/^terp-track-calendar-.*fall-2026\.ics$/.test(result.outputCalendarFilename), 'schedule calendar: filename should be an .ics calendar export');
   assert(result.outputCalendarEventCount === 3, 'schedule calendar: two CMSC meetings and one MATH meeting should produce three VEVENTs');

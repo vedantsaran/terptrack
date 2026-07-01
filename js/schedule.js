@@ -1814,6 +1814,158 @@ function scheduleRegistrationReadinessText(readiness) {
   ];
 }
 
+function scheduleFutureUnlockCount(course, semId = '') {
+  const target = normalizeCode(course?.code || '');
+  if (!target) return 0;
+  const semesters = getAllSemesters();
+  const startIdx = semId ? semesters.findIndex(sem => sem.id === semId) : -1;
+  const unlocked = new Set();
+  semesters.forEach((sem, idx) => {
+    if (startIdx >= 0 && idx <= startIdx) return;
+    const courses = [
+      ...(sem.courses || []),
+      ...(state.customCourses || []).filter(item => item.semId === sem.id),
+    ];
+    courses.forEach(nextCourse => {
+      const nextCode = normalizeCode(nextCourse.code || '');
+      if (!nextCode || nextCode === target) return;
+      const prereqs = Array.isArray(nextCourse.prereqs) ? nextCourse.prereqs : [];
+      if (prereqs.some(req => normalizeCode(req) === target)) unlocked.add(nextCode);
+    });
+  });
+  return unlocked.size;
+}
+
+function scheduleRegistrationCoursePriority(course, unlockCount = 0) {
+  const kind = String(course?.kind || '').toLowerCase();
+  const category = String(course?.category || '').toLowerCase();
+  const labels = [];
+  let score = 0;
+  if (kind === 'critical') {
+    score += 95;
+    labels.push('critical path');
+  }
+  if (course?.isGoal || kind === 'goal') {
+    score += 85;
+    labels.push('goal course');
+  }
+  if (kind === 'core' || category.includes('core')) {
+    score += 75;
+    labels.push('major/core requirement');
+  }
+  if (category.includes('gened') || kind === 'gened') {
+    score += 35;
+    labels.push('GenEd requirement');
+  }
+  if (unlockCount) {
+    score += Math.min(160, unlockCount * 45);
+    labels.push(`unlocks ${unlockCount} later course${unlockCount === 1 ? '' : 's'}`);
+  }
+  return {
+    score,
+    label: labels.length ? labels.join(' · ') : 'planned course',
+  };
+}
+
+function scheduleRegistrationConflictCount(item, conflicts = []) {
+  const code = normalizeCode(item?.course?.code || item?.section?.course || '');
+  if (!code) return 0;
+  return (conflicts || []).filter(conflict => (
+    normalizeCode(conflict?.a?.code || '') === code
+    || normalizeCode(conflict?.b?.code || '') === code
+  )).length;
+}
+
+function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
+  const riskScores = { closed: 1200, risk: 930, watch: 620, unknown: 430, ok: 190 };
+  return (selectedItems || [])
+    .map((item, index) => {
+      const risk = sectionSeatRisk(item.section);
+      const conflictCount = scheduleRegistrationConflictCount(item, conflicts);
+      const unlockCount = scheduleFutureUnlockCount(item.course, semId);
+      const priority = scheduleRegistrationCoursePriority(item.course, unlockCount);
+      const sectionLabel = scheduleSectionShortLabel(item.section);
+      const reasons = [];
+      if (conflictCount) reasons.push(`${conflictCount} conflict${conflictCount === 1 ? '' : 's'} to resolve`);
+      if (risk.level === 'closed') reasons.push(risk.wait ? `${risk.wait} waitlisted` : 'closed section');
+      else if (risk.level === 'risk') reasons.push(risk.detail);
+      else if (risk.level === 'watch' || risk.level === 'unknown') reasons.push(risk.detail);
+      if (priority.label) reasons.push(priority.label);
+      if (!sectionHasTimedMeetings(item.section)) reasons.push('time TBA');
+      const openBonus = risk.open === null ? 0 : Math.max(0, 42 - risk.open);
+      const score = (riskScores[risk.level] || 0)
+        + openBonus
+        + priority.score
+        + (conflictCount * 260)
+        + (item.section?.pinned ? 25 : 0);
+      const label = conflictCount ? 'Resolve first'
+        : risk.level === 'closed' ? 'Backup/waitlist first'
+          : risk.level === 'risk' ? 'Enroll first'
+            : risk.level === 'watch' || risk.level === 'unknown' ? 'Enroll early'
+              : unlockCount || priority.score >= 70 ? 'High priority'
+                : 'Normal priority';
+      return {
+        index,
+        score,
+        label,
+        courseCode: item.course?.code || displayCode(item.section?.course || ''),
+        title: item.course?.title || '',
+        sectionLabel,
+        sectionId: item.section?.section_id || '',
+        seatDetail: risk.detail,
+        riskLevel: risk.level,
+        conflictCount,
+        unlockCount,
+        reasons: Array.from(new Set(reasons)).slice(0, 4),
+      };
+    })
+    .sort((a, b) => b.score - a.score || a.courseCode.localeCompare(b.courseCode) || a.index - b.index)
+    .map((row, idx) => ({ ...row, order: idx + 1 }));
+}
+
+function renderScheduleRegistrationOrderHtml(rows, heading = 'Enrollment Order') {
+  const ordered = Array.isArray(rows) ? rows : [];
+  return `
+    <section class="schedule-registration-order">
+      <div class="schedule-registration-order-head">
+        <div>
+          <h4>${scheduleEscape(heading)}</h4>
+          <span>Use after fixing blockers. Submit tight seats, waitlists, and prerequisite anchors first.</span>
+        </div>
+        <strong>${ordered.length ? `${ordered.length} picked` : 'No picks'}</strong>
+      </div>
+      ${ordered.length ? `
+        <ol class="schedule-registration-order-list">
+          ${ordered.slice(0, 8).map(row => `
+            <li class="${scheduleEscape(row.riskLevel)}">
+              <b>${row.order}</b>
+              <div>
+                <strong>${scheduleEscape(row.courseCode)} ${scheduleEscape(row.sectionLabel)}</strong>
+                <span>${scheduleEscape(row.label)} · ${scheduleEscape(row.seatDetail)}</span>
+                <em>${scheduleEscape(row.reasons.join(' · ') || 'Confirm in Testudo before submitting.')}</em>
+              </div>
+            </li>
+          `).join('')}
+        </ol>
+      ` : '<p>Pick real sections to generate an enrollment order.</p>'}
+    </section>
+  `;
+}
+
+function scheduleRegistrationOrderText(rows) {
+  const ordered = Array.isArray(rows) ? rows : [];
+  const lines = ['', 'Suggested enrollment order:'];
+  if (!ordered.length) {
+    lines.push('- Pick real sections to generate an enrollment order.');
+    return lines;
+  }
+  ordered.forEach(row => {
+    lines.push(`${row.order}. ${row.courseCode} ${row.sectionLabel} - ${row.label}; ${row.seatDetail}${row.sectionId ? `; Section ID ${row.sectionId}` : ''}.`);
+    if (row.reasons.length) lines.push(`   Why: ${row.reasons.join(' / ')}`);
+  });
+  return lines;
+}
+
 function scheduleSectionMeetingLines(section) {
   const timed = (section && section.meetings || []).filter(m => m.days && m.start_time && m.end_time);
   if (!timed.length) return ['Time TBA'];
@@ -2707,6 +2859,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   const auditIssues = outputOptions.auditIssues ? scheduleAdvisorAuditIssues(6) : [];
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   const context = scheduleAdvisorFilterContext(
     sem?.id || '',
     selectedItems,
@@ -2731,6 +2884,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
   lines.push(...scheduleRegistrationReadinessText(readiness));
+  lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleAdvisorCatalogYearText());
   if (outputOptions.auditIssues) lines.push(...scheduleAdvisorAuditSummaryText(auditIssues));
   if (outputOptions.auditIssues && auditIssues.length) lines.push(...scheduleAdvisorLiveLinkNoticeText());
@@ -2830,6 +2984,17 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-readiness-actions div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
     .schedule-readiness-actions .btn{border:1px solid #d8cec0;border-radius:999px;background:#fff;color:#2e5c8b;font-size:11px;font-weight:700;padding:5px 8px}
     .schedule-readiness-actions .btn.primary{border-color:#8b0000;background:#8b0000;color:#fff}
+    .schedule-registration-order{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-registration-order-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-registration-order-head h4{margin:0}
+    .schedule-registration-order-head span,.schedule-registration-order p{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
+    .schedule-registration-order-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-registration-order-list{display:grid;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+    .schedule-registration-order-list li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;border-top:1px solid #eee4d8;padding-top:6px}
+    .schedule-registration-order-list li:first-child{border-top:none;padding-top:0}
+    .schedule-registration-order-list b{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;background:#8b0000;color:#fff;font-size:12px}
+    .schedule-registration-order-list strong,.schedule-registration-order-list span,.schedule-registration-order-list em{display:block}
+    .schedule-registration-order-list span,.schedule-registration-order-list em{color:#5d5962;font-size:12px;font-style:normal;line-height:1.35}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
@@ -2859,7 +3024,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-order-head{flex-direction:column}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
@@ -2880,6 +3045,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
   const generated = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   return `
     <article class="schedule-advisor-packet" id="schedule-advisor-packet">
       <div class="schedule-advisor-head">
@@ -2917,6 +3083,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         ${outputOptions.unscheduled ? (unscheduled.length ? `<span>${unscheduled.length} unscheduled course${unscheduled.length === 1 ? '' : 's'}</span>` : '<span>All current-term courses scheduled</span>') : ''}
       </div>
       ${scheduleRegistrationReadinessHtml(readiness)}
+      ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${scheduleAdvisorCatalogYearHtml()}
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
@@ -2960,6 +3127,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   const lines = [
     `Terp Track Schedule`,
     `Plan semester: ${sem?.name || 'Selected semester'}`,
@@ -2972,6 +3140,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   lines.push(`Timing fit: ${timing.score}/100 - ${timing.label}`);
   timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
   lines.push(...scheduleRegistrationReadinessText(readiness));
+  lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push('', 'Picked sections:');
 
   if (!selectedItems.length) lines.push('- No picked sections yet.');
@@ -3011,6 +3180,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
     ? unscheduledOverride
     : courseList.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const readiness = scheduleRegistrationReadiness(courseList, selectedList, conflicts, warnings, prefs, unscheduled);
+  const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedList, conflicts);
   const lines = [
     'Terp Track Registration List',
     'Use this as a Testudo checklist. Confirm every section, seat, restriction, and prerequisite in Testudo before enrolling.',
@@ -3034,6 +3204,8 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
       lines.push(`  Instructor: ${scheduleInstructorLine(item.section)}`);
       lines.push(`  Seats: ${risk.detail}`);
     });
+
+  lines.push(...scheduleRegistrationOrderText(registrationOrder));
 
   if (unscheduled.length) {
     lines.push('', 'Missing section picks:');
@@ -3120,6 +3292,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   ];
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const registrationOrder = scheduleRegistrationOrder(sem?.id || semId, selectedItems, conflicts);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions);
   const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled);
@@ -3156,6 +3329,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       </div>
       ${outputOptions.preferences ? `<p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       ${scheduleRegistrationReadinessHtml(readiness)}
+      ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleOutputWeek(blocks)}
       <table class="schedule-output-table">
         <thead><tr><th>Course</th><th>Section</th><th>Meetings</th><th>Instructor</th><th>Seats</th></tr></thead>
@@ -3173,6 +3347,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   return {
     text,
     filename: scheduleOutputFilename(term),
+    registrationOrder,
     registrationText,
     registrationFilename: scheduleRegistrationFilename(term),
     html: scheduleHtml,

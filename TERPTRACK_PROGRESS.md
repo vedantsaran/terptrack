@@ -6402,3 +6402,76 @@ Verification:
   - It randomly verified `AOSC`, `AMST`, `JOUR`, `ENGL`, `ENAE`, and `ENCH` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 119
+
+Focus: turn picked real sections into a ranked enrollment order students can follow during registration.
+
+Planned changes:
+- Add a deterministic enrollment-order ranking for picked sections.
+- Prioritize tight seats, waitlisted/closed sections, conflict review, core/goal courses, GenEds, and courses that unlock later planned work.
+- Render the order in the schedule output and advisor packet.
+- Include the same order in schedule `.txt`, registration-list `.txt`, advisor text, and advisor HTML exports.
+- Remove external page-head font fetches so local-first browser verification is not dependent on Google Fonts.
+- Verify the new order in fixture and rendered mobile workflows.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added registration-order helpers in `js/schedule.js`.
+  - `scheduleFutureUnlockCount()` counts later planned courses that depend on a picked course.
+  - `scheduleRegistrationCoursePriority()` scores core, goal, critical, GenEd, and prerequisite-anchor courses.
+  - `scheduleRegistrationOrder()` ranks picked sections by seat urgency, conflicts, academic priority, unlock count, and pinned status.
+  - `renderScheduleRegistrationOrderHtml()` renders the compact Enrollment Order card.
+  - `scheduleRegistrationOrderText()` emits the same order for text exports.
+- Added the Enrollment Order card to:
+  - The main schedule output.
+  - The advisor packet.
+  - The standalone advisor HTML export.
+- Added the ranked order to:
+  - The schedule summary `.txt`.
+  - The Testudo-facing registration list `.txt`.
+  - The advisor text export.
+- Returned `registrationOrder` from `buildScheduleOutput()` for regression coverage.
+- Added production and standalone export CSS for the order card.
+- Removed Google Fonts `preconnect` and stylesheet links from `index.html`.
+  - This keeps the app more local-first and stopped intermittent `net::ERR_NETWORK_IO_SUSPENDED` browser-console noise in rendered generated-plan verification.
+- Bumped cache tags:
+  - `styles.css?v=89`.
+  - `js/schedule.js?v=43`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts the order ranks a low-seat conflicting MATH section first, counts a later prerequisite unlock, renders Enrollment Order HTML, includes the ordered handoff in schedule text, and includes it in the registration-list export.
+  - Rendered mobile advisor packet now asserts Enrollment Order in the live UI, registration export, advisor text, advisor HTML, and no-overflow mobile snapshot.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with enrollment-order assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, enrollment order, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - The first run reached rendered generated-plan verification, rendered all desktop target cards, then failed on transient browser-console `net::ERR_NETWORK_IO_SUSPENDED` resource errors.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=120000`.
+  - It reproduced the same external-resource console error after rendering generated-plan cards.
+- Removed external Google Fonts page-head fetches.
+- Re-ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=120000`.
+  - It passed all 12 generated-template viewport runs with clean proxy-backed console output.
+- Re-ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including enrollment-order coverage.
+  - It passed 12 rendered generated-plan viewport runs with clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with enrollment order.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass119-enrollment-order-live`.
+  - It randomly verified `ANSC`, `ACCOUNTING`, `GEOG`, `NFSC`, `SCM`, and `IS` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
