@@ -3934,6 +3934,72 @@ h1.hero-title em {
   font-style: normal;
   line-height: 1.35;
 }
+.schedule-registration-backups {
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 10px;
+}
+.schedule-registration-backups-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.schedule-registration-backups-head h4 {
+  margin: 0;
+  font-family: 'Fraunces', serif;
+}
+.schedule-registration-backups-head span,
+.schedule-registration-backups p {
+  display: block;
+  margin: 2px 0 0;
+  color: var(--slate);
+  font-size: .74rem;
+  line-height: 1.35;
+}
+.schedule-registration-backups-head strong {
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-registration-backup-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.schedule-registration-backup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.schedule-registration-backup:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.schedule-registration-backup strong,
+.schedule-registration-backup b,
+.schedule-registration-backup span,
+.schedule-registration-backup em {
+  display: block;
+}
+.schedule-registration-backup strong,
+.schedule-registration-backup b {
+  font-size: .78rem;
+}
+.schedule-registration-backup span,
+.schedule-registration-backup em {
+  color: var(--slate);
+  font-size: .72rem;
+  font-style: normal;
+  line-height: 1.35;
+}
 .schedule-output {
   margin: -4px 0 18px;
 }
@@ -7247,6 +7313,13 @@ h1.hero-title em {
   .schedule-registration-order-head {
     flex-direction: column;
     gap: 4px;
+  }
+  .schedule-registration-backups-head {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .schedule-registration-backup {
+    grid-template-columns: 1fr;
   }
   .schedule-output-head,
   .schedule-print-head {

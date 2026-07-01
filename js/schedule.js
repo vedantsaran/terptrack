@@ -1966,6 +1966,95 @@ function scheduleRegistrationOrderText(rows) {
   return lines;
 }
 
+function scheduleRegistrationBackupPlan(selectedItems = [], sectionsByCode = {}, prefs = DEFAULT_SCHEDULE_PREFS, conflicts = []) {
+  const riskScores = { closed: 4, risk: 3, watch: 2, unknown: 1, ok: 0 };
+  return (selectedItems || [])
+    .map(item => {
+      const risk = sectionSeatRisk(item.section);
+      const action = sectionSeatBackupAction(risk);
+      if (!action) return null;
+      const sections = sectionsByCode[normalizeCode(item.course?.code || '')] || [];
+      const backup = sectionBackupCandidate(sections, item.section, prefs, item.course, selectedItems);
+      const conflictCount = scheduleRegistrationConflictCount(item, conflicts);
+      const backupSection = backup?.section || null;
+      const backupRisk = backupSection ? sectionSeatRisk(backupSection) : null;
+      return {
+        courseCode: item.course?.code || displayCode(item.section?.course || ''),
+        title: item.course?.title || '',
+        primaryLabel: scheduleSectionShortLabel(item.section),
+        primaryId: item.section?.section_id || '',
+        primarySeatDetail: risk.detail,
+        riskLevel: risk.level,
+        action,
+        conflictCount,
+        backupLabel: backupSection ? scheduleSectionShortLabel(backupSection) : '',
+        backupId: backupSection?.section_id || '',
+        backupSeatDetail: backupRisk?.detail || '',
+        backupMeetings: backupSection ? scheduleSectionMeetingLines(backupSection).join('; ') : '',
+        backupInstructor: backupSection ? scheduleInstructorLine(backupSection) : '',
+        status: backupSection ? 'ready' : 'missing',
+        note: backupSection
+          ? 'Keep this alternate section ready in case seats change before your registration time.'
+          : 'No conflict-safe open backup was found in posted sections; choose another section manually or ask for an alternate course.',
+        score: (riskScores[risk.level] || 0) * 100 + (conflictCount * 25),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score || a.courseCode.localeCompare(b.courseCode));
+}
+
+function renderScheduleRegistrationBackupsHtml(rows, heading = 'Backup Plan') {
+  const backups = Array.isArray(rows) ? rows : [];
+  const readyCount = backups.filter(row => row.status === 'ready').length;
+  return `
+    <section class="schedule-registration-backups">
+      <div class="schedule-registration-backups-head">
+        <div>
+          <h4>${scheduleEscape(heading)}</h4>
+          <span>Keep alternates ready for low-seat, waitlisted, TBA, or closed picks.</span>
+        </div>
+        <strong>${backups.length ? `${readyCount}/${backups.length} ready` : 'No risks'}</strong>
+      </div>
+      ${backups.length ? `
+        <div class="schedule-registration-backup-list">
+          ${backups.slice(0, 6).map(row => `
+            <div class="schedule-registration-backup ${scheduleEscape(row.status)} ${scheduleEscape(row.riskLevel)}">
+              <div>
+                <strong>${scheduleEscape(row.courseCode)} primary ${scheduleEscape(row.primaryLabel)}</strong>
+                <span>${scheduleEscape(row.primarySeatDetail)} · ${scheduleEscape(row.action)}</span>
+              </div>
+              <div>
+                ${row.backupId
+                  ? `<b>Backup ${scheduleEscape(row.backupLabel)}</b><span>${scheduleEscape(row.backupSeatDetail)} · ${scheduleEscape(row.backupMeetings)} · ${scheduleEscape(row.backupInstructor)}</span>`
+                  : '<b>No ready backup found</b>'}
+                <em>${scheduleEscape(row.note)}</em>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p>No backup sections needed for the current picked sections.</p>'}
+    </section>
+  `;
+}
+
+function scheduleRegistrationBackupText(rows) {
+  const backups = Array.isArray(rows) ? rows : [];
+  const lines = ['', 'Backup sections:'];
+  if (!backups.length) {
+    lines.push('- No backup sections needed for the current picked sections.');
+    return lines;
+  }
+  backups.forEach(row => {
+    lines.push(`- ${row.courseCode} primary ${row.primaryLabel}: ${row.primarySeatDetail}. ${row.action}`);
+    if (row.backupId) {
+      lines.push(`  Backup: ${row.backupLabel}; Section ID ${row.backupId}; ${row.backupSeatDetail}; ${row.backupMeetings}; ${row.backupInstructor}.`);
+    } else {
+      lines.push(`  Backup: none found. ${row.note}`);
+    }
+  });
+  return lines;
+}
+
 function scheduleSectionMeetingLines(section) {
   const timed = (section && section.meetings || []).filter(m => m.days && m.start_time && m.end_time);
   if (!timed.length) return ['Time TBA'];
@@ -2851,7 +2940,7 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
   return { html, totalCourses, shownCourses, totalCredits, shownCredits };
 }
 
-function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions()) {
+function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = []) {
   const stats = scheduleAdvisorStats();
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
@@ -2885,6 +2974,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
+  lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push(...scheduleAdvisorCatalogYearText());
   if (outputOptions.auditIssues) lines.push(...scheduleAdvisorAuditSummaryText(auditIssues));
   if (outputOptions.auditIssues && auditIssues.length) lines.push(...scheduleAdvisorLiveLinkNoticeText());
@@ -2995,6 +3085,16 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-registration-order-list b{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;background:#8b0000;color:#fff;font-size:12px}
     .schedule-registration-order-list strong,.schedule-registration-order-list span,.schedule-registration-order-list em{display:block}
     .schedule-registration-order-list span,.schedule-registration-order-list em{color:#5d5962;font-size:12px;font-style:normal;line-height:1.35}
+    .schedule-registration-backups{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-registration-backups-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-registration-backups-head h4{margin:0}
+    .schedule-registration-backups-head span,.schedule-registration-backups p{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
+    .schedule-registration-backups-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-registration-backup-list{display:grid;gap:6px;margin-top:8px}
+    .schedule-registration-backup{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
+    .schedule-registration-backup:first-child{border-top:none;padding-top:0}
+    .schedule-registration-backup strong,.schedule-registration-backup b,.schedule-registration-backup span,.schedule-registration-backup em{display:block}
+    .schedule-registration-backup span,.schedule-registration-backup em{color:#5d5962;font-style:normal;line-height:1.35}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
@@ -3024,12 +3124,12 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-order-head{flex-direction:column}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions()) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = []) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
@@ -3084,6 +3184,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       </div>
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
+      ${renderScheduleRegistrationBackupsHtml(backupRows)}
       ${scheduleAdvisorCatalogYearHtml()}
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
@@ -3121,7 +3222,7 @@ ${advisorHtml}
 </html>`;
 }
 
-function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions()) {
+function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = []) {
   const outputOptions = normalizeScheduleOutputOptions(options);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
@@ -3141,6 +3242,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
+  lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push('', 'Picked sections:');
 
   if (!selectedItems.length) lines.push('- No picked sections yet.');
@@ -3172,7 +3274,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   return lines.join('\n');
 }
 
-function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null) {
+function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = []) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
   const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course.code)));
@@ -3206,6 +3308,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
     });
 
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
+  lines.push(...scheduleRegistrationBackupText(backupRows));
 
   if (unscheduled.length) {
     lines.push('', 'Missing section picks:');
@@ -3275,7 +3378,7 @@ function renderScheduleOutputWeek(blocks) {
   `;
 }
 
-function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, warnings, prefs) {
+function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, warnings, prefs, sectionsByCode = {}) {
   const sem = getAllSemesters().find(s => s.id === semId);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
@@ -3293,9 +3396,10 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || semId, selectedItems, conflicts);
+  const registrationBackupPlan = scheduleRegistrationBackupPlan(selectedItems, sectionsByCode, prefs, conflicts);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
-  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions);
-  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan);
+  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan);
   const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
   const courseRows = selectedItems
     .slice()
@@ -3330,6 +3434,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${outputOptions.preferences ? `<p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
+      ${renderScheduleRegistrationBackupsHtml(registrationBackupPlan)}
       ${renderScheduleOutputWeek(blocks)}
       <table class="schedule-output-table">
         <thead><tr><th>Course</th><th>Section</th><th>Meetings</th><th>Instructor</th><th>Seats</th></tr></thead>
@@ -3340,14 +3445,15 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${scheduleChangeDigestHtml(changes, 'Schedule summary')}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
-  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions);
+  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan);
 
   return {
     text,
     filename: scheduleOutputFilename(term),
     registrationOrder,
+    registrationBackupPlan,
     registrationText,
     registrationFilename: scheduleRegistrationFilename(term),
     html: scheduleHtml,
@@ -3410,10 +3516,10 @@ function renderScheduleOutputOptions(options = getScheduleOutputOptions()) {
   `;
 }
 
-function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflicts, warnings, prefs) {
+function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflicts, warnings, prefs, sectionsByCode = {}) {
   const root = document.getElementById('schedule-output');
   if (!root) return;
-  scheduleOutputCache = buildScheduleOutput(semId, term, courses, selectedItems, conflicts, warnings, prefs);
+  scheduleOutputCache = buildScheduleOutput(semId, term, courses, selectedItems, conflicts, warnings, prefs, sectionsByCode);
   root.innerHTML = `
     <div class="schedule-output-panel">
       <div class="schedule-output-head">
@@ -3973,7 +4079,7 @@ async function renderSchedule(opts = {}) {
   renderScheduleSummary(courses, selectedItems, conflicts, warnings, term);
   renderScheduleWarnings(warnings);
   renderScheduleFitPanel(selectedItems, prefs, conflicts);
-  renderScheduleOutputPanel(semId, term, courses, selectedItems, conflicts, warnings, prefs);
+  renderScheduleOutputPanel(semId, term, courses, selectedItems, conflicts, warnings, prefs, sectionsByCode);
   renderScheduleUndo();
   renderScheduleAlternatives([]);
   renderWeekGrid([...unavailableBlocks, ...blocks], conflicts);

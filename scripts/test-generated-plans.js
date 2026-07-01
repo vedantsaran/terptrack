@@ -791,6 +791,17 @@ function testScheduleRegistrationReadiness(context) {
         seats: '30',
         waitlist: '0',
       };
+      const mathBackup = {
+        course: 'MATH140',
+        section_id: 'MATH140-0301',
+        semester: '202608',
+        number: '0301',
+        instructors: ['Sofya Kovalevskaya'],
+        meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'MTH', room: '0102' }],
+        open_seats: '18',
+        seats: '30',
+        waitlist: '0',
+      };
       state.activeSchedule = [{
         id: 'PASS112F',
         name: 'Fall 2026',
@@ -825,7 +836,12 @@ function testScheduleRegistrationReadiness(context) {
       const gateMap = Object.fromEntries(readiness.gates.map(gate => [gate.id, gate]));
       const html = scheduleRegistrationReadinessHtml(readiness);
       const text = scheduleRegistrationReadinessText(readiness).join('\\n');
-      const output = buildScheduleOutput('PASS112F', '202608', courses, selectedItems, conflicts, warnings, prefs);
+      const sectionsByCode = {
+        CMSC131: [cmscSection],
+        MATH140: [mathSection, mathBackup],
+        ENGL101: [],
+      };
+      const output = buildScheduleOutput('PASS112F', '202608', courses, selectedItems, conflicts, warnings, prefs, sectionsByCode);
       return {
         level: readiness.level,
         label: readiness.label,
@@ -842,6 +858,7 @@ function testScheduleRegistrationReadiness(context) {
         outputHtml: output.html,
         outputText: output.text,
         outputRegistrationOrder: output.registrationOrder,
+        outputRegistrationBackupPlan: output.registrationBackupPlan,
         outputRegistrationText: output.registrationText,
         outputRegistrationFilename: output.registrationFilename,
         outputCalendar: output.calendar,
@@ -882,6 +899,9 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Enrollment Order/.test(result.outputHtml) && /MATH 140 0201/.test(result.outputHtml), 'registration order: schedule output HTML should include ranked section rows');
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.outputText), 'registration order: schedule text should include ordered registration handoff');
   assert(/Why: [^\n]*unlocks 1 later course/.test(result.outputText), 'registration order: schedule text should explain prerequisite unlocks');
+  assert(result.outputRegistrationBackupPlan[0]?.courseCode === 'MATH 140' && result.outputRegistrationBackupPlan[0]?.backupId === 'MATH140-0301', 'backup plan: should choose conflict-safe higher-seat backup section');
+  assert(/Backup Plan/.test(result.outputHtml) && /Backup 0301/.test(result.outputHtml) && /18 seats open/.test(result.outputHtml), 'backup plan: schedule output HTML should include backup section and seats');
+  assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301; Section ID MATH140-0301/.test(result.outputText), 'backup plan: schedule text should include backup handoff');
   assert(/^terp-track-registration-.*fall-2026\.txt$/.test(result.outputRegistrationFilename), 'registration list: filename should be a term-specific .txt export');
   assert(/Terp Track Registration List/.test(result.outputRegistrationText) && /Testudo checklist/.test(result.outputRegistrationText), 'registration list: text should identify itself as a Testudo checklist');
   assert(/Posted UMD term: Fall 2026 \(202608\)/.test(result.outputRegistrationText), 'registration list: text should include posted UMD term code');
@@ -890,6 +910,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Conflicts to resolve before registration:[\s\S]*CMSC 131 overlaps MATH 140/.test(result.outputRegistrationText), 'registration list: text should include conflict handoff');
   assert(/MATH 140 0201: 2 seats open/.test(result.outputRegistrationText), 'registration list: text should include low-seat warning');
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.outputRegistrationText), 'registration list: text should include the enrollment order');
+  assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301; Section ID MATH140-0301/.test(result.outputRegistrationText), 'registration list: text should include backup section handoff');
   assert(/Before submitting in Testudo:[\s\S]*Confirm open seats/.test(result.outputRegistrationText), 'registration list: text should include final Testudo checks');
   assert(/^terp-track-calendar-.*fall-2026\.ics$/.test(result.outputCalendarFilename), 'schedule calendar: filename should be an .ics calendar export');
   assert(result.outputCalendarEventCount === 3, 'schedule calendar: two CMSC meetings and one MATH meeting should produce three VEVENTs');

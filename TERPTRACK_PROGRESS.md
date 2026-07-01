@@ -6475,3 +6475,68 @@ Verification:
   - It randomly verified `ANSC`, `ACCOUNTING`, `GEOG`, `NFSC`, `SCM`, and `IS` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 120
+
+Focus: add a registration backup plan so students have real alternate sections ready when seats change.
+
+Planned changes:
+- Derive backup sections from the same posted section data used by the Schedule tab.
+- Use existing conflict-safe backup ranking instead of hand-written fallback notes.
+- Render backup choices in the schedule output and advisor packet.
+- Include backup choices in the schedule `.txt`, Testudo registration list `.txt`, advisor text, and advisor HTML exports.
+- Verify the backup plan in fixture and rendered mobile workflows.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added backup-plan helpers in `js/schedule.js`.
+  - `scheduleRegistrationBackupPlan()` builds backup rows for low-seat, waitlisted, TBA, or closed picked sections.
+  - It reuses `sectionBackupCandidate()` so backups are higher-seat, conflict-safe, and clear saved blocked-time preferences.
+  - Rows include primary section, primary seat risk, backup section number, backup section ID, backup seats, meetings, instructor, and a fallback note when no safe backup exists.
+  - `renderScheduleRegistrationBackupsHtml()` renders the compact Backup Plan card.
+  - `scheduleRegistrationBackupText()` emits the same plan for exports.
+- Threaded `sectionsByCode` into `buildScheduleOutput()` through `renderScheduleOutputPanel()` so exports can use live posted alternatives.
+- Added the Backup Plan card to:
+  - The main schedule output.
+  - The advisor packet.
+  - The standalone advisor HTML export.
+- Added backup sections to:
+  - The schedule summary `.txt`.
+  - The Testudo-facing registration list `.txt`.
+  - The advisor text export.
+- Returned `registrationBackupPlan` from `buildScheduleOutput()` for regression coverage.
+- Added production and standalone export CSS for the backup plan card.
+- Bumped cache tags:
+  - `styles.css?v=90`.
+  - `js/schedule.js?v=44`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now passes live-style section alternatives into the output builder and asserts MATH 140 0301 is selected as the conflict-safe higher-seat backup.
+  - The fixture asserts Backup Plan HTML, schedule text backup handoff, and registration-list backup handoff.
+  - Rendered mobile advisor packet now asserts Backup Plan in the live UI, output cache, registration export, advisor text, advisor HTML, and no-overflow mobile snapshot.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with registration backup-plan assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including registration backup-plan coverage.
+  - It passed 12 rendered generated-plan viewport runs with clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with backup plan.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass120-backup-plan-live`.
+  - It randomly verified `JOUR`, `PHIL`, `WMST`, `PHYS`, `ACCOUNTING`, and `ENAE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
