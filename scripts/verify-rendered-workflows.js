@@ -173,8 +173,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=87'), 'workflow app did not load styles.css?v=87');
-  assert(snapshot.scripts.includes('js/schedule.js?v=40'), 'workflow app did not load js/schedule.js?v=40');
+  assert(snapshot.styles.includes('styles.css?v=88'), 'workflow app did not load styles.css?v=88');
+  assert(snapshot.scripts.includes('js/schedule.js?v=41'), 'workflow app did not load js/schedule.js?v=41');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -653,6 +653,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
         minBreak: 15,
         mode: 'compact',
         campusZone: 'north',
+        calendarStart: '2026-09-02',
+        calendarEnd: '2026-12-14',
         blocked: [{ id: 'pass98-work', day: 'F', start: '12:00', end: '13:00', label: 'Work' }],
       },
     };
@@ -732,6 +734,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     calendarFilename: scheduleOutputCache?.calendarFilename || '',
     calendarEventCount: scheduleOutputCache?.calendarEventCount || 0,
     calendarText: scheduleOutputCache?.calendar || '',
+    calendarStartInput: document.querySelector('#schedule-calendar-start')?.value || '',
+    calendarEndInput: document.querySelector('#schedule-calendar-end')?.value || '',
     lastAction: document.querySelector('#schedule-output')?.dataset.lastAction || '',
   }));
   assert(result.advisorFilter === 'blockers', 'advisor packet: blocker filter should persist after click');
@@ -740,7 +744,9 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/^terp-track-calendar-.*fall-2026\.ics$/i.test(result.calendarFilename), 'advisor packet: calendar export should have an .ics filename');
   assert(result.calendarEventCount === 4, 'advisor packet: calendar export should include four timed class events');
   assert(/BEGIN:VCALENDAR/.test(result.calendarText) && /SUMMARY:CMSC 131 0101/.test(result.calendarText), 'advisor packet: calendar export should include picked section events');
-  assert(/DTSTART;TZID=America\/New_York:20260831T090000/.test(result.calendarText), 'advisor packet: calendar export should include inferred Fall 2026 class dates');
+  assert(result.calendarStartInput === '2026-09-02' && result.calendarEndInput === '2026-12-14', 'advisor packet: calendar date inputs should render saved custom range');
+  assert(/DTSTART;TZID=America\/New_York:20260902T090000/.test(result.calendarText), 'advisor packet: calendar export should include configured Fall 2026 class dates');
+  assert(/Calendar range set in Terp Track: 2026-09-02 to 2026-12-14/.test(result.calendarText), 'advisor packet: calendar export should include custom date-range note');
   assert(/schedule-advisor-catalog-warning/.test(result.advisorDocument), 'advisor packet: exported HTML should include catalog warning markup');
   assert(/Registration Blockers/.test(result.advisorDocument), 'advisor packet: exported HTML should include blocker view heading');
   assert(/Registration Readiness/.test(result.advisorDocument) && /Fix before registration/.test(result.advisorDocument), 'advisor packet: exported HTML should include registration readiness gates');

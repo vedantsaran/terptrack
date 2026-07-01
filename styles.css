@@ -3340,7 +3340,7 @@ h1.hero-title em {
 }
 .schedule-preferences {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(220px, 1.3fr);
+  grid-template-columns: repeat(6, minmax(128px, 1fr)) minmax(220px, 1.25fr);
   gap: 10px;
   align-items: stretch;
   margin: 0 0 14px;
@@ -3362,7 +3362,8 @@ h1.hero-title em {
   text-transform: uppercase;
   color: var(--slate);
 }
-.schedule-preferences select {
+.schedule-preferences select,
+.schedule-preferences input {
   border: none;
   border-top: 1px solid var(--line);
   padding: 7px 0 0;
@@ -3372,6 +3373,9 @@ h1.hero-title em {
   font-size: .86rem;
   letter-spacing: 0;
   text-transform: none;
+}
+.schedule-preferences input {
+  min-width: 0;
 }
 .schedule-day-prefs {
   display: flex;

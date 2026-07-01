@@ -21,6 +21,8 @@ const DEFAULT_SCHEDULE_PREFS = {
   commuteStart: '',
   commuteEnd: '',
   locationWeight: 'normal',
+  calendarStart: '',
+  calendarEnd: '',
 };
 const BUILDING_COORDS = {
   IRB: [0, 0],
@@ -238,8 +240,17 @@ function normalizeScheduleChoice(defs, value) {
   return defs.some(def => def.id === raw) ? raw : '';
 }
 
+function normalizeScheduleDate(value) {
+  const raw = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return '';
+  const date = new Date(`${raw}T12:00:00Z`);
+  return Number.isNaN(date.getTime()) ? '' : raw;
+}
+
 function getSchedulePrefs(semId) {
   const saved = (state.schedulePrefs || {})[semId] || {};
+  const calendarStart = normalizeScheduleDate(saved.calendarStart);
+  const calendarEnd = normalizeScheduleDate(saved.calendarEnd);
   return {
     ...DEFAULT_SCHEDULE_PREFS,
     ...saved,
@@ -260,6 +271,8 @@ function getSchedulePrefs(semId) {
     commuteStart: normalizeScheduleChoice(CAMPUS_ANCHOR_DEFS, saved.commuteStart),
     commuteEnd: normalizeScheduleChoice(CAMPUS_ANCHOR_DEFS, saved.commuteEnd),
     locationWeight: LOCATION_WEIGHT_MULTIPLIERS[saved.locationWeight] ? saved.locationWeight : DEFAULT_SCHEDULE_PREFS.locationWeight,
+    calendarStart,
+    calendarEnd: calendarStart && calendarEnd && calendarEnd < calendarStart ? '' : calendarEnd,
   };
 }
 
@@ -362,10 +375,14 @@ function schedulePopulatePreferenceControls(semId) {
   const latest = document.getElementById('schedule-pref-latest');
   const minBreak = document.getElementById('schedule-pref-break');
   const mode = document.getElementById('schedule-pref-mode');
+  const calendarStart = document.getElementById('schedule-calendar-start');
+  const calendarEnd = document.getElementById('schedule-calendar-end');
   if (earliest) earliest.value = prefs.earliest || '';
   if (latest) latest.value = prefs.latest || '';
   if (minBreak) minBreak.value = String(prefs.minBreak ?? DEFAULT_SCHEDULE_PREFS.minBreak);
   if (mode) mode.value = prefs.mode || DEFAULT_SCHEDULE_PREFS.mode;
+  if (calendarStart) calendarStart.value = prefs.calendarStart || '';
+  if (calendarEnd) calendarEnd.value = prefs.calendarEnd || '';
   const campusZone = document.getElementById('schedule-pref-campus-zone');
   const commuteStart = document.getElementById('schedule-pref-commute-start');
   const commuteEnd = document.getElementById('schedule-pref-commute-end');
@@ -1865,7 +1882,24 @@ function scheduleDateOnOrAfter(year, monthIndex, day, targetDow) {
   return date;
 }
 
-function scheduleCalendarTermWindow(term) {
+function scheduleDateInputToUtc(value) {
+  const normalized = normalizeScheduleDate(value);
+  if (!normalized) return null;
+  const [year, month, day] = normalized.split('-').map(Number);
+  return scheduleUtcDate(year, month - 1, day);
+}
+
+function scheduleCalendarTermWindow(term, prefs = DEFAULT_SCHEDULE_PREFS) {
+  const customStart = scheduleDateInputToUtc(prefs.calendarStart);
+  const customEnd = scheduleDateInputToUtc(prefs.calendarEnd);
+  if (customStart && customEnd && customEnd >= customStart) {
+    return {
+      start: customStart,
+      end: customEnd,
+      note: `Calendar range set in Terp Track: ${prefs.calendarStart} to ${prefs.calendarEnd}. Confirm exact academic-calendar dates with UMD.`,
+      custom: true,
+    };
+  }
   const raw = String(term || '');
   const year = /^\d{4}/.test(raw) ? parseInt(raw.slice(0, 4), 10) : new Date().getFullYear();
   const suffix = raw.slice(4);
@@ -1944,8 +1978,8 @@ function scheduleIcsFoldLine(line) {
   return lines;
 }
 
-function buildScheduleCalendarIcs(sem, term, selectedItems = []) {
-  const termWindow = scheduleCalendarTermWindow(term);
+function buildScheduleCalendarIcs(sem, term, selectedItems = [], prefs = DEFAULT_SCHEDULE_PREFS) {
+  const termWindow = scheduleCalendarTermWindow(term, prefs);
   const stamp = scheduleCalendarTimestamp();
   const header = [
     'BEGIN:VCALENDAR',
@@ -3020,7 +3054,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions);
-  const calendar = buildScheduleCalendarIcs(sem, term, selectedItems);
+  const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
   const courseRows = selectedItems
     .slice()
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
@@ -3798,6 +3832,8 @@ function initScheduleEvents() {
     'schedule-pref-latest',
     'schedule-pref-break',
     'schedule-pref-mode',
+    'schedule-calendar-start',
+    'schedule-calendar-end',
     'schedule-pref-campus-zone',
     'schedule-pref-commute-start',
     'schedule-pref-commute-end',
@@ -3812,6 +3848,8 @@ function initScheduleEvents() {
       if (id === 'schedule-pref-latest') patch.latest = el.value;
       if (id === 'schedule-pref-break') patch.minBreak = Number(el.value) || 0;
       if (id === 'schedule-pref-mode') patch.mode = el.value;
+      if (id === 'schedule-calendar-start') patch.calendarStart = normalizeScheduleDate(el.value);
+      if (id === 'schedule-calendar-end') patch.calendarEnd = normalizeScheduleDate(el.value);
       if (id === 'schedule-pref-campus-zone') patch.campusZone = el.value;
       if (id === 'schedule-pref-commute-start') patch.commuteStart = el.value;
       if (id === 'schedule-pref-commute-end') patch.commuteEnd = el.value;

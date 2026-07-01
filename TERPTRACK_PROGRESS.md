@@ -6293,3 +6293,62 @@ Verification:
   - It randomly verified `PHYS`, `ENST`, `WMST`, `FMSC`, `JOUR`, and `SOCY` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 117
+
+Focus: let students set exact calendar export date ranges instead of relying only on inferred term windows.
+
+Planned changes:
+- Add per-semester calendar start/end controls in the Schedule tab.
+- Save and normalize those dates in schedule preferences.
+- Make `.ics` generation use the custom date range when both dates are valid.
+- Preserve inferred term-window behavior when dates are blank or invalid.
+- Verify custom calendar ranges in fixture and rendered browser workflows.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `calendarStart` and `calendarEnd` to `DEFAULT_SCHEDULE_PREFS`.
+- Added `normalizeScheduleDate()` and normalization in `getSchedulePrefs()`.
+  - Invalid date strings normalize to blank.
+  - End dates earlier than start dates are ignored.
+- Added `Calendar starts` and `Calendar ends` date inputs to the Schedule preferences panel.
+- Wired the new date inputs through `initScheduleEvents()`.
+- Updated Schedule preference styles so date inputs match existing compact controls.
+- Updated `scheduleCalendarTermWindow()` to accept schedule prefs.
+  - Valid custom ranges now drive first meeting dates and recurrence `UNTIL`.
+  - Custom calendar event descriptions include the selected date range plus UMD academic-calendar confirmation guidance.
+  - Blank or invalid custom dates still fall back to inferred Spring/Summer/Fall/Winter windows.
+- Updated `buildScheduleCalendarIcs()` and `buildScheduleOutput()` to pass schedule prefs into calendar generation.
+- Bumped cache tags:
+  - `styles.css?v=88`.
+  - `js/schedule.js?v=41`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now sets a custom `2026-09-02` to `2026-12-14` calendar range and asserts the generated `.ics` uses that range.
+  - Rendered mobile advisor packet now asserts the date inputs render the saved range and the exported calendar uses the configured start date.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with custom calendar date-range assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with saved calendar date inputs, calendar export, registration readiness quick actions, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including custom calendar range coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with custom calendar date inputs.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass117-calendar-date-controls-live`.
+  - It randomly verified `ENAE`, `AREC`, `ACCOUNTING`, `MATH`, `JOUR`, and `LING` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

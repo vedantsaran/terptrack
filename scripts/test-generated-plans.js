@@ -795,7 +795,7 @@ function testScheduleRegistrationReadiness(context) {
       state.customCourses = [];
       state.courses = {};
       state.selectedSections = {};
-      state.schedulePrefs = { PASS112F: { ...DEFAULT_SCHEDULE_PREFS, term: '202608', minBreak: 15, mode: 'balanced' } };
+      state.schedulePrefs = { PASS112F: { ...DEFAULT_SCHEDULE_PREFS, term: '202608', minBreak: 15, mode: 'balanced', calendarStart: '2026-09-02', calendarEnd: '2026-12-14' } };
       state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: false, auditIssues: true };
       state.scheduleAdvisorFilter = 'all';
       state.scheduleOutputPreset = 'personal';
@@ -865,10 +865,11 @@ function testScheduleRegistrationReadiness(context) {
   assert(result.outputCalendarEventCount === 3, 'schedule calendar: two CMSC meetings and one MATH meeting should produce three VEVENTs');
   assert(/BEGIN:VCALENDAR/.test(result.outputCalendarUnfolded) && /BEGIN:VEVENT/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include calendar and event records');
   assert(/SUMMARY:CMSC 131 0101/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include course and section summary');
-  assert(/DTSTART;TZID=America\/New_York:20260831T090000/.test(result.outputCalendarUnfolded), 'schedule calendar: Fall 2026 Monday class should start on inferred first class Monday');
-  assert(/RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261212T235900/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should recur weekly through the inferred Fall window');
+  assert(/DTSTART;TZID=America\/New_York:20260902T090000/.test(result.outputCalendarUnfolded), 'schedule calendar: custom Fall 2026 range should start Wednesday classes on the configured start date');
+  assert(/RRULE:FREQ=WEEKLY;BYDAY=WE;UNTIL=20261214T235900/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should recur weekly through the configured custom range');
   assert(/LOCATION:IRB 1101/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include classroom location');
-  assert(/confirm exact academic-calendar dates with UMD/i.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should warn that term dates need official UMD confirmation');
+  assert(/Calendar range set in Terp Track: 2026-09-02 to 2026-12-14/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should record custom calendar range');
+  assert(/Confirm exact academic-calendar dates with UMD/i.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should warn that term dates need official UMD confirmation');
   assert(/Registration readiness/.test(result.outputText) && /Conflicts: 1/.test(result.outputText), 'registration readiness: schedule text should include readiness gates');
   assert(/Fix: Apply a backup section/.test(result.outputText), 'registration readiness: schedule text should include fix guidance');
   assert(/Registration Readiness/.test(result.advisorHtml) && /Fix before registration/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness gates');
