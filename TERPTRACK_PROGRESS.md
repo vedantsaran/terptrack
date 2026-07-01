@@ -4436,3 +4436,68 @@ Next pass candidates:
 - Add official per-major citation links beside generated requirement groups and Settings freshness rows.
 - Add a Settings history drawer for the last few generated-template audit seeds and results.
 - Add a lightweight CI/offline fixture for the live-verifier shape with an opt-in network mode for release passes.
+
+## 2026-06-30 Pass 87
+
+Focus: add a same-origin umd.io proxy so rendered generated-plan previews and section lookups do not rely on noisy browser CORS fallbacks.
+
+Planned changes:
+- Add a Vercel/serverless `/api/umd` proxy for safe umd.io course endpoints.
+- Route browser umd.io metadata, semester, and section requests through the same-origin proxy first.
+- Keep direct `api.umd.io` fallback for local/static contexts where the proxy route is not available.
+- Tighten the rendered verifier so `/api/config` and umd.io calls are proxy-backed and no longer produce expected console noise.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `api/umd.js`.
+- The serverless proxy:
+  - Allows `GET` and `HEAD`.
+  - Accepts only `/courses` umd.io paths.
+  - Rejects empty, protocol, double-slash, and non-course paths.
+  - Marks responses with `x-terptrack-proxy: umd-io`.
+  - Caches successful upstream responses for the edge.
+  - Returns safe JSON fallbacks for upstream failures without surfacing failed-resource console noise.
+- Updated `js/api.js` so umd.io course, paged course, semester, and section fetches:
+  - Try `/api/umd?path=...` first in browser HTTP contexts.
+  - Fall back to direct `https://api.umd.io/v1` only when the proxy route looks unavailable and unmarked.
+  - Stop falling back to direct browser requests after a proxy timeout/error, preventing CORS console spam when a proxy exists.
+- Updated the rendered verifier's local server:
+  - `/api/config` now returns an empty local config instead of a 404.
+  - `/api/umd` now proxies course endpoints with the same marker header and safe fallback behavior.
+  - The verifier now fails if previously ignored CORS/network console errors appear.
+- Bumped `js/api.js` to `v=3`.
+- Updated the Settings generated-catalog freshness audit seed to `pass87-all`.
+- Bumped `js/settings.js` to `v=19`.
+- Updated generated-plan and rendered-browser tests to assert the new freshness seed and cache tags.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran a direct `api/umd.js` smoke test:
+  - `GET /api/umd?path=/courses/ENEE244` returned a proxied `ENEE244` response.
+  - `GET /api/umd?path=/bad` returned a marked 400 rejection.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan and planner fixtures with `pass87-all`.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It passed all six rendered targets.
+  - It confirmed the app loaded `js/api.js?v=3` and `js/settings.js?v=19`.
+  - It confirmed a clean proxy-backed browser console.
+  - `PHYS`: `20/20 live course records`; `PHYS402:4cr`, `PHYS410:4cr`.
+  - `ARTT`: `12/12 live course records`; `ARTT489C:3cr`.
+  - `PLSC`: `17/17 live course records`; `PLSC201:4cr`.
+  - `KNES`: `16/16 live course records`; `KNES385:3cr`.
+  - `ENAE`: `30/30 live course records`; `ENAE432:3cr`.
+  - `ENCE`: `25/25 live course records`; `ENCE215:3cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass87-all`.
+  - Verified all 50 generated schedules against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+- Ran `node scripts/verify-random-schedules.js --majors PHYS,ARTT,PLSC,KNES,ENAE,ENCE --keep-going --seed pass87-final-targets`.
+  - Verified all six rendered targets against PlanetTerp after the freshness/cache bump.
+
+Findings for next pass:
+- The generated-template stack now has a clean rendered-browser verification path, but it still depends on live network for release-grade evidence. A small offline fixture for the proxy response shape would make CI coverage less brittle.
+- Section previews now have a same-origin path available; the next UX pass can use that to surface richer meeting-time confidence in Browse and replacement flows.
+
+Next pass candidates:
+- Add official per-major citation links beside generated requirement groups and Settings freshness rows.
+- Add a Settings history drawer for the last few generated-template audit seeds and results.
+- Broaden the rendered verifier with a mobile viewport pass for Settings previews and applied course cards.
+- Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.

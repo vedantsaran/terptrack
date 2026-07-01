@@ -9,6 +9,19 @@ const UMDIO_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 const UMDIO_SECTION_CACHE_TTL_MS = 1000 * 60 * 15; // 15 minutes; seats change quickly
 const UMDIO_FETCH_TIMEOUT_MS = 6500;
 
+function umdioNormalizePath(pathAndQuery) {
+  const raw = String(pathAndQuery || '').trim();
+  return raw.startsWith('/') ? raw : `/${raw}`;
+}
+
+function umdioProxyUrl(pathAndQuery) {
+  const clean = umdioNormalizePath(pathAndQuery);
+  if (!/^\/courses(?:[/?]|$)/.test(clean)) return '';
+  const loc = typeof window !== 'undefined' ? window.location : null;
+  if (!loc || !/^https?:$/.test(loc.protocol || '')) return '';
+  return `/api/umd?path=${encodeURIComponent(clean)}`;
+}
+
 async function fetchWithTimeout(url, opts = {}, timeoutMs = UMDIO_FETCH_TIMEOUT_MS) {
   let timer = null;
   try {
@@ -21,6 +34,29 @@ async function fetchWithTimeout(url, opts = {}, timeoutMs = UMDIO_FETCH_TIMEOUT_
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+async function umdioFetchPath(pathAndQuery, opts = {}, timeoutMs = UMDIO_FETCH_TIMEOUT_MS) {
+  const clean = umdioNormalizePath(pathAndQuery);
+  const proxy = umdioProxyUrl(clean);
+  const urls = proxy ? [proxy, `${UMDIO_BASE}${clean}`] : [`${UMDIO_BASE}${clean}`];
+  let lastError = null;
+  for (const url of urls) {
+    try {
+      const resp = await fetchWithTimeout(url, opts, timeoutMs);
+      if (url === proxy) {
+        const marker = resp.headers && resp.headers.get ? resp.headers.get('x-terptrack-proxy') : '';
+        if (resp.ok || marker === 'umd-io') return resp;
+        lastError = new Error(`umd.io proxy returned HTTP ${resp.status}`);
+        continue;
+      }
+      return resp;
+    } catch (error) {
+      lastError = error;
+      if (url === proxy) break;
+    }
+  }
+  throw lastError || new Error('umd.io request failed');
 }
 
 function umdioCacheLoad() {
@@ -53,10 +89,9 @@ async function umdioFetchCourse(code) {
   const cached = umdioCacheGet(cacheKey);
   if (cached !== undefined) return cached; // cache hit (may be null for 404)
   if (_umdioInflight[id]) return _umdioInflight[id];
-  const url = `${UMDIO_BASE}/courses/${encodeURIComponent(id)}`;
   _umdioInflight[id] = (async () => {
     let resp;
-    try { resp = await fetchWithTimeout(url); }
+    try { resp = await umdioFetchPath(`/courses/${encodeURIComponent(id)}`); }
     catch (e) { return null; }
     if (!resp.ok) {
       if (resp.status === 404) { umdioCachePut(cacheKey, null); return null; }
@@ -80,7 +115,7 @@ async function umdioFetchPagedCourses(params, cacheKey, maxPages = 12) {
     pageParams.set('per_page', '100');
     pageParams.set('page', String(page));
     let resp;
-    try { resp = await fetchWithTimeout(`${UMDIO_BASE}/courses?${pageParams}`); }
+    try { resp = await umdioFetchPath(`/courses?${pageParams}`); }
     catch (e) { return all; }
     if (!resp.ok) return all;
     const data = await resp.json();
@@ -116,7 +151,7 @@ async function umdioFetchSemesters() {
   const cached = umdioCacheGet(key, UMDIO_CACHE_TTL_MS);
   if (cached !== undefined) return cached;
   let resp;
-  try { resp = await fetchWithTimeout(`${UMDIO_BASE}/courses/semesters`); }
+  try { resp = await umdioFetchPath('/courses/semesters'); }
   catch (e) { return []; }
   if (!resp.ok) return [];
   const data = await resp.json();
@@ -134,7 +169,7 @@ async function umdioFetchSections(courseCode, semester) {
   if (cached !== undefined) return cached || [];
   let resp;
   try {
-    resp = await fetchWithTimeout(`${UMDIO_BASE}/courses/${encodeURIComponent(id)}/sections?semester=${encodeURIComponent(term)}`, {}, 5000);
+    resp = await umdioFetchPath(`/courses/${encodeURIComponent(id)}/sections?semester=${encodeURIComponent(term)}`, {}, 5000);
   } catch (e) {
     return [];
   }

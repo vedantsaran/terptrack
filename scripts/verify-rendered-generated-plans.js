@@ -148,12 +148,60 @@ function safeJoin(root, requestPath) {
   return resolved;
 }
 
+function umdIoFallbackBody(pathAndQuery) {
+  const clean = String(pathAndQuery || '').split('?')[0];
+  if (clean === '/courses' || clean === '/courses/semesters' || clean.includes('/sections')) return [];
+  return null;
+}
+
 function startServer() {
   return new Promise((resolve, reject) => {
-    const server = http.createServer((req, res) => {
+    const server = http.createServer(async (req, res) => {
       if (req.url === '/api/config') {
-        res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ error: 'No local config for rendered verifier.' }));
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+        res.end(JSON.stringify({ supabaseUrl: '', supabaseAnonKey: '' }));
+        return;
+      }
+      if (req.url && req.url.startsWith('/api/umd')) {
+        let clean = '';
+        try {
+          const requestUrl = new URL(req.url, 'http://127.0.0.1');
+          const raw = requestUrl.searchParams.get('path') || '';
+          clean = raw.startsWith('/') ? raw : `/${raw}`;
+          if (!/^\/courses(?:[/?]|$)/.test(clean) || clean.includes('://') || clean.startsWith('//')) {
+            res.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'x-terptrack-proxy': 'umd-io' });
+            res.end(JSON.stringify({ error: 'Only umd.io course endpoints are proxied.' }));
+            return;
+          }
+          const upstream = await fetch(`https://api.umd.io/v1${clean}`, {
+            headers: { accept: 'application/json', 'user-agent': 'TerpTrack/render-verifier' },
+          });
+          const body = await upstream.text();
+          if (!upstream.ok) {
+            res.writeHead(200, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+              'x-terptrack-proxy': 'umd-io',
+              'x-terptrack-upstream-status': String(upstream.status),
+            });
+            res.end(JSON.stringify(umdIoFallbackBody(clean)));
+            return;
+          }
+          res.writeHead(upstream.status, {
+            'content-type': upstream.headers.get('content-type') || 'application/json; charset=utf-8',
+            'cache-control': upstream.ok ? 'public, max-age=900' : 'no-store',
+            'x-terptrack-proxy': 'umd-io',
+          });
+          res.end(body);
+        } catch (error) {
+          res.writeHead(200, {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-terptrack-proxy': 'umd-io',
+            'x-terptrack-upstream-status': 'fetch-error',
+          });
+          res.end(JSON.stringify(umdIoFallbackBody(clean)));
+        }
         return;
       }
       const file = safeJoin(ROOT, req.url);
@@ -238,7 +286,7 @@ async function waitForReview(page, target, timeoutMs) {
         return text.includes(coverage)
           && text.includes(totalCredits)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass86-all');
+          && text.includes('pass87-all');
       },
       { coverage: target.coverage, totalCredits: target.totalCredits },
       { timeout: timeoutMs },
@@ -304,7 +352,7 @@ async function main() {
       else consoleErrors.push(text);
     });
     page.on('pageerror', error => pageErrors.push(error.message));
-    await page.goto(`${url}?render-verifier=pass86`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
+    await page.goto(`${url}?render-verifier=pass87`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
     const onboardingSkip = page.locator('#ob-skip');
     if (await onboardingSkip.isVisible({ timeout: 3000 }).catch(() => false)) {
       await onboardingSkip.click({ timeout: opts.timeoutMs });
@@ -315,8 +363,8 @@ async function main() {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=2'), 'Rendered app did not load js/planetterp.js?v=2');
-    assert(initialSnapshot.scripts.includes('js/api.js?v=2'), 'Rendered app did not load js/api.js?v=2');
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=18'), 'Rendered app did not load js/settings.js?v=18');
+    assert(initialSnapshot.scripts.includes('js/api.js?v=3'), 'Rendered app did not load js/api.js?v=3');
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=19'), 'Rendered app did not load js/settings.js?v=19');
 
     for (const target of selected) {
       await applyMajor(page, target, opts.timeoutMs);
@@ -332,8 +380,8 @@ async function main() {
 
     assert(!pageErrors.length, `Browser page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
     assert(!consoleErrors.length, `Unexpected browser console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
-    const ignoredSuffix = ignoredConsoleErrors.length ? ` (${ignoredConsoleErrors.length} expected network console messages ignored)` : '';
-    console.log(`Verified ${rows.length} generated templates in rendered browser UI.${ignoredSuffix}`);
+    assert(!ignoredConsoleErrors.length, `Expected the umd.io proxy to prevent network console noise: ${ignoredConsoleErrors.slice(0, 5).join(' | ')}`);
+    console.log(`Verified ${rows.length} generated templates in rendered browser UI with clean proxy-backed console.`);
     if (opts.keepOpen) await page.waitForTimeout(60_000);
   } finally {
     await browser.close().catch(() => {});
