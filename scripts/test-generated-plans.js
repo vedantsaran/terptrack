@@ -95,7 +95,7 @@ function assertNoDuplicateCodes(courses, majorId) {
   });
 }
 
-function assertProfileElectives(courses, majorId) {
+function assertProfileElectives(courses, review, majorId) {
   const electives = courses.filter(course => /^Free Elective/i.test(course.code || ''));
   if (!electives.length) return;
   assert(
@@ -106,6 +106,14 @@ function assertProfileElectives(courses, majorId) {
     electives.some(course => /INST|PSYC|GVPT|machine learning for public policy/i.test(course.note || '')),
     `${majorId}: expected profile department or career-goal hints in free elective notes`,
   );
+  assert(review.electivePlacement?.total === electives.length, `${majorId}: elective placement summary should count free electives`);
+  assert(
+    (review.electivePlacement.buildCount || 0) + (review.electivePlacement.specializeCount || 0) > 0,
+    `${majorId}: expected at least one profile elective outside first-year exploration terms`,
+  );
+  if (electives.length >= 3) {
+    assert(review.electivePlacement.specializeCount > 0, `${majorId}: expected larger elective sets to include senior-year placement`);
+  }
 }
 
 async function buildPreview(context, majorId) {
@@ -145,7 +153,7 @@ async function testMajorFixture(context, fixture) {
   assert(review.genEdPlaceholders >= fixture.minGenEdPlaceholders, `${fixture.id}: expected at least ${fixture.minGenEdPlaceholders} GenEd placeholders`);
   assert(review.freeElectives >= fixture.minFreeElectives, `${fixture.id}: expected at least ${fixture.minFreeElectives} free electives`);
   assertNoDuplicateCodes(courses, fixture.id);
-  assertProfileElectives(courses, fixture.id);
+  assertProfileElectives(courses, review, fixture.id);
 
   return {
     id: fixture.id,
@@ -158,6 +166,7 @@ async function testMajorFixture(context, fixture) {
     requirements: review.requirementCourseCount,
     requirementGroups: review.requirementGroupSummary.map(group => `${group.label}:${group.scheduled}/${group.total}`).join(' | '),
     levels: `${review.levelProgression.earlyIntroCount} early lower/${review.levelProgression.lateAdvancedCount} later upper/${review.levelProgression.upper400Count} 400-level`,
+    electives: review.electivePlacement ? `${review.electivePlacement.exploreCount}/${review.electivePlacement.buildCount}/${review.electivePlacement.specializeCount}` : '',
   };
 }
 
@@ -494,6 +503,8 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.templateReality.level === 'warn' && result.templateReality.title === 'Draft needs live replacements', 'auto plan reality: template-only preview should warn that live replacements are needed');
   assert(result.templateReality.metrics.some(metric => metric.label === 'Live-backed requirements' && metric.value === `0/${result.templateCoverage.total}`), 'auto plan reality: should show live-backed requirement count');
   assert(result.templateReality.metrics.some(metric => metric.label === 'Placeholder credits' && metric.level === 'warn'), 'auto plan reality: should flag placeholder credits');
+  assert(result.templateReality.metrics.some(metric => metric.label === 'Elective placement' && /senior/.test(metric.detail)), 'auto plan reality: should show elective placement distribution');
+  assert(result.templateReality.metrics.some(metric => metric.label === 'Elective placement' && metric.level === 'ok'), 'auto plan reality: elective placement should be ready when electives are spread beyond year one');
   assert(result.templateReality.nextActions.some(action => /Replace \d+ placeholder credits/.test(action)), 'auto plan reality: should include replacement action text');
   assert(result.templateGroups.every(group => group.complete), 'auto plan diagnostics: requirement groups should be complete');
   assert(result.templateProgression.realCount === result.templateCoverage.total, 'auto plan diagnostics: level progression should count real template requirements');
@@ -505,6 +516,7 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Intro-to-400 path/.test(result.templateHtml) && /100\/200-level/.test(result.templateHtml) && /400-level/.test(result.templateHtml), 'auto plan diagnostics: review should render course-level progression');
   assert(/Major Requirement Groups/.test(result.templateHtml) && /Core Requirements/.test(result.templateHtml) && /Upper-Level Choices/.test(result.templateHtml), 'auto plan diagnostics: review should render requirement groups');
   assert(/Plan Reality/.test(result.templateHtml) && /Live-backed requirements/.test(result.templateHtml) && /Placeholder credits/.test(result.templateHtml), 'auto plan reality: review should render reality metrics');
+  assert(/Elective placement/.test(result.templateHtml) && /senior/.test(result.templateHtml), 'auto plan reality: review should render elective placement metric');
   assert(/Next replacement actions/.test(result.templateHtml) && /data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan reality: review should render actionable replacement buttons');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');

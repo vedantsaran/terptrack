@@ -359,6 +359,7 @@ async function applyMajor(page, target, timeoutMs) {
   assert(reviewText.includes('Major Requirement Groups'), `${target.major}: rendered preview missing requirement group block`);
   assert(reviewText.includes('Plan Reality'), `${target.major}: rendered preview missing plan reality block`);
   assert(reviewText.includes('Live-backed requirements'), `${target.major}: rendered preview missing live-backed requirement metric`);
+  assert(reviewText.includes('Elective placement'), `${target.major}: rendered preview missing elective placement metric`);
   assert(reviewText.includes('Next replacement actions'), `${target.major}: rendered preview missing next replacement actions`);
   assert(reviewText.includes('Core Requirements'), `${target.major}: rendered preview missing core requirement group`);
   assert(reviewText.includes('Upper-Level Choices'), `${target.major}: rendered preview missing upper requirement group`);
@@ -430,8 +431,8 @@ async function runViewport(browser, url, viewport, selected, opts) {
     assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=3'), `${viewport.label}: rendered app did not load js/planetterp.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=4'), `${viewport.label}: rendered app did not load js/api.js?v=4`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=27'), `${viewport.label}: rendered app did not load js/settings.js?v=27`);
-    assert(initialSnapshot.scripts.includes('js/import.js?v=12'), `${viewport.label}: rendered app did not load js/import.js?v=12`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=28'), `${viewport.label}: rendered app did not load js/settings.js?v=28`);
+    assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('3/4 launch checks ready'), `${viewport.label}: release checklist did not show 3/4 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);

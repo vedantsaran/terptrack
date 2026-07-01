@@ -5,6 +5,7 @@
 
 const ACCOUNT_CONFIG_STORAGE = 'terp-track-supabase-config';
 const ACCOUNT_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+const ACCOUNT_CONFIG_FETCH_TIMEOUT_MS = 3500;
 const ACCOUNT_SCHEMA_REQUIREMENTS = [
   { id: 'profiles', label: 'profiles', detail: 'student profile, major, profile preferences' },
   { id: 'plans', label: 'plans', detail: 'private cloud save/load payloads' },
@@ -126,6 +127,32 @@ function accountNormalizeConfig(value, source) {
   return { source, supabaseUrl, supabaseAnonKey };
 }
 
+async function accountFetchWithTimeout(url, opts = {}, timeoutMs = ACCOUNT_CONFIG_FETCH_TIMEOUT_MS) {
+  if (typeof AbortController === 'undefined') {
+    let timer = null;
+    try {
+      return await Promise.race([
+        fetch(url, opts),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('account config request timed out')), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } catch (error) {
+    if (error && error.name === 'AbortError') throw new Error('account config request timed out');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function accountLoadConfig() {
   if (accountConfigPromise) return accountConfigPromise;
   accountConfigPromise = (async () => {
@@ -136,7 +163,7 @@ async function accountLoadConfig() {
     if (globalConfig) return globalConfig;
 
     try {
-      const res = await fetch('/api/config', { cache: 'no-store' });
+      const res = await accountFetchWithTimeout('/api/config', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         const apiConfig = accountNormalizeConfig(data, 'vercel');

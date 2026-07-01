@@ -641,13 +641,15 @@ function autoPlanRealitySummary(review) {
   const placeholderCount = (review.genEdPlaceholders || 0) + (review.freeElectives || 0);
   const placeholderCredits = review.placeholderCredits || 0;
   const progression = review.levelProgression || {};
+  const electivePlacement = review.electivePlacement || {};
   const hasLevelPath = !!(progression.hasEarlyIntro && progression.hasLateAdvanced && progression.hasUpper400);
   const genEdComplete = (review.genEdCompleteCount || 0) >= (review.genEdRequirementCount || 0);
   const metadataReady = !metadata || metadata.missing === 0;
   const groupReady = !groups.length || completeGroups === groups.length;
+  const electiveReady = !electivePlacement.total || electivePlacement.buildCount > 0 || electivePlacement.specializeCount > 0;
   const level = !groupReady || !genEdComplete
     ? 'danger'
-    : (!metadataReady || placeholderCredits > 0 || !hasLevelPath) ? 'warn' : 'ok';
+    : (!metadataReady || placeholderCredits > 0 || !hasLevelPath || !electiveReady) ? 'warn' : 'ok';
   const title = level === 'ok'
     ? 'Real-course draft ready'
     : level === 'danger'
@@ -681,6 +683,14 @@ function autoPlanRealitySummary(review) {
       detail: `${progression.earlyIntroCount || 0} early lower, ${progression.lateAdvancedCount || 0} later upper, ${progression.upper400Count || 0} 400-level`,
       level: hasLevelPath ? 'ok' : 'warn',
     },
+    {
+      label: 'Elective placement',
+      value: electivePlacement.total ? `${electivePlacement.total} slots` : 'None',
+      detail: electivePlacement.total
+        ? `${electivePlacement.exploreCount || 0} explore, ${electivePlacement.buildCount || 0} build, ${electivePlacement.specializeCount || 0} senior`
+        : 'No open elective slots needed',
+      level: electiveReady ? 'ok' : 'warn',
+    },
   ];
   const nextActions = [];
   if (placeholderCredits > 0) {
@@ -694,6 +704,9 @@ function autoPlanRealitySummary(review) {
   }
   if (!hasLevelPath && progression.realCount) {
     nextActions.push('Confirm the sequence has early intro work and later 300/400-level senior work.');
+  }
+  if (!electiveReady) {
+    nextActions.push('Move at least one elective placeholder into a later term for minor, certificate, or senior-interest work.');
   }
   if (!nextActions.length) nextActions.push('Confirm sections and seats in the Schedule tab before registration.');
   return {
