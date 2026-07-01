@@ -22,6 +22,7 @@ const COMMON_DEPTS = [
 
 const BROWSE_ALL_GENEDS_VALUE = '__ALL_GENEDS__';
 const BROWSE_PROFILE_DEPTS_VALUE = '__PROFILE_DEPTS__';
+const BROWSE_ALL_DEPTS_VALUE = '__ALL_DEPTS__';
 const BROWSE_GENED_TAGS = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','DVUP','DVCC','SCIS'];
 const BROWSE_SAVED_LIMIT = 12;
 
@@ -66,10 +67,17 @@ function browseIsProfileDeptMode() {
   return browseDept === BROWSE_PROFILE_DEPTS_VALUE;
 }
 
+function browseIsAllDeptMode() {
+  return browseDept === BROWSE_ALL_DEPTS_VALUE;
+}
+
 function browseDepartmentScope() {
   if (browseIsProfileDeptMode()) {
     const depts = browseProfileDepartments();
     return { depts, label: depts.length ? `profile departments (${depts.slice(0, 5).join(', ')}${depts.length > 5 ? '…' : ''})` : 'profile departments' };
+  }
+  if (browseIsAllDeptMode()) {
+    return { depts: browseAllSearchDepts(), label: 'all departments' };
   }
   return { depts: browseDept ? [browseDept] : [], label: browseDept ? `${browseDept} courses` : '' };
 }
@@ -120,6 +128,7 @@ function renderBrowseProfileHints() {
   root.hidden = false;
   const deptButtons = [
     `<button type="button" class="browse-profile-chip ${browseIsProfileDeptMode() ? 'active' : ''}" data-br-profile-dept="${BROWSE_PROFILE_DEPTS_VALUE}">All profile departments</button>`,
+    `<button type="button" class="browse-profile-chip ${browseIsAllDeptMode() ? 'active' : ''}" data-br-profile-dept="${BROWSE_ALL_DEPTS_VALUE}">All departments</button>`,
     ...depts.map(dept => `
       <button type="button" class="browse-profile-chip ${browseDept === dept ? 'active' : ''}" data-br-profile-dept="${browseEscape(dept)}">${browseEscape(dept)}</button>
     `),
@@ -156,7 +165,9 @@ function browseCurrentSearch() {
 }
 
 function browseSearchLabel(search = browseCurrentSearch()) {
-  const deptLabel = search.dept === BROWSE_PROFILE_DEPTS_VALUE ? 'Profile departments' : search.dept;
+  const deptLabel = search.dept === BROWSE_PROFILE_DEPTS_VALUE ? 'Profile departments'
+    : search.dept === BROWSE_ALL_DEPTS_VALUE ? 'All departments'
+      : search.dept;
   const genEdLabel = search.genEd === BROWSE_ALL_GENEDS_VALUE ? 'All Gen-Eds' : search.genEd;
   return [deptLabel, genEdLabel, search.search].filter(Boolean).join(' · ') || 'Browse search';
 }
@@ -256,7 +267,11 @@ function renderBrowseSavedSearches() {
     <div>
       ${saved.map(search => {
         const active = current.dept === search.dept && current.genEd === search.genEd && current.search === search.search;
-        const detail = [search.dept === BROWSE_PROFILE_DEPTS_VALUE ? 'Profile departments' : search.dept, search.genEd === BROWSE_ALL_GENEDS_VALUE ? 'All Gen-Eds' : search.genEd, search.search].filter(Boolean).join(' · ');
+        const detail = [
+          search.dept === BROWSE_PROFILE_DEPTS_VALUE ? 'Profile departments' : search.dept === BROWSE_ALL_DEPTS_VALUE ? 'All departments' : search.dept,
+          search.genEd === BROWSE_ALL_GENEDS_VALUE ? 'All Gen-Eds' : search.genEd,
+          search.search,
+        ].filter(Boolean).join(' · ');
         return `
           <span class="browse-saved-item">
             <button type="button" class="browse-saved-chip ${active ? 'active' : ''}" data-br-saved="${browseEscape(search.id)}">
@@ -1334,6 +1349,12 @@ async function browseHydrateAvailability(items, nextTerm, seq) {
 async function browseListCoursesForCurrentScope() {
   const allGenEds = browseGenEd === BROWSE_ALL_GENEDS_VALUE;
   const scope = browseDepartmentScope();
+  if (browseIsAllDeptMode()) {
+    if (allGenEds) return browseListCoursesByGenEdTags(BROWSE_GENED_TAGS).catch(() => []);
+    return browseGenEd
+      ? browseListCoursesByGenEdWithFallback(browseGenEd, '').catch(() => [])
+      : [];
+  }
   if (browseIsProfileDeptMode()) {
     if (!scope.depts.length) return [];
     if (allGenEds) {
@@ -1365,6 +1386,10 @@ async function renderBrowse() {
     profileOption.value = BROWSE_PROFILE_DEPTS_VALUE;
     profileOption.textContent = 'Profile departments';
     sel.appendChild(profileOption);
+    const allOption = document.createElement('option');
+    allOption.value = BROWSE_ALL_DEPTS_VALUE;
+    allOption.textContent = 'All departments';
+    sel.appendChild(allOption);
     COMMON_DEPTS.forEach(d => {
       const o = document.createElement('option');
       o.value = d; o.textContent = d;
@@ -1386,15 +1411,21 @@ async function renderBrowse() {
     grid.innerHTML = '<p class="reco-empty">Set interests or preferred Gen-Ed departments in Settings to use profile department search.</p>';
     return;
   }
+  if (browseIsAllDeptMode() && !browseGenEd) {
+    grid.innerHTML = '<p class="reco-empty">Choose a Gen-Ed tag or All Gen-Ed categories to search across every department.</p>';
+    return;
+  }
 
-  const desiredCacheKey = `${browseDept || 'ALL'}:${browseGenEd || 'ANY'}:${browseIsProfileDeptMode() ? scope.depts.join(',') : ''}`;
+  const desiredCacheKey = `${browseDept || 'ALL'}:${browseGenEd || 'ANY'}:${browseIsProfileDeptMode() || browseIsAllDeptMode() ? scope.depts.join(',') : ''}`;
   if (browseCacheKey !== desiredCacheKey) {
     browseCache = [];
     browseCacheKey = desiredCacheKey;
   }
   if (!browseCache.length) {
     const allGenEds = browseGenEd === BROWSE_ALL_GENEDS_VALUE;
-    const scopeLabel = browseIsProfileDeptMode()
+    const scopeLabel = browseIsAllDeptMode()
+      ? `${allGenEds ? 'all Gen-Ed categories' : browseGenEd} across all departments`
+      : browseIsProfileDeptMode()
       ? scope.label
       : allGenEds && !browseDept
       ? 'all Gen-Ed courses'

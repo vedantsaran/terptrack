@@ -175,7 +175,7 @@ async function openFreshApp(page, url, opts, suffix) {
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.styles.includes('styles.css?v=79'), 'workflow app did not load styles.css?v=79');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
-  assert(snapshot.scripts.includes('js/browse.js?v=12'), 'workflow app did not load js/browse.js?v=12');
+  assert(snapshot.scripts.includes('js/browse.js?v=13'), 'workflow app did not load js/browse.js?v=13');
   return snapshot;
 }
 
@@ -276,7 +276,46 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   assert(snapshot.browseText.includes('Full results'), 'browse: missing full results section');
   assert(snapshot.browseText.includes('Fills gap'), 'browse: missing GenEd gap evidence');
   assertNoOverflow('browse replacement mobile', snapshot);
-  console.log('Browse replacement [mobile]: rendered replacement banner, result card, actions, and no overflow.');
+
+  await page.evaluate(async () => {
+    window.__browseAllDeptCalls = [];
+    umdioListCoursesByGenEd = async (tag, opts = {}) => {
+      window.__browseAllDeptCalls.push(`gened:${tag}:${opts.dept || ''}`);
+      return [{
+        course_id: 'HIST210',
+        name: 'Global Humanities',
+        credits: '3',
+        description: 'Humanities course available outside profile departments.',
+        gen_ed: [[tag]],
+        department: 'HIST',
+      }];
+    };
+    browseDept = BROWSE_ALL_DEPTS_VALUE;
+    browseGenEd = 'DSHU';
+    browseSearch = '';
+    browseCache = [];
+    browseCacheKey = '';
+    await renderBrowse();
+  });
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#br-grid')?.textContent?.replace(/\s+/g, ' ') || '';
+    return text.includes('HIST 210') && text.includes('Global Humanities');
+  }, null, { timeout: opts.timeoutMs });
+  const allDeptResult = await page.evaluate(() => ({
+    hasOption: Array.from(document.querySelectorAll('#br-dept option'))
+      .some(option => option.value === BROWSE_ALL_DEPTS_VALUE && /All departments/.test(option.textContent || '')),
+    selected: document.querySelector('#br-dept')?.value || '',
+    calls: window.__browseAllDeptCalls || [],
+    text: document.querySelector('#br-grid')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+  }));
+  assert(allDeptResult.hasOption, 'browse all departments: department selector should include All departments');
+  assert(allDeptResult.selected === '__ALL_DEPTS__', 'browse all departments: selector should preserve the broad scope');
+  assert(allDeptResult.calls.includes('gened:DSHU:'), 'browse all departments: should call GenEd search without a department');
+  assert(!allDeptResult.calls.includes('gened:DSHU:GVPT'), 'browse all departments: should not stay limited to profile departments');
+  assert(allDeptResult.text.includes('HIST 210'), 'browse all departments: broad GenEd search should render global results');
+  const allDeptSnapshot = await page.evaluate(snapshotScript());
+  assertNoOverflow('browse all departments mobile', allDeptSnapshot);
+  console.log('Browse replacement [mobile]: rendered replacement banner, result card, all-department GenEd search, actions, and no overflow.');
 }
 
 async function verifyRecommendationsSectionMobile(page, url, opts) {

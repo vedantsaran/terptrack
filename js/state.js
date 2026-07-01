@@ -299,10 +299,13 @@ function normalizeBrowseSavedSearch(search, index = 0) {
   const dept = String(search?.dept || '').trim().toUpperCase();
   const genEd = String(search?.genEd || '').trim().toUpperCase();
   const query = String(search?.search || search?.query || '').trim().slice(0, 80);
-  const safeDept = dept === '__PROFILE_DEPTS__' || /^[A-Z]{3,4}$/.test(dept) ? dept : '';
+  const safeDept = dept === '__PROFILE_DEPTS__' || dept === '__ALL_DEPTS__' || /^[A-Z]{3,4}$/.test(dept) ? dept : '';
   const safeGenEd = genEd === '__ALL_GENEDS__' || /^[A-Z0-9-]{4,16}$/.test(genEd) ? genEd : '';
   if (!safeDept && !safeGenEd && !query) return null;
-  const fallbackLabel = [safeDept === '__PROFILE_DEPTS__' ? 'Profile departments' : safeDept, safeGenEd, query].filter(Boolean).join(' · ') || `Saved search ${index + 1}`;
+  const deptLabel = safeDept === '__PROFILE_DEPTS__' ? 'Profile departments'
+    : safeDept === '__ALL_DEPTS__' ? 'All departments'
+      : safeDept;
+  const fallbackLabel = [deptLabel, safeGenEd, query].filter(Boolean).join(' · ') || `Saved search ${index + 1}`;
   const fallbackId = `browse-search-${index + 1}`;
   const id = String(search?.id || fallbackId).trim().slice(0, 60) || fallbackId;
   return {

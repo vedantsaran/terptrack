@@ -1216,6 +1216,12 @@ async function testBrowseProfileDepartments(context) {
       umdioListCoursesByGenEd = async (tag, opts = {}) => {
         const dept = String(opts.dept || '');
         calls.push('gened:' + tag + ':' + dept);
+        if (!dept) {
+          return [
+            { course_id: 'HIST150', name: 'Global ' + tag + ' GenEd', description: 'all department fit', gen_ed: [tag] },
+            { course_id: 'INST201', name: 'Shared Global GenEd', description: 'shared', gen_ed: [tag] }
+          ];
+        }
         return [
           { course_id: dept + '150', name: dept + ' GenEd', description: 'gened profile fit', gen_ed: [tag] },
           { course_id: 'INST201', name: 'Shared GenEd', description: 'shared', gen_ed: [tag] }
@@ -1237,6 +1243,12 @@ async function testBrowseProfileDepartments(context) {
       const defaultScope = browseDepartmentScope();
       browseGenEd = 'DSHS';
       const genEdRows = await browseListCoursesForCurrentScope();
+      browseDept = BROWSE_ALL_DEPTS_VALUE;
+      browseGenEd = 'DSHU';
+      const allDeptScope = browseDepartmentScope();
+      const allDeptRows = await browseListCoursesForCurrentScope();
+      const allDeptLabel = browseSearchLabel({ dept: BROWSE_ALL_DEPTS_VALUE, genEd: 'DSHU', search: '' });
+      browseDept = BROWSE_PROFILE_DEPTS_VALUE;
       browseGenEd = '';
       const deptRows = await browseListCoursesForCurrentScope();
       state.browseSavedSearches = [];
@@ -1251,16 +1263,31 @@ async function testBrowseProfileDepartments(context) {
       browseApplySavedSearch(saved[0].id);
       const restored = { dept: browseDept, genEd: browseGenEd, search: browseSearch };
       browseDeleteSavedSearch(saved[0].id);
+      browseDept = BROWSE_ALL_DEPTS_VALUE;
+      browseGenEd = 'DSHU';
+      browseSearch = 'global';
+      browseSaveCurrentSearch();
+      const allDeptSaved = browseSavedSearches()[0] || {};
+      browseDept = 'CMSC';
+      browseGenEd = '';
+      browseSearch = '';
+      browseApplySavedSearch(allDeptSaved.id);
+      const restoredAllDept = { dept: browseDept, genEd: browseGenEd, search: browseSearch };
       return {
         defaultDept,
         scope: defaultScope.depts.slice(0, 4),
         genEdCodes: genEdRows.map(row => row.course_id).sort(),
+        allDeptScopeCount: allDeptScope.depts.length,
+        allDeptCodes: allDeptRows.map(row => row.course_id).sort(),
+        allDeptLabel,
         deptCodes: deptRows.map(row => row.course_id).sort(),
         callCount: calls.length,
         calls,
         savedCount: saved.length,
         savedLabel: saved[0]?.label || '',
         restored,
+        allDeptSavedLabel: allDeptSaved.label || '',
+        restoredAllDept,
         afterDelete: state.browseSavedSearches.length,
       };
     })()
@@ -1269,6 +1296,11 @@ async function testBrowseProfileDepartments(context) {
   assert(result.defaultDept === '__PROFILE_DEPTS__', 'browse profile: should default to profile department mode');
   assert(result.scope.includes('INST') && result.scope.includes('PSYC') && result.scope.includes('GVPT'), 'browse profile: expected preferred departments in scope');
   assert(result.genEdCodes.includes('INST150') && result.genEdCodes.includes('PSYC150'), 'browse profile: GenEd search should fan out across profile departments');
+  assert(result.allDeptScopeCount >= 100, 'browse all departments: should expose the full common department scope');
+  assert(result.allDeptCodes.includes('HIST150'), 'browse all departments: GenEd search should use the global all-department path');
+  assert(result.calls.includes('gened:DSHU:'), 'browse all departments: expected a global GenEd API call without a department');
+  assert(!result.calls.includes('gened:DSHU:INST'), 'browse all departments: should not stay limited to profile departments');
+  assert(/All departments/.test(result.allDeptLabel) && /DSHU/.test(result.allDeptLabel), 'browse all departments: search label should identify the broad scope');
   assert(result.deptCodes.includes('INST101') && result.deptCodes.includes('PSYC101'), 'browse profile: department search should fan out across profile departments');
   assert(result.genEdCodes.filter(code => code === 'INST201').length === 1, 'browse profile: GenEd rows should dedupe shared courses');
   assert(result.deptCodes.filter(code => code === 'INST201').length === 1, 'browse profile: department rows should dedupe shared courses');
@@ -1276,7 +1308,9 @@ async function testBrowseProfileDepartments(context) {
   assert(result.savedCount === 1, 'browse saved search: should save one preset');
   assert(/Profile departments/.test(result.savedLabel) && /DSHS/.test(result.savedLabel), 'browse saved search: label should summarize filters');
   assert(result.restored.dept === '__PROFILE_DEPTS__' && result.restored.genEd === 'DSHS' && result.restored.search === 'policy', 'browse saved search: apply should restore filters');
-  assert(result.afterDelete === 0, 'browse saved search: delete should remove preset');
+  assert(/All departments/.test(result.allDeptSavedLabel) && /DSHU/.test(result.allDeptSavedLabel), 'browse saved search: all-department preset should label broad GenEd search');
+  assert(result.restoredAllDept.dept === '__ALL_DEPTS__' && result.restoredAllDept.genEd === 'DSHU' && result.restoredAllDept.search === 'global', 'browse saved search: apply should restore all-department filters');
+  assert(result.afterDelete === 1, 'browse saved search: delete should remove only the first preset');
 
   return {
     id: 'BROWSE-PROFILE-SAVED',

@@ -5541,3 +5541,66 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass104-backup-section-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 105
+
+Focus: add an explicit all-departments GenEd search scope so profile-targeted searches can be broadened on demand.
+
+Planned changes:
+- Keep profile departments as the default Browse starting point for personalized GenEd searches.
+- Add a visible `All departments` Browse scope for GenEd searches that should not be limited to preferred/profile departments.
+- Make the broad scope call the global GenEd path instead of fanning out only across profile departments.
+- Preserve all-department saved searches through local state and shared-plan import/export.
+- Extend generated and rendered mobile coverage for the new broad GenEd scope.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `BROWSE_ALL_DEPTS_VALUE` in `js/browse.js`.
+- Added `browseIsAllDeptMode()` and extended `browseDepartmentScope()`:
+  - profile mode still resolves to preferred departments.
+  - all-departments mode resolves to the full common department scope.
+- Added a visible `All departments` option to the Browse department selector.
+- Added an `All departments` quick chip beside profile department chips.
+- Updated `browseListCoursesForCurrentScope()`:
+  - `All departments` + specific GenEd tag uses the global GenEd fetch/fallback path.
+  - `All departments` + all GenEds uses the all-tag GenEd fetch/fallback path.
+  - `All departments` without a GenEd tag prompts the student to choose a GenEd filter instead of accidentally loading every course.
+- Updated Browse labels and saved-search details so broad searches render as `All departments`.
+- Updated `normalizeBrowseSavedSearch()` in `js/state.js` so `__ALL_DEPTS__` persists.
+- Updated advisor/audit Browse labels in `js/schedule.js` so all-department search targets display clearly.
+- Bumped cache tags:
+  - `js/state.js?v=18`.
+  - `js/browse.js?v=13`.
+- Extended `BROWSE-PROFILE-SAVED` fixture coverage:
+  - verifies profile GenEd search still fans out across preferred departments.
+  - verifies all-department GenEd search uses the global GenEd call with no department.
+  - verifies all-department saved searches label and restore correctly.
+- Extended rendered mobile Browse workflow verification:
+  - verifies the selector includes `All departments`.
+  - verifies a DSHU all-department search renders a global `HIST 210` result.
+  - verifies the broad search does not stay constrained to the profile department call.
+
+Verification:
+- Ran `node --check js/browse.js`.
+- Ran `node --check js/state.js`.
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the extended `BROWSE-PROFILE-SAVED` fixture plus the existing generated-plan regression suite.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement plus all-department GenEd search.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet export and backup apply workflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the extended `BROWSE-PROFILE-SAVED` all-department coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement with all-department GenEd search, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass105-all-depts-gened-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.

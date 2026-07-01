@@ -1708,6 +1708,7 @@ function scheduleAuditIssueSemesterName(semId) {
 function scheduleAuditBrowseDeptLabel(dept) {
   if (!dept) return '';
   if (typeof BROWSE_PROFILE_DEPTS_VALUE !== 'undefined' && dept === BROWSE_PROFILE_DEPTS_VALUE) return 'Profile departments';
+  if (typeof BROWSE_ALL_DEPTS_VALUE !== 'undefined' && dept === BROWSE_ALL_DEPTS_VALUE) return 'All departments';
   return dept;
 }
 
