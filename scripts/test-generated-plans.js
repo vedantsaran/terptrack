@@ -888,6 +888,7 @@ function testScheduleRegistrationReadiness(context) {
       const mapRows = scheduleReadinessMapRows('PASS112F', '202608', courses, selectedItems, conflicts, warnings, sectionsByCode);
       const mapFall = mapRows.find(row => row.sem.id === 'PASS112F');
       const mapSpring = mapRows.find(row => row.sem.id === 'PASS112S');
+      const mapTargets = scheduleReadinessMapLoadTargets('PASS112F');
       return {
         level: readiness.level,
         label: readiness.label,
@@ -928,6 +929,7 @@ function testScheduleRegistrationReadiness(context) {
           springStatus: mapSpring?.status?.label,
           springPicked: (mapSpring?.selectedItems?.length || 0) + '/' + (mapSpring?.courses?.length || 0),
           springLoaded: (mapSpring?.loadedCount || 0) + '/' + (mapSpring?.courses?.length || 0),
+          loadTargets: mapTargets.map(row => row.sem.id + ':' + row.loadedCount + '/' + row.courses.length).join(','),
         },
       };
     })()
@@ -1023,6 +1025,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(result.map.fallPicked === '2/3' && result.map.fallLoaded === '3/3' && result.map.fallPostedCount === 3, 'readiness map: current term should summarize picked, loaded, and posted sections');
   assert(result.map.springLevel === 'danger' && result.map.springStatus === 'Needs sections', 'readiness map: future term should expose missing section work');
   assert(result.map.springPicked === '0/2' && result.map.springLoaded === '0/2', 'readiness map: future term should show no saved section evidence yet');
+  assert(result.map.loadTargets === 'PASS112S:0/2', 'readiness map: loader should target only terms missing section evidence');
 
   return {
     id: 'SCHEDULE-READINESS',

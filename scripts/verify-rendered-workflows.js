@@ -176,8 +176,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=98'), 'workflow app did not load styles.css?v=98');
-  assert(snapshot.scripts.includes('js/schedule.js?v=49'), 'workflow app did not load js/schedule.js?v=49');
+  assert(snapshot.styles.includes('styles.css?v=99'), 'workflow app did not load styles.css?v=99');
+  assert(snapshot.scripts.includes('js/schedule.js?v=50'), 'workflow app did not load js/schedule.js?v=50');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -711,6 +711,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && mapText.includes('2/3')
       && mapText.includes('3/3')
       && mapText.includes('Needs sections')
+      && mapText.includes('Load map data')
       && text.includes('Advisor Packet')
       && text.includes('Download registration list')
       && text.includes('Download calendar')
@@ -742,6 +743,15 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && sectionText.includes('0301')
       && sectionText.includes('Apply backup')
       && text.includes('Picked CMSC 131 0101');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-map-load]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const spring = document.querySelector('[data-schedule-jump-sem="PASS98S"]')?.textContent?.replace(/\s+/g, ' ') || '';
+    const loadBtn = document.querySelector('[data-schedule-map-load]');
+    return loadBtn?.disabled
+      && spring.includes('Spring 2027')
+      && spring.includes('0/2')
+      && spring.includes('2/2');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-schedule-jump-sem="PASS98S"]').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {

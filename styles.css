@@ -3934,7 +3934,14 @@ h1.hero-title em {
   line-height: 1.35;
   margin-top: 2px;
 }
-.schedule-readiness-map-head > strong {
+.schedule-readiness-map-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.schedule-readiness-map-actions > strong {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--cream);
@@ -3942,6 +3949,9 @@ h1.hero-title em {
   font-size: .72rem;
   padding: 4px 8px;
   white-space: nowrap;
+}
+.schedule-readiness-map-actions .btn {
+  padding: 5px 9px;
 }
 .schedule-readiness-term-grid {
   display: grid;
@@ -7960,6 +7970,9 @@ h1.hero-title em {
     align-items: flex-start;
     flex-direction: column;
     gap: 5px;
+  }
+  .schedule-readiness-map-actions {
+    justify-content: flex-start;
   }
   .schedule-readiness-term-grid {
     grid-template-columns: 1fr;

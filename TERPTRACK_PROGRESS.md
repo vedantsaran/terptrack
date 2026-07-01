@@ -7107,3 +7107,60 @@ Verification:
   - It randomly verified `ASTR`, `FMSC`, `ENMA`, `AAST`, `AOSC`, and `CINE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 130
+
+Focus: make the Schedule Readiness Map actionable by letting students load missing live-section evidence across schedule-ready terms.
+
+Planned changes:
+- Add a concrete command to load missing readiness-map section data.
+- Target only terms missing loaded section evidence so the app does not overwrite already-loaded current-term section choices.
+- Keep the action bounded, visible, and mobile-safe.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added a `Load map data` button to the Schedule Readiness Map header.
+- Added `scheduleReadinessMapLoadTargets()` in `js/schedule.js`.
+  - It identifies schedule-ready terms whose courses do not yet have cached section evidence.
+  - It skips the active term once the active Schedule render has already loaded its sections.
+- Added `loadScheduleReadinessMapData()`.
+  - It guards against duplicate clicks.
+  - It loads missing term evidence through the existing `scheduleFetchSectionsFor()` cache path.
+  - It rerenders the active Schedule view after loading.
+  - It reports success or failure through the existing status/toast surfaces.
+- Updated map header styling so the status pill and load command wrap cleanly on desktop and mobile.
+- Bumped cache tags:
+  - `styles.css?v=99`.
+  - `js/schedule.js?v=50`.
+- Extended tests:
+  - `SCHEDULE-READINESS` fixture now asserts that the map loader targets only terms missing section evidence.
+  - Rendered mobile workflow verifier now checks the `Load map data` command and confirms the future term changes from `0/2 loaded` to `2/2 loaded`.
+  - Rendered verifiers assert updated style and Schedule script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with map-loader target assertions.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, recommendations, Browse, audit, onboarding, prior-credit, schedule timing, registration readiness, and seat-risk tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with Readiness Map rendering, map-data loading, jump-to-term behavior, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, exports, backup apply, seat refresh action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated global CSS cache tag.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the readiness-map loader coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with readiness-map loader coverage.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass130-readiness-map-loader-live`.
+  - It randomly verified `THET`, `HESP`, `BCHM`, `BIOE`, `PHIL`, and `ENFP` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

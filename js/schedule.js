@@ -122,6 +122,7 @@ let scheduleRenderSeq = 0;
 let scheduleAlternatives = [];
 let scheduleOutputCache = null;
 let scheduleUndoAction = null;
+let scheduleReadinessMapLoading = false;
 const scheduleSectionsCache = {};
 const scheduleSectionsMeta = {};
 const SCHEDULE_SEAT_WARN_MS = 15 * 60 * 1000;
@@ -1525,6 +1526,53 @@ function scheduleReadinessMapRows(activeSemId, activeTerm, activeCourses, active
   });
 }
 
+function scheduleReadinessMapLoadTargets(activeSemId = scheduleCurrentSemId || scheduleDefaultSemesterId()) {
+  return getAllSemesters()
+    .map(sem => {
+      const courses = scheduleCoursesForSemester(sem.id);
+      const term = ((state.schedulePrefs || {})[sem.id]?.term || scheduleInferTermCode(sem));
+      const loadedCount = scheduleReadinessMapLoadedCount(sem.id, term, courses, {}, activeSemId);
+      return { sem, term, courses, loadedCount };
+    })
+    .filter(row => row.courses.length && row.loadedCount < row.courses.length);
+}
+
+async function loadScheduleReadinessMapData() {
+  if (scheduleReadinessMapLoading) return;
+  const activeSemId = scheduleCurrentSemId || scheduleDefaultSemesterId();
+  const targets = scheduleReadinessMapLoadTargets(activeSemId);
+  if (!targets.length) {
+    if (typeof toastInfo === 'function') toastInfo('Readiness map already has loaded section evidence.');
+    return;
+  }
+  scheduleReadinessMapLoading = true;
+  const root = document.getElementById('schedule-readiness-map');
+  const btn = root?.querySelector('[data-schedule-map-load]');
+  const status = document.getElementById('schedule-status');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+  }
+  try {
+    for (const row of targets) {
+      if (status) status.textContent = `Loading ${row.sem.name || row.sem.id} section evidence...`;
+      await scheduleFetchSectionsFor(row.sem.id, row.term, row.courses, false);
+    }
+    await renderSchedule();
+    if (status) status.textContent = `Loaded readiness map data for ${targets.length} term${targets.length === 1 ? '' : 's'}.`;
+    if (typeof toastSuccess === 'function') toastSuccess(`Loaded readiness map data for ${targets.length} term${targets.length === 1 ? '' : 's'}.`);
+  } catch (error) {
+    if (status) status.textContent = 'Could not load readiness map section data.';
+    if (typeof toastError === 'function') toastError('Could not load readiness map data. Try again in a moment.');
+  } finally {
+    scheduleReadinessMapLoading = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Load map data';
+    }
+  }
+}
+
 function renderScheduleReadinessMap(activeSemId, activeTerm, activeCourses, activeSelectedItems, activeConflicts, activeWarnings, activeSectionsByCode) {
   const root = document.getElementById('schedule-readiness-map');
   if (!root) return;
@@ -1533,6 +1581,7 @@ function renderScheduleReadinessMap(activeSemId, activeTerm, activeCourses, acti
   const readyRows = activeRows.filter(row => row.readiness.level === 'ok').length;
   const dangerRows = activeRows.filter(row => row.readiness.level === 'danger').length;
   const warnRows = activeRows.filter(row => row.readiness.level === 'warn').length;
+  const loadTargetCount = activeRows.filter(row => row.loadedCount < row.courses.length).length;
   root.innerHTML = `
     <section class="schedule-readiness-map-panel">
       <div class="schedule-readiness-map-head">
@@ -1540,7 +1589,10 @@ function renderScheduleReadinessMap(activeSemId, activeTerm, activeCourses, acti
           <h3>Readiness Map</h3>
           <span>${scheduleEscape(activeRows.length ? `${readyRows}/${activeRows.length} active terms registration-ready` : 'No open schedule-ready terms')}</span>
         </div>
-        <strong>${dangerRows ? `${dangerRows} fix` : warnRows ? `${warnRows} review` : 'Ready'}</strong>
+        <div class="schedule-readiness-map-actions">
+          <strong>${dangerRows ? `${dangerRows} fix` : warnRows ? `${warnRows} review` : 'Ready'}</strong>
+          <button class="btn small" type="button" data-schedule-map-load ${loadTargetCount ? '' : 'disabled'} title="${scheduleEscape(loadTargetCount ? `Load section evidence for ${loadTargetCount} term${loadTargetCount === 1 ? '' : 's'}.` : 'All map terms have loaded evidence.')}">Load map data</button>
+        </div>
       </div>
       <div class="schedule-readiness-term-grid">
         ${rows.map(row => `
@@ -4777,6 +4829,11 @@ function initScheduleEvents() {
     applyScheduleAlternative(Number(btn.dataset.altIndex));
   });
   if (readinessMap) readinessMap.addEventListener('click', e => {
+    const loadBtn = e.target.closest('[data-schedule-map-load]');
+    if (loadBtn) {
+      loadScheduleReadinessMapData();
+      return;
+    }
     const btn = e.target.closest('[data-schedule-jump-sem]');
     if (!btn) return;
     const semId = btn.dataset.scheduleJumpSem;
