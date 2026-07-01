@@ -1057,6 +1057,120 @@ function testScheduleRegistrationReadiness(context) {
   };
 }
 
+function testScheduleReadinessMapUndo(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      const undoRoot = { innerHTML: '' };
+      const originalGetElementById = document.getElementById;
+      const originalRenderSchedule = renderSchedule;
+      const originalRenderSemesters = typeof renderSemesters === 'function' ? renderSemesters : null;
+      const originalToastInfo = typeof toastInfo === 'function' ? toastInfo : null;
+      document.getElementById = id => {
+        if (id === 'schedule-undo') return undoRoot;
+        if (id === 'save-indicator') return { classList: { add() {}, remove() {} } };
+        return null;
+      };
+      renderSchedule = () => renderScheduleUndo();
+      renderSemesters = () => {};
+      toastInfo = message => { window.__readinessUndoToast = message; };
+      try {
+        state.activeSchedule = [{
+          id: 'UNDOF',
+          name: 'Fall 2026',
+          courses: [{ code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4 }],
+        }, {
+          id: 'UNDOS',
+          name: 'Spring 2027',
+          courses: [
+            { code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4 },
+            { code: 'MATH 141', title: 'Calculus II', cr: 4 },
+          ],
+        }];
+        scheduleCurrentSemId = 'UNDOF';
+        state.selectedSections = {};
+        const cmscNext = {
+          course: 'CMSC132',
+          section_id: 'CMSC132-0101',
+          semester: '202701',
+          number: '0101',
+          meetings: [{ days: 'TuTh', start_time: '10:00am', end_time: '11:15am', building: 'IRB', room: '1207' }],
+          open_seats: '16',
+          seats: '32',
+          waitlist: '0',
+        };
+        const mathPrevious = {
+          course: 'MATH141',
+          section_id: 'MATH141-OLD',
+          semester: '202608',
+          number: 'OLD',
+          meetings: [{ days: 'M', start_time: '8:00am', end_time: '8:50am', building: 'MTH', room: '0101' }],
+          open_seats: '3',
+          seats: '30',
+          waitlist: '0',
+        };
+        const mathNext = {
+          course: 'MATH141',
+          section_id: 'MATH141-0201',
+          semester: '202701',
+          number: '0201',
+          meetings: [{ days: 'MWF', start_time: '11:00am', end_time: '11:50am', building: 'MTH', room: '0101' }],
+          open_seats: '14',
+          seats: '30',
+          waitlist: '0',
+        };
+        restoreSelectedSection('UNDOS', 'MATH 141', mathPrevious, true);
+        setSelectedSection('UNDOS', 'CMSC 132', cmscNext);
+        setSelectedSection('UNDOS', 'MATH 141', mathNext);
+        registerScheduleUndo({
+          type: 'readiness-map-auto-pick',
+          title: 'Auto-picked 2 Readiness Map sections',
+          detail: 'Undo restores previous picks across 1 loaded term.',
+          termCount: 1,
+          changes: [
+            { semId: 'UNDOS', code: 'CMSC 132', previousSection: null, previousPinned: false, nextSection: cmscNext },
+            { semId: 'UNDOS', code: 'MATH 141', previousSection: mathPrevious, previousPinned: true, nextSection: mathNext },
+          ],
+        });
+        const banner = undoRoot.innerHTML;
+        undoScheduleSectionChange();
+        const cmscAfter = getSelectedSection('UNDOS', 'CMSC 132');
+        const mathAfter = getSelectedSection('UNDOS', 'MATH 141');
+        const change = (state.recentChanges || [])[0] || {};
+        return {
+          banner,
+          cmscRestoredEmpty: !cmscAfter,
+          mathRestored: mathAfter?.section_id || '',
+          mathPinned: !!mathAfter?.pinned,
+          cleared: undoRoot.innerHTML === '',
+          changeTitle: change.title || '',
+          toast: window.__readinessUndoToast || '',
+        };
+      } finally {
+        document.getElementById = originalGetElementById;
+        renderSchedule = originalRenderSchedule;
+        if (originalRenderSemesters) renderSemesters = originalRenderSemesters;
+        else delete globalThis.renderSemesters;
+        if (originalToastInfo) toastInfo = originalToastInfo;
+        else delete globalThis.toastInfo;
+        delete window.__readinessUndoToast;
+      }
+    })()
+  `, context));
+
+  assert(/Auto-picked 2 Readiness Map sections/.test(result.banner), 'readiness map undo: banner should describe the bulk map action');
+  assert(/Undo restores previous picks/.test(result.banner), 'readiness map undo: banner should explain the restore scope');
+  assert(result.cmscRestoredEmpty, 'readiness map undo: auto-filled empty course should be cleared');
+  assert(result.mathRestored === 'MATH141-OLD' && result.mathPinned, 'readiness map undo: previous pinned pick should be restored');
+  assert(result.cleared, 'readiness map undo: undo banner should clear after restore');
+  assert(/Undid Readiness Map auto-pick/.test(result.changeTitle), 'readiness map undo: should record an undo change');
+  assert(/Restored 2 Readiness Map section picks/.test(result.toast), 'readiness map undo: should announce restored picks');
+
+  return {
+    id: 'SCHEDULE-MAP-UNDO',
+    restored: `${result.cmscRestoredEmpty ? 'empty' : 'kept'}/${result.mathRestored}`,
+  };
+}
+
 function testScheduleCourseChip(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -1495,6 +1609,21 @@ function testReleaseJsonReport() {
     id: 'RELEASE-JSON',
     status: report.status,
     stages: Object.keys(stageStatus).join(','),
+  };
+}
+
+function testCanonicalCourseTitles(context) {
+  const result = clone(vm.runInContext(`
+    ({
+      amst205: UMDIO_CANONICAL_TITLES.AMST205,
+      phys260: UMDIO_CANONICAL_TITLES.PHYS260,
+    })
+  `, context));
+  assert(result.amst205 === 'American Material Culture: The Study of People, Places, and Things', 'canonical titles: AMST 205 should use the current live catalog title');
+  assert(/Electricity/.test(result.phys260), 'canonical titles: existing PHYS override should remain present');
+  return {
+    id: 'COURSE-CANONICAL-TITLES',
+    amst205: result.amst205,
   };
 }
 
@@ -3378,8 +3507,10 @@ async function main() {
   const account = testAccountAndShareState(context);
   const accountSetup = testAccountCloudSetup(context);
   const releaseJson = testReleaseJsonReport();
+  const canonicalTitles = testCanonicalCourseTitles(context);
   const timing = testScheduleTimingFit(context);
   const readiness = testScheduleRegistrationReadiness(context);
+  const mapUndo = testScheduleReadinessMapUndo(context);
   const chip = testScheduleCourseChip(context);
   const seatRisk = testScheduleSeatRiskBackups(context);
   const recoMove = testRecommendationMoveAction(context);
@@ -3407,8 +3538,10 @@ async function main() {
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
+  console.log(`Canonical title fixture ${canonicalTitles.id}: AMST 205 -> ${canonicalTitles.amst205}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Schedule readiness fixture ${readiness.id}: ${readiness.label}; gates ${readiness.gates}.`);
+  console.log(`Schedule map undo fixture ${mapUndo.id}: restored ${mapUndo.restored}.`);
   console.log(`Schedule chip fixture ${chip.id}: ${chip.risk}, ${chip.closed}, ${chip.ok}.`);
   console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
@@ -3427,7 +3560,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + registration readiness + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + readiness map undo + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

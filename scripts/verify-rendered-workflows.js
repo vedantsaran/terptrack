@@ -177,7 +177,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.styles.includes('styles.css?v=99'), 'workflow app did not load styles.css?v=99');
-  assert(snapshot.scripts.includes('js/schedule.js?v=51'), 'workflow app did not load js/schedule.js?v=51');
+  assert(snapshot.scripts.includes('js/schedule.js?v=52'), 'workflow app did not load js/schedule.js?v=52');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -785,12 +785,15 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   await page.locator('[data-schedule-map-pick]').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
     const spring = document.querySelector('[data-schedule-jump-sem="PASS98S"]')?.textContent?.replace(/\s+/g, ' ') || '';
+    const undo = document.querySelector('#schedule-undo')?.textContent?.replace(/\s+/g, ' ') || '';
     const pickedCmsc = getSelectedSection('PASS98S', 'CMSC 132')?.section_id || '';
     const pickedComm = getSelectedSection('PASS98S', 'COMM 107')?.section_id || '';
     const change = (state.recentChanges || [])[0] || {};
     return pickedCmsc === 'CMSC132-0101'
       && pickedComm === 'COMM107-0201'
       && /Auto-picked 2 map sections/.test(change.title || '')
+      && undo.includes('Auto-picked 2 Readiness Map sections')
+      && undo.includes('Undo restores previous picks')
       && spring.includes('2/2')
       && spring.includes('Ready');
   }, null, { timeout: opts.timeoutMs });
@@ -803,6 +806,19 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && mapText.includes('Spring 2027')
       && mapText.includes('2/2')
       && mapText.includes('Ready');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-undo]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const mapText = document.querySelector('#schedule-readiness-map')?.textContent?.replace(/\s+/g, ' ') || '';
+    const pickedCmsc = getSelectedSection('PASS98S', 'CMSC 132');
+    const pickedComm = getSelectedSection('PASS98S', 'COMM 107');
+    const change = (state.recentChanges || [])[0] || {};
+    return !pickedCmsc
+      && !pickedComm
+      && /Undid Readiness Map auto-pick/.test(change.title || '')
+      && mapText.includes('Spring 2027')
+      && mapText.includes('0/2')
+      && mapText.includes('Needs sections');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-schedule-jump-sem="PASS98F"]').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => document.querySelector('#schedule-semester')?.value === 'PASS98F' && scheduleCurrentSemId === 'PASS98F', null, { timeout: opts.timeoutMs });

@@ -7217,3 +7217,69 @@ Verification:
   - It randomly verified `JOUR`, `FMSC`, `ASTR`, `CHEM`, `ENAE`, and `GEOL` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 132
+
+Focus: make plan-wide Readiness Map auto-picks reversible so students can safely try future-term section filling.
+
+Planned changes:
+- Extend the Schedule undo model to support a batch of section changes across semesters.
+- Register Readiness Map auto-picks as an undoable action.
+- Verify both the user-visible mobile undo flow and the underlying restore semantics.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Generalized `renderScheduleUndo()` in `js/schedule.js`.
+  - Existing single-section swaps still render the current course-specific undo banner.
+  - Readiness Map bulk picks now render a plan-wide undo banner even when the active term was not changed.
+- Generalized `undoScheduleSectionChange()`.
+  - It can now restore a batch of prior section states across terms.
+  - It removes newly auto-filled picks when the previous state had no section.
+  - It restores previous pinned picks when a prior section existed.
+  - It records an `Undid Readiness Map auto-pick` recent-change entry.
+- Updated `autoPickScheduleReadinessMap()`.
+  - It records the exact future-term section changes it fills.
+  - It registers a batch undo before rerendering Schedule.
+- Added a canonical `AMST205` title override in `js/api.js`.
+  - The live sample exposed a mismatch between generated AMST schedules and current app live metadata.
+  - The override keeps AMST 205 aligned to `American Material Culture: The Study of People, Places, and Things`.
+- Bumped cache tags:
+  - `js/schedule.js?v=52`.
+  - `js/api.js?v=6`.
+- Extended tests:
+  - Added `SCHEDULE-MAP-UNDO` to `scripts/test-generated-plans.js` for batch undo restore behavior.
+  - Added `COURSE-CANONICAL-TITLES` to protect the AMST 205 title correction.
+  - Extended the rendered advisor packet workflow to assert the bulk undo banner, undo the loaded Spring picks, and confirm the future term returns to `Needs sections`.
+  - Rendered cache checks now expect the updated Schedule and API script tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check js/api.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `SCHEDULE-MAP-UNDO` fixture.
+  - It passed the new `COURSE-CANONICAL-TITLES` fixture for AMST 205.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, recommendations, Browse, audit, onboarding, prior-credit, schedule timing, registration readiness, and seat-risk tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with Readiness Map loading, auto-pick loaded sections, bulk undo, jump-to-term behavior, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, exports, backup apply, seat refresh action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated API cache tag.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-majors AMST`.
+  - It verified the AMST generated schedule after the AMST 205 canonical-title correction.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including readiness-map undo and canonical-title coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with readiness-map undo coverage.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass132-readiness-map-undo-live`.
+  - It randomly verified `STAT`, `AMST`, `PLSC`, `JOUR`, `ENCE`, and `GEOG` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

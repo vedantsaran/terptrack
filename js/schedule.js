@@ -491,8 +491,24 @@ function renderScheduleUndo() {
   const root = document.getElementById('schedule-undo');
   if (!root) return;
   const currentSemId = scheduleCurrentSemId || scheduleDefaultSemesterId();
-  if (!scheduleUndoAction || scheduleUndoAction.semId !== currentSemId) {
+  const isBatch = scheduleUndoAction?.type === 'readiness-map-auto-pick' && Array.isArray(scheduleUndoAction.changes);
+  if (!scheduleUndoAction || (!isBatch && scheduleUndoAction.semId !== currentSemId)) {
     root.innerHTML = '';
+    return;
+  }
+  if (isBatch) {
+    root.innerHTML = `
+      <div class="schedule-undo-banner">
+        <div>
+          <strong>${scheduleEscape(scheduleUndoAction.title || 'Readiness Map sections applied')}</strong>
+          <span>${scheduleEscape(scheduleUndoAction.detail || 'You can restore the previous section picks across affected terms.')}</span>
+        </div>
+        <div class="schedule-undo-actions">
+          <button class="btn small" type="button" data-schedule-undo="${scheduleEscape(scheduleUndoAction.id)}">Undo</button>
+          <button class="schedule-undo-dismiss" type="button" data-schedule-undo-dismiss="${scheduleEscape(scheduleUndoAction.id)}" aria-label="Dismiss undo">×</button>
+        </div>
+      </div>
+    `;
     return;
   }
   const prevLabel = scheduleSectionShortLabel(scheduleUndoAction.previousSection);
@@ -514,6 +530,25 @@ function renderScheduleUndo() {
 function undoScheduleSectionChange() {
   if (!scheduleUndoAction) return;
   const action = scheduleUndoAction;
+  if (action.type === 'readiness-map-auto-pick' && Array.isArray(action.changes)) {
+    const termCount = action.termCount || 1;
+    action.changes.forEach(change => {
+      restoreSelectedSection(change.semId, change.code, change.previousSection, change.previousPinned);
+    });
+    scheduleUndoAction = null;
+    recordPlanChange({
+      type: 'auto-pick',
+      source: 'Schedule',
+      title: 'Undid Readiness Map auto-pick',
+      detail: `Restored previous section choices for ${action.changes.length} course${action.changes.length === 1 ? '' : 's'} across ${termCount} term${termCount === 1 ? '' : 's'}.`,
+      meta: 'Undo readiness map',
+    }, { save: false });
+    saveState();
+    renderSchedule();
+    renderSemesters();
+    toastInfo(`Restored ${action.changes.length} Readiness Map section pick${action.changes.length === 1 ? '' : 's'}.`);
+    return;
+  }
   restoreSelectedSection(action.semId, action.code, action.previousSection, action.previousPinned);
   scheduleUndoAction = null;
   recordPlanChange({
@@ -1607,6 +1642,7 @@ async function autoPickScheduleReadinessMap() {
   let filled = 0;
   let terms = 0;
   const highlights = [];
+  const undoChanges = [];
   try {
     targets.forEach(row => {
       const prefs = getSchedulePrefs(row.sem.id);
@@ -1615,12 +1651,32 @@ async function autoPickScheduleReadinessMap() {
       const candidate = buildScheduleCandidate(row.courses, row.sectionsByCode, prefs, 0, preserved);
       const newItems = candidate.items.filter(item => !selectedCodes.has(normalizeCode(item.course.code)));
       if (!newItems.length) return;
-      candidate.items.forEach(item => setSelectedSection(row.sem.id, item.course.code, item.section));
+      candidate.items.forEach(item => {
+        const previous = getSelectedSection(row.sem.id, item.course.code);
+        setSelectedSection(row.sem.id, item.course.code, item.section);
+        if (!selectedCodes.has(normalizeCode(item.course.code))) {
+          undoChanges.push({
+            semId: row.sem.id,
+            semName: row.sem.name || row.sem.id,
+            code: item.course.code,
+            previousSection: scheduleCloneSection(previous),
+            previousPinned: !!previous?.pinned,
+            nextSection: scheduleCloneSection(item.section),
+          });
+        }
+      });
       filled += newItems.length;
       terms += 1;
       highlights.push(`${row.sem.name || row.sem.id}: ${newItems.map(item => `${item.course.code} ${scheduleSectionShortLabel(item.section)}`).join(', ')}`);
     });
     if (filled) {
+      registerScheduleUndo({
+        type: 'readiness-map-auto-pick',
+        title: `Auto-picked ${filled} Readiness Map section${filled === 1 ? '' : 's'}`,
+        detail: `Undo restores previous picks across ${terms} loaded term${terms === 1 ? '' : 's'}.`,
+        termCount: terms,
+        changes: undoChanges,
+      });
       recordPlanChange({
         type: 'auto-pick',
         source: 'Schedule',

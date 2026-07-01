@@ -456,7 +456,7 @@ async function runViewport(browser, url, viewport, selected, opts) {
     assert(initialSnapshot.styles.includes('styles.css?v=99'), `${viewport.label}: rendered app did not load styles.css?v=99`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
-    assert(initialSnapshot.scripts.includes('js/api.js?v=5'), `${viewport.label}: rendered app did not load js/api.js?v=5`);
+    assert(initialSnapshot.scripts.includes('js/api.js?v=6'), `${viewport.label}: rendered app did not load js/api.js?v=6`);
     assert(initialSnapshot.scripts.includes('js/settings.js?v=29'), `${viewport.label}: rendered app did not load js/settings.js?v=29`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('3/4 launch checks ready'), `${viewport.label}: release checklist did not show 3/4 ready status`);
