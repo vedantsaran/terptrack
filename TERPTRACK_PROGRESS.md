@@ -5317,3 +5317,55 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass100-reco-move-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 101
+
+Focus: turn Smart next picks into a direct registration action by saving the best posted section from the recommendation card.
+
+Planned changes:
+- Add a `Pick best` action when a recommended course has a live posted section that fits the current registration term.
+- If the recommended course is still in a future term, move the existing planned course into the active registration term before saving the section.
+- Save the exact posted section into `state.selectedSections` using the Schedule tab's existing section-pick storage.
+- Clear stale source-term section picks when the course is moved.
+- Record one coherent recent-change entry from `Smart next picks` with section, seat, timing, and Schedule-review follow-up details.
+- Keep the Schedule jump available for weekly-grid/advisor-packet review.
+- Add fixture and rendered mobile coverage for the direct section-pick workflow.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added recommendation helpers in `js/recommendations.js` for:
+  - shared course-placement moves.
+  - cached section lookup from the live Schedule section cache.
+  - source-term section cleanup.
+  - section labels/summaries that reuse Schedule helpers.
+  - `recoPickBestSection()` for moving a course and saving a posted section in one action.
+- Updated Smart next pick actions:
+  - live recommendations with a best posted section now show `Pick best` plus `Schedule`.
+  - recommendations without a best section keep the existing `Move here` fallback.
+- Gated `Pick best` to sections that avoid current picked-section conflicts and unavailable blocked-time preferences.
+- Preserved existing section pin behavior when replacing an already selected target-term section.
+- Added `RECO-SECTION` fixture coverage in `scripts/test-generated-plans.js`.
+- Updated rendered mobile workflow verification to click `Pick best` and assert the posted section is saved.
+- Bumped cache tag:
+  - `js/recommendations.js?v=13`.
+
+Verification:
+- Ran `node --check js/recommendations.js && node --check scripts/test-generated-plans.js && node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `RECO-SECTION` fixture plus the existing generated-plan regression suite.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed the new mobile Recommendations section-pick workflow.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet export.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including `RECO-SECTION`.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass101-reco-section-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.

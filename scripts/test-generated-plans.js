@@ -697,6 +697,117 @@ function testRecommendationMoveAction(context) {
   };
 }
 
+function testRecommendationBestSectionAction(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      let renderCalls = 0;
+      const originalRender = render;
+      render = () => { renderCalls += 1; };
+      currentTab = 'plan';
+      state.activeSchedule = [{
+        id: 'PASS101F',
+        name: 'Pass 101 Fall',
+        year: 'Year 1',
+        courses: [{
+          code: 'CMSC 131',
+          title: 'Object-Oriented Programming I',
+          cr: 4,
+          prereqs: [],
+          kind: 'core',
+          category: 'major-core'
+        }]
+      }, {
+        id: 'PASS101S',
+        name: 'Pass 101 Spring',
+        year: 'Year 1',
+        courses: [{
+          code: 'CMSC 132',
+          title: 'Object-Oriented Programming II',
+          cr: 4,
+          prereqs: ['CMSC 131'],
+          kind: 'core',
+          category: 'major-core'
+        }]
+      }];
+      state.customSemesters = [];
+      state.customCourses = [];
+      state.courses = { 'CMSC 131': { status: 'passed', grade: 'A' } };
+      state.schedulePrefs = { PASS101F: { term: '202608', minBreak: 15, mode: 'balanced', avoidDays: [] } };
+      state.selectedSections = {
+        PASS101S: {
+          CMSC132: {
+            course: 'CMSC132',
+            section_id: 'CMSC132-0999',
+            semester: '202609',
+            number: '0999',
+            meetings: [],
+            pinned: true,
+          }
+        }
+      };
+      state.recentChanges = [];
+      scheduleSectionsCache['PASS101F:202608:CMSC132'] = [{
+        section_id: 'CMSC132-0101',
+        semester: '202608',
+        number: '0101',
+        instructors: ['Grace Hopper'],
+        meetings: [{ days: 'MW', start_time: '10:30am', end_time: '11:45am', building: 'IRB', room: '1201' }],
+        open_seats: '12',
+        seats: '30',
+        waitlist: '0',
+      }, {
+        section_id: 'CMSC132-0201',
+        semester: '202608',
+        number: '0201',
+        instructors: ['Katherine Johnson'],
+        meetings: [{ days: 'TuTh', start_time: '5:00pm', end_time: '6:15pm', building: 'CSI', room: '1115' }],
+        open_seats: '2',
+        seats: '30',
+        waitlist: '4',
+      }];
+      const ctx = { semId: 'PASS101F', term: '202608', termLabel: 'Fall 2026' };
+      const candidate = recoBaseCandidates().find(item => normalizeCode(item.course.code) === 'CMSC132');
+      candidate.sections = scheduleSectionsCache['PASS101F:202608:CMSC132'];
+      candidate.bestSection = candidate.sections[0];
+      candidate.bestSectionSafe = true;
+      const htmlBefore = recoRenderPick(candidate, 0, ctx);
+      const picked = recoPickBestSection('CMSC 132', 'PASS101F', '202608', 'CMSC132-0101');
+      const selected = getSelectedSection('PASS101F', 'CMSC 132');
+      const sourceSelected = (state.selectedSections.PASS101S || {}).CMSC132 || null;
+      render = originalRender;
+      return {
+        candidateCode: candidate?.course?.code || '',
+        picked,
+        fallCodes: state.activeSchedule[0].courses.map(course => course.code),
+        springCodes: state.activeSchedule[1].courses.map(course => course.code),
+        htmlBefore,
+        selected,
+        sourceSelected,
+        change: state.recentChanges[0] || null,
+        renderCalls,
+      };
+    })()
+  `, context));
+
+  assert(result.candidateCode === 'CMSC 132', 'recommendation section: should find ready course candidate');
+  assert(/Pick best/.test(result.htmlBefore) && /Schedule/.test(result.htmlBefore), 'recommendation section: live best pick should render pick and schedule actions');
+  assert(!/Move here/.test(result.htmlBefore), 'recommendation section: best section action should replace move-only action');
+  assert(result.picked === true, 'recommendation section: action should report successful pick');
+  assert(result.fallCodes.includes('CMSC 132') && !result.springCodes.includes('CMSC 132'), 'recommendation section: course should move into target term');
+  assert(result.selected?.section_id === 'CMSC132-0101' && result.selected?.semester === '202608', 'recommendation section: target term should save selected posted section');
+  assert(!result.sourceSelected, 'recommendation section: stale source-term section pick should be cleared');
+  assert(result.change?.type === 'section-pick' && result.change?.source === 'Smart next picks', 'recommendation section: should record a single Smart next picks section change');
+  assert(/Picked CMSC 132/.test(result.change.title || ''), 'recommendation section: change title should name picked course');
+  assert((result.change?.highlights || []).some(item => /weekly grid/i.test(item)), 'recommendation section: change should direct student to review the Schedule grid');
+  assert(result.renderCalls === 1, 'recommendation section: should rerender the app once after picking');
+
+  return {
+    id: 'RECO-SECTION',
+    picked: result.selected?.section_id || '',
+    moved: result.fallCodes.includes('CMSC 132') ? 'CMSC 132' : '',
+  };
+}
+
 function testAccountCloudSetup(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -2614,6 +2725,7 @@ async function main() {
   const releaseJson = testReleaseJsonReport();
   const timing = testScheduleTimingFit(context);
   const recoMove = testRecommendationMoveAction(context);
+  const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
   const questions = testPlannerAdvisorQuestions(context);
   const browse = await testBrowseProfileDepartments(context);
@@ -2638,6 +2750,7 @@ async function main() {
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
+  console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
@@ -2652,7 +2765,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + recommendation move action + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

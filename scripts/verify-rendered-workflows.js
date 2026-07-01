@@ -276,7 +276,7 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   console.log('Browse replacement [mobile]: rendered replacement banner, result card, actions, and no overflow.');
 }
 
-async function verifyRecommendationsMoveMobile(page, url, opts) {
+async function verifyRecommendationsSectionMobile(page, url, opts) {
   await openFreshApp(page, url, opts, 'recommendations');
   await page.evaluate(() => {
     document.querySelector('#onboard-modal')?.classList.remove('open');
@@ -345,26 +345,29 @@ async function verifyRecommendationsMoveMobile(page, url, opts) {
     const text = document.querySelector('#reco-container')?.textContent?.replace(/\s+/g, ' ') || '';
     return text.includes('Smart next picks')
       && text.includes('CMSC 132')
-      && text.includes('Move here')
+      && text.includes('Pick best')
       && text.includes('Schedule');
   }, null, { timeout: opts.timeoutMs });
-  await page.locator('#reco-container .reco-pick:has-text("CMSC 132") button:has-text("Move here")').click({ timeout: opts.timeoutMs });
+  await page.locator('#reco-container .reco-pick:has-text("CMSC 132") button:has-text("Pick best")').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
     const text = document.querySelector('#reco-container')?.textContent?.replace(/\s+/g, ' ') || '';
-    return text.includes('CMSC 132') && text.includes('In this term');
+    const selected = state.selectedSections?.PASS100F?.CMSC132;
+    return text.includes('CMSC 132') && text.includes('Pick best') && selected?.section_id === 'CMSC132-0101';
   }, null, { timeout: opts.timeoutMs });
   const result = await page.evaluate(() => ({
     fallCodes: state.activeSchedule[0].courses.map(course => course.code),
     springCodes: state.activeSchedule[1].courses.map(course => course.code),
+    selected: state.selectedSections?.PASS100F?.CMSC132 || null,
     change: state.recentChanges[0] || null,
   }));
   assert(result.fallCodes.includes('CMSC 132'), 'recommendations: moved course should be in current term');
   assert(!result.springCodes.includes('CMSC 132'), 'recommendations: moved course should leave future term');
-  assert(result.change?.type === 'recommendation-move', 'recommendations: move should record a recent change');
+  assert(result.selected?.section_id === 'CMSC132-0101', 'recommendations: best section should be saved for the current term');
+  assert(result.change?.type === 'section-pick' && result.change?.source === 'Smart next picks', 'recommendations: section pick should record a Smart next picks change');
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.recoText.includes('In this term'), 'recommendations: rendered panel should show moved current-term state');
-  assertNoOverflow('recommendations move mobile', snapshot);
-  console.log('Recommendations [mobile]: rendered Smart next pick move action, moved a ready course, and no overflow.');
+  assert(snapshot.recoText.includes('Pick best'), 'recommendations: rendered panel should keep direct section action visible');
+  assertNoOverflow('recommendations section mobile', snapshot);
+  console.log('Recommendations [mobile]: rendered Smart next pick section action, moved a ready course, saved a posted section, and no overflow.');
 }
 
 async function verifyAccountSetupMobile(page, url, opts) {
@@ -593,12 +596,12 @@ async function main() {
     page.on('pageerror', error => pageErrors.push(error.message));
     await verifyOnboardingMobile(page, url, opts);
     await verifyBrowseReplacementMobile(page, url, opts);
-    await verifyRecommendationsMoveMobile(page, url, opts);
+    await verifyRecommendationsSectionMobile(page, url, opts);
     await verifyAccountSetupMobile(page, url, opts);
     await verifyAdvisorPacketMobile(page, url, opts);
     assert(!pageErrors.length, `Workflow page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
     assert(!consoleErrors.length, `Workflow console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
-    console.log('Verified rendered mobile onboarding, Browse replacement, Recommendations move, Account setup, and advisor packet workflows.');
+    console.log('Verified rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.');
     if (opts.keepOpen) await page.waitForTimeout(60_000);
   } finally {
     await browser.close().catch(() => {});

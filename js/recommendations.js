@@ -177,11 +177,13 @@ function recoHydrateLiveData(seq, payload) {
     payload.candidates.forEach(item => {
       const norm = normalizeCode(item.course.code);
       const sections = sectionsByCode[norm] || [];
+      const prefs = getSchedulePrefs(ctx.semId);
       item.sections = sections;
       if (!sections.length) {
         item.liveScore = -85;
         item.liveNote = ctx.termLabel ? `No posted ${ctx.termLabel} sections` : 'No posted sections';
         item.seatRisk = null;
+        item.bestSectionSafe = false;
         return;
       }
       const viable = sections.filter(section => {
@@ -190,12 +192,16 @@ function recoHydrateLiveData(seq, payload) {
         const existingBlocks = currentItems
           .filter(existing => normalizeCode(existing.course.code) !== norm)
           .flatMap(existing => sectionBlocks(existing.section, existing.course));
-        return !candidateBlocks.some(a => existingBlocks.some(b => blocksConflict(a, b)));
+        const blocked = typeof sectionBlockedOverlaps === 'function'
+          ? sectionBlockedOverlaps(section, prefs, item.course).length > 0
+          : false;
+        return !blocked && !candidateBlocks.some(a => existingBlocks.some(b => blocksConflict(a, b)));
       });
       const pool = viable.length ? viable : sections;
-      pool.sort((a, b) => sectionScore(b, getSchedulePrefs(ctx.semId), item.course, currentItems)
-        - sectionScore(a, getSchedulePrefs(ctx.semId), item.course, currentItems));
+      pool.sort((a, b) => sectionScore(b, prefs, item.course, currentItems)
+        - sectionScore(a, prefs, item.course, currentItems));
       item.bestSection = pool[0] || null;
+      item.bestSectionSafe = viable.length > 0;
       item.seatRisk = typeof sectionSeatRisk === 'function' && item.bestSection ? sectionSeatRisk(item.bestSection) : null;
       const openSeats = sections.reduce((max, section) => {
         const open = parseInt(section.open_seats, 10);
@@ -257,6 +263,19 @@ function recoFindCoursePlacement(code) {
   return null;
 }
 
+function recoMovePlacementToTarget(placement, target, targetSemId) {
+  const sourceName = placement.sem?.name || (placement.semId ? placement.semId : 'Outside Plan');
+  if (placement.semId === targetSemId) return { moved: false, sourceName };
+  if (placement.custom) {
+    placement.course.semId = targetSemId;
+  } else {
+    placement.sem.courses = (placement.sem.courses || []).filter(course => normalizeCode(course.code) !== normalizeCode(placement.course.code));
+    target.courses = target.courses || [];
+    target.courses.push(placement.course);
+  }
+  return { moved: true, sourceName };
+}
+
 function recoMoveToSemester(code, targetSemId) {
   const target = recoMutableSemesters().find(sem => sem.id === targetSemId);
   if (!target) {
@@ -273,14 +292,7 @@ function recoMoveToSemester(code, targetSemId) {
     recoOpenSchedule(targetSemId);
     return false;
   }
-  const sourceName = placement.sem?.name || (placement.semId ? placement.semId : 'Outside Plan');
-  if (placement.custom) {
-    placement.course.semId = targetSemId;
-  } else {
-    placement.sem.courses = (placement.sem.courses || []).filter(course => normalizeCode(course.code) !== normalizeCode(code));
-    target.courses = target.courses || [];
-    target.courses.push(placement.course);
-  }
+  const { sourceName } = recoMovePlacementToTarget(placement, target, targetSemId);
   recordPlanChange({
     type: 'recommendation-move',
     source: 'Smart next picks',
@@ -298,10 +310,103 @@ function recoMoveToSemester(code, targetSemId) {
   return true;
 }
 
+function recoCachedSection(targetSemId, term, code, sectionId) {
+  if (typeof scheduleSectionsCache === 'undefined') return null;
+  const key = `${targetSemId}:${term}:${normalizeCode(code)}`;
+  return (scheduleSectionsCache[key] || []).find(section => section.section_id === sectionId) || null;
+}
+
+function recoClearSelectedSection(semId, code) {
+  if (!semId || !code) return;
+  if (typeof setSelectedSection === 'function') {
+    setSelectedSection(semId, code, null);
+    return;
+  }
+  const bucket = state.selectedSections && state.selectedSections[semId];
+  if (bucket) delete bucket[normalizeCode(code)];
+}
+
+function recoSectionLabel(section) {
+  return typeof scheduleSectionShortLabel === 'function'
+    ? scheduleSectionShortLabel(section)
+    : (section?.number || section?.section_id || 'section');
+}
+
+function recoSectionSummary(section) {
+  return typeof sectionSummary === 'function'
+    ? sectionSummary(section)
+    : recoSectionLabel(section);
+}
+
+function recoPickBestSection(code, targetSemId, term, sectionId) {
+  const target = recoMutableSemesters().find(sem => sem.id === targetSemId);
+  if (!target) {
+    toastError('Could not find that target term.');
+    return false;
+  }
+  if (typeof setSelectedSection !== 'function') {
+    toastError('Schedule section picker is still loading.');
+    return false;
+  }
+  const placement = recoFindCoursePlacement(code);
+  if (!placement) {
+    toastError(`Could not find ${displayCode(code)} in your plan.`);
+    return false;
+  }
+  const section = recoCachedSection(targetSemId, term, placement.course.code, sectionId);
+  if (!section) {
+    toastError('Could not find that posted section. Refresh recommendations and try again.');
+    return false;
+  }
+  const previous = typeof getSelectedSection === 'function' ? getSelectedSection(targetSemId, placement.course.code) : null;
+  const previousTarget = previous && typeof scheduleCloneSection === 'function'
+    ? scheduleCloneSection(previous)
+    : (previous ? { ...previous } : null);
+  const previousPinned = !!previousTarget?.pinned;
+  const sourceSemId = placement.semId;
+  const { moved, sourceName } = recoMovePlacementToTarget(placement, target, targetSemId);
+  if (moved && sourceSemId) recoClearSelectedSection(sourceSemId, placement.course.code);
+  const sectionForSave = {
+    ...section,
+    course: normalizeCode(placement.course.code),
+    semester: String(section.semester || term || ''),
+  };
+  setSelectedSection(targetSemId, placement.course.code, sectionForSave);
+  if (previousPinned && typeof setSelectedSectionPinned === 'function') {
+    setSelectedSectionPinned(targetSemId, placement.course.code, true);
+  }
+  const risk = typeof sectionSeatRisk === 'function' ? sectionSeatRisk(sectionForSave) : null;
+  const prefs = typeof getSchedulePrefs === 'function' ? getSchedulePrefs(targetSemId) : {};
+  const notes = typeof sectionPreferenceNotes === 'function' ? sectionPreferenceNotes(sectionForSave, prefs, placement.course) : [];
+  const sectionLabel = recoSectionLabel(sectionForSave);
+  const termLabel = typeof scheduleTermLabel === 'function' ? scheduleTermLabel(term) : term;
+  recordPlanChange({
+    type: 'section-pick',
+    source: 'Smart next picks',
+    title: `Picked ${placement.course.code} ${sectionLabel}`,
+    detail: `Smart next picks saved ${sectionLabel} for ${target.name}${moved ? ` after moving it from ${sourceName}` : ''}.`,
+    meta: termLabel,
+    highlights: [
+      moved ? `Moved from ${sourceName} to ${target.name} before saving this section.` : `${placement.course.code} was already in ${target.name}.`,
+      recoSectionSummary(sectionForSave),
+      risk ? risk.detail : '',
+      ...notes.filter(note => note.type === 'warn').slice(0, 2).map(note => note.text),
+      'Open Schedule to review the weekly grid and advisor packet.',
+    ].filter(Boolean),
+  }, { save: false });
+  saveState();
+  render();
+  toastSuccess(`Picked ${placement.course.code} ${sectionLabel}.`);
+  return true;
+}
+
 function recoRenderPick(item, idx, ctx) {
   const course = item.course;
   const inContext = recoCourseInContext(course, ctx);
-  const targetAction = ctx.semId
+  const bestAction = ctx.semId && ctx.term && item.bestSection && item.bestSectionSafe !== false
+    ? `<button class="btn small primary" type="button" onclick="recoPickBestSection('${recoEscape(course.code)}','${recoEscape(ctx.semId)}','${recoEscape(ctx.term)}','${recoEscape(item.bestSection.section_id)}')">Pick best</button>`
+    : '';
+  const targetAction = ctx.semId && !bestAction
     ? (inContext
       ? '<span class="reco-current">In this term</span>'
       : `<button class="btn small primary" type="button" onclick="recoMoveToSemester('${recoEscape(course.code)}','${recoEscape(ctx.semId)}')">Move here</button>`)
@@ -319,6 +424,7 @@ function recoRenderPick(item, idx, ctx) {
         <div class="reco-reason">${recoEscape(recoReason(item))}</div>
       </div>
       <div class="reco-actions">
+        ${bestAction}
         ${targetAction}
         <button class="btn small" type="button" onclick="recoOpenSchedule('${recoEscape(ctx.semId)}')">Schedule</button>
       </div>
@@ -420,6 +526,7 @@ function recoFindGenEd(tag) {
 window.renderRecommendations = renderRecommendations;
 window.recoAddCourse = recoAddCourse;
 window.recoMoveToSemester = recoMoveToSemester;
+window.recoPickBestSection = recoPickBestSection;
 window.recoOpenSchedule = recoOpenSchedule;
 window.recoFindGenEd = recoFindGenEd;
 
