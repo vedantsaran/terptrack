@@ -174,7 +174,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.styles.includes('styles.css?v=88'), 'workflow app did not load styles.css?v=88');
-  assert(snapshot.scripts.includes('js/schedule.js?v=41'), 'workflow app did not load js/schedule.js?v=41');
+  assert(snapshot.scripts.includes('js/schedule.js?v=42'), 'workflow app did not load js/schedule.js?v=42');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -685,6 +685,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     const sectionText = document.querySelector('#schedule-section-list')?.textContent?.replace(/\s+/g, ' ') || '';
     return text.includes('Schedule Output')
       && text.includes('Advisor Packet')
+      && text.includes('Download registration list')
       && text.includes('Download calendar')
       && text.includes('Download advisor packet')
       && text.includes('Registration Readiness')
@@ -711,6 +712,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     return output?.dataset.lastReadinessAction === 'review-sections'
       && panel?.classList.contains('readiness-focus');
   }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-output="registration-download"]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => document.querySelector('#schedule-output')?.dataset.lastAction === 'registration-download', null, { timeout: opts.timeoutMs });
   await page.locator('[data-schedule-output="calendar-download"]').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => document.querySelector('#schedule-output')?.dataset.lastAction === 'calendar-download', null, { timeout: opts.timeoutMs });
   await page.locator('[data-advisor-filter="blockers"]').click({ timeout: opts.timeoutMs });
@@ -731,6 +734,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     advisorFilename: scheduleOutputCache?.advisorFilename || '',
     advisorDocument: scheduleOutputCache?.advisorDocument || '',
     advisorText: scheduleOutputCache?.advisorText || '',
+    registrationFilename: scheduleOutputCache?.registrationFilename || '',
+    registrationText: scheduleOutputCache?.registrationText || '',
     calendarFilename: scheduleOutputCache?.calendarFilename || '',
     calendarEventCount: scheduleOutputCache?.calendarEventCount || 0,
     calendarText: scheduleOutputCache?.calendar || '',
@@ -741,6 +746,10 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(result.advisorFilter === 'blockers', 'advisor packet: blocker filter should persist after click');
   assert(result.lastAction === 'advisor-download', 'advisor packet: download action should be recorded');
   assert(/^terp-track-advisor-.*\.html$/i.test(result.advisorFilename), 'advisor packet: export filename should be an HTML advisor packet');
+  assert(/^terp-track-registration-.*fall-2026\.txt$/i.test(result.registrationFilename), 'advisor packet: registration export should have a term-specific .txt filename');
+  assert(/Terp Track Registration List/.test(result.registrationText) && /Testudo checklist/.test(result.registrationText), 'advisor packet: registration export should identify Testudo checklist');
+  assert(/CMSC 131 \| Section 0101 \| Section ID CMSC131-0101/.test(result.registrationText), 'advisor packet: registration export should include picked section IDs');
+  assert(/Missing section picks:[\s\S]*ENGL 101/.test(result.registrationText), 'advisor packet: registration export should include missing picks');
   assert(/^terp-track-calendar-.*fall-2026\.ics$/i.test(result.calendarFilename), 'advisor packet: calendar export should have an .ics filename');
   assert(result.calendarEventCount === 4, 'advisor packet: calendar export should include four timed class events');
   assert(/BEGIN:VCALENDAR/.test(result.calendarText) && /SUMMARY:CMSC 131 0101/.test(result.calendarText), 'advisor packet: calendar export should include picked section events');
@@ -790,7 +799,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(!/MATH 140 0201: 2 seats open/.test(backupResult.outputText), 'advisor packet: backup apply should clear the prior low-seat warning');
   const backupSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet backup apply mobile', backupSnapshot);
-  console.log('Advisor packet [mobile]: rendered blocker view, registration readiness with recommended fixes and quick actions, calendar export, catalog warning, low-seat backup warning, backup apply action, export action, and no overflow.');
+  console.log('Advisor packet [mobile]: rendered blocker view, registration readiness with recommended fixes and quick actions, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, export action, and no overflow.');
 }
 
 async function main() {

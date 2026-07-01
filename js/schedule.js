@@ -1871,6 +1871,12 @@ function scheduleCalendarFilename(term) {
   return `terp-track-calendar-${program}-${label || 'term'}.ics`;
 }
 
+function scheduleRegistrationFilename(term) {
+  const program = scheduleCleanFilenamePart(getSettings().programName || 'umd-degree-plan');
+  const label = scheduleTermLabel(term).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return `terp-track-registration-${program}-${label || 'term'}.txt`;
+}
+
 function scheduleUtcDate(year, monthIndex, day) {
   return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0));
 }
@@ -2997,6 +3003,68 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   return lines.join('\n');
 }
 
+function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null) {
+  const courseList = Array.isArray(courses) ? courses : [];
+  const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
+  const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course.code)));
+  const unscheduled = Array.isArray(unscheduledOverride)
+    ? unscheduledOverride
+    : courseList.filter(course => !selectedCodes.has(normalizeCode(course.code)));
+  const readiness = scheduleRegistrationReadiness(courseList, selectedList, conflicts, warnings, prefs, unscheduled);
+  const lines = [
+    'Terp Track Registration List',
+    'Use this as a Testudo checklist. Confirm every section, seat, restriction, and prerequisite in Testudo before enrolling.',
+    `Plan semester: ${sem?.name || 'Selected semester'}`,
+    `Posted UMD term: ${scheduleTermLabel(term)} (${term || 'term code missing'})`,
+    `Registration readiness: ${readiness.label} - ${readiness.detail}`,
+    '',
+    'Picked sections:',
+  ];
+
+  if (!selectedList.length) lines.push('- No picked sections yet.');
+  selectedList
+    .slice()
+    .sort((a, b) => a.course.code.localeCompare(b.course.code))
+    .forEach(item => {
+      const sectionLabel = item.section.number || item.section.section_id || 'TBA';
+      const risk = sectionSeatRisk(item.section);
+      lines.push(`- ${item.course.code} | Section ${sectionLabel} | Section ID ${item.section.section_id || 'not posted'} | ${Number(item.course.cr) || 0} cr`);
+      if (item.course.title) lines.push(`  Title: ${item.course.title}`);
+      lines.push(`  Meetings: ${scheduleSectionMeetingLines(item.section).join('; ')}`);
+      lines.push(`  Instructor: ${scheduleInstructorLine(item.section)}`);
+      lines.push(`  Seats: ${risk.detail}`);
+    });
+
+  if (unscheduled.length) {
+    lines.push('', 'Missing section picks:');
+    unscheduled.forEach(course => lines.push(`- ${course.code} ${course.title || ''}`.trim()));
+  }
+
+  if ((conflicts || []).length) {
+    lines.push('', 'Conflicts to resolve before registration:');
+    conflicts.slice(0, 12).forEach(conflict => {
+      const start = Math.max(conflict.a.start, conflict.b.start);
+      const end = Math.min(conflict.a.end, conflict.b.end);
+      lines.push(`- ${conflict.a.code} overlaps ${conflict.b.code} on ${conflict.a.day} ${formatMeetingTime(start)}-${formatMeetingTime(end)}.`);
+    });
+  }
+
+  if ((warnings || []).length) {
+    lines.push('', 'Warnings to review:');
+    warnings.slice(0, 12).forEach(warning => lines.push(`- ${warning}`));
+    if (warnings.length > 12) lines.push(`- ${warnings.length - 12} more warning(s) in Terp Track.`);
+  }
+
+  lines.push('', 'Recommended fixes:');
+  (readiness.fixes || []).forEach(fix => lines.push(`- ${fix}`));
+  lines.push('', 'Before submitting in Testudo:');
+  lines.push('- Confirm the posted term and every section number still match.');
+  lines.push('- Confirm open seats, waitlist status, permissions, prerequisites, and restrictions.');
+  lines.push('- Resolve every conflict and missing section pick flagged above.');
+
+  return lines.join('\n');
+}
+
 function renderScheduleOutputWeek(blocks) {
   if (!blocks.length) return '<div class="schedule-output-empty">No posted meeting times.</div>';
   const minStart = Math.min(8 * 60, ...blocks.map(b => b.start));
@@ -3054,6 +3122,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions);
+  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
   const courseRows = selectedItems
     .slice()
@@ -3104,6 +3173,8 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   return {
     text,
     filename: scheduleOutputFilename(term),
+    registrationText,
+    registrationFilename: scheduleRegistrationFilename(term),
     html: scheduleHtml,
     calendar,
     calendarFilename: scheduleCalendarFilename(term),
@@ -3178,6 +3249,7 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
         <div class="schedule-output-actions">
           <button class="btn small" type="button" data-schedule-output="copy">Select summary</button>
           <button class="btn small" type="button" data-schedule-output="download">Download .txt</button>
+          <button class="btn small" type="button" data-schedule-output="registration-download">Download registration list</button>
           <button class="btn small" type="button" data-schedule-output="calendar-download">Download calendar</button>
           <button class="btn small" type="button" data-schedule-output="advisor-download">Download advisor packet</button>
           <button class="btn small" type="button" data-schedule-output="print">Print schedule</button>
@@ -3199,6 +3271,7 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       root.dataset.lastAction = action;
       if (action === 'copy') copyScheduleOutputSummary();
       if (action === 'download') downloadScheduleOutputSummary();
+      if (action === 'registration-download') downloadScheduleRegistrationList();
       if (action === 'calendar-download') downloadScheduleCalendar();
       if (action === 'print') printScheduleOutputSummary();
       if (action === 'advisor-download') downloadScheduleAdvisorPacket();
@@ -3265,6 +3338,18 @@ function downloadScheduleOutputSummary() {
   a.click();
   URL.revokeObjectURL(url);
   toastSuccess('Schedule summary downloaded.');
+}
+
+function downloadScheduleRegistrationList() {
+  if (!scheduleOutputCache) return;
+  const blob = new Blob([scheduleOutputCache.registrationText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = scheduleOutputCache.registrationFilename;
+  a.click();
+  URL.revokeObjectURL(url);
+  toastSuccess('Registration list downloaded.');
 }
 
 function downloadScheduleCalendar() {
@@ -3339,6 +3424,7 @@ async function handleScheduleReadinessAction(action) {
 if (typeof window !== 'undefined') {
   window.copyScheduleOutputSummary = copyScheduleOutputSummary;
   window.downloadScheduleOutputSummary = downloadScheduleOutputSummary;
+  window.downloadScheduleRegistrationList = downloadScheduleRegistrationList;
   window.downloadScheduleCalendar = downloadScheduleCalendar;
   window.downloadScheduleAdvisorPacket = downloadScheduleAdvisorPacket;
   window.printScheduleOutputSummary = printScheduleOutputSummary;

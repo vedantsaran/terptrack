@@ -6352,3 +6352,53 @@ Verification:
   - It randomly verified `ENAE`, `AREC`, `ACCOUNTING`, `MATH`, `JOUR`, and `LING` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 118
+
+Focus: give students a Testudo-facing registration handoff export from picked real sections.
+
+Planned changes:
+- Add a plain-text registration checklist export beside the advisor packet and calendar export.
+- Include exact picked section numbers and section IDs so students can copy their choices into Testudo.
+- Call out missing section picks, conflicts, low-seat warnings, and final registration checks.
+- Verify the export in fixture tests and the rendered mobile advisor-packet workflow.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleRegistrationFilename()` to generate term-specific `.txt` filenames.
+- Added `buildScheduleRegistrationText()` for the registration checklist payload.
+  - It includes the plan semester, posted UMD term code, readiness status, picked sections, instructors, meetings, seats, missing section picks, conflicts, warnings, recommended fixes, and final Testudo checks.
+  - It keeps the handoff honest by labeling the export as a Testudo checklist and telling students to confirm seats, prerequisites, blocks, and exact meeting details before submitting.
+- Added `registrationText` and `registrationFilename` to `buildScheduleOutput()`.
+- Added a `Download registration list` button to the schedule output action row.
+- Added `downloadScheduleRegistrationList()` and exposed it for test automation.
+- Bumped the Schedule script cache tag to `js/schedule.js?v=42`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts registration filename, Testudo checklist labeling, posted UMD term code, picked section IDs, missing picks, conflicts, low-seat warnings, and final Testudo checks.
+  - Rendered mobile advisor packet now clicks the registration export button and verifies the generated export cache.
+  - Rendered workflow cache assertions now require `js/schedule.js?v=42`.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with registration checklist export assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration export, calendar export, registration readiness quick actions, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including registration checklist export coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with registration export.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass118-registration-list-live`.
+  - It randomly verified `AOSC`, `AMST`, `JOUR`, `ENGL`, `ENAE`, and `ENCH` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

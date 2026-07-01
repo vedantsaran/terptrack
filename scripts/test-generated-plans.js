@@ -828,6 +828,8 @@ function testScheduleRegistrationReadiness(context) {
         text,
         outputHtml: output.html,
         outputText: output.text,
+        outputRegistrationText: output.registrationText,
+        outputRegistrationFilename: output.registrationFilename,
         outputCalendar: output.calendar,
         outputCalendarUnfolded: output.calendar.replace(/\\r?\\n /g, ''),
         outputCalendarFilename: output.calendarFilename,
@@ -861,6 +863,14 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
   assert(/Recommended fixes/.test(result.outputHtml) && /Generate alternatives/.test(result.outputHtml), 'registration readiness: schedule output HTML should include fix guidance');
   assert(/Quick actions/.test(result.outputHtml) && /data-readiness-action="alternatives"/.test(result.outputHtml), 'registration readiness: schedule output HTML should include action buttons');
+  assert(/^terp-track-registration-.*fall-2026\.txt$/.test(result.outputRegistrationFilename), 'registration list: filename should be a term-specific .txt export');
+  assert(/Terp Track Registration List/.test(result.outputRegistrationText) && /Testudo checklist/.test(result.outputRegistrationText), 'registration list: text should identify itself as a Testudo checklist');
+  assert(/Posted UMD term: Fall 2026 \(202608\)/.test(result.outputRegistrationText), 'registration list: text should include posted UMD term code');
+  assert(/CMSC 131 \| Section 0101 \| Section ID CMSC131-0101/.test(result.outputRegistrationText), 'registration list: text should include course section and section ID');
+  assert(/Missing section picks:[\s\S]*ENGL 101/.test(result.outputRegistrationText), 'registration list: text should include missing section picks');
+  assert(/Conflicts to resolve before registration:[\s\S]*CMSC 131 overlaps MATH 140/.test(result.outputRegistrationText), 'registration list: text should include conflict handoff');
+  assert(/MATH 140 0201: 2 seats open/.test(result.outputRegistrationText), 'registration list: text should include low-seat warning');
+  assert(/Before submitting in Testudo:[\s\S]*Confirm open seats/.test(result.outputRegistrationText), 'registration list: text should include final Testudo checks');
   assert(/^terp-track-calendar-.*fall-2026\.ics$/.test(result.outputCalendarFilename), 'schedule calendar: filename should be an .ics calendar export');
   assert(result.outputCalendarEventCount === 3, 'schedule calendar: two CMSC meetings and one MATH meeting should produce three VEVENTs');
   assert(/BEGIN:VCALENDAR/.test(result.outputCalendarUnfolded) && /BEGIN:VEVENT/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include calendar and event records');
