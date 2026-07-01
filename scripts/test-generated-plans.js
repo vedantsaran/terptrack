@@ -1188,6 +1188,188 @@ function testScheduleReadinessMapUndo(context) {
   };
 }
 
+async function testScheduleActionUndo(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const undoRoot = { innerHTML: '' };
+      const originalGetElementById = document.getElementById;
+      const originalRenderSchedule = renderSchedule;
+      const originalRenderSemesters = typeof renderSemesters === 'function' ? renderSemesters : null;
+      const originalToastInfo = typeof toastInfo === 'function' ? toastInfo : null;
+      const originalToastSuccess = typeof toastSuccess === 'function' ? toastSuccess : null;
+      const originalFetchSections = scheduleFetchSectionsFor;
+      document.getElementById = id => {
+        if (id === 'schedule-undo') return undoRoot;
+        if (id === 'save-indicator') return { classList: { add() {}, remove() {} } };
+        return null;
+      };
+      renderSchedule = async () => renderScheduleUndo();
+      renderSemesters = () => {};
+      toastInfo = message => { window.__scheduleActionToasts = [...(window.__scheduleActionToasts || []), message]; };
+      toastSuccess = message => { window.__scheduleActionToasts = [...(window.__scheduleActionToasts || []), message]; };
+      try {
+        const cmscOld = {
+          course: 'CMSC131',
+          section_id: 'CMSC131-0001',
+          semester: '202608',
+          number: '0001',
+          meetings: [{ days: 'MWF', start_time: '8:00am', end_time: '8:50am', building: 'IRB', room: '1100' }],
+          open_seats: '1',
+          seats: '30',
+          waitlist: '0',
+        };
+        const cmscNew = {
+          course: 'CMSC131',
+          section_id: 'CMSC131-0101',
+          semester: '202608',
+          number: '0101',
+          meetings: [{ days: 'MWF', start_time: '10:00am', end_time: '10:50am', building: 'IRB', room: '1201' }],
+          open_seats: '18',
+          seats: '30',
+          waitlist: '0',
+        };
+        const mathOld = {
+          course: 'MATH140',
+          section_id: 'MATH140-0201',
+          semester: '202608',
+          number: '0201',
+          meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'MTH', room: '0101' }],
+          open_seats: '12',
+          seats: '30',
+          waitlist: '0',
+        };
+        const englOld = {
+          course: 'ENGL101',
+          section_id: 'ENGL101-0301',
+          semester: '202608',
+          number: '0301',
+          meetings: [{ days: 'F', start_time: '2:00pm', end_time: '2:50pm', building: 'TWS', room: '1200' }],
+          open_seats: '9',
+          seats: '20',
+          waitlist: '0',
+        };
+        state.activeSchedule = [{
+          id: 'BULKF',
+          name: 'Fall 2026',
+          courses: [
+            { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4 },
+            { code: 'MATH 140', title: 'Calculus I', cr: 4 },
+            { code: 'ENGL 101', title: 'Academic Writing', cr: 3 },
+          ],
+        }];
+        scheduleCurrentSemId = 'BULKF';
+        state.schedulePrefs = { BULKF: { ...DEFAULT_SCHEDULE_PREFS, term: '202608', earliest: '08:00', latest: '17:00' } };
+        state.recentChanges = [];
+
+        state.selectedSections = { BULKF: { CMSC131: { ...cmscOld, pinned: true }, MATH140: mathOld } };
+        clearScheduleSelections();
+        const clearBanner = undoRoot.innerHTML;
+        const afterClear = {
+          cmsc: !!getSelectedSection('BULKF', 'CMSC 131'),
+          math: !!getSelectedSection('BULKF', 'MATH 140'),
+        };
+        undoScheduleSectionChange();
+        const afterClearUndo = {
+          cmsc: getSelectedSection('BULKF', 'CMSC 131')?.section_id || '',
+          cmscPinned: !!getSelectedSection('BULKF', 'CMSC 131')?.pinned,
+          math: getSelectedSection('BULKF', 'MATH 140')?.section_id || '',
+          title: (state.recentChanges || [])[0]?.title || '',
+        };
+
+        state.selectedSections = { BULKF: { CMSC131: cmscOld } };
+        scheduleFetchSectionsFor = async () => ({
+          CMSC131: [cmscNew],
+          MATH140: [mathOld],
+          ENGL101: [],
+        });
+        await autoPickScheduleSections();
+        const autoBanner = undoRoot.innerHTML;
+        const afterAuto = {
+          cmsc: getSelectedSection('BULKF', 'CMSC 131')?.section_id || '',
+          math: getSelectedSection('BULKF', 'MATH 140')?.section_id || '',
+        };
+        undoScheduleSectionChange();
+        const afterAutoUndo = {
+          cmsc: getSelectedSection('BULKF', 'CMSC 131')?.section_id || '',
+          math: !!getSelectedSection('BULKF', 'MATH 140'),
+          title: (state.recentChanges || [])[0]?.title || '',
+        };
+
+        state.selectedSections = { BULKF: { CMSC131: cmscOld, ENGL101: englOld } };
+        scheduleAlternatives = [{
+          items: [
+            { course: state.activeSchedule[0].courses[0], section: cmscNew },
+            { course: state.activeSchedule[0].courses[1], section: mathOld },
+          ],
+          conflicts: [],
+          warnings: [],
+          openSeats: 30,
+          score: 100,
+          signature: 'bulk-undo-alt',
+          timing: { score: 95, tone: 'ok', scoreAdjustment: 0, metrics: { totalIdle: 0, activeDays: 3 } },
+          locationIssues: 0,
+          compareTo: {
+            items: [],
+            conflicts: [],
+            warnings: [],
+            openSeats: 0,
+            timing: { score: 70, tone: 'warn', scoreAdjustment: 0, metrics: { totalIdle: 90, activeDays: 2 } },
+            locationIssues: 0,
+          },
+        }];
+        applyScheduleAlternative(0);
+        const altBanner = undoRoot.innerHTML;
+        const afterAlt = {
+          cmsc: getSelectedSection('BULKF', 'CMSC 131')?.section_id || '',
+          math: getSelectedSection('BULKF', 'MATH 140')?.section_id || '',
+          engl: !!getSelectedSection('BULKF', 'ENGL 101'),
+        };
+        undoScheduleSectionChange();
+        const afterAltUndo = {
+          cmsc: getSelectedSection('BULKF', 'CMSC 131')?.section_id || '',
+          math: !!getSelectedSection('BULKF', 'MATH 140'),
+          engl: getSelectedSection('BULKF', 'ENGL 101')?.section_id || '',
+          title: (state.recentChanges || [])[0]?.title || '',
+        };
+
+        return { clearBanner, afterClear, afterClearUndo, autoBanner, afterAuto, afterAutoUndo, altBanner, afterAlt, afterAltUndo };
+      } finally {
+        scheduleFetchSectionsFor = originalFetchSections;
+        document.getElementById = originalGetElementById;
+        renderSchedule = originalRenderSchedule;
+        if (originalRenderSemesters) renderSemesters = originalRenderSemesters;
+        else delete globalThis.renderSemesters;
+        if (originalToastInfo) toastInfo = originalToastInfo;
+        else delete globalThis.toastInfo;
+        if (originalToastSuccess) toastSuccess = originalToastSuccess;
+        else delete globalThis.toastSuccess;
+        delete window.__scheduleActionToasts;
+      }
+    })()
+  `, context));
+
+  assert(/Cleared 2 section picks/.test(result.clearBanner), 'schedule action undo: clear banner should describe cleared picks');
+  assert(!result.afterClear.cmsc && !result.afterClear.math, 'schedule action undo: clear should remove saved picks');
+  assert(result.afterClearUndo.cmsc === 'CMSC131-0001' && result.afterClearUndo.cmscPinned, 'schedule action undo: clear undo should restore pinned CMSC pick');
+  assert(result.afterClearUndo.math === 'MATH140-0201', 'schedule action undo: clear undo should restore MATH pick');
+  assert(/Undid clear section picks/.test(result.afterClearUndo.title), 'schedule action undo: clear undo should record a change');
+  assert(/Auto-picked 2 sections/.test(result.autoBanner), 'schedule action undo: auto-pick banner should describe changed picks');
+  assert(result.afterAuto.cmsc === 'CMSC131-0101' && result.afterAuto.math === 'MATH140-0201', 'schedule action undo: auto-pick should replace and fill picks');
+  assert(result.afterAutoUndo.cmsc === 'CMSC131-0001' && !result.afterAutoUndo.math, 'schedule action undo: auto-pick undo should restore previous state');
+  assert(/Undid section auto-pick/.test(result.afterAutoUndo.title), 'schedule action undo: auto-pick undo should record a change');
+  assert(/Applied alternate schedule 1/.test(result.altBanner), 'schedule action undo: alternate banner should describe applied option');
+  assert(result.afterAlt.cmsc === 'CMSC131-0101' && result.afterAlt.math === 'MATH140-0201' && !result.afterAlt.engl, 'schedule action undo: alternate should apply and remove non-option picks');
+  assert(result.afterAltUndo.cmsc === 'CMSC131-0001' && !result.afterAltUndo.math && result.afterAltUndo.engl === 'ENGL101-0301', 'schedule action undo: alternate undo should restore previous picks');
+  assert(/Undid alternate schedule 1/.test(result.afterAltUndo.title), 'schedule action undo: alternate undo should record a change');
+
+  return {
+    id: 'SCHEDULE-ACTION-UNDO',
+    clear: result.afterClearUndo.math,
+    auto: result.afterAutoUndo.cmsc,
+    alternate: result.afterAltUndo.engl,
+  };
+}
+
 function testScheduleCourseChip(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -3528,6 +3710,7 @@ async function main() {
   const timing = testScheduleTimingFit(context);
   const readiness = testScheduleRegistrationReadiness(context);
   const mapUndo = testScheduleReadinessMapUndo(context);
+  const actionUndo = await testScheduleActionUndo(context);
   const chip = testScheduleCourseChip(context);
   const seatRisk = testScheduleSeatRiskBackups(context);
   const recoMove = testRecommendationMoveAction(context);
@@ -3559,6 +3742,7 @@ async function main() {
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Schedule readiness fixture ${readiness.id}: ${readiness.label}; gates ${readiness.gates}.`);
   console.log(`Schedule map undo fixture ${mapUndo.id}: restored ${mapUndo.restored}.`);
+  console.log(`Schedule action undo fixture ${actionUndo.id}: clear ${actionUndo.clear}, auto ${actionUndo.auto}, alternate ${actionUndo.alternate}.`);
   console.log(`Schedule chip fixture ${chip.id}: ${chip.risk}, ${chip.closed}, ${chip.ok}.`);
   console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
@@ -3577,7 +3761,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

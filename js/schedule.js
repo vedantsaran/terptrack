@@ -473,6 +473,22 @@ function restoreSelectedSection(semId, code, section, pinned = false) {
   }
 }
 
+function scheduleSelectionKey(section) {
+  if (!section) return '';
+  return `${String(section.semester || '')}:${String(section.section_id || '')}`;
+}
+
+function scheduleSectionUndoChange(semId, code, previous, next) {
+  if (scheduleSelectionKey(previous) === scheduleSelectionKey(next)) return null;
+  return {
+    semId,
+    code,
+    previousSection: scheduleCloneSection(previous),
+    previousPinned: !!previous?.pinned,
+    nextSection: scheduleCloneSection(next),
+  };
+}
+
 function clearScheduleUndo() {
   scheduleUndoAction = null;
   renderScheduleUndo();
@@ -4983,6 +4999,7 @@ function applyScheduleAlternative(index) {
   const alt = scheduleAlternatives[index];
   if (!alt) return;
   const semId = scheduleCurrentSemId || scheduleDefaultSemesterId();
+  const sem = getAllSemesters().find(s => s.id === semId);
   const courses = scheduleCoursesForSemester(semId);
   const prefs = getSchedulePrefs(semId);
   const altCodes = new Set(alt.items.map(item => normalizeCode(item.course.code)));
@@ -4992,12 +5009,36 @@ function applyScheduleAlternative(index) {
   const courseLine = alt.items
     .map(item => `${item.course.code} ${item.section.number || ''}`.trim())
     .join(' · ');
+  const undoChanges = [];
   clearScheduleUndo();
   courses.forEach(course => {
     const key = normalizeCode(course.code);
-    if (!altCodes.has(key) && !bucket[key]?.pinned) delete bucket[key];
+    if (!altCodes.has(key) && !bucket[key]?.pinned) {
+      const change = scheduleSectionUndoChange(semId, course.code, bucket[key], null);
+      if (change) undoChanges.push(change);
+      delete bucket[key];
+    }
   });
-  alt.items.forEach(item => setSelectedSection(semId, item.course.code, item.section));
+  alt.items.forEach(item => {
+    const previous = getSelectedSection(semId, item.course.code);
+    const change = scheduleSectionUndoChange(semId, item.course.code, previous, item.section);
+    if (change) undoChanges.push(change);
+    setSelectedSection(semId, item.course.code, item.section);
+  });
+  if (undoChanges.length) {
+    registerScheduleUndo({
+      type: 'alternate-schedule-apply',
+      semId,
+      changes: undoChanges,
+      termCount: 1,
+      title: `Applied alternate schedule ${index + 1}`,
+      detail: `Undo restores ${undoChanges.length} previous pick${undoChanges.length === 1 ? '' : 's'} for ${sem?.name || semId}.`,
+      undoTitle: `Undid alternate schedule ${index + 1}`,
+      undoDetail: `Restored previous section choices for ${undoChanges.length} alternate schedule course${undoChanges.length === 1 ? '' : 's'}.`,
+      undoMeta: 'Undo alternate schedule',
+      undoToast: `Restored ${undoChanges.length} alternate schedule pick${undoChanges.length === 1 ? '' : 's'}.`,
+    });
+  }
   recordPlanChange({
     type: 'auto-pick',
     source: 'Schedule',
@@ -5178,8 +5219,28 @@ async function autoPickScheduleSections() {
   const sectionsByCode = await scheduleFetchSectionsFor(semId, term, courses);
   const currentItems = scheduleSelectedItemsFor(semId, term, courses, sectionsByCode);
   const candidate = buildScheduleCandidate(courses, sectionsByCode, prefs, 0, currentItems);
+  const undoChanges = [];
   clearScheduleUndo();
-  candidate.items.forEach(item => setSelectedSection(semId, item.course.code, item.section));
+  candidate.items.forEach(item => {
+    const previous = getSelectedSection(semId, item.course.code);
+    const change = scheduleSectionUndoChange(semId, item.course.code, previous, item.section);
+    if (change) undoChanges.push(change);
+    setSelectedSection(semId, item.course.code, item.section);
+  });
+  if (undoChanges.length) {
+    registerScheduleUndo({
+      type: 'schedule-auto-pick',
+      semId,
+      changes: undoChanges,
+      termCount: 1,
+      title: `Auto-picked ${undoChanges.length} section${undoChanges.length === 1 ? '' : 's'}`,
+      detail: `Undo restores ${undoChanges.length} previous pick${undoChanges.length === 1 ? '' : 's'} for ${sem.name || semId}.`,
+      undoTitle: 'Undid section auto-pick',
+      undoDetail: `Restored previous section choices for ${undoChanges.length} auto-picked course${undoChanges.length === 1 ? '' : 's'}.`,
+      undoMeta: 'Undo section auto-pick',
+      undoToast: `Restored ${undoChanges.length} auto-picked section pick${undoChanges.length === 1 ? '' : 's'}.`,
+    });
+  }
   if (candidate.items.length) {
     recordPlanChange({
       type: 'auto-pick',
@@ -5200,13 +5261,34 @@ async function autoPickScheduleSections() {
 function clearScheduleSelections() {
   const semId = scheduleCurrentSemId || scheduleDefaultSemesterId();
   if (!semId) return;
+  const sem = getAllSemesters().find(item => item.id === semId);
+  const bucket = (state.selectedSections || {})[semId] || {};
+  const undoChanges = Object.entries(bucket)
+    .map(([key, section]) => scheduleSectionUndoChange(semId, section?.course || key, section, null))
+    .filter(Boolean);
+  if (!undoChanges.length) {
+    if (typeof toastInfo === 'function') toastInfo('No section picks to clear.');
+    return;
+  }
   clearScheduleUndo();
   if ((state.selectedSections || {})[semId]) delete state.selectedSections[semId];
+  registerScheduleUndo({
+    type: 'clear-section-picks',
+    semId,
+    changes: undoChanges,
+    termCount: 1,
+    title: `Cleared ${undoChanges.length} section pick${undoChanges.length === 1 ? '' : 's'}`,
+    detail: `Undo restores the cleared picks for ${sem?.name || semId}.`,
+    undoTitle: 'Undid clear section picks',
+    undoDetail: `Restored ${undoChanges.length} cleared section pick${undoChanges.length === 1 ? '' : 's'}.`,
+    undoMeta: 'Undo clear picks',
+    undoToast: `Restored ${undoChanges.length} cleared section pick${undoChanges.length === 1 ? '' : 's'}.`,
+  });
   recordPlanChange({
     type: 'clear',
     source: 'Schedule',
     title: 'Cleared section picks',
-    detail: `Removed saved section choices for ${getAllSemesters().find(sem => sem.id === semId)?.name || semId}.`,
+    detail: `Removed ${undoChanges.length} saved section choice${undoChanges.length === 1 ? '' : 's'} for ${sem?.name || semId}.`,
     meta: 'Schedule builder',
   }, { save: false });
   saveState();
@@ -5375,8 +5457,20 @@ function initScheduleEvents() {
     const key = `${semId}:${term}:${normalizeCode(code)}`;
     const section = (scheduleSectionsCache[key] || []).find(s => s.section_id === e.target.value);
     const previous = getSelectedSection(semId, code);
+    const undoChange = scheduleSectionUndoChange(semId, code, previous, section || null);
     clearScheduleUndo();
     setSelectedSection(semId, code, section || null);
+    if (undoChange) {
+      registerScheduleUndo({
+        type: 'section-pick',
+        semId,
+        term,
+        code,
+        previousSection: undoChange.previousSection,
+        previousPinned: undoChange.previousPinned,
+        nextSection: undoChange.nextSection,
+      });
+    }
     recordPlanChange({
       type: 'section-pick',
       source: 'Schedule',

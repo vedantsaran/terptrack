@@ -7560,3 +7560,63 @@ Verification:
   - It randomly verified `HESP`, `FMSC`, `EDUC`, `ARTT`, `ARCH`, and `MARKETING` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 138
+
+Focus: make major Schedule actions reversible so students can safely try auto-pick, alternate schedules, manual section swaps, and clear-picks without losing work.
+
+Planned changes:
+- Add undo coverage for Auto-pick no-conflict sections.
+- Add undo coverage for applying alternate schedules.
+- Add undo coverage for Clear picks and manual section select changes.
+- Verify the destructive clear-picks path in rendered mobile workflow coverage.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added shared section-change helpers in `js/schedule.js`.
+  - `scheduleSelectionKey()` compares saved section selections without depending on object identity.
+  - `scheduleSectionUndoChange()` captures previous section payloads and pinned state for batch restore.
+- Made Auto-pick no-conflict sections undoable.
+  - It now records only actual changed picks.
+  - Undo restores replaced sections and clears courses that were newly filled by the auto-pick.
+- Made alternate schedule apply undoable.
+  - It restores previous section choices.
+  - It also restores any non-option course picks that were removed when the alternate was applied.
+- Made Clear picks undoable.
+  - It records all cleared section picks for the active term.
+  - Undo restores cleared picks, including pinned state.
+- Added single-section undo for manual section dropdown changes.
+- Bumped the Schedule cache tag:
+  - `js/schedule.js?v=58`.
+- Extended tests:
+  - Added `SCHEDULE-ACTION-UNDO` to generated-plan regression fixtures for clear-picks undo, auto-pick undo, and alternate-apply undo.
+  - The rendered mobile advisor packet workflow now clicks Clear picks, verifies the destructive state and undo banner, undoes it, and continues through the existing calendar omission flow.
+  - Rendered workflow logs now name `clear-picks undo` coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `SCHEDULE-ACTION-UNDO` fixture.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule chips, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with calendar omission auto-fill, clear-picks undo, calendar omission review, partial-calendar warning toast, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including schedule action undo coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with clear-picks undo coverage.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass138-schedule-action-undo-live`.
+  - It randomly verified `GEOG`, `SCM`, `AOSC`, `CHEM`, `THET`, and `EDUC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

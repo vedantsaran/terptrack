@@ -177,7 +177,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.styles.includes('styles.css?v=104'), 'workflow app did not load styles.css?v=104');
-  assert(snapshot.scripts.includes('js/schedule.js?v=57'), 'workflow app did not load js/schedule.js?v=57');
+  assert(snapshot.scripts.includes('js/schedule.js?v=58'), 'workflow app did not load js/schedule.js?v=58');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -856,6 +856,32 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('1 course still needs a section')
       && /Undid calendar auto-fill/.test(change.title || '');
   }, null, { timeout: opts.timeoutMs });
+  await page.locator('#schedule-clear').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const output = document.querySelector('#schedule-output');
+    const text = output?.textContent?.replace(/\s+/g, ' ') || '';
+    const undo = document.querySelector('#schedule-undo')?.textContent?.replace(/\s+/g, ' ') || '';
+    const pickedCmsc = getSelectedSection('PASS98F', 'CMSC 131');
+    const pickedMath = getSelectedSection('PASS98F', 'MATH 140');
+    const change = (state.recentChanges || [])[0] || {};
+    return !pickedCmsc
+      && !pickedMath
+      && text.includes('0/3 picked')
+      && undo.includes('Cleared 2 section picks')
+      && /Cleared section picks/.test(change.title || '');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-undo]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const output = document.querySelector('#schedule-output');
+    const text = output?.textContent?.replace(/\s+/g, ' ') || '';
+    const pickedCmsc = getSelectedSection('PASS98F', 'CMSC 131')?.section_id || '';
+    const pickedMath = getSelectedSection('PASS98F', 'MATH 140')?.section_id || '';
+    const change = (state.recentChanges || [])[0] || {};
+    return pickedCmsc === 'CMSC131-0101'
+      && pickedMath === 'MATH140-0201'
+      && text.includes('1 course still needs a section')
+      && /Undid clear section picks/.test(change.title || '');
+  }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-calendar-export-action="review-omissions"]').first().click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
     const output = document.querySelector('#schedule-output');
@@ -1029,7 +1055,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }, null, { timeout: opts.timeoutMs });
   const refreshSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet seat refresh mobile', refreshSnapshot);
-  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, seat refresh action, export action, and no overflow.');
+  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, seat refresh action, export action, and no overflow.');
 }
 
 async function main() {
