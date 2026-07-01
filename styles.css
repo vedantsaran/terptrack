@@ -2355,6 +2355,18 @@ h1.hero-title em {
   display: block;
   margin-top: 3px;
 }
+.account-friend-free {
+  display: block;
+  margin-top: 4px;
+}
+.account-friend-free strong {
+  color: var(--ink);
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .63rem;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
 .account-friend-actions {
   display: flex;
   flex-wrap: wrap;

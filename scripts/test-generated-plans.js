@@ -337,6 +337,7 @@ function testAccountAndShareState(context) {
       advisorImportUrl,
       friendSummary,
       friendPlansHtml,
+      sharedFreeWindows: friendSummary.sharedFreeWindows.map(window => window.text),
     })
   `, context));
 
@@ -362,10 +363,13 @@ function testAccountAndShareState(context) {
   assert(result.friendSummary.selectedCount === 2, 'friend compare: should count picked friend sections');
   assert(result.friendSummary.sharedCourseCount === 1, 'friend compare: should count courses shared with current plan');
   assert(result.friendSummary.meetingOverlapCount === 1, 'friend compare: should count timed overlaps with current plan');
+  assert(result.friendSummary.sharedFreeWindows.length >= 3, 'friend compare: should compute shared free windows');
+  assert(result.sharedFreeWindows[0] === 'Mon 8:00am-10:00am', 'friend compare: first shared free window should precede both Monday meetings');
   assert(/Pal STEM plan/.test(result.friendPlansHtml) && /Mathematics/.test(result.friendPlansHtml), 'friend compare: should render friend plan identity');
   assert(/2<\/strong> courses/.test(result.friendPlansHtml) && /2<\/strong> picked sections/.test(result.friendPlansHtml), 'friend compare: should render course and section counts');
   assert(/1<\/strong> shared courses/.test(result.friendPlansHtml) && /1<\/strong> meeting overlaps/.test(result.friendPlansHtml), 'friend compare: should render shared and overlap counts');
   assert(/MATH 140 with your MATH 140 M 10:30am-10:50am/.test(result.friendPlansHtml), 'friend compare: should render overlap sample');
+  assert(/Shared free windows/.test(result.friendPlansHtml) && /Mon 8:00am-10:00am/.test(result.friendPlansHtml), 'friend compare: should render shared free windows');
 
   return {
     id: 'ACCOUNT-FRIENDS',

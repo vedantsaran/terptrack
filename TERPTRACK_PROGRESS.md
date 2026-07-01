@@ -5846,3 +5846,59 @@ Verification:
   - It randomly verified `HESP`, `HLTH`, `ARTT`, `MUSC`, `AOSC`, and `NFSC` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 110
+
+Focus: make friend plan comparison actionable by showing shared free windows from picked section times.
+
+Planned changes:
+- Extend the Account modal friend-plan comparison beyond overlaps.
+- Use current and friend selected section meeting blocks to find shared free windows.
+- Show the windows before the student opens/imports a friend plan.
+- Verify the free-window computation in account/share tests and rendered mobile Account UI.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `accountSharedFreeWindows()` in `js/account.js`.
+  - Merges current-plan and friend-plan busy meeting blocks.
+  - Finds weekday windows from 8:00am to 8:00pm.
+  - Requires at least 60 minutes of shared free time.
+  - Returns the first useful windows with labels such as `Mon 8:00am-10:00am`.
+- Extended `accountFriendPlanSummary()` with `sharedFreeWindows`.
+- Extended `accountFriendPlanSummaryHtml()`:
+  - keeps overlap examples.
+  - adds a `Shared free windows` line.
+  - explains when picked sections are missing and free-time comparison is not possible.
+- Added compact Account modal styling for `.account-friend-free`.
+- Bumped cache tags:
+  - `styles.css?v=82`.
+  - `js/account.js?v=10`.
+- Extended tests:
+  - `ACCOUNT-FRIENDS` now verifies shared free windows are computed and rendered.
+  - Rendered mobile Account setup now verifies `Shared free windows` and `Mon 8:00am-10:00am` in the real modal.
+
+Verification:
+- Ran `node --check js/account.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the account/share fixture with shared free-window assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with friend-plan comparison and shared free windows.
+  - It passed mobile advisor packet workflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including account/share free-window coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup with shared free windows, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass110-friend-free-windows-live`.
+  - It randomly verified `FMSC`, `THET`, `HLTH`, `HESP`, `WMST`, and `ENMA` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

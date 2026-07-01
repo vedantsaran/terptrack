@@ -173,10 +173,10 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=81'), 'workflow app did not load styles.css?v=81');
+  assert(snapshot.styles.includes('styles.css?v=82'), 'workflow app did not load styles.css?v=82');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
-  assert(snapshot.scripts.includes('js/account.js?v=9'), 'workflow app did not load js/account.js?v=9');
+  assert(snapshot.scripts.includes('js/account.js?v=10'), 'workflow app did not load js/account.js?v=10');
   return snapshot;
 }
 
@@ -538,7 +538,9 @@ async function verifyAccountSetupMobile(page, url, opts) {
       && modalText.includes('2 picked sections')
       && modalText.includes('1 shared courses')
       && modalText.includes('1 meeting overlaps')
-      && modalText.includes('MATH 140 with your MATH 140 M 10:30am-10:50am');
+      && modalText.includes('MATH 140 with your MATH 140 M 10:30am-10:50am')
+      && modalText.includes('Shared free windows')
+      && modalText.includes('Mon 8:00am-10:00am');
   }, null, { timeout: opts.timeoutMs });
 
   const snapshot = await page.evaluate(snapshotScript());
@@ -548,8 +550,9 @@ async function verifyAccountSetupMobile(page, url, opts) {
   assert(snapshot.accountText.includes('Local only'), 'account setup: modal should identify local-only config');
   assert(snapshot.accountText.includes('Friend invite saved locally.'), 'account setup: modal should preserve local invite status');
   assert(snapshot.accountText.includes('Pal STEM plan') && snapshot.accountText.includes('meeting overlaps'), 'account setup: modal should show friend-plan comparison');
+  assert(snapshot.accountText.includes('Shared free windows') && snapshot.accountText.includes('Mon 8:00am-10:00am'), 'account setup: modal should show shared free windows');
   assertNoOverflow('account setup mobile', snapshot);
-  console.log('Account setup [mobile]: rendered local-first cloud checklist, profile save, friend invite, friend-plan comparison, and no overflow.');
+  console.log('Account setup [mobile]: rendered local-first cloud checklist, profile save, friend invite, friend-plan comparison with shared free windows, and no overflow.');
 }
 
 async function verifyAdvisorPacketMobile(page, url, opts) {

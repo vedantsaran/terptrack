@@ -869,6 +869,56 @@ function accountMeetingOverlapSummary(friendItems, currentItems) {
   return { count, samples };
 }
 
+function accountSharedFreeWindows(friendItems, currentItems, options = {}) {
+  if (typeof sectionBlocks !== 'function' || typeof formatMeetingTime !== 'function') return [];
+  if (!friendItems.length || !currentItems.length) return [];
+  const startDay = options.start || 8 * 60;
+  const endDay = options.end || 20 * 60;
+  const minDuration = options.minDuration || 60;
+  const days = typeof SCHEDULE_DAY_DEFS !== 'undefined'
+    ? SCHEDULE_DAY_DEFS
+    : [
+      { key: 'M', label: 'Mon' },
+      { key: 'Tu', label: 'Tue' },
+      { key: 'W', label: 'Wed' },
+      { key: 'Th', label: 'Thu' },
+      { key: 'F', label: 'Fri' },
+    ];
+  const byDay = Object.fromEntries(days.map(day => [day.key, []]));
+  [...friendItems, ...currentItems].forEach(item => {
+    sectionBlocks(item.section, item.course).forEach(block => {
+      if (!byDay[block.day]) return;
+      const start = Math.max(startDay, block.start);
+      const end = Math.min(endDay, block.end);
+      if (end > start) byDay[block.day].push({ start, end });
+    });
+  });
+  const windows = [];
+  days.forEach(day => {
+    const blocks = (byDay[day.key] || []).sort((a, b) => a.start - b.start || a.end - b.end);
+    const merged = [];
+    blocks.forEach(block => {
+      const last = merged[merged.length - 1];
+      if (last && block.start <= last.end) last.end = Math.max(last.end, block.end);
+      else merged.push({ ...block });
+    });
+    let cursor = startDay;
+    merged.forEach(block => {
+      if (block.start - cursor >= minDuration) {
+        windows.push({ day: day.key, label: day.label, start: cursor, end: block.start });
+      }
+      cursor = Math.max(cursor, block.end);
+    });
+    if (endDay - cursor >= minDuration) {
+      windows.push({ day: day.key, label: day.label, start: cursor, end: endDay });
+    }
+  });
+  return windows.slice(0, 4).map(window => ({
+    ...window,
+    text: `${window.label} ${formatMeetingTime(window.start)}-${formatMeetingTime(window.end)}`,
+  }));
+}
+
 function accountFriendPlanSummary(plan) {
   const payload = accountPlanPayload(plan);
   const current = accountCurrentPlanPayload();
@@ -877,6 +927,7 @@ function accountFriendPlanSummary(plan) {
   const friendItems = accountSelectedSectionItems(payload.selectedSections || {});
   const currentItems = accountSelectedSectionItems(current.selectedSections || {});
   const overlaps = accountMeetingOverlapSummary(friendItems, currentItems);
+  const sharedFreeWindows = accountSharedFreeWindows(friendItems, currentItems);
   return {
     majorName: payload.settings?.programName || payload.settings?.majorName || payload.majorId || 'Shared plan',
     courseCount: friendCodes.length,
@@ -884,6 +935,7 @@ function accountFriendPlanSummary(plan) {
     sharedCourseCount: friendCodes.filter(code => currentCodes.has(code)).length,
     meetingOverlapCount: overlaps.count,
     meetingOverlapSamples: overlaps.samples,
+    sharedFreeWindows,
   };
 }
 
@@ -891,6 +943,9 @@ function accountFriendPlanSummaryHtml(summary) {
   const overlapText = summary.meetingOverlapSamples.length
     ? summary.meetingOverlapSamples.join(' · ')
     : (summary.selectedCount ? 'No picked-section overlaps with your current plan.' : 'Friend plan has no picked sections yet.');
+  const freeText = (summary.sharedFreeWindows || []).length
+    ? summary.sharedFreeWindows.map(window => window.text).join(' · ')
+    : (summary.selectedCount ? 'No shared free windows found from picked sections.' : 'Pick sections in both plans to compare free time.');
   return `
     <div class="account-friend-compare">
       <span><strong>${accountEscape(summary.courseCount)}</strong> courses</span>
@@ -899,6 +954,7 @@ function accountFriendPlanSummaryHtml(summary) {
       <span><strong>${accountEscape(summary.meetingOverlapCount)}</strong> meeting overlaps</span>
     </div>
     <em class="account-friend-overlaps">${accountEscape(overlapText)}</em>
+    <em class="account-friend-free"><strong>Shared free windows</strong>${accountEscape(freeText)}</em>
   `;
 }
 
