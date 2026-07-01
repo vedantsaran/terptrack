@@ -173,8 +173,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=93'), 'workflow app did not load styles.css?v=93');
-  assert(snapshot.scripts.includes('js/schedule.js?v=47'), 'workflow app did not load js/schedule.js?v=47');
+  assert(snapshot.styles.includes('styles.css?v=94'), 'workflow app did not load styles.css?v=94');
+  assert(snapshot.scripts.includes('js/schedule.js?v=48'), 'workflow app did not load js/schedule.js?v=48');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -699,6 +699,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Aug 25, 2099 at 9:30am')
       && text.includes('Seat Data Freshness')
       && text.includes('Refresh seats')
+      && text.includes('Refresh sections now')
       && text.includes('Testudo Entry Queue')
       && text.includes('Section ID MATH140-0201')
       && text.includes('Enrollment Order')
@@ -778,6 +779,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(result.registrationDateInput === '2099-08-25' && result.registrationTimeInput === '09:30', 'advisor packet: registration appointment inputs should render saved values');
   assert(/Registration appointment: Scheduled - Aug 25, 2099 at 9:30am/.test(result.registrationText), 'advisor packet: registration export should include appointment summary');
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.registrationText), 'advisor packet: registration export should include seat freshness');
+  assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.registrationText), 'advisor packet: registration export should include seat-refresh action guidance');
   assert(/Testudo entry queue:[\s\S]*1\. MATH 140 0201 \| Section ID: MATH140-0201/.test(result.registrationText), 'advisor packet: registration export should include Testudo queue');
   assert(result.registrationBackupPlan[0]?.backupId === 'MATH140-0301', 'advisor packet: output cache should include backup section ID');
   assert(/Backup ID: MATH140-0301/.test(result.registrationText), 'advisor packet: registration export should include backup ID in Testudo queue');
@@ -794,6 +796,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Registration Readiness/.test(result.advisorDocument) && /Fix before registration/.test(result.advisorDocument), 'advisor packet: exported HTML should include registration readiness gates');
   assert(/Registration Appointment/.test(result.advisorDocument) && /Aug 25, 2099 at 9:30am/.test(result.advisorDocument), 'advisor packet: exported HTML should include appointment');
   assert(/Seat Data Freshness/.test(result.advisorDocument) && /Refresh seats/.test(result.advisorDocument), 'advisor packet: exported HTML should include seat freshness');
+  assert(/data-seat-freshness-action="refresh"/.test(result.advisorDocument), 'advisor packet: exported HTML should include seat refresh action');
   assert(/Testudo Entry Queue/.test(result.advisorDocument) && /Section ID MATH140-0201/.test(result.advisorDocument), 'advisor packet: exported HTML should include Testudo queue');
   assert(/Enrollment Order/.test(result.advisorDocument) && /MATH 140 0201/.test(result.advisorDocument), 'advisor packet: exported HTML should include enrollment order');
   assert(/Backup Plan/.test(result.advisorDocument) && /Backup 0301/.test(result.advisorDocument), 'advisor packet: exported HTML should include backup plan');
@@ -804,6 +807,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Registration readiness/.test(result.advisorText) && /Sections: 2\/3/.test(result.advisorText), 'advisor packet: exported text should include registration readiness gates');
   assert(/Registration appointment:[\s\S]*Use the registration list to submit exact section IDs/.test(result.advisorText), 'advisor packet: exported text should include appointment checklist');
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.advisorText), 'advisor packet: exported text should include seat freshness');
+  assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.advisorText), 'advisor packet: exported text should include seat-refresh action guidance');
   assert(/Testudo entry queue:[\s\S]*Section ID: MATH140-0201/.test(result.advisorText), 'advisor packet: exported text should include Testudo queue');
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.advisorText), 'advisor packet: exported text should include enrollment order');
   assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301/.test(result.advisorText), 'advisor packet: exported text should include backup plan');
@@ -852,7 +856,17 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(!/MATH 140 0201: 2 seats open/.test(backupResult.outputText), 'advisor packet: backup apply should clear the prior low-seat warning');
   const backupSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet backup apply mobile', backupSnapshot);
-  console.log('Advisor packet [mobile]: rendered blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, export action, and no overflow.');
+  await page.locator('[data-seat-freshness-action="refresh"]').first().click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const output = document.querySelector('#schedule-output');
+    const status = document.querySelector('#schedule-status')?.textContent || '';
+    return output?.dataset.lastSeatFreshnessAction === 'refresh'
+      && /fresh seats/i.test(status)
+      && scheduleOutputCache?.seatFreshness?.level === 'ok';
+  }, null, { timeout: opts.timeoutMs });
+  const refreshSnapshot = await page.evaluate(snapshotScript());
+  assertNoOverflow('advisor packet seat refresh mobile', refreshSnapshot);
+  console.log('Advisor packet [mobile]: rendered blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, seat refresh action, export action, and no overflow.');
 }
 
 async function main() {

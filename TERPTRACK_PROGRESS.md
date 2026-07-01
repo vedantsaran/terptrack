@@ -6727,3 +6727,58 @@ Verification:
   - It randomly verified `LING`, `SCM`, `THET`, `ENMA`, `SOCY`, and `ENST` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 124
+
+Focus: make stale seat data actionable with an in-packet refresh action.
+
+Planned changes:
+- Add a visible refresh action to the Seat Data Freshness card.
+- Wire that action to the existing forced Schedule tab section refresh path.
+- Preserve refresh guidance in text exports.
+- Verify the button in fixture output and rendered mobile workflows.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added a `Refresh sections now` action to `renderScheduleSeatFreshnessHtml()` whenever section data rows exist.
+- Added seat-refresh action guidance to `scheduleSeatFreshnessText()`.
+- Added `handleScheduleSeatFreshnessAction()` in `js/schedule.js`.
+  - It records the action on `#schedule-output`.
+  - It calls `renderSchedule({ force: true })` so posted sections and seats are refetched.
+  - It restores the action marker after the forced re-render for UI verification.
+- Bound `[data-seat-freshness-action]` buttons in the schedule output panel.
+- Exposed `handleScheduleSeatFreshnessAction` on `window` beside the existing readiness handler.
+- Added production and standalone export CSS for the freshness action row.
+- Bumped cache tags:
+  - `styles.css?v=94`.
+  - `js/schedule.js?v=48`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts the refresh action button in schedule/advisor HTML and refresh-action guidance in schedule, registration, and advisor text.
+  - Rendered mobile advisor packet now clicks `Refresh sections now`, verifies the forced-refresh action marker, verifies the status moves to fresh seats, and checks no overflow after refresh.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with seat refresh action assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including seat refresh action coverage.
+  - It passed 12 rendered generated-plan viewport runs with clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with seat refresh action.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass124-seat-refresh-action-live`.
+  - It randomly verified `SOCY`, `EDUC`, `NEUR`, `ENGL`, `CINE`, and `THET` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

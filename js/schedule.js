@@ -2347,6 +2347,12 @@ function renderScheduleSeatFreshnessHtml(freshness, heading = 'Seat Data Freshne
           `).join('')}
         </div>
       ` : '<p>No section data loaded yet.</p>'}
+      ${rows.length ? `
+        <div class="schedule-seat-freshness-actions">
+          <strong>Before Testudo</strong>
+          <button class="btn small ${freshness.level === 'ok' ? '' : 'primary'}" type="button" data-seat-freshness-action="refresh">Refresh sections now</button>
+        </div>
+      ` : ''}
     </section>
   `;
 }
@@ -2361,6 +2367,7 @@ function scheduleSeatFreshnessText(freshness) {
   (freshness.rows || []).forEach(row => {
     lines.push(`- ${row.code}: ${row.detail}. ${row.label}.`);
   });
+  if ((freshness.rows || []).length) lines.push('- Action: Refresh sections in Terp Track shortly before opening Testudo.');
   return lines;
 }
 
@@ -3408,6 +3415,10 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-seat-freshness-row.warn{border-color:#f1c45c;background:#fffaf0}
     .schedule-seat-freshness-row strong,.schedule-seat-freshness-row span,.schedule-seat-freshness-row em{display:block}
     .schedule-seat-freshness-row span,.schedule-seat-freshness-row em{color:#5d5962;font-size:12px;font-style:normal;line-height:1.35}
+    .schedule-seat-freshness-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-seat-freshness-actions strong{font-size:10px;text-transform:uppercase;color:#8b0000}
+    .schedule-seat-freshness-actions .btn{border:1px solid #d8cec0;border-radius:999px;background:#fff;color:#2e5c8b;font-size:11px;font-weight:700;padding:5px 8px}
+    .schedule-seat-freshness-actions .btn.primary{border-color:#8b0000;background:#8b0000;color:#fff}
     .schedule-registration-handoff{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-registration-handoff-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-registration-handoff-head h4{margin:0}
@@ -3472,7 +3483,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-seat-freshness-list{grid-template-columns:1fr}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-seat-freshness-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-seat-freshness-list{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-seat-freshness-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
@@ -3955,6 +3966,12 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       handleScheduleReadinessAction(btn.dataset.readinessAction);
     });
   });
+  root.querySelectorAll('[data-seat-freshness-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      handleScheduleSeatFreshnessAction(btn.dataset.seatFreshnessAction);
+    });
+  });
   root.querySelectorAll('[data-schedule-audit-primary]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
@@ -4075,6 +4092,16 @@ async function handleScheduleReadinessAction(action) {
   }
 }
 
+async function handleScheduleSeatFreshnessAction(action) {
+  const root = document.getElementById('schedule-output');
+  if (root) root.dataset.lastSeatFreshnessAction = action || '';
+  if (action !== 'refresh') return;
+  toastInfo('Refreshing posted sections and seats...');
+  await renderSchedule({ force: true });
+  const nextRoot = document.getElementById('schedule-output');
+  if (nextRoot) nextRoot.dataset.lastSeatFreshnessAction = 'refresh';
+}
+
 if (typeof window !== 'undefined') {
   window.copyScheduleOutputSummary = copyScheduleOutputSummary;
   window.downloadScheduleOutputSummary = downloadScheduleOutputSummary;
@@ -4084,6 +4111,7 @@ if (typeof window !== 'undefined') {
   window.printScheduleOutputSummary = printScheduleOutputSummary;
   window.printScheduleAdvisorPacket = printScheduleAdvisorPacket;
   window.handleScheduleReadinessAction = handleScheduleReadinessAction;
+  window.handleScheduleSeatFreshnessAction = handleScheduleSeatFreshnessAction;
 }
 
 function renderMiniSchedulePreview(items, unavailableBlocks = []) {

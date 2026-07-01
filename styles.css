@@ -3985,6 +3985,27 @@ h1.hero-title em {
   font-style: normal;
   line-height: 1.35;
 }
+.schedule-seat-freshness-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.schedule-seat-freshness-actions strong {
+  color: var(--maroon);
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.schedule-seat-freshness-actions .btn {
+  min-height: 30px;
+  white-space: normal;
+}
 .schedule-registration-handoff {
   margin: 10px 0;
   border: 1px solid var(--line);
@@ -7541,6 +7562,11 @@ h1.hero-title em {
   }
   .schedule-seat-freshness-list {
     grid-template-columns: 1fr;
+  }
+  .schedule-seat-freshness-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
   }
   .schedule-registration-handoff-head {
     flex-direction: column;
