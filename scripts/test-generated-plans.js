@@ -828,6 +828,10 @@ function testScheduleRegistrationReadiness(context) {
         text,
         outputHtml: output.html,
         outputText: output.text,
+        outputCalendar: output.calendar,
+        outputCalendarUnfolded: output.calendar.replace(/\\r?\\n /g, ''),
+        outputCalendarFilename: output.calendarFilename,
+        outputCalendarEventCount: output.calendarEventCount,
         advisorHtml: output.advisorHtml,
         advisorText: output.advisorText,
         advisorDocument: output.advisorDocument,
@@ -857,6 +861,14 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
   assert(/Recommended fixes/.test(result.outputHtml) && /Generate alternatives/.test(result.outputHtml), 'registration readiness: schedule output HTML should include fix guidance');
   assert(/Quick actions/.test(result.outputHtml) && /data-readiness-action="alternatives"/.test(result.outputHtml), 'registration readiness: schedule output HTML should include action buttons');
+  assert(/^terp-track-calendar-.*fall-2026\.ics$/.test(result.outputCalendarFilename), 'schedule calendar: filename should be an .ics calendar export');
+  assert(result.outputCalendarEventCount === 3, 'schedule calendar: two CMSC meetings and one MATH meeting should produce three VEVENTs');
+  assert(/BEGIN:VCALENDAR/.test(result.outputCalendarUnfolded) && /BEGIN:VEVENT/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include calendar and event records');
+  assert(/SUMMARY:CMSC 131 0101/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include course and section summary');
+  assert(/DTSTART;TZID=America\/New_York:20260831T090000/.test(result.outputCalendarUnfolded), 'schedule calendar: Fall 2026 Monday class should start on inferred first class Monday');
+  assert(/RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261212T235900/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should recur weekly through the inferred Fall window');
+  assert(/LOCATION:IRB 1101/.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should include classroom location');
+  assert(/confirm exact academic-calendar dates with UMD/i.test(result.outputCalendarUnfolded), 'schedule calendar: ICS should warn that term dates need official UMD confirmation');
   assert(/Registration readiness/.test(result.outputText) && /Conflicts: 1/.test(result.outputText), 'registration readiness: schedule text should include readiness gates');
   assert(/Fix: Apply a backup section/.test(result.outputText), 'registration readiness: schedule text should include fix guidance');
   assert(/Registration Readiness/.test(result.advisorHtml) && /Fix before registration/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness gates');

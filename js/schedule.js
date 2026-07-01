@@ -1848,6 +1848,152 @@ function scheduleAdvisorFilename(term) {
   return `terp-track-advisor-${program}-${label || 'term'}-${date}.html`;
 }
 
+function scheduleCalendarFilename(term) {
+  const program = scheduleCleanFilenamePart(getSettings().programName || 'umd-degree-plan');
+  const label = scheduleTermLabel(term).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return `terp-track-calendar-${program}-${label || 'term'}.ics`;
+}
+
+function scheduleUtcDate(year, monthIndex, day) {
+  return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0));
+}
+
+function scheduleDateOnOrAfter(year, monthIndex, day, targetDow) {
+  const date = scheduleUtcDate(year, monthIndex, day);
+  const delta = (targetDow - date.getUTCDay() + 7) % 7;
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date;
+}
+
+function scheduleCalendarTermWindow(term) {
+  const raw = String(term || '');
+  const year = /^\d{4}/.test(raw) ? parseInt(raw.slice(0, 4), 10) : new Date().getFullYear();
+  const suffix = raw.slice(4);
+  if (suffix === '08') {
+    return {
+      start: scheduleDateOnOrAfter(year, 7, 29, 1),
+      end: scheduleDateOnOrAfter(year, 11, 8, 6),
+      note: 'Fall class weeks are inferred from late August through the December exam window; confirm exact academic-calendar dates with UMD.',
+    };
+  }
+  if (suffix === '05') {
+    return {
+      start: scheduleDateOnOrAfter(year, 5, 1, 1),
+      end: scheduleDateOnOrAfter(year, 7, 1, 6),
+      note: 'Summer class weeks vary by session; confirm exact session dates with UMD before relying on recurring events.',
+    };
+  }
+  if (suffix === '12') {
+    return {
+      start: scheduleDateOnOrAfter(year, 0, 2, 1),
+      end: scheduleDateOnOrAfter(year, 0, 20, 6),
+      note: 'Winter class weeks vary by session; confirm exact session dates with UMD before relying on recurring events.',
+    };
+  }
+  return {
+    start: scheduleDateOnOrAfter(year, 0, 24, 1),
+    end: scheduleDateOnOrAfter(year, 4, 8, 6),
+    note: 'Spring class weeks are inferred from late January through the May exam window; confirm exact academic-calendar dates with UMD.',
+  };
+}
+
+function scheduleCalendarDayCode(day) {
+  return { M: 'MO', Tu: 'TU', W: 'WE', Th: 'TH', F: 'FR', Sa: 'SA', Su: 'SU' }[day] || 'MO';
+}
+
+function scheduleCalendarDayIndex(day) {
+  return { Su: 0, M: 1, Tu: 2, W: 3, Th: 4, F: 5, Sa: 6 }[day] ?? 1;
+}
+
+function scheduleCalendarFirstMeetingDate(windowStart, day) {
+  const date = new Date(windowStart.getTime());
+  const target = scheduleCalendarDayIndex(day);
+  const delta = (target - date.getUTCDay() + 7) % 7;
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date;
+}
+
+function scheduleCalendarDateTime(date, minutes) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+  const min = String(minutes % 60).padStart(2, '0');
+  return `${y}${m}${d}T${h}${min}00`;
+}
+
+function scheduleCalendarTimestamp(date = new Date()) {
+  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+function scheduleIcsEscape(value) {
+  return String(value == null ? '' : value)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
+function scheduleIcsFoldLine(line) {
+  const text = String(line || '');
+  if (text.length <= 73) return [text];
+  const lines = [];
+  for (let i = 0; i < text.length; i += 73) {
+    lines.push(`${i ? ' ' : ''}${text.slice(i, i + 73)}`);
+  }
+  return lines;
+}
+
+function buildScheduleCalendarIcs(sem, term, selectedItems = []) {
+  const termWindow = scheduleCalendarTermWindow(term);
+  const stamp = scheduleCalendarTimestamp();
+  const header = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Terp Track//Schedule Calendar//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:Terp Track - ' + scheduleIcsEscape(`${sem?.name || 'Schedule'} ${scheduleTermLabel(term)}`),
+    'X-WR-TIMEZONE:America/New_York',
+  ];
+  const events = [];
+  (selectedItems || []).forEach(item => {
+    const blocks = sectionBlocks(item.section, item.course);
+    blocks.forEach((block, index) => {
+      const first = scheduleCalendarFirstMeetingDate(termWindow.start, block.day);
+      const sectionLabel = scheduleSectionShortLabel(item.section);
+      const code = item.course?.code || block.code || displayCode(item.section?.course || '');
+      const summary = `${code} ${sectionLabel}`.trim();
+      const detailParts = [
+        item.course?.title || block.title || '',
+        block.type || '',
+        scheduleInstructorLine(item.section),
+        sectionSeatRisk(item.section).detail,
+        termWindow.note,
+      ].filter(Boolean);
+      events.push(
+        'BEGIN:VEVENT',
+        `UID:terp-track-${scheduleCleanFilenamePart(term)}-${scheduleCleanFilenamePart(code)}-${scheduleCleanFilenamePart(sectionLabel)}-${scheduleCalendarDayCode(block.day)}-${index}@terptrack.local`,
+        `DTSTAMP:${stamp}`,
+        `SUMMARY:${scheduleIcsEscape(summary)}`,
+        `DTSTART;TZID=America/New_York:${scheduleCalendarDateTime(first, block.start)}`,
+        `DTEND;TZID=America/New_York:${scheduleCalendarDateTime(first, block.end)}`,
+        `RRULE:FREQ=WEEKLY;BYDAY=${scheduleCalendarDayCode(block.day)};UNTIL=${scheduleCalendarDateTime(termWindow.end, 23 * 60 + 59)}`,
+        block.room ? `LOCATION:${scheduleIcsEscape(block.room)}` : '',
+        `DESCRIPTION:${scheduleIcsEscape(detailParts.join('\n'))}`,
+        'END:VEVENT'
+      );
+    });
+  });
+  return [...header, ...events.filter(Boolean), 'END:VCALENDAR']
+    .flatMap(scheduleIcsFoldLine)
+    .join('\r\n');
+}
+
+function scheduleCalendarEventCount(ics) {
+  return (String(ics || '').match(/BEGIN:VEVENT/g) || []).length;
+}
+
 function scheduleRecentChanges(limit = 5) {
   return typeof recentPlanChanges === 'function' ? recentPlanChanges().slice(0, limit) : [];
 }
@@ -2874,6 +3020,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions);
+  const calendar = buildScheduleCalendarIcs(sem, term, selectedItems);
   const courseRows = selectedItems
     .slice()
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
@@ -2924,6 +3071,9 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     text,
     filename: scheduleOutputFilename(term),
     html: scheduleHtml,
+    calendar,
+    calendarFilename: scheduleCalendarFilename(term),
+    calendarEventCount: scheduleCalendarEventCount(calendar),
     advisorHtml,
     advisorText,
     advisorFilter,
@@ -2994,6 +3144,7 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
         <div class="schedule-output-actions">
           <button class="btn small" type="button" data-schedule-output="copy">Select summary</button>
           <button class="btn small" type="button" data-schedule-output="download">Download .txt</button>
+          <button class="btn small" type="button" data-schedule-output="calendar-download">Download calendar</button>
           <button class="btn small" type="button" data-schedule-output="advisor-download">Download advisor packet</button>
           <button class="btn small" type="button" data-schedule-output="print">Print schedule</button>
           <button class="btn small primary" type="button" data-schedule-output="advisor-print">Print advisor PDF</button>
@@ -3014,6 +3165,7 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       root.dataset.lastAction = action;
       if (action === 'copy') copyScheduleOutputSummary();
       if (action === 'download') downloadScheduleOutputSummary();
+      if (action === 'calendar-download') downloadScheduleCalendar();
       if (action === 'print') printScheduleOutputSummary();
       if (action === 'advisor-download') downloadScheduleAdvisorPacket();
       if (action === 'advisor-print') printScheduleAdvisorPacket();
@@ -3081,6 +3233,22 @@ function downloadScheduleOutputSummary() {
   toastSuccess('Schedule summary downloaded.');
 }
 
+function downloadScheduleCalendar() {
+  if (!scheduleOutputCache) return;
+  if (!scheduleOutputCache.calendarEventCount) {
+    toastInfo('Pick timed sections before downloading a calendar.');
+    return;
+  }
+  const blob = new Blob([scheduleOutputCache.calendar], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = scheduleOutputCache.calendarFilename;
+  a.click();
+  URL.revokeObjectURL(url);
+  toastSuccess(`Calendar downloaded with ${scheduleOutputCache.calendarEventCount} class event${scheduleOutputCache.calendarEventCount === 1 ? '' : 's'}.`);
+}
+
 function downloadScheduleAdvisorPacket() {
   if (!scheduleOutputCache) return;
   const blob = new Blob([scheduleOutputCache.advisorDocument], { type: 'text/html;charset=utf-8' });
@@ -3137,6 +3305,7 @@ async function handleScheduleReadinessAction(action) {
 if (typeof window !== 'undefined') {
   window.copyScheduleOutputSummary = copyScheduleOutputSummary;
   window.downloadScheduleOutputSummary = downloadScheduleOutputSummary;
+  window.downloadScheduleCalendar = downloadScheduleCalendar;
   window.downloadScheduleAdvisorPacket = downloadScheduleAdvisorPacket;
   window.printScheduleOutputSummary = printScheduleOutputSummary;
   window.printScheduleAdvisorPacket = printScheduleAdvisorPacket;

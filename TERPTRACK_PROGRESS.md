@@ -6223,3 +6223,73 @@ Verification:
   - It randomly verified `WMST`, `MARKETING`, `HESP`, `PLSC`, `EDUC`, and `MATH` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 116
+
+Focus: let students export picked real class meetings into an importable calendar file.
+
+Planned changes:
+- Add a first-class `.ics` export beside schedule text, advisor packet, and print actions.
+- Build calendar events from the same real selected-section meeting blocks that power the weekly grid.
+- Include course code, section, room, instructor, seat status, and a UMD academic-calendar date review note.
+- Verify the calendar payload in unit-style schedule output tests and in the rendered mobile advisor-packet workflow.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added calendar export helpers in `js/schedule.js`.
+  - `buildScheduleCalendarIcs()` emits standards-style `VCALENDAR` / `VEVENT` content.
+  - Timed picked section meetings become weekly recurring events.
+  - Events use `America/New_York`, course/section summaries, classroom locations, instructors, seat status, and inferred term windows.
+  - Term-window notes explicitly tell students to confirm exact academic-calendar dates with UMD.
+  - ICS line folding and escaping are handled for descriptions, rooms, course names, and calendar names.
+- Added `scheduleCalendarFilename()` and `scheduleCalendarEventCount()`.
+- Added calendar content, filename, and event count to `buildScheduleOutput()`.
+- Added a `Download calendar` button to the Schedule Output action row.
+- Added `downloadScheduleCalendar()`.
+  - It downloads `text/calendar` when timed section events exist.
+  - It warns students to pick timed sections before downloading if the current schedule has no calendar events.
+- Bumped the Schedule script cache tag to `js/schedule.js?v=40`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts `.ics` filename, `BEGIN:VCALENDAR`, `VEVENT` records, event count, section summary, Fall 2026 inferred first Monday, weekly recurrence, classroom location, and UMD date-review note.
+  - Rendered mobile advisor packet now asserts the `Download calendar` button, clicks it, verifies the action marker, and checks the generated calendar cache.
+  - Rendered workflow cache assertions now require `js/schedule.js?v=40`.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with calendar export assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - The first run failed because the rendered advisor-packet fixture had four timed class events, not three.
+  - Corrected the workflow assertion to match CMSC Monday/Wednesday plus MATH Tuesday/Thursday.
+- Re-ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with calendar export, registration readiness quick actions, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including calendar export coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with calendar export.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Renamed the local calendar term-window variable for readability, then re-ran syntax checks for `js/schedule.js`, `scripts/test-generated-plans.js`, and `scripts/verify-rendered-workflows.js`.
+- Re-ran `node scripts/run-release-checks.js`.
+  - The first final-code rerun passed syntax, proxy, and generated fixtures, then hit a rendered generated-plan timeout after mobile `ARTT`.
+- Re-ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=120000`.
+  - It passed all 12 generated-template viewport runs.
+- Re-ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including calendar export coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with calendar export.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass116-calendar-export-live`.
+  - It randomly verified `PHYS`, `ENST`, `WMST`, `FMSC`, `JOUR`, and `SOCY` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
