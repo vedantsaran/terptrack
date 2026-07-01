@@ -1457,6 +1457,114 @@ function renderScheduleSummary(courses, selectedItems, conflicts, warnings, term
   `;
 }
 
+function scheduleReadinessMapSectionsFor(semId, term, courses, currentSectionsByCode = {}, currentSemId = '') {
+  const out = {};
+  (courses || []).forEach(course => {
+    const norm = normalizeCode(course.code);
+    const key = scheduleSectionCacheKey(semId, term, course.code);
+    out[norm] = semId === currentSemId
+      ? (currentSectionsByCode[norm] || [])
+      : (scheduleSectionsCache[key] || []);
+  });
+  return out;
+}
+
+function scheduleReadinessMapLoadedCount(semId, term, courses, sectionsByCode, activeSemId = '') {
+  return (courses || []).filter(course => {
+    const key = scheduleSectionCacheKey(semId, term, course.code);
+    return semId === activeSemId || !!scheduleSectionsMeta[key] || Array.isArray(scheduleSectionsCache[key]);
+  }).length;
+}
+
+function scheduleReadinessMapStatus(row) {
+  if (!row.courses.length) return { label: 'Clear', detail: 'No open UMD-coded courses in this term.' };
+  if (row.readiness.unscheduled.length) {
+    return {
+      label: 'Needs sections',
+      detail: `Pick sections for ${row.readiness.unscheduled.slice(0, 3).map(course => course.code).join(', ')}${row.readiness.unscheduled.length > 3 ? ` +${row.readiness.unscheduled.length - 3}` : ''}.`,
+    };
+  }
+  if (row.conflicts.length) return { label: 'Conflicts', detail: `${row.conflicts.length} time overlap${row.conflicts.length === 1 ? '' : 's'} to resolve.` };
+  const risky = row.selectedItems.filter(item => ['closed', 'risk'].includes(sectionSeatRisk(item.section).level));
+  if (risky.length) return { label: 'Seat risk', detail: `${risky.length} picked section${risky.length === 1 ? '' : 's'} with low or closed seats.` };
+  if (row.readiness.warnCount) return { label: 'Review', detail: row.readiness.fixes[0] || row.readiness.detail };
+  return { label: 'Ready', detail: 'Picked sections clear core registration checks.' };
+}
+
+function scheduleReadinessMapRows(activeSemId, activeTerm, activeCourses, activeSelectedItems, activeConflicts, activeWarnings, activeSectionsByCode) {
+  return getAllSemesters().map(sem => {
+    const isActive = sem.id === activeSemId;
+    const term = isActive
+      ? activeTerm
+      : ((state.schedulePrefs || {})[sem.id]?.term || scheduleInferTermCode(sem));
+    const courses = isActive ? activeCourses : scheduleCoursesForSemester(sem.id);
+    const prefs = getSchedulePrefs(sem.id);
+    const sectionsByCode = scheduleReadinessMapSectionsFor(sem.id, term, courses, activeSectionsByCode, activeSemId);
+    const selectedItems = isActive
+      ? activeSelectedItems
+      : scheduleSelectedItemsFor(sem.id, term, courses, sectionsByCode);
+    const conflicts = isActive ? activeConflicts : detectScheduleConflicts(selectedItems).conflicts;
+    const warnings = isActive ? activeWarnings : selectedScheduleWarnings(selectedItems, prefs);
+    const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs);
+    const loadedCount = scheduleReadinessMapLoadedCount(sem.id, term, courses, sectionsByCode, activeSemId);
+    const postedCount = Object.values(sectionsByCode).reduce((sum, sections) => sum + ((sections || []).length), 0);
+    const row = {
+      sem,
+      term,
+      courses,
+      selectedItems,
+      conflicts,
+      warnings,
+      readiness,
+      loadedCount,
+      postedCount,
+      isActive,
+    };
+    row.status = scheduleReadinessMapStatus(row);
+    return row;
+  });
+}
+
+function renderScheduleReadinessMap(activeSemId, activeTerm, activeCourses, activeSelectedItems, activeConflicts, activeWarnings, activeSectionsByCode) {
+  const root = document.getElementById('schedule-readiness-map');
+  if (!root) return;
+  const rows = scheduleReadinessMapRows(activeSemId, activeTerm, activeCourses, activeSelectedItems, activeConflicts, activeWarnings, activeSectionsByCode);
+  const activeRows = rows.filter(row => row.courses.length);
+  const readyRows = activeRows.filter(row => row.readiness.level === 'ok').length;
+  const dangerRows = activeRows.filter(row => row.readiness.level === 'danger').length;
+  const warnRows = activeRows.filter(row => row.readiness.level === 'warn').length;
+  root.innerHTML = `
+    <section class="schedule-readiness-map-panel">
+      <div class="schedule-readiness-map-head">
+        <div>
+          <h3>Readiness Map</h3>
+          <span>${scheduleEscape(activeRows.length ? `${readyRows}/${activeRows.length} active terms registration-ready` : 'No open schedule-ready terms')}</span>
+        </div>
+        <strong>${dangerRows ? `${dangerRows} fix` : warnRows ? `${warnRows} review` : 'Ready'}</strong>
+      </div>
+      <div class="schedule-readiness-term-grid">
+        ${rows.map(row => `
+          <button class="schedule-readiness-term ${scheduleEscape(row.readiness.level)}${row.isActive ? ' active' : ''}" type="button" data-schedule-jump-sem="${scheduleEscape(row.sem.id)}">
+            <span class="schedule-readiness-term-head">
+              <strong>${scheduleEscape(row.sem.name || row.sem.id)}</strong>
+              <em>${scheduleEscape(scheduleTermLabel(row.term))} · ${row.courses.length} course${row.courses.length === 1 ? '' : 's'}</em>
+            </span>
+            <span class="schedule-readiness-term-metrics">
+              <span><b>${row.selectedItems.length}/${row.courses.length}</b><small>picked</small></span>
+              <span><b>${row.loadedCount}/${row.courses.length}</b><small>loaded</small></span>
+              <span><b>${row.postedCount}</b><small>sections</small></span>
+            </span>
+            <span class="schedule-readiness-term-status">
+              <b>${scheduleEscape(row.status.label)}</b>
+              <small>${scheduleEscape(row.status.detail)}</small>
+            </span>
+          </button>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
 function renderScheduleWarnings(warnings) {
   const root = document.getElementById('schedule-warnings');
   if (!root) return;
@@ -4479,6 +4587,7 @@ async function renderSchedule(opts = {}) {
     status.innerHTML = `${postedCount} section${postedCount === 1 ? '' : 's'} loaded · ${scheduleEscape(seatFreshness.label).toLowerCase()}${termPosted ? '' : ' · selected term is not in the latest posted UMD term list'}.`;
   }
   renderScheduleSummary(courses, selectedItems, conflicts, warnings, term);
+  renderScheduleReadinessMap(semId, term, courses, selectedItems, conflicts, warnings, sectionsByCode);
   renderScheduleWarnings(warnings);
   renderScheduleFitPanel(selectedItems, prefs, conflicts);
   renderScheduleOutputPanel(semId, term, courses, selectedItems, conflicts, warnings, prefs, sectionsByCode);
@@ -4581,6 +4690,7 @@ function initScheduleEvents() {
   const list = document.getElementById('schedule-section-list');
   const undoRoot = document.getElementById('schedule-undo');
   const alternativesRoot = document.getElementById('schedule-alternatives');
+  const readinessMap = document.getElementById('schedule-readiness-map');
   const blockAddBtn = document.getElementById('schedule-block-add');
   const blockList = document.getElementById('schedule-block-list');
 
@@ -4665,6 +4775,16 @@ function initScheduleEvents() {
     const btn = e.target.closest('[data-alt-index]');
     if (!btn) return;
     applyScheduleAlternative(Number(btn.dataset.altIndex));
+  });
+  if (readinessMap) readinessMap.addEventListener('click', e => {
+    const btn = e.target.closest('[data-schedule-jump-sem]');
+    if (!btn) return;
+    const semId = btn.dataset.scheduleJumpSem;
+    if (!semId || semId === scheduleCurrentSemId) return;
+    scheduleCurrentSemId = semId;
+    renderSchedule();
+    const sem = getAllSemesters().find(item => item.id === semId);
+    if (typeof toastInfo === 'function') toastInfo(`Opened ${sem?.name || semId} in Schedule.`);
   });
   if (list) list.addEventListener('change', e => {
     if (!e.target.classList.contains('section-select')) return;

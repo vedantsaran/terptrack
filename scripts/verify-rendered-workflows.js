@@ -133,6 +133,7 @@ function snapshotScript() {
     const grid = document.querySelector('#br-grid');
     const schedule = document.querySelector('#view-schedule');
     const scheduleOutput = document.querySelector('#schedule-output');
+    const scheduleMap = document.querySelector('#schedule-readiness-map');
     const advisorPacket = document.querySelector('#schedule-advisor-packet');
     const recommendations = document.querySelector('#reco-container');
     const semesters = document.querySelector('#semesters-container');
@@ -144,6 +145,7 @@ function snapshotScript() {
       accountText: accountModal ? accountModal.textContent.replace(/\\s+/g, ' ').trim() : '',
       browseText: grid ? grid.textContent.replace(/\\s+/g, ' ').trim() : '',
       scheduleText: scheduleOutput ? scheduleOutput.textContent.replace(/\\s+/g, ' ').trim() : '',
+      scheduleMapText: scheduleMap ? scheduleMap.textContent.replace(/\\s+/g, ' ').trim() : '',
       recoText: recommendations ? recommendations.textContent.replace(/\\s+/g, ' ').trim() : '',
       overflow: {
         document: document.documentElement.scrollWidth > window.innerWidth + 1,
@@ -155,6 +157,7 @@ function snapshotScript() {
         grid: grid ? grid.scrollWidth > grid.clientWidth + 1 : false,
         schedule: schedule ? schedule.scrollWidth > schedule.clientWidth + 1 : false,
         scheduleOutput: scheduleOutput ? scheduleOutput.scrollWidth > scheduleOutput.clientWidth + 1 : false,
+        scheduleMap: scheduleMap ? scheduleMap.scrollWidth > scheduleMap.clientWidth + 1 : false,
         advisorPacket: advisorPacket ? advisorPacket.scrollWidth > advisorPacket.clientWidth + 1 : false,
         recommendations: recommendations ? recommendations.scrollWidth > recommendations.clientWidth + 1 : false,
         semesters: semesters ? semesters.scrollWidth > semesters.clientWidth + 1 : false,
@@ -173,8 +176,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=97'), 'workflow app did not load styles.css?v=97');
-  assert(snapshot.scripts.includes('js/schedule.js?v=48'), 'workflow app did not load js/schedule.js?v=48');
+  assert(snapshot.styles.includes('styles.css?v=98'), 'workflow app did not load styles.css?v=98');
+  assert(snapshot.scripts.includes('js/schedule.js?v=49'), 'workflow app did not load js/schedule.js?v=49');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -699,7 +702,15 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   await page.waitForFunction(() => {
     const text = document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ') || '';
     const sectionText = document.querySelector('#schedule-section-list')?.textContent?.replace(/\s+/g, ' ') || '';
+    const mapText = document.querySelector('#schedule-readiness-map')?.textContent?.replace(/\s+/g, ' ') || '';
     return text.includes('Schedule Output')
+      && mapText.includes('Readiness Map')
+      && mapText.includes('0/2 active terms registration-ready')
+      && mapText.includes('Fall 2026')
+      && mapText.includes('Spring 2027')
+      && mapText.includes('2/3')
+      && mapText.includes('3/3')
+      && mapText.includes('Needs sections')
       && text.includes('Advisor Packet')
       && text.includes('Download registration list')
       && text.includes('Download calendar')
@@ -732,6 +743,18 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && sectionText.includes('Apply backup')
       && text.includes('Picked CMSC 131 0101');
   }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-jump-sem="PASS98S"]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const sem = document.querySelector('#schedule-semester')?.value || '';
+    const mapText = document.querySelector('#schedule-readiness-map')?.textContent?.replace(/\s+/g, ' ') || '';
+    return sem === 'PASS98S'
+      && scheduleCurrentSemId === 'PASS98S'
+      && mapText.includes('Spring 2027')
+      && mapText.includes('0/2')
+      && mapText.includes('Needs sections');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-jump-sem="PASS98F"]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => document.querySelector('#schedule-semester')?.value === 'PASS98F' && scheduleCurrentSemId === 'PASS98F', null, { timeout: opts.timeoutMs });
   await page.locator('[data-readiness-action="review-sections"]').first().click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
     const output = document.querySelector('#schedule-output');
@@ -834,6 +857,9 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/ENGL 101 needs a section choice/.test(result.outputText), 'advisor packet: rendered packet should include unscheduled follow-up');
   assert(/MATH 140 0201: 2 seats open/.test(result.outputText) && /backup section/.test(result.outputText), 'advisor packet: rendered packet should include low-seat backup warning');
   const snapshot = await page.evaluate(snapshotScript());
+  assert(snapshot.scheduleMapText.includes('Readiness Map'), 'advisor packet: mobile snapshot should include readiness map');
+  assert(snapshot.scheduleMapText.includes('Fall 2026') && snapshot.scheduleMapText.includes('Spring 2027'), 'advisor packet: readiness map should include all plan terms');
+  assert(snapshot.scheduleMapText.includes('Needs sections'), 'advisor packet: readiness map should expose missing section work');
   assert(snapshot.scheduleText.includes('Advisor view'), 'advisor packet: rendered output should include advisor controls');
   assert(snapshot.scheduleText.includes('Registration Readiness'), 'advisor packet: mobile snapshot should include readiness panel');
   assert(snapshot.scheduleText.includes('Registration Appointment'), 'advisor packet: mobile snapshot should include registration appointment');
@@ -876,7 +902,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }, null, { timeout: opts.timeoutMs });
   const refreshSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet seat refresh mobile', refreshSnapshot);
-  console.log('Advisor packet [mobile]: rendered blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, seat refresh action, export action, and no overflow.');
+  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, seat refresh action, export action, and no overflow.');
 }
 
 async function main() {

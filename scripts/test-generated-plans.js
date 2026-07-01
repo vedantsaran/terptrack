@@ -885,6 +885,9 @@ function testScheduleRegistrationReadiness(context) {
       scheduleSectionsMeta[scheduleSectionCacheKey('PASS112F', '202608', 'MATH 140')] = { fetchedAt: new Date(now - (90 * 60 * 1000)).toISOString(), source: 'fixture', count: 2 };
       scheduleSectionsMeta[scheduleSectionCacheKey('PASS112F', '202608', 'ENGL 101')] = { fetchedAt: new Date(now - (8 * 60 * 1000)).toISOString(), source: 'fixture', count: 0 };
       const output = buildScheduleOutput('PASS112F', '202608', courses, selectedItems, conflicts, warnings, prefs, sectionsByCode);
+      const mapRows = scheduleReadinessMapRows('PASS112F', '202608', courses, selectedItems, conflicts, warnings, sectionsByCode);
+      const mapFall = mapRows.find(row => row.sem.id === 'PASS112F');
+      const mapSpring = mapRows.find(row => row.sem.id === 'PASS112S');
       return {
         level: readiness.level,
         label: readiness.label,
@@ -914,6 +917,18 @@ function testScheduleRegistrationReadiness(context) {
         advisorHtml: output.advisorHtml,
         advisorText: output.advisorText,
         advisorDocument: output.advisorDocument,
+        map: {
+          count: mapRows.length,
+          fallLevel: mapFall?.readiness?.level,
+          fallStatus: mapFall?.status?.label,
+          fallPicked: (mapFall?.selectedItems?.length || 0) + '/' + (mapFall?.courses?.length || 0),
+          fallLoaded: (mapFall?.loadedCount || 0) + '/' + (mapFall?.courses?.length || 0),
+          fallPostedCount: mapFall?.postedCount,
+          springLevel: mapSpring?.readiness?.level,
+          springStatus: mapSpring?.status?.label,
+          springPicked: (mapSpring?.selectedItems?.length || 0) + '/' + (mapSpring?.courses?.length || 0),
+          springLoaded: (mapSpring?.loadedCount || 0) + '/' + (mapSpring?.courses?.length || 0),
+        },
       };
     })()
   `, context));
@@ -1003,6 +1018,11 @@ function testScheduleRegistrationReadiness(context) {
   assert(/schedule-seat-freshness/.test(result.advisorDocument), 'seat freshness: exported advisor document should include freshness markup');
   assert(/schedule-registration-handoff/.test(result.advisorDocument), 'testudo queue: exported advisor document should include queue markup');
   assert(/schedule-readiness-actions/.test(result.advisorDocument) && /data-readiness-action="review-sections"/.test(result.advisorDocument), 'registration readiness: exported advisor document should include quick-action markup');
+  assert(result.map.count === 2, 'readiness map: should include every plan term');
+  assert(result.map.fallLevel === 'danger' && result.map.fallStatus === 'Needs sections', 'readiness map: current term should expose missing section blocker');
+  assert(result.map.fallPicked === '2/3' && result.map.fallLoaded === '3/3' && result.map.fallPostedCount === 3, 'readiness map: current term should summarize picked, loaded, and posted sections');
+  assert(result.map.springLevel === 'danger' && result.map.springStatus === 'Needs sections', 'readiness map: future term should expose missing section work');
+  assert(result.map.springPicked === '0/2' && result.map.springLoaded === '0/2', 'readiness map: future term should show no saved section evidence yet');
 
   return {
     id: 'SCHEDULE-READINESS',
