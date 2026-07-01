@@ -7736,3 +7736,62 @@ Verification:
   - It randomly verified `AMST`, `STAT`, `CINE`, `ACCOUNTING`, `ENMA`, and `ARTT` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 141
+
+Focus: add a workload reality check so students and advisors can see whether picked sections create a sustainable weekly class load, not just a conflict-free grid.
+
+Planned changes:
+- Derive workload from real picked UMD sections, meeting minutes, current-term credits, active days, TBA picks, and missing section evidence.
+- Render the workload summary in the live Schedule tab.
+- Include the same workload evidence in schedule output, registration-list text, advisor packet HTML, and advisor text exports.
+- Verify generated fixtures, rendered mobile output, release checks, and live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleWorkloadBalance()` in `js/schedule.js`.
+  - It computes picked credits vs planned credits, weekly in-class time, active days, per-day course load, TBA picked sections, and missing section count from selected section meetings.
+  - It labels the term as `Balanced workload`, `Review workload`, `Heavy week`, `Pick sections`, or `No workload`.
+  - It surfaces concrete workload notes such as missing sections, compressed active days, heavy in-class days, and the busiest weekday.
+- Added workload render/text helpers.
+  - The Schedule tab now shows a `Workload Balance` card beside the timing/readiness flow.
+  - Schedule output HTML includes the workload card.
+  - Schedule text exports include workload rows.
+  - Registration-list text exports include workload evidence before backup and readiness-map handoffs.
+  - Advisor packet HTML and advisor text exports include the workload card/metrics.
+- Added app CSS and standalone advisor CSS for the workload card, including mobile one-column day rows and two-column metric rows.
+- Bumped cache tags:
+  - `styles.css?v=107`.
+  - `js/schedule.js?v=61`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts workload cache data, `8/11` scheduled credits, `3 hr 45 min` weekly class time, missing-section evidence, schedule output HTML/text, registration-list text, advisor HTML/text, and exported advisor document markup.
+  - The rendered mobile advisor packet workflow now waits for the workload card, verifies `scheduleOutputCache.workloadBalance`, checks registration/advisor exports, checks rendered packet text, and includes workload balance in no-overflow snapshots.
+  - Rendered workflow logs now name `workload balance` coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with workload balance coverage.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule ready backups, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with workload balance, final registration checklist, ready backup apply, calendar omission auto-fill, clear-picks undo, calendar omission review, partial-calendar warning toast, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js --live --live-seed=pass141-workload-balance-live`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including workload balance coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with workload balance coverage.
+  - It live-verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp with every generated required course reporting a matching live title/credit pair.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass141-workload-balance-random-live`.
+  - It randomly verified `ENMA`, `SPAN`, `AOSC`, `ENST`, `SOCY`, and `NEUR` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

@@ -931,6 +931,7 @@ function testScheduleRegistrationReadiness(context) {
         outputRegistrationOrder: output.registrationOrder,
         outputRegistrationBackupPlan: output.registrationBackupPlan,
         outputFinalChecklist: output.finalChecklist,
+        outputWorkloadBalance: output.workloadBalance,
         outputRegistrationText: output.registrationText,
         outputRegistrationFilename: output.registrationFilename,
         outputCalendar: output.calendar,
@@ -985,6 +986,9 @@ function testScheduleRegistrationReadiness(context) {
   assert(result.outputFinalChecklist.items.some(item => item.id === 'backups' && item.level === 'warn' && /ready backup/.test(item.detail)), 'final checklist: should include ready backup warning');
   assert(/Final Registration Checklist/.test(result.outputHtml) && /1\/6/.test(result.outputHtml) && /launch checks ready/.test(result.outputHtml), 'final checklist: schedule output HTML should include launch readiness score');
   assert(/Final registration checklist:[\s\S]*Overall: Fix before Testudo[\s\S]*Seat freshness: DANGER/.test(result.outputText), 'final checklist: schedule text should include final checklist rows');
+  assert(result.outputWorkloadBalance?.label === 'Review workload' && result.outputWorkloadBalance?.pickedCredits === 8 && result.outputWorkloadBalance?.totalCredits === 11 && result.outputWorkloadBalance?.weeklyMinutes === 225 && result.outputWorkloadBalance?.missingCount === 1, 'workload balance: should summarize picked credits, weekly class time, and missing section evidence');
+  assert(/Workload Balance/.test(result.outputHtml) && /8\/11/.test(result.outputHtml) && /3 hr 45 min/.test(result.outputHtml), 'workload balance: schedule output HTML should include workload card metrics');
+  assert(/Workload balance:[\s\S]*Overall: Review workload[\s\S]*8\/11 credits[\s\S]*Mon: 2 hr 30 min/.test(result.outputText), 'workload balance: schedule text should include workload rows');
   assert(result.outputRegistrationAppointment?.label === 'Scheduled' && /Aug 25, 2099 at 9:30am/.test(result.outputRegistrationAppointment.when), 'registration appointment: should summarize saved Testudo time');
   assert(/Registration Appointment/.test(result.outputHtml) && /Aug 25, 2099 at 9:30am/.test(result.outputHtml), 'registration appointment: schedule output HTML should include saved appointment');
   assert(/Registration appointment:[\s\S]*Scheduled: Aug 25, 2099 at 9:30am/.test(result.outputText), 'registration appointment: schedule text should include appointment checklist');
@@ -1019,6 +1023,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/MATH 140 0201: 2 seats open/.test(result.outputRegistrationText), 'registration list: text should include low-seat warning');
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.outputRegistrationText), 'registration list: text should include the enrollment order');
   assert(/Final registration checklist:[\s\S]*1\/6 launch checks ready[\s\S]*Testudo entry queue: DANGER/.test(result.outputRegistrationText), 'registration list: text should include final launch checklist');
+  assert(/Workload balance:[\s\S]*3 hr 45 min weekly class time[\s\S]*1 course still needs picked sections/.test(result.outputRegistrationText), 'registration list: text should include workload balance evidence');
   assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301; Section ID MATH140-0301/.test(result.outputRegistrationText), 'registration list: text should include backup section handoff');
   assert(/Have 1 backup section ready in Testudo/.test(result.outputRegistrationText), 'registration appointment: should reference backup readiness');
   assert(/Backup ID: MATH140-0301/.test(result.outputRegistrationText), 'testudo queue: registration list should include backup ID');
@@ -1045,6 +1050,7 @@ function testScheduleRegistrationReadiness(context) {
 		  assert(/Registration Readiness/.test(result.advisorHtml) && /Fix before registration/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness gates');
 		  assert(/schedule-advisor-readiness-map/.test(result.advisorHtml) && /Plan Readiness Map/.test(result.advisorHtml) && /Spring 2027/.test(result.advisorHtml), 'readiness map export: advisor HTML should include plan-wide readiness map');
   assert(/Final Registration Checklist/.test(result.advisorHtml) && /Fix before Testudo/.test(result.advisorHtml), 'final checklist: advisor HTML should include final checklist');
+  assert(/Workload Balance/.test(result.advisorHtml) && /Review workload/.test(result.advisorHtml) && /3 hr 45 min/.test(result.advisorHtml), 'workload balance: advisor HTML should include workload card');
 		  assert(/Registration Appointment/.test(result.advisorHtml) && /Aug 25, 2099 at 9:30am/.test(result.advisorHtml), 'registration appointment: advisor HTML should include saved appointment');
   assert(/Seat Data Freshness/.test(result.advisorHtml) && /Refresh seats/.test(result.advisorHtml), 'seat freshness: advisor HTML should include freshness card');
   assert(/Calendar Export/.test(result.advisorHtml) && /Calendar incomplete/.test(result.advisorHtml) && /Auto-fill timed sections/.test(result.advisorHtml) && /Review omitted courses/.test(result.advisorHtml), 'calendar export readiness: advisor HTML should include calendar omission actions');
@@ -1058,12 +1064,14 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Calendar export:[\s\S]*CMSC 131 0101: 2 calendar events/.test(result.advisorText), 'calendar export readiness: advisor text should include course event rows');
   assert(/Calendar export:[\s\S]*ENGL 101 Missing section: omitted from calendar until a section is picked/.test(result.advisorText), 'calendar export readiness: advisor text should include missing-section omission');
   assert(/Final registration checklist:[\s\S]*Calendar export: WARN/.test(result.advisorText), 'final checklist: advisor text should include calendar launch warning');
+  assert(/Workload balance:[\s\S]*Metrics: 8\/11 credits; 3 hr 45 min weekly class time/.test(result.advisorText), 'workload balance: advisor text should include workload metrics');
   assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.advisorText), 'seat freshness: advisor text should include refresh action guidance');
   assert(/Testudo entry queue:[\s\S]*Section ID: MATH140-0201/.test(result.advisorText), 'testudo queue: advisor text should include exact section IDs');
   assert(/Fix: Pick sections for ENGL 101/.test(result.advisorText), 'registration readiness: advisor text should include recommended fixes');
 	  assert(/schedule-readiness/.test(result.advisorDocument) && /Recommended fixes/.test(result.advisorDocument), 'registration readiness: exported advisor document should include readiness markup and fixes');
 		  assert(/schedule-advisor-readiness-map/.test(result.advisorDocument) && /Plan Readiness Map/.test(result.advisorDocument), 'readiness map export: exported advisor document should include plan-wide readiness markup');
   assert(/schedule-final-checklist/.test(result.advisorDocument) && /Final Registration Checklist/.test(result.advisorDocument), 'final checklist: exported advisor document should include final checklist markup');
+  assert(/schedule-workload-card/.test(result.advisorDocument) && /Workload Balance/.test(result.advisorDocument), 'workload balance: exported advisor document should include workload markup');
 		  assert(/schedule-registration-appointment/.test(result.advisorDocument), 'registration appointment: exported advisor document should include appointment markup');
   assert(/schedule-seat-freshness/.test(result.advisorDocument), 'seat freshness: exported advisor document should include freshness markup');
   assert(/schedule-calendar-export/.test(result.advisorDocument) && /Calendar Export/.test(result.advisorDocument) && /data-calendar-export-action="auto-fill-omissions"/.test(result.advisorDocument) && /data-calendar-export-action="review-omissions"/.test(result.advisorDocument), 'calendar export readiness: exported advisor document should include calendar action markup');

@@ -1377,6 +1377,140 @@ function scheduleTimingFit(items, prefs = DEFAULT_SCHEDULE_PREFS, conflicts = []
   };
 }
 
+function scheduleCourseCredits(course) {
+  return Number(course && course.cr) || 0;
+}
+
+function scheduleWorkloadBalance(courses = [], selectedItems = [], prefs = DEFAULT_SCHEDULE_PREFS, timing = null) {
+  const courseList = Array.isArray(courses) ? courses : [];
+  const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
+  const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course?.code || item.section?.course || '')));
+  const totalCredits = courseList.reduce((sum, course) => sum + scheduleCourseCredits(course), 0);
+  const pickedCredits = selectedList.reduce((sum, item) => sum + scheduleCourseCredits(item.course), 0);
+  const missing = courseList.filter(course => !selectedCodes.has(normalizeCode(course.code)));
+  const fit = timing || scheduleTimingFit(selectedList, prefs, []);
+  const blocks = selectedList.flatMap(item => sectionBlocks(item.section, item.course));
+  const weeklyMinutes = blocks.reduce((sum, block) => sum + Math.max(0, block.end - block.start), 0);
+  const tbaPicks = selectedList.filter(item => !sectionBlocks(item.section, item.course).length);
+  const dayRows = SCHEDULE_DAY_DEFS.map(day => {
+    const dayBlocks = blocks.filter(block => block.day === day.key);
+    const codes = Array.from(new Set(dayBlocks.map(block => normalizeCode(block.code)).filter(Boolean)));
+    const credits = selectedList
+      .filter(item => codes.includes(normalizeCode(item.course?.code || '')))
+      .reduce((sum, item) => sum + scheduleCourseCredits(item.course), 0);
+    const minutes = dayBlocks.reduce((sum, block) => sum + Math.max(0, block.end - block.start), 0);
+    return {
+      day,
+      minutes,
+      courseCount: codes.length,
+      credits,
+      label: day.label,
+      detail: codes.length
+        ? `${codes.map(displayCode).join(', ')} · ${scheduleDurationLabel(minutes)} in class`
+        : 'No picked classes',
+    };
+  });
+  const activeRows = dayRows.filter(row => row.minutes > 0);
+  const busiest = activeRows.slice().sort((a, b) => b.minutes - a.minutes || b.courseCount - a.courseCount)[0] || null;
+  const activeDays = activeRows.length;
+  const creditsPerActiveDay = activeDays ? pickedCredits / activeDays : 0;
+  const heavyDayCount = activeRows.filter(row => row.minutes >= 4 * 60 || row.courseCount >= 3).length;
+  const flags = [];
+  if (!courseList.length) flags.push('No unsatisfied UMD-coded courses are in this semester.');
+  if (missing.length) flags.push(`${missing.length} course${missing.length === 1 ? '' : 's'} still ${missing.length === 1 ? 'needs' : 'need'} picked sections before the workload picture is complete.`);
+  if (tbaPicks.length) flags.push(`${tbaPicks.length} picked section${tbaPicks.length === 1 ? '' : 's'} still has time TBA.`);
+  if (pickedCredits >= 18) flags.push(`${pickedCredits} picked credits is a heavy registration load.`);
+  else if (totalCredits >= 16) flags.push(`${totalCredits} planned credits is a full-time load; confirm work, commute, and study time fit.`);
+  if (weeklyMinutes >= 15 * 60) flags.push(`${scheduleDurationLabel(weeklyMinutes)} of weekly in-class time is high for a single term.`);
+  if (heavyDayCount) flags.push(`${heavyDayCount} active day${heavyDayCount === 1 ? '' : 's'} carry at least 4 hours in class or 3 courses.`);
+  if (creditsPerActiveDay >= 5.5 && activeDays) flags.push(`${creditsPerActiveDay.toFixed(1)} credits per active day means this schedule is very compressed.`);
+  if (busiest) flags.push(`${busiest.label} is busiest: ${scheduleDurationLabel(busiest.minutes)} across ${busiest.courseCount} course${busiest.courseCount === 1 ? '' : 's'}.`);
+  if (!flags.length) flags.push('Workload looks balanced after normal section and advisor review.');
+
+  const danger = pickedCredits >= 18 || weeklyMinutes >= 18 * 60 || heavyDayCount >= 3 || creditsPerActiveDay >= 7;
+  const warn = !danger && (!!missing.length || !!tbaPicks.length || totalCredits >= 16 || weeklyMinutes >= 12 * 60 || heavyDayCount > 0 || fit.score < 76);
+  const level = !courseList.length ? 'ok' : !selectedList.length ? 'warn' : danger ? 'danger' : warn ? 'warn' : 'ok';
+  const label = !courseList.length ? 'No workload'
+    : !selectedList.length ? 'Pick sections'
+      : danger ? 'Heavy week'
+        : warn ? 'Review workload'
+          : 'Balanced workload';
+  const detail = !courseList.length
+    ? 'This term has no open schedule-ready courses.'
+    : !selectedList.length
+      ? `${totalCredits} planned credits need section picks before weekly workload can be trusted.`
+      : `${pickedCredits}/${totalCredits} credits scheduled with ${scheduleDurationLabel(weeklyMinutes)} weekly in-class time across ${activeDays || 0} active day${activeDays === 1 ? '' : 's'}.`;
+
+  return {
+    level,
+    label,
+    detail,
+    totalCredits,
+    pickedCredits,
+    missingCount: missing.length,
+    tbaCount: tbaPicks.length,
+    weeklyMinutes,
+    weeklyHours: Math.round((weeklyMinutes / 60) * 10) / 10,
+    activeDays,
+    creditsPerActiveDay,
+    heavyDayCount,
+    busiest,
+    dayRows,
+    flags: Array.from(new Set(flags)).slice(0, 5),
+  };
+}
+
+function renderScheduleWorkloadHtml(workload, heading = 'Workload Balance') {
+  if (!workload) return '';
+  const metrics = [
+    { label: 'Credits', value: `${workload.pickedCredits}/${workload.totalCredits}` },
+    { label: 'Weekly class time', value: scheduleDurationLabel(workload.weeklyMinutes) },
+    { label: 'Active days', value: String(workload.activeDays || 0) },
+    { label: 'TBA picks', value: String(workload.tbaCount || 0) },
+  ];
+  const dayRows = (workload.dayRows || []).filter(row => row.minutes > 0);
+  return `
+    <section class="schedule-workload-card ${scheduleEscape(workload.level)}">
+      <div class="schedule-workload-head">
+        <div>
+          <h4>${scheduleEscape(heading)}</h4>
+          <span>${scheduleEscape(workload.detail)}</span>
+        </div>
+        <strong>${scheduleEscape(workload.label)}</strong>
+      </div>
+      <div class="schedule-workload-metrics">
+        ${metrics.map(row => `<span><strong>${scheduleEscape(row.value)}</strong><em>${scheduleEscape(row.label)}</em></span>`).join('')}
+      </div>
+      ${dayRows.length ? `<div class="schedule-workload-days">
+        ${dayRows.map(row => `
+          <span>
+            <strong>${scheduleEscape(row.label)}</strong>
+            <em>${scheduleEscape(`${scheduleDurationLabel(row.minutes)} · ${row.courseCount} course${row.courseCount === 1 ? '' : 's'}`)}</em>
+          </span>
+        `).join('')}
+      </div>` : ''}
+      <div class="schedule-workload-flags">
+        ${(workload.flags || []).map(flag => `<span>${scheduleEscape(flag)}</span>`).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function scheduleWorkloadText(workload) {
+  if (!workload) return [];
+  const lines = [
+    '',
+    'Workload balance:',
+    `- Overall: ${workload.label}. ${workload.detail}`,
+    `- Metrics: ${workload.pickedCredits}/${workload.totalCredits} credits; ${scheduleDurationLabel(workload.weeklyMinutes)} weekly class time; ${workload.activeDays || 0} active day${workload.activeDays === 1 ? '' : 's'}; ${workload.tbaCount || 0} TBA pick${workload.tbaCount === 1 ? '' : 's'}.`,
+  ];
+  (workload.dayRows || [])
+    .filter(row => row.minutes > 0)
+    .forEach(row => lines.push(`- ${row.label}: ${scheduleDurationLabel(row.minutes)} across ${row.courseCount} course${row.courseCount === 1 ? '' : 's'}.`));
+  (workload.flags || []).forEach(flag => lines.push(`- Note: ${flag}`));
+  return lines;
+}
+
 function sectionScore(section, prefs = DEFAULT_SCHEDULE_PREFS, course = null, chosen = []) {
   const open = parseInt(section.open_seats, 10);
   const wait = parseInt(section.waitlist, 10);
@@ -1869,6 +2003,13 @@ function renderScheduleFitPanel(selectedItems, prefs, conflicts) {
       </div>
     </div>
   `;
+}
+
+function renderScheduleWorkloadPanel(courses, selectedItems, prefs, timing = null) {
+  const root = document.getElementById('schedule-workload');
+  if (!root) return;
+  const workload = scheduleWorkloadBalance(courses, selectedItems, prefs, timing);
+  root.innerHTML = renderScheduleWorkloadHtml(workload);
 }
 
 function scheduleTimingDiagnostics(timing) {
@@ -3892,7 +4033,7 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
   return { html, totalCourses, shownCourses, totalCredits, shownCredits };
 }
 
-function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null, finalChecklist = null) {
+function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null, finalChecklist = null, workloadBalance = null) {
   const stats = scheduleAdvisorStats();
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
@@ -3903,6 +4044,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   const checklist = finalChecklist || scheduleFinalRegistrationChecklist(readiness, appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows), freshness, backupRows, registrationHandoff, calendarSummary);
+  const workload = workloadBalance || scheduleWorkloadBalance(courses, selectedItems, prefs, timing);
   const context = scheduleAdvisorFilterContext(
     sem?.id || '',
     selectedItems,
@@ -3926,6 +4068,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   ];
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
+  lines.push(...scheduleWorkloadText(workload));
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleFinalChecklistText(checklist));
   lines.push(...scheduleRegistrationAppointmentText(appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows)));
@@ -4011,6 +4154,19 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-diagnostic-notes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
     .schedule-advisor-diagnostic-list{border-top:1px solid #eee4d8;padding-top:7px;font-size:12px}
     .schedule-advisor-diagnostic-list strong{display:block;margin-bottom:4px}
+    .schedule-workload-card{border:1px solid #d8cec0;border-left:4px solid #7b8b55;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-workload-card.warn{border-left-color:#c99700;background:#fffaf0}
+    .schedule-workload-card.danger{border-left-color:#8b0000;background:#fff5f3}
+    .schedule-workload-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-workload-head h4{margin:0}
+    .schedule-workload-head span,.schedule-workload-flags span,.schedule-workload-metrics em,.schedule-workload-days em{display:block;color:#5d5962;font-size:12px;line-height:1.35;font-style:normal}
+    .schedule-workload-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-workload-metrics,.schedule-workload-days{display:grid;gap:6px;margin-top:8px}
+    .schedule-workload-metrics{grid-template-columns:repeat(4,1fr)}
+    .schedule-workload-days{grid-template-columns:repeat(5,1fr)}
+    .schedule-workload-metrics span,.schedule-workload-days span{border:1px solid #d8cec0;border-radius:7px;background:#fbf7ef;padding:7px}
+    .schedule-workload-metrics strong,.schedule-workload-days strong{display:block;color:#241f1f;font-size:12px}
+    .schedule-workload-flags{display:grid;gap:4px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
     .schedule-advisor-audit-list{display:grid;gap:6px;margin-top:8px}
     .schedule-advisor-audit-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-audit-row:first-child{border-top:none;padding-top:0}
@@ -4171,12 +4327,12 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid,.schedule-calendar-export-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-readiness-map-list,.schedule-seat-freshness-list,.schedule-calendar-export-list,.schedule-final-checklist-grid{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-final-checklist-head,.schedule-seat-freshness-head,.schedule-calendar-export-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head,.schedule-advisor-readiness-map-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid,.schedule-calendar-export-metrics,.schedule-workload-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-readiness-map-list,.schedule-seat-freshness-list,.schedule-calendar-export-list,.schedule-final-checklist-grid,.schedule-workload-days{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-final-checklist-head,.schedule-workload-head,.schedule-seat-freshness-head,.schedule-calendar-export-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head,.schedule-advisor-readiness-map-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions,.schedule-calendar-export-actions{display:none}}
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null, finalChecklist = null) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null, finalChecklist = null, workloadBalance = null) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
@@ -4196,6 +4352,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   const checklist = finalChecklist || scheduleFinalRegistrationChecklist(readiness, registrationAppointment, freshness, backupRows, registrationHandoff, calendarSummary);
+  const workload = workloadBalance || scheduleWorkloadBalance(courses, selectedItems, prefs, timing);
   return `
     <article class="schedule-advisor-packet" id="schedule-advisor-packet">
       <div class="schedule-advisor-head">
@@ -4234,6 +4391,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       </div>
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleFinalChecklistHtml(checklist)}
+      ${renderScheduleWorkloadHtml(workload)}
       ${scheduleAdvisorReadinessMapHtml(readinessRows)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
       ${renderScheduleSeatFreshnessHtml(freshness)}
@@ -4278,7 +4436,7 @@ ${advisorHtml}
 </html>`;
 }
 
-function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null, finalChecklist = null) {
+function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null, finalChecklist = null, workloadBalance = null) {
   const outputOptions = normalizeScheduleOutputOptions(options);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
@@ -4288,6 +4446,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   const checklist = finalChecklist || scheduleFinalRegistrationChecklist(readiness, registrationAppointment, freshness, backupRows, registrationHandoff, calendarSummary);
+  const workload = workloadBalance || scheduleWorkloadBalance(courses, selectedItems, prefs, timing);
   const lines = [
     `Terp Track Schedule`,
     `Plan semester: ${sem?.name || 'Selected semester'}`,
@@ -4299,6 +4458,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
   lines.push(`Timing fit: ${timing.score}/100 - ${timing.label}`);
   timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
+  lines.push(...scheduleWorkloadText(workload));
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleFinalChecklistText(checklist));
   lines.push(...scheduleAdvisorReadinessMapText(readinessRows));
@@ -4339,7 +4499,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   return lines.join('\n');
 }
 
-function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null, finalChecklist = null) {
+function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null, finalChecklist = null, workloadBalance = null) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
   const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course.code)));
@@ -4351,6 +4511,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   const checklist = finalChecklist || scheduleFinalRegistrationChecklist(readiness, registrationAppointment, freshness, backupRows, registrationHandoff, calendarSummary);
+  const workload = workloadBalance || scheduleWorkloadBalance(courseList, selectedList, prefs, readiness.timing);
   const lines = [
     'Terp Track Registration List',
     'Use this as a Testudo checklist. Confirm every section, seat, restriction, and prerequisite in Testudo before enrolling.',
@@ -4378,6 +4539,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
 
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleFinalChecklistText(checklist));
+  lines.push(...scheduleWorkloadText(workload));
   lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push(...scheduleAdvisorReadinessMapText(readinessRows));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
@@ -4480,8 +4642,9 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
   const calendarSummary = scheduleCalendarExportSummary(sem, term, courses, selectedItems, prefs, calendar);
   const finalChecklist = scheduleFinalRegistrationChecklist(readiness, registrationAppointment, seatFreshness, registrationBackupPlan, registrationHandoff, calendarSummary);
-  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary, finalChecklist);
-  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary, finalChecklist);
+  const workloadBalance = scheduleWorkloadBalance(courses, selectedItems, prefs, timing);
+  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary, finalChecklist, workloadBalance);
+  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary, finalChecklist, workloadBalance);
   const courseRows = selectedItems
     .slice()
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
@@ -4515,6 +4678,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${outputOptions.preferences ? `<p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleFinalChecklistHtml(finalChecklist)}
+      ${renderScheduleWorkloadHtml(workloadBalance)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
       ${renderScheduleSeatFreshnessHtml(seatFreshness)}
       ${renderScheduleCalendarExportHtml(calendarSummary)}
@@ -4531,9 +4695,9 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${scheduleChangeDigestHtml(changes, 'Schedule summary')}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary, finalChecklist);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary, finalChecklist, workloadBalance);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
-  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary, finalChecklist);
+  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary, finalChecklist, workloadBalance);
 
   return {
     text,
@@ -4544,6 +4708,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     registrationOrder,
     registrationBackupPlan,
     finalChecklist,
+    workloadBalance,
     registrationText,
     registrationFilename: scheduleRegistrationFilename(term),
     html: scheduleHtml,
@@ -5421,7 +5586,9 @@ async function renderSchedule(opts = {}) {
   renderScheduleSummary(courses, selectedItems, conflicts, warnings, term);
   renderScheduleReadinessMap(semId, term, courses, selectedItems, conflicts, warnings, sectionsByCode);
   renderScheduleWarnings(warnings);
+  const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   renderScheduleFitPanel(selectedItems, prefs, conflicts);
+  renderScheduleWorkloadPanel(courses, selectedItems, prefs, timing);
   renderScheduleOutputPanel(semId, term, courses, selectedItems, conflicts, warnings, prefs, sectionsByCode);
   renderScheduleUndo();
   renderScheduleAlternatives([]);

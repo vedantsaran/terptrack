@@ -4137,6 +4137,104 @@ h1.hero-title em {
   font-size: .75rem;
   line-height: 1.35;
 }
+.schedule-workload {
+  margin: -4px 0 18px;
+}
+.schedule-workload-card {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 10px;
+  background: var(--paper);
+  padding: 12px;
+}
+.schedule-workload-card.warn {
+  border-left-color: var(--amber);
+  background: color-mix(in srgb, var(--paper) 84%, var(--amber-soft));
+}
+.schedule-workload-card.danger {
+  border-left-color: var(--red);
+  background: color-mix(in srgb, var(--paper) 84%, var(--red-soft));
+}
+.schedule-workload-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+.schedule-workload-head h4 {
+  margin: 0;
+  color: var(--ink);
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+}
+.schedule-workload-head span {
+  display: block;
+  color: var(--slate);
+  font-size: .76rem;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+.schedule-workload-head > strong {
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .68rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-workload-metrics,
+.schedule-workload-days {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.schedule-workload-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.schedule-workload-days {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.schedule-workload-metrics span,
+.schedule-workload-days span {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+  padding: 8px;
+  min-width: 0;
+}
+.schedule-workload-metrics strong,
+.schedule-workload-metrics em,
+.schedule-workload-days strong,
+.schedule-workload-days em {
+  display: block;
+}
+.schedule-workload-metrics strong,
+.schedule-workload-days strong {
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .82rem;
+  overflow-wrap: anywhere;
+}
+.schedule-workload-metrics em,
+.schedule-workload-days em {
+  color: var(--slate);
+  font-size: .66rem;
+  font-style: normal;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+.schedule-workload-flags {
+  display: grid;
+  gap: 5px;
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 8px;
+}
+.schedule-workload-flags span {
+  color: var(--ink-soft);
+  font-size: .74rem;
+  line-height: 1.35;
+}
 .schedule-readiness {
   border: 1px solid var(--line);
   border-left: 4px solid var(--green);
@@ -8246,6 +8344,17 @@ h1.hero-title em {
   }
   .schedule-fit-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .schedule-workload-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .schedule-workload-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .schedule-workload-days {
+    grid-template-columns: 1fr;
   }
   .schedule-readiness-map-head {
     align-items: flex-start;
