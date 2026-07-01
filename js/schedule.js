@@ -123,6 +123,9 @@ let scheduleAlternatives = [];
 let scheduleOutputCache = null;
 let scheduleUndoAction = null;
 const scheduleSectionsCache = {};
+const scheduleSectionsMeta = {};
+const SCHEDULE_SEAT_WARN_MS = 15 * 60 * 1000;
+const SCHEDULE_SEAT_STALE_MS = 60 * 60 * 1000;
 
 function scheduleEscape(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
@@ -322,6 +325,10 @@ function scheduleInferTermCode(sem) {
   if (/fall|\bF\d{2}\b/i.test(name)) return `${year}08`;
   if (/winter/i.test(name)) return `${year}12`;
   return `${year}01`;
+}
+
+function scheduleSectionCacheKey(semId, term, code) {
+  return `${semId}:${term}:${normalizeCode(code)}`;
 }
 
 function scheduleTermLabel(term) {
@@ -1417,13 +1424,18 @@ function buildScheduleCandidate(courses, sectionsByCode, prefs, variant = 0, cur
 async function scheduleFetchSectionsFor(semId, term, courses, force = false) {
   const out = {};
   await Promise.all(courses.map(async course => {
-    const key = `${semId}:${term}:${normalizeCode(course.code)}`;
+    const key = scheduleSectionCacheKey(semId, term, course.code);
     if (!force && scheduleSectionsCache[key]) {
       out[normalizeCode(course.code)] = scheduleSectionsCache[key];
       return;
     }
     const sections = await umdioFetchSections(course.code, term);
     scheduleSectionsCache[key] = sections;
+    scheduleSectionsMeta[key] = {
+      fetchedAt: new Date().toISOString(),
+      source: force ? 'manual refresh' : 'live fetch',
+      count: Array.isArray(sections) ? sections.length : 0,
+    };
     out[normalizeCode(course.code)] = sections;
   }));
   return out;
@@ -2238,6 +2250,118 @@ function scheduleRegistrationAppointmentText(appointment) {
     `- ${appointment.label}: ${appointment.when}. ${appointment.detail}`,
     ...(appointment.items || []).map(item => `- Check: ${item}`),
   ];
+}
+
+function scheduleSeatFreshnessAgeLabel(ageMs) {
+  const safeAge = Math.max(0, Number(ageMs) || 0);
+  const mins = Math.floor(safeAge / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  const rem = mins % 60;
+  return `${hours} hr${hours === 1 ? '' : 's'}${rem ? ` ${rem} min` : ''} ago`;
+}
+
+function scheduleSeatFreshness(semId, term, courses = [], sectionsByCode = {}, now = new Date()) {
+  const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  const rows = (courses || []).map(course => {
+    const code = course?.code || '';
+    const normalized = normalizeCode(code);
+    const key = scheduleSectionCacheKey(semId, term, code);
+    const meta = scheduleSectionsMeta[key] || null;
+    const fetchedAt = meta?.fetchedAt ? new Date(meta.fetchedAt) : null;
+    const sections = sectionsByCode[normalized] || scheduleSectionsCache[key] || [];
+    const count = Array.isArray(sections) ? sections.length : Number(meta?.count) || 0;
+    if (!fetchedAt || Number.isNaN(fetchedAt.getTime()) || !Number.isFinite(nowMs)) {
+      return {
+        code,
+        count,
+        level: 'warn',
+        label: 'Refresh unknown',
+        detail: 'Refresh posted sections before relying on seats.',
+        fetchedAt: '',
+        ageMs: null,
+        source: meta?.source || 'unknown',
+      };
+    }
+    const ageMs = Math.max(0, nowMs - fetchedAt.getTime());
+    const level = ageMs >= SCHEDULE_SEAT_STALE_MS ? 'danger'
+      : ageMs >= SCHEDULE_SEAT_WARN_MS ? 'warn'
+        : 'ok';
+    const label = level === 'danger' ? 'Stale'
+      : level === 'warn' ? 'Review'
+        : 'Fresh';
+    return {
+      code,
+      count,
+      level,
+      label,
+      detail: `${scheduleSeatFreshnessAgeLabel(ageMs)} · ${count} posted section${count === 1 ? '' : 's'}`,
+      fetchedAt: meta.fetchedAt,
+      ageMs,
+      source: meta.source || 'live fetch',
+    };
+  });
+  const dangerCount = rows.filter(row => row.level === 'danger').length;
+  const warnCount = rows.filter(row => row.level === 'warn').length;
+  const level = dangerCount ? 'danger' : warnCount ? 'warn' : 'ok';
+  const label = !rows.length ? 'No section data'
+    : dangerCount ? 'Refresh seats'
+      : warnCount ? 'Review freshness'
+        : 'Fresh seats';
+  const detail = !rows.length ? 'No schedule-ready courses need posted sections.'
+    : dangerCount ? `${dangerCount} course${dangerCount === 1 ? '' : 's'} have stale section data. Refresh before registration.`
+      : warnCount ? `${warnCount} course${warnCount === 1 ? '' : 's'} need a seat-data freshness check.`
+        : 'All loaded section data was refreshed recently.';
+  return {
+    level,
+    label,
+    detail,
+    rows,
+    dangerCount,
+    warnCount,
+    refreshedCount: rows.filter(row => row.level === 'ok').length,
+  };
+}
+
+function renderScheduleSeatFreshnessHtml(freshness, heading = 'Seat Data Freshness') {
+  if (!freshness) return '';
+  const rows = Array.isArray(freshness.rows) ? freshness.rows : [];
+  return `
+    <section class="schedule-seat-freshness ${scheduleEscape(freshness.level)}">
+      <div class="schedule-seat-freshness-head">
+        <div>
+          <h4>${scheduleEscape(heading)}</h4>
+          <span>${scheduleEscape(freshness.detail)}</span>
+        </div>
+        <strong>${scheduleEscape(freshness.label)}</strong>
+      </div>
+      ${rows.length ? `
+        <div class="schedule-seat-freshness-list">
+          ${rows.slice(0, 8).map(row => `
+            <div class="schedule-seat-freshness-row ${scheduleEscape(row.level)}">
+              <strong>${scheduleEscape(row.code)}</strong>
+              <span>${scheduleEscape(row.detail)}</span>
+              <em>${scheduleEscape(row.label)}${row.source ? ` · ${scheduleEscape(row.source)}` : ''}</em>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p>No section data loaded yet.</p>'}
+    </section>
+  `;
+}
+
+function scheduleSeatFreshnessText(freshness) {
+  if (!freshness) return [];
+  const lines = [
+    '',
+    'Seat data freshness:',
+    `- Overall: ${freshness.label}. ${freshness.detail}`,
+  ];
+  (freshness.rows || []).forEach(row => {
+    lines.push(`- ${row.code}: ${row.detail}. ${row.label}.`);
+  });
+  return lines;
 }
 
 function scheduleSectionMeetingLines(section) {
@@ -3125,7 +3249,7 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
   return { html, totalCourses, shownCourses, totalCredits, shownCredits };
 }
 
-function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null) {
+function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null) {
   const stats = scheduleAdvisorStats();
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
@@ -3160,6 +3284,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleRegistrationAppointmentText(appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows)));
+  lines.push(...scheduleSeatFreshnessText(freshness));
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
@@ -3270,6 +3395,19 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-registration-appointment-head span,.schedule-registration-appointment p,.schedule-registration-appointment-list span{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
     .schedule-registration-appointment-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
     .schedule-registration-appointment-list{display:grid;gap:4px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-seat-freshness{border:1px solid #d8cec0;border-left:4px solid #7b8b55;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-seat-freshness.warn{border-left-color:#c99700;background:#fffaf0}
+    .schedule-seat-freshness.danger{border-left-color:#8b0000;background:#fff5f3}
+    .schedule-seat-freshness-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-seat-freshness-head h4{margin:0}
+    .schedule-seat-freshness-head span,.schedule-seat-freshness p{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
+    .schedule-seat-freshness-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-seat-freshness-list{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-seat-freshness-row{border:1px solid #d8cec0;border-radius:7px;background:#fbf7ef;padding:7px}
+    .schedule-seat-freshness-row.danger{border-color:#f0b4a9;background:#fff5f3}
+    .schedule-seat-freshness-row.warn{border-color:#f1c45c;background:#fffaf0}
+    .schedule-seat-freshness-row strong,.schedule-seat-freshness-row span,.schedule-seat-freshness-row em{display:block}
+    .schedule-seat-freshness-row span,.schedule-seat-freshness-row em{color:#5d5962;font-size:12px;font-style:normal;line-height:1.35}
     .schedule-registration-handoff{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-registration-handoff-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-registration-handoff-head h4{margin:0}
@@ -3334,12 +3472,12 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-seat-freshness-list{grid-template-columns:1fr}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-seat-freshness-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
@@ -3396,6 +3534,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       </div>
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
+      ${renderScheduleSeatFreshnessHtml(freshness)}
       ${renderScheduleRegistrationHandoffHtml(registrationHandoff)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(backupRows)}
@@ -3436,7 +3575,7 @@ ${advisorHtml}
 </html>`;
 }
 
-function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null) {
+function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null) {
   const outputOptions = normalizeScheduleOutputOptions(options);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
@@ -3458,6 +3597,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
+  lines.push(...scheduleSeatFreshnessText(freshness));
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
@@ -3492,7 +3632,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   return lines.join('\n');
 }
 
-function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null) {
+function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null, freshness = null) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
   const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course.code)));
@@ -3531,6 +3671,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
+  lines.push(...scheduleSeatFreshnessText(freshness));
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
 
   if (unscheduled.length) {
@@ -3622,9 +3763,10 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const registrationBackupPlan = scheduleRegistrationBackupPlan(selectedItems, sectionsByCode, prefs, conflicts);
   const registrationAppointment = scheduleRegistrationAppointment(prefs, readiness, registrationBackupPlan);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, registrationBackupPlan);
+  const seatFreshness = scheduleSeatFreshness(semId, term, courses, sectionsByCode);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
-  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment);
-  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment);
+  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness);
+  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment, seatFreshness);
   const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
   const courseRows = selectedItems
     .slice()
@@ -3659,6 +3801,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${outputOptions.preferences ? `<p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
+      ${renderScheduleSeatFreshnessHtml(seatFreshness)}
       ${renderScheduleRegistrationHandoffHtml(registrationHandoff)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(registrationBackupPlan)}
@@ -3672,14 +3815,15 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${scheduleChangeDigestHtml(changes, 'Schedule summary')}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
-  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment);
+  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness);
 
   return {
     text,
     filename: scheduleOutputFilename(term),
     registrationAppointment,
+    seatFreshness,
     registrationHandoff,
     registrationOrder,
     registrationBackupPlan,
@@ -4301,9 +4445,10 @@ async function renderSchedule(opts = {}) {
   const unavailableBlocks = scheduleBlockedBlocks(prefs);
   const warnings = selectedScheduleWarnings(selectedItems, prefs);
   const postedCount = Object.values(sectionsByCode).reduce((sum, list) => sum + (list || []).length, 0);
+  const seatFreshness = scheduleSeatFreshness(semId, term, courses, sectionsByCode);
   if (status) {
     const termPosted = schedulePostedTerms ? schedulePostedTerms.includes(String(term)) : false;
-    status.innerHTML = `${postedCount} section${postedCount === 1 ? '' : 's'} loaded${termPosted ? '' : ' · selected term is not in the latest posted UMD term list'}.`;
+    status.innerHTML = `${postedCount} section${postedCount === 1 ? '' : 's'} loaded · ${scheduleEscape(seatFreshness.label).toLowerCase()}${termPosted ? '' : ' · selected term is not in the latest posted UMD term list'}.`;
   }
   renderScheduleSummary(courses, selectedItems, conflicts, warnings, term);
   renderScheduleWarnings(warnings);

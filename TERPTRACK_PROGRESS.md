@@ -6661,3 +6661,69 @@ Verification:
   - It randomly verified `ENEE`, `ANTH`, `HIST`, `PHSC`, `PHYS`, and `ENCH` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 123
+
+Focus: add seat-data freshness tracking so students know whether registration seats were recently refreshed before trusting the Testudo handoff.
+
+Planned changes:
+- Track per-course section fetch timestamps in the Schedule tab.
+- Summarize fresh, review, stale, and unknown seat data.
+- Show seat freshness in schedule output and advisor packets.
+- Include freshness context in schedule text, registration-list text, advisor text, and standalone advisor HTML exports.
+- Verify stale-seat behavior in fixture and rendered mobile workflows.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleSectionsMeta` alongside the existing posted-section cache.
+- Updated `scheduleFetchSectionsFor()` to record fetch time, source, and section count whenever live section data is loaded or manually refreshed.
+- Added `scheduleSeatFreshness()` in `js/schedule.js`.
+  - It summarizes each schedule-ready course as fresh, review, stale, or unknown based on cache age.
+  - It marks stale section data as a registration danger requiring refresh.
+  - It includes per-course section counts and human-readable ages.
+- Added `renderScheduleSeatFreshnessHtml()` for the Seat Data Freshness card.
+- Added `scheduleSeatFreshnessText()` for exports.
+- Added the Seat Data Freshness card to:
+  - The main schedule output.
+  - The advisor packet.
+  - The standalone advisor HTML export.
+- Added freshness lines to:
+  - The schedule summary `.txt`.
+  - The Testudo registration list `.txt`.
+  - The advisor text export.
+- Returned `seatFreshness` from `buildScheduleOutput()` for regression and rendered-workflow coverage.
+- Added freshness status to the Schedule tab live section-load status line.
+- Added production and standalone export CSS for fresh/warn/stale states with mobile stacking.
+- Bumped cache tags:
+  - `styles.css?v=93`.
+  - `js/schedule.js?v=47`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now seeds stale MATH 140 section metadata and asserts the stale refresh warning in output cache, HTML, schedule text, registration text, advisor text, advisor HTML, and exported document markup.
+  - Rendered mobile advisor packet now seeds stale section metadata and asserts Seat Data Freshness in the DOM, output cache, registration export, advisor text, advisor HTML, mobile snapshot, and no-overflow path.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with seat freshness assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including seat freshness coverage.
+  - It passed 12 rendered generated-plan viewport runs with clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with seat freshness.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass123-seat-freshness-live`.
+  - It randomly verified `LING`, `SCM`, `THET`, `ENMA`, `SOCY`, and `ENST` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
