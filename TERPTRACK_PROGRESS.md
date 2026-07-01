@@ -6540,3 +6540,61 @@ Verification:
   - It randomly verified `JOUR`, `PHIL`, `WMST`, `PHYS`, `ACCOUNTING`, and `ENAE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 121
+
+Focus: add a per-semester registration appointment so students can plan around their exact Testudo enrollment time.
+
+Planned changes:
+- Add saved registration date and time controls to the Schedule preferences.
+- Normalize and persist appointment values per semester.
+- Show appointment status, timing, and checklist items in schedule output and advisor packets.
+- Include appointment context in schedule text, registration-list text, advisor text, and standalone advisor HTML exports.
+- Verify appointment state in generated-plan fixtures and rendered mobile workflows.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Extended schedule preferences with `registrationDate` and `registrationTime`.
+- Added Schedule tab inputs for registration date and registration time.
+- Added appointment helpers in `js/schedule.js`.
+  - `scheduleRegistrationAppointmentDate()` formats saved Testudo appointment values.
+  - `scheduleRegistrationAppointment()` derives status, urgency, and checklist items from the saved appointment, readiness gates, and backup-plan count.
+  - `renderScheduleRegistrationAppointmentHtml()` renders the Registration Appointment card.
+  - `scheduleRegistrationAppointmentText()` emits appointment checklist lines for exports.
+- Added the Registration Appointment card to the main schedule output and advisor packet.
+- Added appointment summaries and checklist items to the schedule `.txt`, Testudo registration list `.txt`, advisor text, and standalone advisor HTML export.
+- Returned `registrationAppointment` from `buildScheduleOutput()` for regression and rendered-workflow coverage.
+- Added production and standalone export CSS for appointment card states.
+- Bumped cache tags:
+  - `styles.css?v=91`.
+  - `js/schedule.js?v=45`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now saves an Aug. 25, 2099 at 9:30am appointment and asserts the appointment in output cache, HTML, schedule text, registration text, advisor text, and advisor document markup.
+  - Rendered mobile advisor packet now asserts the saved appointment inputs, output cache, rendered packet, registration export, advisor text, advisor HTML, mobile snapshot, and no-overflow path.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with registration appointment assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, registration appointment, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including registration appointment coverage.
+  - It passed 12 rendered generated-plan viewport runs with clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with registration appointment.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass121-registration-appointment-live`.
+  - It randomly verified `BIOE`, `ENAE`, `MUSC`, `PLSC`, `JOUR`, and `ENGL` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

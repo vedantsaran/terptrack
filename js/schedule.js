@@ -23,6 +23,8 @@ const DEFAULT_SCHEDULE_PREFS = {
   locationWeight: 'normal',
   calendarStart: '',
   calendarEnd: '',
+  registrationDate: '',
+  registrationTime: '',
 };
 const BUILDING_COORDS = {
   IRB: [0, 0],
@@ -247,6 +249,11 @@ function normalizeScheduleDate(value) {
   return Number.isNaN(date.getTime()) ? '' : raw;
 }
 
+function normalizeScheduleTime(value) {
+  const raw = String(value || '').trim();
+  return parseClockValue(raw) === null ? '' : raw;
+}
+
 function getSchedulePrefs(semId) {
   const saved = (state.schedulePrefs || {})[semId] || {};
   const calendarStart = normalizeScheduleDate(saved.calendarStart);
@@ -273,6 +280,8 @@ function getSchedulePrefs(semId) {
     locationWeight: LOCATION_WEIGHT_MULTIPLIERS[saved.locationWeight] ? saved.locationWeight : DEFAULT_SCHEDULE_PREFS.locationWeight,
     calendarStart,
     calendarEnd: calendarStart && calendarEnd && calendarEnd < calendarStart ? '' : calendarEnd,
+    registrationDate: normalizeScheduleDate(saved.registrationDate),
+    registrationTime: normalizeScheduleTime(saved.registrationTime),
   };
 }
 
@@ -377,12 +386,16 @@ function schedulePopulatePreferenceControls(semId) {
   const mode = document.getElementById('schedule-pref-mode');
   const calendarStart = document.getElementById('schedule-calendar-start');
   const calendarEnd = document.getElementById('schedule-calendar-end');
+  const registrationDate = document.getElementById('schedule-registration-date');
+  const registrationTime = document.getElementById('schedule-registration-time');
   if (earliest) earliest.value = prefs.earliest || '';
   if (latest) latest.value = prefs.latest || '';
   if (minBreak) minBreak.value = String(prefs.minBreak ?? DEFAULT_SCHEDULE_PREFS.minBreak);
   if (mode) mode.value = prefs.mode || DEFAULT_SCHEDULE_PREFS.mode;
   if (calendarStart) calendarStart.value = prefs.calendarStart || '';
   if (calendarEnd) calendarEnd.value = prefs.calendarEnd || '';
+  if (registrationDate) registrationDate.value = prefs.registrationDate || '';
+  if (registrationTime) registrationTime.value = prefs.registrationTime || '';
   const campusZone = document.getElementById('schedule-pref-campus-zone');
   const commuteStart = document.getElementById('schedule-pref-commute-start');
   const commuteEnd = document.getElementById('schedule-pref-commute-end');
@@ -2055,6 +2068,98 @@ function scheduleRegistrationBackupText(rows) {
   return lines;
 }
 
+function scheduleRegistrationAppointmentDate(prefs = DEFAULT_SCHEDULE_PREFS) {
+  const date = normalizeScheduleDate(prefs.registrationDate);
+  if (!date) return { date: null, hasTime: false, label: 'Not set' };
+  const time = normalizeScheduleTime(prefs.registrationTime);
+  const [year, month, day] = date.split('-').map(Number);
+  const mins = parseClockValue(time) ?? (9 * 60);
+  const dt = new Date(year, month - 1, day, Math.floor(mins / 60), mins % 60, 0, 0);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const label = `${months[month - 1]} ${day}, ${year}${time ? ` at ${formatMeetingTime(mins)}` : ''}`;
+  return { date: dt, hasTime: !!time, label, dateValue: date, timeValue: time };
+}
+
+function scheduleRegistrationAppointment(prefs = DEFAULT_SCHEDULE_PREFS, readiness = null, backupRows = [], now = new Date()) {
+  const appt = scheduleRegistrationAppointmentDate(prefs);
+  if (!appt.date) {
+    return {
+      level: 'warn',
+      label: 'Add registration appointment',
+      when: 'Not set',
+      detail: 'Enter your assigned Testudo registration date and time for this term.',
+      items: ['Set the date and time from Testudo or your registration email.', 'Refresh sections again before registration.'],
+    };
+  }
+  const diffMs = appt.date.getTime() - now.getTime();
+  const absMs = Math.abs(diffMs);
+  const days = Math.floor(absMs / 86400000);
+  const hours = Math.floor((absMs % 86400000) / 3600000);
+  const timeLeft = diffMs >= 0
+    ? (days ? `${days} day${days === 1 ? '' : 's'}${hours ? ` ${hours} hr` : ''} left` : `${Math.max(0, hours)} hr left`)
+    : (days ? `${days} day${days === 1 ? '' : 's'} ago` : `${hours} hr ago`);
+  const backupCount = (backupRows || []).length;
+  const items = [];
+  if (readiness?.level === 'danger') items.push('Resolve readiness blockers before the appointment.');
+  else if (readiness?.level === 'warn') items.push('Review warnings before the appointment.');
+  else items.push('Keep the picked sections and exports ready.');
+  if (backupCount) items.push(`Have ${backupCount} backup section${backupCount === 1 ? '' : 's'} ready in Testudo.`);
+  items.push('Refresh sections and seats shortly before the appointment.');
+  items.push('Use the registration list to submit exact section IDs.');
+  if (!appt.hasTime) items.unshift('Add the exact appointment time once Testudo shows it.');
+
+  const level = diffMs < 0 ? 'warn'
+    : diffMs <= 6 * 3600000 ? 'danger'
+      : diffMs <= 48 * 3600000 ? 'danger'
+        : diffMs <= 7 * 86400000 ? 'warn'
+          : 'ok';
+  const label = diffMs < 0 ? 'Appointment passed'
+    : !appt.hasTime ? 'Date set, time missing'
+      : diffMs <= 6 * 3600000 ? 'Register now'
+        : diffMs <= 48 * 3600000 ? 'Final check'
+          : diffMs <= 7 * 86400000 ? 'Final week'
+            : 'Scheduled';
+  const detail = diffMs < 0
+    ? 'This saved appointment has passed; refresh sections and update the plan if registration changed.'
+    : `${timeLeft}. Complete the checklist before opening Testudo.`;
+  return {
+    level,
+    label,
+    when: appt.label,
+    detail,
+    items: Array.from(new Set(items)).slice(0, 5),
+  };
+}
+
+function renderScheduleRegistrationAppointmentHtml(appointment, heading = 'Registration Appointment') {
+  if (!appointment) return '';
+  return `
+    <section class="schedule-registration-appointment ${scheduleEscape(appointment.level)}">
+      <div class="schedule-registration-appointment-head">
+        <div>
+          <h4>${scheduleEscape(heading)}</h4>
+          <span>${scheduleEscape(appointment.when)}</span>
+        </div>
+        <strong>${scheduleEscape(appointment.label)}</strong>
+      </div>
+      <p>${scheduleEscape(appointment.detail)}</p>
+      <div class="schedule-registration-appointment-list">
+        ${(appointment.items || []).map(item => `<span>${scheduleEscape(item)}</span>`).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function scheduleRegistrationAppointmentText(appointment) {
+  if (!appointment) return [];
+  return [
+    '',
+    'Registration appointment:',
+    `- ${appointment.label}: ${appointment.when}. ${appointment.detail}`,
+    ...(appointment.items || []).map(item => `- Check: ${item}`),
+  ];
+}
+
 function scheduleSectionMeetingLines(section) {
   const timed = (section && section.meetings || []).filter(m => m.days && m.start_time && m.end_time);
   if (!timed.length) return ['Time TBA'];
@@ -2940,7 +3045,7 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
   return { html, totalCourses, shownCourses, totalCredits, shownCredits };
 }
 
-function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = []) {
+function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null) {
   const stats = scheduleAdvisorStats();
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
@@ -2973,6 +3078,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
   lines.push(...scheduleRegistrationReadinessText(readiness));
+  lines.push(...scheduleRegistrationAppointmentText(appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows)));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push(...scheduleAdvisorCatalogYearText());
@@ -3074,6 +3180,14 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-readiness-actions div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
     .schedule-readiness-actions .btn{border:1px solid #d8cec0;border-radius:999px;background:#fff;color:#2e5c8b;font-size:11px;font-weight:700;padding:5px 8px}
     .schedule-readiness-actions .btn.primary{border-color:#8b0000;background:#8b0000;color:#fff}
+    .schedule-registration-appointment{border:1px solid #d8cec0;border-left:4px solid #7b8b55;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-registration-appointment.warn{border-left-color:#c99700;background:#fffaf0}
+    .schedule-registration-appointment.danger{border-left-color:#8b0000;background:#fff5f3}
+    .schedule-registration-appointment-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-registration-appointment-head h4{margin:0}
+    .schedule-registration-appointment-head span,.schedule-registration-appointment p,.schedule-registration-appointment-list span{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
+    .schedule-registration-appointment-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-registration-appointment-list{display:grid;gap:4px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
     .schedule-registration-order{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-registration-order-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-registration-order-head h4{margin:0}
@@ -3124,12 +3238,12 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = []) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
@@ -3146,6 +3260,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
+  const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   return `
     <article class="schedule-advisor-packet" id="schedule-advisor-packet">
       <div class="schedule-advisor-head">
@@ -3183,6 +3298,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         ${outputOptions.unscheduled ? (unscheduled.length ? `<span>${unscheduled.length} unscheduled course${unscheduled.length === 1 ? '' : 's'}</span>` : '<span>All current-term courses scheduled</span>') : ''}
       </div>
       ${scheduleRegistrationReadinessHtml(readiness)}
+      ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(backupRows)}
       ${scheduleAdvisorCatalogYearHtml()}
@@ -3222,13 +3338,14 @@ ${advisorHtml}
 </html>`;
 }
 
-function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = []) {
+function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null) {
   const outputOptions = normalizeScheduleOutputOptions(options);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
+  const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   const lines = [
     `Terp Track Schedule`,
     `Plan semester: ${sem?.name || 'Selected semester'}`,
@@ -3241,6 +3358,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   lines.push(`Timing fit: ${timing.score}/100 - ${timing.label}`);
   timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
   lines.push(...scheduleRegistrationReadinessText(readiness));
+  lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push('', 'Picked sections:');
@@ -3274,7 +3392,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   return lines.join('\n');
 }
 
-function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = []) {
+function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
   const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course.code)));
@@ -3283,12 +3401,14 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
     : courseList.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const readiness = scheduleRegistrationReadiness(courseList, selectedList, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedList, conflicts);
+  const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   const lines = [
     'Terp Track Registration List',
     'Use this as a Testudo checklist. Confirm every section, seat, restriction, and prerequisite in Testudo before enrolling.',
     `Plan semester: ${sem?.name || 'Selected semester'}`,
     `Posted UMD term: ${scheduleTermLabel(term)} (${term || 'term code missing'})`,
     `Registration readiness: ${readiness.label} - ${readiness.detail}`,
+    `Registration appointment: ${registrationAppointment.label} - ${registrationAppointment.when}`,
     '',
     'Picked sections:',
   ];
@@ -3309,6 +3429,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
 
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
+  lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
 
   if (unscheduled.length) {
     lines.push('', 'Missing section picks:');
@@ -3397,9 +3518,10 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || semId, selectedItems, conflicts);
   const registrationBackupPlan = scheduleRegistrationBackupPlan(selectedItems, sectionsByCode, prefs, conflicts);
+  const registrationAppointment = scheduleRegistrationAppointment(prefs, readiness, registrationBackupPlan);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
-  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan);
-  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan);
+  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment);
+  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment);
   const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
   const courseRows = selectedItems
     .slice()
@@ -3433,6 +3555,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       </div>
       ${outputOptions.preferences ? `<p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       ${scheduleRegistrationReadinessHtml(readiness)}
+      ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(registrationBackupPlan)}
       ${renderScheduleOutputWeek(blocks)}
@@ -3445,13 +3568,14 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${scheduleChangeDigestHtml(changes, 'Schedule summary')}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
-  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan);
+  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment);
 
   return {
     text,
     filename: scheduleOutputFilename(term),
+    registrationAppointment,
     registrationOrder,
     registrationBackupPlan,
     registrationText,
@@ -4201,6 +4325,8 @@ function initScheduleEvents() {
     'schedule-pref-mode',
     'schedule-calendar-start',
     'schedule-calendar-end',
+    'schedule-registration-date',
+    'schedule-registration-time',
     'schedule-pref-campus-zone',
     'schedule-pref-commute-start',
     'schedule-pref-commute-end',
@@ -4217,6 +4343,8 @@ function initScheduleEvents() {
       if (id === 'schedule-pref-mode') patch.mode = el.value;
       if (id === 'schedule-calendar-start') patch.calendarStart = normalizeScheduleDate(el.value);
       if (id === 'schedule-calendar-end') patch.calendarEnd = normalizeScheduleDate(el.value);
+      if (id === 'schedule-registration-date') patch.registrationDate = normalizeScheduleDate(el.value);
+      if (id === 'schedule-registration-time') patch.registrationTime = normalizeScheduleTime(el.value);
       if (id === 'schedule-pref-campus-zone') patch.campusZone = el.value;
       if (id === 'schedule-pref-commute-start') patch.commuteStart = el.value;
       if (id === 'schedule-pref-commute-end') patch.commuteEnd = el.value;

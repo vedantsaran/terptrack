@@ -819,7 +819,7 @@ function testScheduleRegistrationReadiness(context) {
       state.customCourses = [];
       state.courses = {};
       state.selectedSections = {};
-      state.schedulePrefs = { PASS112F: { ...DEFAULT_SCHEDULE_PREFS, term: '202608', minBreak: 15, mode: 'balanced', calendarStart: '2026-09-02', calendarEnd: '2026-12-14' } };
+      state.schedulePrefs = { PASS112F: { ...DEFAULT_SCHEDULE_PREFS, term: '202608', minBreak: 15, mode: 'balanced', calendarStart: '2026-09-02', calendarEnd: '2026-12-14', registrationDate: '2099-08-25', registrationTime: '09:30' } };
       state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: false, auditIssues: true };
       state.scheduleAdvisorFilter = 'all';
       state.scheduleOutputPreset = 'personal';
@@ -857,6 +857,7 @@ function testScheduleRegistrationReadiness(context) {
         text,
         outputHtml: output.html,
         outputText: output.text,
+        outputRegistrationAppointment: output.registrationAppointment,
         outputRegistrationOrder: output.registrationOrder,
         outputRegistrationBackupPlan: output.registrationBackupPlan,
         outputRegistrationText: output.registrationText,
@@ -894,6 +895,9 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
   assert(/Recommended fixes/.test(result.outputHtml) && /Generate alternatives/.test(result.outputHtml), 'registration readiness: schedule output HTML should include fix guidance');
   assert(/Quick actions/.test(result.outputHtml) && /data-readiness-action="alternatives"/.test(result.outputHtml), 'registration readiness: schedule output HTML should include action buttons');
+  assert(result.outputRegistrationAppointment?.label === 'Scheduled' && /Aug 25, 2099 at 9:30am/.test(result.outputRegistrationAppointment.when), 'registration appointment: should summarize saved Testudo time');
+  assert(/Registration Appointment/.test(result.outputHtml) && /Aug 25, 2099 at 9:30am/.test(result.outputHtml), 'registration appointment: schedule output HTML should include saved appointment');
+  assert(/Registration appointment:[\s\S]*Scheduled: Aug 25, 2099 at 9:30am/.test(result.outputText), 'registration appointment: schedule text should include appointment checklist');
   assert(result.outputRegistrationOrder[0]?.courseCode === 'MATH 140' && result.outputRegistrationOrder[0]?.label === 'Resolve first', 'registration order: low-seat conflicting section should be first');
   assert(result.outputRegistrationOrder.some(row => row.courseCode === 'CMSC 131' && row.unlockCount === 1), 'registration order: should count later prerequisite unlocks');
   assert(/Enrollment Order/.test(result.outputHtml) && /MATH 140 0201/.test(result.outputHtml), 'registration order: schedule output HTML should include ranked section rows');
@@ -905,12 +909,14 @@ function testScheduleRegistrationReadiness(context) {
   assert(/^terp-track-registration-.*fall-2026\.txt$/.test(result.outputRegistrationFilename), 'registration list: filename should be a term-specific .txt export');
   assert(/Terp Track Registration List/.test(result.outputRegistrationText) && /Testudo checklist/.test(result.outputRegistrationText), 'registration list: text should identify itself as a Testudo checklist');
   assert(/Posted UMD term: Fall 2026 \(202608\)/.test(result.outputRegistrationText), 'registration list: text should include posted UMD term code');
+  assert(/Registration appointment: Scheduled - Aug 25, 2099 at 9:30am/.test(result.outputRegistrationText), 'registration list: text should include appointment summary');
   assert(/CMSC 131 \| Section 0101 \| Section ID CMSC131-0101/.test(result.outputRegistrationText), 'registration list: text should include course section and section ID');
   assert(/Missing section picks:[\s\S]*ENGL 101/.test(result.outputRegistrationText), 'registration list: text should include missing section picks');
   assert(/Conflicts to resolve before registration:[\s\S]*CMSC 131 overlaps MATH 140/.test(result.outputRegistrationText), 'registration list: text should include conflict handoff');
   assert(/MATH 140 0201: 2 seats open/.test(result.outputRegistrationText), 'registration list: text should include low-seat warning');
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.outputRegistrationText), 'registration list: text should include the enrollment order');
   assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301; Section ID MATH140-0301/.test(result.outputRegistrationText), 'registration list: text should include backup section handoff');
+  assert(/Have 1 backup section ready in Testudo/.test(result.outputRegistrationText), 'registration appointment: should reference backup readiness');
   assert(/Before submitting in Testudo:[\s\S]*Confirm open seats/.test(result.outputRegistrationText), 'registration list: text should include final Testudo checks');
   assert(/^terp-track-calendar-.*fall-2026\.ics$/.test(result.outputCalendarFilename), 'schedule calendar: filename should be an .ics calendar export');
   assert(result.outputCalendarEventCount === 3, 'schedule calendar: two CMSC meetings and one MATH meeting should produce three VEVENTs');
@@ -924,10 +930,13 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Registration readiness/.test(result.outputText) && /Conflicts: 1/.test(result.outputText), 'registration readiness: schedule text should include readiness gates');
   assert(/Fix: Apply a backup section/.test(result.outputText), 'registration readiness: schedule text should include fix guidance');
   assert(/Registration Readiness/.test(result.advisorHtml) && /Fix before registration/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness gates');
+  assert(/Registration Appointment/.test(result.advisorHtml) && /Aug 25, 2099 at 9:30am/.test(result.advisorHtml), 'registration appointment: advisor HTML should include saved appointment');
   assert(/Quick actions/.test(result.advisorHtml) && /Review section picks/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness quick actions');
   assert(/Registration readiness/.test(result.advisorText) && result.advisorText.includes('Sections: 2/3'), 'registration readiness: advisor text should include readiness gates');
+  assert(/Registration appointment:[\s\S]*Use the registration list to submit exact section IDs/.test(result.advisorText), 'registration appointment: advisor text should include appointment checklist');
   assert(/Fix: Pick sections for ENGL 101/.test(result.advisorText), 'registration readiness: advisor text should include recommended fixes');
   assert(/schedule-readiness/.test(result.advisorDocument) && /Recommended fixes/.test(result.advisorDocument), 'registration readiness: exported advisor document should include readiness markup and fixes');
+  assert(/schedule-registration-appointment/.test(result.advisorDocument), 'registration appointment: exported advisor document should include appointment markup');
   assert(/schedule-readiness-actions/.test(result.advisorDocument) && /data-readiness-action="review-sections"/.test(result.advisorDocument), 'registration readiness: exported advisor document should include quick-action markup');
 
   return {
