@@ -173,8 +173,9 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=84'), 'workflow app did not load styles.css?v=84');
+  assert(snapshot.styles.includes('styles.css?v=85'), 'workflow app did not load styles.css?v=85');
   assert(snapshot.scripts.includes('js/schedule.js?v=37'), 'workflow app did not load js/schedule.js?v=37');
+  assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
   assert(snapshot.scripts.includes('js/account.js?v=11'), 'workflow app did not load js/account.js?v=11');
@@ -394,6 +395,8 @@ async function verifyRecommendationsSectionMobile(page, url, opts) {
     return text.includes('Smart next picks')
       && text.includes('CMSC 132')
       && text.includes('Pick best')
+      && text.includes('Term impact')
+      && text.includes('Fix before registration')
       && text.includes('Schedule');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('#reco-container .reco-pick:has-text("CMSC 132") button:has-text("Pick best")').click({ timeout: opts.timeoutMs });
@@ -414,9 +417,10 @@ async function verifyRecommendationsSectionMobile(page, url, opts) {
   assert(result.change?.type === 'section-pick' && result.change?.source === 'Smart next picks', 'recommendations: section pick should record a Smart next picks change');
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.recoText.includes('Pick best'), 'recommendations: rendered panel should keep direct section action visible');
+  assert(snapshot.recoText.includes('Term impact') && snapshot.recoText.includes('Fix before registration'), 'recommendations: rendered panel should show section-pick readiness impact');
   assert(snapshot.planText.includes('CMSC 132') && snapshot.planText.includes('0101') && snapshot.planText.includes('9 open'), 'recommendations: Plan row should show picked section and seat status');
   assertNoOverflow('recommendations section mobile', snapshot);
-  console.log('Recommendations [mobile]: rendered Smart next pick section action, moved a ready course, saved a posted section, and no overflow.');
+  console.log('Recommendations [mobile]: rendered Smart next pick section action with term readiness impact, moved a ready course, saved a posted section, and no overflow.');
 }
 
 async function verifyAccountSetupMobile(page, url, opts) {

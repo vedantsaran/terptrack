@@ -6025,3 +6025,66 @@ Verification:
   - It randomly verified `EDUC`, `ARCH`, `PHIL`, `PHSC`, `ENCE`, and `HESP` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 113
+
+Focus: connect Smart next picks to registration-readiness impact before a student moves or picks a recommended section.
+
+Planned changes:
+- Reuse the Schedule tab registration-readiness model inside Recommendations.
+- Simulate the current term after applying a recommended best section.
+- Show whether the recommended section would make the term registration-ready, review-needed, or still blocked.
+- Verify the impact row in unit-style recommendation tests and rendered mobile Recommendations UI.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added recommendation readiness-impact helpers in `js/recommendations.js`:
+  - `recoTermCoursesWithCandidate()`.
+  - `recoItemsWithCandidate()`.
+  - `recoCandidateReadinessImpact()`.
+  - `recoReadinessImpactHtml()`.
+  - `recoBadgeClass()`.
+- During live recommendation hydration, TerpTrack now:
+  - fetches posted sections as before.
+  - chooses the best section with existing schedule scoring.
+  - simulates the current term with that candidate section added.
+  - runs `scheduleRegistrationReadiness()` on the simulated term.
+  - uses the impact in the live recommendation score.
+- Added a compact `Term impact` row to recommendation cards.
+  - It shows statuses such as `Registration ready` or `Fix before registration`.
+  - It names the most important readiness gate, such as remaining section picks or conflicts.
+- Added readiness-impact badges for recommendation cards.
+- Added responsive styles for `.reco-readiness` and readiness badge states.
+- Bumped cache tags:
+  - `styles.css?v=85`.
+  - `js/recommendations.js?v=14`.
+- Extended tests:
+  - `RECO-SECTION` now asserts a safe live best section renders `Term impact` and `Registration ready`.
+  - Rendered mobile Recommendations now asserts `Term impact` and `Fix before registration` in the real panel.
+  - Rendered verifiers now assert `styles.css?v=85` and `js/recommendations.js?v=14`.
+
+Verification:
+- Ran `node --check js/recommendations.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the updated `RECO-SECTION` fixture with registration-readiness impact assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, schedule timing, registration readiness, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations with Smart next pick section action, term readiness impact, course move, posted section save, and no overflow.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including recommendation readiness-impact coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick with term readiness impact, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass113-reco-readiness-impact-live`.
+  - It randomly verified `SCM`, `PHYS`, `ENST`, `IS`, `MGMT`, and `EDUC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

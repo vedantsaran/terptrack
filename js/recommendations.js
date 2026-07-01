@@ -164,6 +164,54 @@ function recoSelectedItemsForContext(ctx) {
     .filter(item => item.section);
 }
 
+function recoTermCoursesWithCandidate(ctx, candidateCourse) {
+  const map = new Map();
+  const base = typeof scheduleCoursesForSemester === 'function'
+    ? scheduleCoursesForSemester(ctx.semId)
+    : ((getAllSemesters().find(sem => sem.id === ctx.semId)?.courses || [])
+      .filter(course => !recoIsDone(course.code)));
+  base.forEach(course => map.set(normalizeCode(course.code), course));
+  if (candidateCourse?.code) map.set(normalizeCode(candidateCourse.code), candidateCourse);
+  return Array.from(map.values());
+}
+
+function recoItemsWithCandidate(currentItems, candidateCourse, section, term) {
+  if (!candidateCourse?.code || !section) return currentItems || [];
+  const norm = normalizeCode(candidateCourse.code);
+  const savedSection = {
+    ...section,
+    course: norm,
+    semester: String(section.semester || term || ''),
+  };
+  const items = (currentItems || [])
+    .filter(item => normalizeCode(item.course?.code || item.section?.course || '') !== norm);
+  items.push({ course: candidateCourse, section: savedSection });
+  return items;
+}
+
+function recoCandidateReadinessImpact(item, ctx, currentItems, prefs) {
+  if (!item?.bestSection || !ctx?.semId || typeof scheduleRegistrationReadiness !== 'function') return null;
+  const courses = recoTermCoursesWithCandidate(ctx, item.course);
+  const selectedItems = recoItemsWithCandidate(currentItems, item.course, item.bestSection, ctx.term);
+  const conflicts = typeof detectScheduleConflicts === 'function'
+    ? detectScheduleConflicts(selectedItems).conflicts
+    : [];
+  const warnings = typeof selectedScheduleWarnings === 'function'
+    ? selectedScheduleWarnings(selectedItems, prefs || {})
+    : [];
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs || {});
+  const issue = (readiness.gates || []).find(gate => gate.level === 'danger')
+    || (readiness.gates || []).find(gate => gate.level === 'warn')
+    || (readiness.gates || [])[0]
+    || null;
+  return {
+    level: readiness.level,
+    label: readiness.label,
+    detail: issue ? `${issue.label}: ${issue.detail}` : readiness.detail,
+    readiness,
+  };
+}
+
 function recoHydrateLiveData(seq, payload) {
   const root = document.getElementById('reco-container');
   if (!root || !payload.candidates.length || typeof scheduleFetchSectionsFor !== 'function') return;
@@ -203,12 +251,17 @@ function recoHydrateLiveData(seq, payload) {
       item.bestSection = pool[0] || null;
       item.bestSectionSafe = viable.length > 0;
       item.seatRisk = typeof sectionSeatRisk === 'function' && item.bestSection ? sectionSeatRisk(item.bestSection) : null;
+      item.readinessImpact = recoCandidateReadinessImpact(item, ctx, currentItems, prefs);
       const openSeats = sections.reduce((max, section) => {
         const open = parseInt(section.open_seats, 10);
         return Number.isFinite(open) ? Math.max(max, open) : max;
       }, 0);
       const hasFit = viable.length > 0;
-      item.liveScore = Math.min(220, sections.length * 8 + openSeats * 3 + (hasFit ? 75 : -180) + (item.seatRisk ? item.seatRisk.score : 0));
+      const readinessScore = item.readinessImpact?.level === 'ok' ? 65
+        : item.readinessImpact?.level === 'warn' ? 20
+          : item.readinessImpact?.level === 'danger' ? -20
+            : 0;
+      item.liveScore = Math.min(240, sections.length * 8 + openSeats * 3 + (hasFit ? 75 : -180) + (item.seatRisk ? item.seatRisk.score : 0) + readinessScore);
       item.liveNote = hasFit
         ? `${sections.length} posted; ${item.seatRisk ? item.seatRisk.detail : `best has ${openSeats} open`}`
         : `${sections.length} posted; conflicts with current picks`;
@@ -230,6 +283,7 @@ function recoBadges(item) {
   if (item.gpa) badges.push({ label: `Avg GPA ${item.gpa.toFixed(2)}` });
   if (item.sections) badges.push({ label: `${item.sections.length} posted` });
   if (item.seatRisk) badges.push({ label: item.seatRisk.label, cls: `seat-risk-${item.seatRisk.level}` });
+  if (item.readinessImpact) badges.push({ label: item.readinessImpact.label, cls: `reco-ready-${item.readinessImpact.level}` });
   return badges.slice(0, 5);
 }
 
@@ -242,6 +296,23 @@ function recoReason(item) {
   if (item.bestSection && typeof sectionSummary === 'function') reasons.push(sectionSummary(item.bestSection));
   if (!reasons.length) reasons.push('ready now and fits the current plan order');
   return reasons.join(' · ');
+}
+
+function recoReadinessImpactHtml(item) {
+  const impact = item?.readinessImpact;
+  if (!impact) return '';
+  return `
+    <div class="reco-readiness ${recoEscape(impact.level)}">
+      <strong>Term impact</strong>
+      <span>${recoEscape(impact.label)}</span>
+      <em>${recoEscape(impact.detail)}</em>
+    </div>
+  `;
+}
+
+function recoBadgeClass(cls) {
+  if (!cls) return '';
+  return cls.startsWith('seat-risk-') ? `seat-risk ${cls}` : cls;
 }
 
 function recoCourseInContext(course, ctx) {
@@ -420,8 +491,9 @@ function recoRenderPick(item, idx, ctx) {
           <span class="reco-title">${recoEscape(course.title || '')}</span>
           <span class="reco-score">${Math.max(0, Math.round(item.score / 10))}</span>
         </div>
-        <div class="reco-badges">${recoBadges(item).map(badge => `<span class="${badge.cls ? `seat-risk ${badge.cls}` : ''}">${recoEscape(badge.label)}</span>`).join('')}</div>
+        <div class="reco-badges">${recoBadges(item).map(badge => `<span class="${recoEscape(recoBadgeClass(badge.cls))}">${recoEscape(badge.label)}</span>`).join('')}</div>
         <div class="reco-reason">${recoEscape(recoReason(item))}</div>
+        ${recoReadinessImpactHtml(item)}
       </div>
       <div class="reco-actions">
         ${bestAction}

@@ -1177,6 +1177,8 @@ function testRecommendationBestSectionAction(context) {
       candidate.sections = scheduleSectionsCache['PASS101F:202608:CMSC132'];
       candidate.bestSection = candidate.sections[0];
       candidate.bestSectionSafe = true;
+      candidate.seatRisk = sectionSeatRisk(candidate.bestSection);
+      candidate.readinessImpact = recoCandidateReadinessImpact(candidate, ctx, recoSelectedItemsForContext(ctx), getSchedulePrefs(ctx.semId));
       const htmlBefore = recoRenderPick(candidate, 0, ctx);
       const picked = recoPickBestSection('CMSC 132', 'PASS101F', '202608', 'CMSC132-0101');
       const selected = getSelectedSection('PASS101F', 'CMSC 132');
@@ -1191,6 +1193,7 @@ function testRecommendationBestSectionAction(context) {
         selected,
         sourceSelected,
         change: state.recentChanges[0] || null,
+        readinessImpact: candidate.readinessImpact,
         renderCalls,
       };
     })()
@@ -1198,7 +1201,9 @@ function testRecommendationBestSectionAction(context) {
 
   assert(result.candidateCode === 'CMSC 132', 'recommendation section: should find ready course candidate');
   assert(/Pick best/.test(result.htmlBefore) && /Schedule/.test(result.htmlBefore), 'recommendation section: live best pick should render pick and schedule actions');
+  assert(/Term impact/.test(result.htmlBefore) && /Registration ready/.test(result.htmlBefore), 'recommendation section: live best pick should render registration-readiness impact');
   assert(!/Move here/.test(result.htmlBefore), 'recommendation section: best section action should replace move-only action');
+  assert(result.readinessImpact?.level === 'ok' && result.readinessImpact?.label === 'Registration ready', 'recommendation section: readiness impact should classify a complete safe pick as ready');
   assert(result.picked === true, 'recommendation section: action should report successful pick');
   assert(result.fallCodes.includes('CMSC 132') && !result.springCodes.includes('CMSC 132'), 'recommendation section: course should move into target term');
   assert(result.selected?.section_id === 'CMSC132-0101' && result.selected?.semester === '202608', 'recommendation section: target term should save selected posted section');
