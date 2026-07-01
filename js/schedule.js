@@ -698,7 +698,12 @@ function renderSectionSeatOverview(sections, picked) {
 
 function scheduleCourseSummary(semId, code) {
   const section = getSelectedSection(semId, code);
-  return section ? `<span class="schedule-chip">${scheduleEscape(sectionSummary(section))}</span>` : '';
+  if (!section) return '';
+  const summary = sectionSummary(section);
+  const risk = typeof sectionSeatRisk === 'function' ? sectionSeatRisk(section) : null;
+  const title = [summary, risk?.detail].filter(Boolean).join(' · ');
+  const riskClass = risk ? ` seat-risk-${risk.level}` : '';
+  return `<span class="schedule-chip${riskClass}" title="${scheduleEscape(title)}"><span>${scheduleEscape(summary)}</span>${risk ? `<b>${scheduleEscape(risk.label)}</b>` : ''}</span>`;
 }
 
 function renderScheduleBlockedTimeControls(semId) {

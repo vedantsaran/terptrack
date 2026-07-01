@@ -4830,12 +4830,46 @@ h1.hero-title em {
   color: var(--amber);
 }
 .schedule-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
   border: 1px solid rgba(46,92,139,.28);
   background: rgba(46,92,139,.10);
   color: var(--blue);
-  border-radius: 4px;
-  padding: 1px 6px;
+  border-radius: 999px;
+  padding: 2px 7px;
+  vertical-align: middle;
+}
+.schedule-chip > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.schedule-chip b {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.schedule-chip.seat-risk-ok {
+  border-color: rgba(46,107,63,.28);
+  background: var(--green-soft);
+  color: var(--green);
+}
+.schedule-chip.seat-risk-watch,
+.schedule-chip.seat-risk-unknown {
+  border-color: rgba(245, 158, 11, .32);
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+.schedule-chip.seat-risk-risk,
+.schedule-chip.seat-risk-closed {
+  border-color: rgba(139,0,0,.32);
+  background: var(--red-soft);
+  color: var(--red);
 }
 
 /* ===========================================================

@@ -135,10 +135,12 @@ function snapshotScript() {
     const scheduleOutput = document.querySelector('#schedule-output');
     const advisorPacket = document.querySelector('#schedule-advisor-packet');
     const recommendations = document.querySelector('#reco-container');
+    const semesters = document.querySelector('#semesters-container');
     return {
       scripts: Array.from(document.scripts).map(script => script.getAttribute('src')).filter(Boolean),
       styles: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link => link.getAttribute('href')),
       onboardText: preview ? preview.textContent.replace(/\\s+/g, ' ').trim() : '',
+      planText: semesters ? semesters.textContent.replace(/\\s+/g, ' ').trim() : '',
       accountText: accountModal ? accountModal.textContent.replace(/\\s+/g, ' ').trim() : '',
       browseText: grid ? grid.textContent.replace(/\\s+/g, ' ').trim() : '',
       scheduleText: scheduleOutput ? scheduleOutput.textContent.replace(/\\s+/g, ' ').trim() : '',
@@ -155,6 +157,7 @@ function snapshotScript() {
         scheduleOutput: scheduleOutput ? scheduleOutput.scrollWidth > scheduleOutput.clientWidth + 1 : false,
         advisorPacket: advisorPacket ? advisorPacket.scrollWidth > advisorPacket.clientWidth + 1 : false,
         recommendations: recommendations ? recommendations.scrollWidth > recommendations.clientWidth + 1 : false,
+        semesters: semesters ? semesters.scrollWidth > semesters.clientWidth + 1 : false,
       },
     };
   })()`;
@@ -170,7 +173,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=78'), 'workflow app did not load styles.css?v=78');
+  assert(snapshot.styles.includes('styles.css?v=79'), 'workflow app did not load styles.css?v=79');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=12'), 'workflow app did not load js/browse.js?v=12');
   return snapshot;
@@ -366,6 +369,7 @@ async function verifyRecommendationsSectionMobile(page, url, opts) {
   assert(result.change?.type === 'section-pick' && result.change?.source === 'Smart next picks', 'recommendations: section pick should record a Smart next picks change');
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.recoText.includes('Pick best'), 'recommendations: rendered panel should keep direct section action visible');
+  assert(snapshot.planText.includes('CMSC 132') && snapshot.planText.includes('0101') && snapshot.planText.includes('9 open'), 'recommendations: Plan row should show picked section and seat status');
   assertNoOverflow('recommendations section mobile', snapshot);
   console.log('Recommendations [mobile]: rendered Smart next pick section action, moved a ready course, saved a posted section, and no overflow.');
 }

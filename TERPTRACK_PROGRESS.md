@@ -5369,3 +5369,53 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass101-reco-section-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 102
+
+Focus: make saved real sections visible on Plan cards with seat-status context, not only inside the Schedule tab.
+
+Planned changes:
+- Upgrade the Plan-view section chip so selected sections show both meeting summary and live seat status.
+- Use the same seat-risk levels as Schedule (`ok`, `watch`, `risk`, `closed`, `unknown`) so students can scan urgent picks quickly.
+- Keep chips compact and mobile-safe inside course metadata rows.
+- Extend tests so section chips prove low-seat, closed/waitlisted, and open-seat states.
+- Extend rendered mobile workflow coverage so a Smart next pick section saved from Plan is visible on the Plan row with seat status.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `scheduleCourseSummary()` in `js/schedule.js`:
+  - returns a compact chip with section/timing summary.
+  - appends the current seat-risk label, such as `9 open`, `2 left`, or `7 waitlisted`.
+  - exposes the full section summary and seat detail in the chip title.
+- Updated `.schedule-chip` styling in `styles.css`:
+  - uses inline-flex layout with truncation protection.
+  - colors chips by `seat-risk-*` level.
+  - keeps the seat label fixed while the meeting summary truncates.
+- Bumped cache tags:
+  - `styles.css?v=79`.
+  - `js/schedule.js?v=34`.
+- Updated rendered verifiers for `styles.css?v=79`.
+- Added `SCHEDULE-CHIP` fixture coverage in `scripts/test-generated-plans.js`.
+- Extended rendered mobile workflow snapshots to capture Plan text and Plan overflow.
+- Extended the Recommendations section-pick workflow to assert the Plan row shows the saved section and seat status after `Pick best`.
+
+Verification:
+- Ran `node --check js/schedule.js && node --check scripts/test-generated-plans.js && node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `SCHEDULE-CHIP` fixture plus the existing generated-plan regression suite.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick and confirmed the Plan row showed `CMSC 132`, section `0101`, and `9 open`.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet export.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including `SCHEDULE-CHIP`.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass102-schedule-chip-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.

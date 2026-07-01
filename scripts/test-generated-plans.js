@@ -616,6 +616,65 @@ function testScheduleTimingFit(context) {
   };
 }
 
+function testScheduleCourseChip(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      state.selectedSections = {};
+      setSelectedSection('PASS102F', 'CMSC 132', {
+        course: 'CMSC132',
+        section_id: 'CMSC132-0101',
+        semester: '202608',
+        number: '0101',
+        instructors: ['Grace Hopper'],
+        meetings: [{ days: 'MW', start_time: '10:30am', end_time: '11:45am', building: 'IRB', room: '1201' }],
+        open_seats: '2',
+        seats: '30',
+        waitlist: '3',
+      });
+      setSelectedSection('PASS102F', 'MATH 140', {
+        course: 'MATH140',
+        section_id: 'MATH140-0201',
+        semester: '202608',
+        number: '0201',
+        instructors: ['Emmy Noether'],
+        meetings: [{ days: 'TuTh', start_time: '9:30am', end_time: '10:45am', building: 'MTH', room: '0101' }],
+        open_seats: '0',
+        seats: '35',
+        waitlist: '7',
+      });
+      setSelectedSection('PASS102F', 'ENGL 101', {
+        course: 'ENGL101',
+        section_id: 'ENGL101-0301',
+        semester: '202608',
+        number: '0301',
+        instructors: ['Toni Morrison'],
+        meetings: [{ days: 'F', start_time: '1:00pm', end_time: '1:50pm', building: 'TWS', room: '1200' }],
+        open_seats: '18',
+        seats: '24',
+        waitlist: '0',
+      });
+      return {
+        risk: scheduleCourseSummary('PASS102F', 'CMSC 132'),
+        closed: scheduleCourseSummary('PASS102F', 'MATH 140'),
+        ok: scheduleCourseSummary('PASS102F', 'ENGL 101'),
+      };
+    })()
+  `, context));
+
+  assert(/schedule-chip seat-risk-risk/.test(result.risk), 'schedule chip: low-seat pick should use risk styling');
+  assert(/0101/.test(result.risk) && /2 left/.test(result.risk), 'schedule chip: low-seat pick should show section and remaining seats');
+  assert(/title="[^"]*2 seats open/.test(result.risk), 'schedule chip: low-seat pick should expose seat detail in title');
+  assert(/schedule-chip seat-risk-closed/.test(result.closed) && /7 waitlisted/.test(result.closed), 'schedule chip: closed pick should show waitlist status');
+  assert(/schedule-chip seat-risk-ok/.test(result.ok) && /18 open/.test(result.ok), 'schedule chip: open pick should show open-seat status');
+
+  return {
+    id: 'SCHEDULE-CHIP',
+    risk: '2 left',
+    closed: '7 waitlisted',
+    ok: '18 open',
+  };
+}
+
 function testRecommendationMoveAction(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -2724,6 +2783,7 @@ async function main() {
   const accountSetup = testAccountCloudSetup(context);
   const releaseJson = testReleaseJsonReport();
   const timing = testScheduleTimingFit(context);
+  const chip = testScheduleCourseChip(context);
   const recoMove = testRecommendationMoveAction(context);
   const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
@@ -2749,6 +2809,7 @@ async function main() {
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
+  console.log(`Schedule chip fixture ${chip.id}: ${chip.risk}, ${chip.closed}, ${chip.ok}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
@@ -2765,7 +2826,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
