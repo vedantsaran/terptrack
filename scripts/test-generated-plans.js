@@ -300,6 +300,8 @@ async function testAutoPlanDiagnostics(context) {
       });
       const templateDiagnostics = autoPlanDiagnostics(template);
       const templateHtml = autoPlanDiagnosticsHtml(template) + autoPlanSourceSamplesHtml(template);
+      const templateFreshnessSummary = generatedTemplateFreshnessSummary(template);
+      const templateFreshnessHtml = generatedTemplateFreshnessHtml(template);
       const samplePlaceholder = template.placeholderSamples.find(course => /^GenEd/i.test(course.code)) || template.placeholderSamples[0];
       const placeholderAction = autoPlanPlaceholderBrowseConfig(samplePlaceholder, template);
       state.browseSavedSearches = [];
@@ -345,17 +347,21 @@ async function testAutoPlanDiagnostics(context) {
       });
       const mixedDiagnostics = autoPlanDiagnostics(mixed);
       const mixedHtml = autoPlanDiagnosticsHtml(mixed) + autoPlanSourceSamplesHtml(mixed);
+      const mixedFreshnessHtml = generatedTemplateFreshnessHtml(mixed);
 
       return {
         templateCoverage: template.metadataCoverage,
         templateTitles: templateDiagnostics.map(item => item.title),
         templateHtml,
+        templateFreshnessSummary,
+        templateFreshnessHtml,
         templatePlaceholderSamples: template.placeholderSamples.map(item => item.code),
         placeholderAction,
         replacementBrowse,
         mixedCoverage: mixed.metadataCoverage,
         mixedTitles: mixedDiagnostics.map(item => item.title),
         mixedHtml,
+        mixedFreshnessHtml,
       };
     })()
   `, context));
@@ -367,6 +373,12 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Template fallback/.test(result.templateHtml), 'auto plan diagnostics: source samples should include template fallback row');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
+  assert(result.templateFreshnessSummary.generatedCount === 50, 'auto plan diagnostics: freshness report should count generated templates');
+  assert(result.templateFreshnessSummary.requirementRows === 843, 'auto plan diagnostics: freshness report should count generated requirement rows');
+  assert(/Generated Catalog Freshness/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render a title');
+  assert(/50\/50/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
+  assert(/PlanetTerp/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should name the live source');
+  assert(/pass84-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
   assert(result.templatePlaceholderSamples.length > 0, 'auto plan diagnostics: should include placeholder samples');
   assert(result.placeholderAction.genEd, 'auto plan diagnostics: placeholder action should infer a GenEd filter');
   assert(result.placeholderAction.dept === '__PROFILE_DEPTS__', 'auto plan diagnostics: placeholder action should use profile departments when profile is active');
@@ -381,6 +393,10 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.mixedCoverage.liveCodes.length === 3, 'auto plan diagnostics: mixed preview should include live code samples');
   assert(result.mixedTitles.includes('Mixed metadata sources'), 'auto plan diagnostics: should flag mixed metadata sources');
   assert(/Live metadata/.test(result.mixedHtml) && /Template fallback/.test(result.mixedHtml), 'auto plan diagnostics: mixed source samples should compare live and fallback rows');
+  assert(
+    result.mixedFreshnessHtml.includes(`${result.mixedCoverage.found}/${result.mixedCoverage.total}`),
+    'auto plan diagnostics: freshness report should show selected preview live coverage',
+  );
 
   return {
     id: 'AUTO-PLAN-DIAGNOSTICS',

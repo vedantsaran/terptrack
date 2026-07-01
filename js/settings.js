@@ -42,6 +42,14 @@ function renderMajorSelectNote(majorId) {
 
 let autoPlanReviewSeq = 0;
 let autoPlanReviewTimer = null;
+const GENERATED_TEMPLATE_AUDIT = Object.freeze({
+  checkedAt: 'June 30, 2026',
+  seed: 'pass84-all',
+  source: 'PlanetTerp',
+  verifiedSchedules: 50,
+  failedSchedules: 0,
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass84-all',
+});
 
 function settingsHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -59,6 +67,73 @@ function autoPlanReviewStat(label, value, detail) {
       <strong>${settingsHtml(value)}</strong>
       <span>${settingsHtml(label)}</span>
       ${detail ? `<small>${settingsHtml(detail)}</small>` : ''}
+    </div>
+  `;
+}
+
+function generatedTemplateFreshnessSummary(review) {
+  const majors = typeof listMajors === 'function'
+    ? listMajors().filter(major => (
+        major
+        && !major.isCustom
+        && typeof isMajorFullyBaked === 'function'
+        && typeof majorAllCodes === 'function'
+        && !isMajorFullyBaked(major)
+        && majorAllCodes(major).length
+      ))
+    : [];
+  const requirementRows = majors.reduce((sum, major) => sum + majorAllCodes(major).length, 0);
+  const metadata = review && review.metadataCoverage;
+  const selectedValue = metadata
+    ? `${metadata.found}/${metadata.total}`
+    : (review?.kind === 'curated' ? 'Curated' : 'Pending');
+  const selectedDetail = metadata
+    ? (metadata.missing
+        ? `${metadata.missing} template fallback${metadata.missing === 1 ? '' : 's'}`
+        : `${metadata.coveragePct}% live course records`)
+    : (review?.kind === 'curated' ? 'hand-built local schedule' : 'live preview pending');
+  const generatedCount = majors.length || GENERATED_TEMPLATE_AUDIT.verifiedSchedules;
+  return {
+    generatedCount,
+    requirementRows,
+    selectedValue,
+    selectedDetail,
+    allVerified: GENERATED_TEMPLATE_AUDIT.failedSchedules === 0
+      && GENERATED_TEMPLATE_AUDIT.verifiedSchedules >= generatedCount,
+  };
+}
+
+function autoPlanFreshnessStat(label, value, detail) {
+  return `
+    <div class="auto-plan-freshness-stat">
+      <strong>${settingsHtml(value)}</strong>
+      <span>${settingsHtml(label)}</span>
+      ${detail ? `<small>${settingsHtml(detail)}</small>` : ''}
+    </div>
+  `;
+}
+
+function generatedTemplateFreshnessHtml(review) {
+  const summary = generatedTemplateFreshnessSummary(review);
+  const audit = GENERATED_TEMPLATE_AUDIT;
+  const auditDetail = audit.failedSchedules
+    ? `${audit.failedSchedules} live audit issue${audit.failedSchedules === 1 ? '' : 's'}`
+    : 'zero live audit failures';
+  return `
+    <div class="auto-plan-freshness" title="${settingsHtml(audit.command)}">
+      <div class="auto-plan-freshness-head">
+        <div>
+          <span class="auto-plan-review-label">Generated Catalog Freshness</span>
+          <strong>${summary.allVerified ? 'Every generated template passed live verification' : 'Generated template audit needs review'}</strong>
+        </div>
+        <span class="auto-plan-freshness-source">${settingsHtml(audit.source)}</span>
+      </div>
+      <div class="auto-plan-freshness-grid">
+        ${autoPlanFreshnessStat('generated templates', `${audit.verifiedSchedules}/${summary.generatedCount}`, auditDetail)}
+        ${autoPlanFreshnessStat('requirement rows', summary.requirementRows || 'ready', 'built-in generated catalog')}
+        ${autoPlanFreshnessStat('last live audit', audit.checkedAt, audit.seed)}
+        ${autoPlanFreshnessStat('selected preview', summary.selectedValue, summary.selectedDetail)}
+      </div>
     </div>
   `;
 }
@@ -350,6 +425,7 @@ function autoPlanReviewHtml(review, opts = {}) {
       </div>
       ${review.termLoads ? `<div class="auto-plan-loads">${autoPlanTermList(review.termLoads)}</div>` : ''}
       ${autoPlanDiagnosticsHtml(review)}
+      ${generatedTemplateFreshnessHtml(review)}
     `;
   }
 
@@ -384,6 +460,7 @@ function autoPlanReviewHtml(review, opts = {}) {
       <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>
     </div>
     ${autoPlanDiagnosticsHtml(review)}
+    ${generatedTemplateFreshnessHtml(review)}
     ${autoPlanSourceSamplesHtml(review, opts)}
     <div class="auto-plan-profile">
       <strong>Profile fit</strong>

@@ -4262,3 +4262,56 @@ Next pass candidates:
 - Add official per-major citation links beside generated requirement groups.
 - Broaden the live verifier to check generated course credits and titles against rendered UI snapshots, not just template metadata.
 - Add a lightweight CI/offline fixture for the live-verifier shape with an opt-in network mode for release passes.
+
+## 2026-06-30 Pass 84
+
+Focus: make the generated-template live verification status visible inside Settings.
+
+Planned changes:
+- Add a compact Settings panel that tells users the generated catalog passed a live PlanetTerp audit.
+- Pair the global generated-template audit with the currently selected major's live metadata coverage.
+- Keep the panel responsive and covered by generated-plan regression tests.
+- Bump only the needed asset cache tags so browsers load the new Settings UI and CSS.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added a `GENERATED_TEMPLATE_AUDIT` summary in `js/settings.js` for the latest all-generated-template audit:
+  - Date: June 30, 2026.
+  - Seed: `pass84-all`.
+  - Command: `node scripts/verify-random-schedules.js --all --keep-going --seed pass84-all`.
+  - Result shown in-app: `50/50` generated templates, zero live audit failures.
+- Added `generatedTemplateFreshnessSummary`, `autoPlanFreshnessStat`, and `generatedTemplateFreshnessHtml`.
+- Rendered the freshness panel in both generated and curated Settings auto-plan reviews.
+- The panel reports:
+  - `50/50` built-in generated templates verified.
+  - `843` built-in generated requirement rows.
+  - `PlanetTerp` as the live source.
+  - The latest audit seed, `pass84-all`.
+  - The selected preview's live coverage, such as `17/17` for Plant Sciences.
+- Added responsive CSS for the freshness panel and mobile two-column stat layout.
+- Bumped cache tags:
+  - `styles.css?v=70`.
+  - `js/settings.js?v=15`.
+- Extended `scripts/test-generated-plans.js` so the auto-plan diagnostics fixture asserts the freshness title, catalog count, requirement-row count, live source, seed, and selected-preview coverage.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan and planner fixtures.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass84-all`.
+  - Verified all 50 generated schedules against PlanetTerp.
+- Used Chrome with a temporary static server at `http://127.0.0.1:8765/`, then finalized Chrome and stopped the server before commit.
+- Chrome confirmed:
+  - Settings opened normally after the cache tag bump.
+  - Selecting Plant Sciences rendered the generated-major note and auto-plan review.
+  - The new freshness panel showed `Generated Catalog Freshness`.
+  - The panel showed `50/50` generated templates, `843` requirement rows, `PlanetTerp`, `June 30, 2026`, `pass84-all`, and `17/17` selected preview coverage.
+  - The Plant Sciences review still rendered `17/17 live course records`.
+  - Exact-code matching found no old invalid `PLSC202`, `PLSC304`, `PLSC313`, `PLSC472`, generic `PLSC489`, or `PLSC470` entries.
+  - There was no document, body, modal, or review horizontal overflow.
+  - Browser console errors were clean.
+
+Next pass candidates:
+- Add official per-major citation links beside generated requirement groups and Settings freshness rows.
+- Broaden the live verifier to compare generated course credits and titles against rendered UI snapshots, not just template metadata.
+- Add a lightweight CI/offline fixture for the live-verifier shape with an opt-in network mode for release passes.
+- Add a Settings history drawer for the last few generated-template audit seeds and results.

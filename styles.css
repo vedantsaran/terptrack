@@ -2549,6 +2549,80 @@ h1.hero-title em {
   font-size: .64rem;
   overflow-wrap: anywhere;
 }
+.auto-plan-freshness {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(47,125,75,.24);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 86%, rgba(47,125,75,.12));
+}
+.auto-plan-freshness-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+.auto-plan-freshness-head > div {
+  min-width: 0;
+}
+.auto-plan-freshness-head .auto-plan-review-label {
+  margin-bottom: 4px;
+}
+.auto-plan-freshness-head strong {
+  display: block;
+  color: var(--ink);
+  font-size: .78rem;
+  line-height: 1.25;
+}
+.auto-plan-freshness-source {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid rgba(47,125,75,.28);
+  border-radius: 999px;
+  background: rgba(47,125,75,.08);
+  color: var(--green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.auto-plan-freshness-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+.auto-plan-freshness-stat {
+  min-width: 0;
+}
+.auto-plan-freshness-stat strong,
+.auto-plan-freshness-stat span,
+.auto-plan-freshness-stat small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.auto-plan-freshness-stat strong {
+  color: var(--ink);
+  font-size: .84rem;
+  line-height: 1.12;
+}
+.auto-plan-freshness-stat span {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.auto-plan-freshness-stat small {
+  margin-top: 2px;
+  color: var(--slate);
+  font-size: .66rem;
+  line-height: 1.25;
+}
 .auto-plan-source-samples {
   display: grid;
   gap: 6px;
@@ -6210,6 +6284,13 @@ h1.hero-title em {
   }
   .auto-plan-diagnostic-grid {
     grid-template-columns: 1fr;
+  }
+  .auto-plan-freshness-head {
+    flex-direction: column;
+    gap: 7px;
+  }
+  .auto-plan-freshness-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .auto-plan-load {
     max-width: calc(50% - 3px);
