@@ -5419,3 +5419,65 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass102-schedule-chip-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 103
+
+Focus: turn risky saved sections into explicit backup actions across Schedule, Timeline checklist, and advisor packet exports.
+
+Planned changes:
+- Warn when a picked section is closed, waitlisted, or down to a small number of seats.
+- Reuse the warning in Schedule summaries and advisor packet exports instead of making it a one-off visual cue.
+- Add Timeline registration checklist items that tell students to keep a backup for risky picks.
+- Add advisor questions that ask what backup section or alternate course to use if a risky pick closes.
+- Extend generated and rendered workflow coverage for low-seat/closed selected sections.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `selectedSeatRiskWarnings()` in `js/schedule.js`.
+  - Closed picks now say to pick a backup section or alternate course before registration.
+  - Low-seat picks now say to pick a backup section before the section fills.
+  - Watch-list picks now say to keep a backup ready and watch seats.
+- Fed seat-risk warnings into `selectedScheduleWarnings()`, so they appear in:
+  - Schedule warning cards.
+  - schedule output text.
+  - advisor packet HTML/text exports.
+  - blocker-focused advisor packet filtering.
+- Added Timeline backup helpers in `js/timeline.js`.
+  - Registration checklist now creates `Seat risk` actions for risky saved sections.
+  - Advisor questions now ask what backup section or alternate course to use for those risky saved sections.
+  - Both surfaces keep the `Open Schedule` action.
+- Added `SCHEDULE-SEAT-RISK` fixture coverage in `scripts/test-generated-plans.js`.
+  - Verifies a closed picked section with a waitlist.
+  - Verifies a two-seat picked section.
+  - Verifies Schedule warnings, checklist text, advisor-question text, danger levels, and Schedule buttons.
+- Extended rendered mobile advisor packet verification in `scripts/verify-rendered-workflows.js`.
+  - Seeds `MATH 140 0201` with two open seats.
+  - Verifies the low-seat backup warning in the rendered advisor packet.
+  - Verifies the warning is present in exported advisor HTML and text.
+- Bumped cache tags:
+  - `js/timeline.js?v=19`.
+  - `js/schedule.js?v=35`.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check js/timeline.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `SCHEDULE-SEAT-RISK` fixture plus the existing generated-plan regression suite.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet export with the new low-seat backup warning.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including `SCHEDULE-SEAT-RISK`.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass103-seat-risk-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.

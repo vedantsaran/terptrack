@@ -224,6 +224,34 @@ function plannerRegistrationSelectedItems(semId, items = []) {
     .filter(Boolean);
 }
 
+function plannerSelectedSeatRiskItems(selectedItems) {
+  if (typeof sectionSeatRisk !== 'function') return [];
+  return (selectedItems || [])
+    .map(item => {
+      const risk = sectionSeatRisk(item.section);
+      if (!risk || !['closed', 'risk', 'watch'].includes(risk.level)) return null;
+      const label = typeof scheduleSectionShortLabel === 'function'
+        ? scheduleSectionShortLabel(item.section)
+        : (item.section?.number || item.section?.section_id || 'section');
+      return {
+        item,
+        risk,
+        code: item.course?.code || displayCode(item.section?.course || ''),
+        label,
+        level: risk.level === 'closed' || risk.level === 'risk' ? 'danger' : 'warn',
+      };
+    })
+    .filter(Boolean);
+}
+
+function plannerSeatRiskBackupBody(entry) {
+  if (!entry) return '';
+  const action = typeof sectionSeatBackupAction === 'function'
+    ? sectionSeatBackupAction(entry.risk)
+    : 'Keep a backup section ready before registration.';
+  return `${entry.risk.detail}. ${action}`;
+}
+
 function plannerChecklistItem(level, title, body, meta = '', button = null) {
   return { level: level || 'info', title, body, meta, button };
 }
@@ -309,6 +337,15 @@ function plannerRegistrationChecklist(advisor) {
       scheduleButton,
     ));
   }
+  plannerSelectedSeatRiskItems(selectedItems).slice(0, 2).forEach(entry => {
+    items.push(plannerChecklistItem(
+      entry.level,
+      `Keep a backup for ${entry.code} ${entry.label}`,
+      plannerSeatRiskBackupBody(entry),
+      'Seat risk',
+      scheduleButton,
+    ));
+  });
 
   (advisor.genedGaps || []).slice(0, 2).forEach(gap => {
     const tag = gap.id === 'DIVERSITY-2' ? 'DVUP' : gap.id;
@@ -488,6 +525,17 @@ function plannerAdvisorQuestions(advisor, checklist = []) {
       scheduleButton,
     ));
   }
+  plannerSelectedSeatRiskItems(selectedItems).slice(0, 2).forEach(entry => {
+    const fallback = entry.risk.level === 'closed' ? 'is still closed when I register' : 'fills before I register';
+    questions.push(plannerAdvisorQuestion(
+      entry.level,
+      `${nextSem.name} seat backup`,
+      `What backup section or alternate course should I use if ${entry.code} ${entry.label} ${fallback}?`,
+      plannerSeatRiskBackupBody(entry),
+      'Seat risk',
+      scheduleButton,
+    ));
+  });
 
   (advisor.genedGaps || []).slice(0, 2).forEach(gap => {
     const tag = gap.id === 'DIVERSITY-2' ? 'DVUP' : gap.id;

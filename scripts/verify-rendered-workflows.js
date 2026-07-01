@@ -451,7 +451,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       number: '0201',
       instructors: ['Katherine Johnson'],
       meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'CSI', room: '2110' }],
-      open_seats: '8',
+      open_seats: '2',
       seats: '30',
       waitlist: '0',
     };
@@ -542,6 +542,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Download advisor packet')
       && text.includes('Confirm 2024-2025 catalog requirements')
       && text.includes('ENGL 101 needs a section choice')
+      && text.includes('MATH 140 0201: 2 seats open')
+      && text.includes('Pick a backup section now before it fills')
       && text.includes('Picked CMSC 131 0101');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-advisor-filter="blockers"]').click({ timeout: opts.timeoutMs });
@@ -569,13 +571,17 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/^terp-track-advisor-.*\.html$/i.test(result.advisorFilename), 'advisor packet: export filename should be an HTML advisor packet');
   assert(/schedule-advisor-catalog-warning/.test(result.advisorDocument), 'advisor packet: exported HTML should include catalog warning markup');
   assert(/Registration Blockers/.test(result.advisorDocument), 'advisor packet: exported HTML should include blocker view heading');
+  assert(/MATH 140 0201: 2 seats open/.test(result.advisorDocument) && /backup section/.test(result.advisorDocument), 'advisor packet: exported HTML should include low-seat backup warning');
   assert(/Catalog-year verification/.test(result.advisorText), 'advisor packet: exported text should include catalog-year verification');
+  assert(/MATH 140 0201: 2 seats open/.test(result.advisorText) && /backup section/.test(result.advisorText), 'advisor packet: exported text should include low-seat backup warning');
   assert(/ENGL 101 needs a section choice/.test(result.outputText), 'advisor packet: rendered packet should include unscheduled follow-up');
+  assert(/MATH 140 0201: 2 seats open/.test(result.outputText) && /backup section/.test(result.outputText), 'advisor packet: rendered packet should include low-seat backup warning');
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.scheduleText.includes('Advisor view'), 'advisor packet: rendered output should include advisor controls');
   assert(snapshot.scheduleText.includes('Registration Blockers'), 'advisor packet: rendered output should show blocker view');
+  assert(snapshot.scheduleText.includes('MATH 140 0201: 2 seats open'), 'advisor packet: mobile snapshot should include low-seat backup warning');
   assertNoOverflow('advisor packet mobile', snapshot);
-  console.log('Advisor packet [mobile]: rendered blocker view, catalog warning, export action, and no overflow.');
+  console.log('Advisor packet [mobile]: rendered blocker view, catalog warning, low-seat backup warning, export action, and no overflow.');
 }
 
 async function main() {

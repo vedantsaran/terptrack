@@ -1058,8 +1058,30 @@ function renderSectionDecision(sections, picked, prefs, course, selectedItems = 
   `;
 }
 
+function sectionSeatBackupAction(risk) {
+  if (!risk) return '';
+  if (risk.level === 'closed') return 'Pick a backup section or alternate course before registration.';
+  if (risk.level === 'risk') return 'Pick a backup section now before it fills.';
+  if (risk.level === 'watch') return 'Keep a backup section ready and watch seats.';
+  return '';
+}
+
+function selectedSeatRiskWarnings(selectedItems) {
+  return (selectedItems || [])
+    .map(item => {
+      const risk = sectionSeatRisk(item.section);
+      const action = sectionSeatBackupAction(risk);
+      if (!action) return null;
+      const code = item.course?.code || displayCode(item.section?.course || '');
+      const section = scheduleSectionShortLabel(item.section);
+      return `${code} ${section}: ${risk.detail}. ${action}`;
+    })
+    .filter(Boolean);
+}
+
 function selectedScheduleWarnings(selectedItems, prefs) {
   const warnings = [];
+  selectedSeatRiskWarnings(selectedItems).forEach(warning => warnings.push(warning));
   selectedItems.forEach(item => {
     sectionPreferenceNotes(item.section, prefs, item.course).forEach(note => {
       if (note.type === 'warn') warnings.push(`${item.course.code}: ${note.text}.`);

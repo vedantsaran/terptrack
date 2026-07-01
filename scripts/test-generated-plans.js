@@ -675,6 +675,80 @@ function testScheduleCourseChip(context) {
   };
 }
 
+function testScheduleSeatRiskBackups(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      recoGenEdGaps = () => [];
+      state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, catalogYear: '2026-2027', totalCredits: 120 });
+      state.activeSchedule = [{
+        id: 'pass103-fall',
+        name: 'Pass 103 Fall',
+        courses: [
+          { code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4, prereqs: [], kind: 'core', category: 'major-core' },
+          { code: 'MATH 140', title: 'Calculus I', cr: 4, prereqs: [], kind: 'core', category: 'gened-fsma' }
+        ]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.selectedSections = {
+        'pass103-fall': {
+          CMSC132: {
+            section_id: 'CMSC132-0101',
+            semester: '202608',
+            number: '0101',
+            open_seats: '0',
+            seats: '30',
+            waitlist: '5',
+            meetings: [{ days: 'MW', start_time: '9:00am', end_time: '10:15am', building: 'IRB', room: '1201' }]
+          },
+          MATH140: {
+            section_id: 'MATH140-0201',
+            semester: '202608',
+            number: '0201',
+            open_seats: '2',
+            seats: '32',
+            waitlist: '0',
+            meetings: [{ days: 'MW', start_time: '10:30am', end_time: '11:45am', building: 'MTH', room: '0101' }]
+          }
+        }
+      };
+      state.schedulePrefs = {
+        'pass103-fall': { ...DEFAULT_SCHEDULE_PREFS, term: '202608', mode: 'balanced', minBreak: 15 }
+      };
+      const advisor = plannerBuildAdvisor();
+      const selectedItems = plannerRegistrationSelectedItems('pass103-fall', advisor.itemsBySem['pass103-fall'] || []);
+      const warnings = selectedScheduleWarnings(selectedItems, getSchedulePrefs('pass103-fall'));
+      const checklist = plannerRegistrationChecklist(advisor);
+      const questions = plannerAdvisorQuestions(advisor, checklist);
+      return {
+        warnings,
+        checklistText: plannerRegistrationChecklistText(checklist),
+        questionText: plannerAdvisorQuestionsText(questions),
+        checklistLevels: checklist.map(item => item.level),
+        questionLevels: questions.map(item => item.level),
+        checklistHtml: plannerChecklistHtml(checklist),
+        questionHtml: plannerAdvisorQuestionsHtml(questions),
+      };
+    })()
+  `, context));
+
+  assert(result.warnings.some(warning => /CMSC 132 0101: 0 open.*5 waitlisted.*backup section/i.test(warning)), 'schedule seat risk: closed picked section should warn with a backup prompt');
+  assert(result.warnings.some(warning => /MATH 140 0201: 2 seats open.*backup section/i.test(warning)), 'schedule seat risk: low-seat picked section should warn with a backup prompt');
+  assert(/Keep a backup for CMSC 132 0101/.test(result.checklistText), 'planner checklist: should add a backup item for closed picked sections');
+  assert(/Keep a backup for MATH 140 0201/.test(result.checklistText), 'planner checklist: should add a backup item for low-seat picked sections');
+  assert(/What backup section or alternate course should I use if CMSC 132 0101 is still closed/i.test(result.questionText), 'planner questions: should ask an advisor about a closed-section backup');
+  assert(/What backup section or alternate course should I use if MATH 140 0201 fills before I register/i.test(result.questionText), 'planner questions: should ask an advisor about a low-seat backup');
+  assert(result.checklistLevels.includes('danger') && result.questionLevels.includes('danger'), 'schedule seat risk: backup items should preserve urgent risk levels');
+  assert(/data-planner-schedule/.test(result.checklistHtml) && /data-planner-schedule/.test(result.questionHtml), 'schedule seat risk: backup items should keep Open Schedule actions');
+
+  return {
+    id: 'SCHEDULE-SEAT-RISK',
+    warnings: result.warnings.length,
+    checklist: 'backup prompts',
+    questions: 'advisor backups',
+  };
+}
+
 function testRecommendationMoveAction(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -2784,6 +2858,7 @@ async function main() {
   const releaseJson = testReleaseJsonReport();
   const timing = testScheduleTimingFit(context);
   const chip = testScheduleCourseChip(context);
+  const seatRisk = testScheduleSeatRiskBackups(context);
   const recoMove = testRecommendationMoveAction(context);
   const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
@@ -2810,6 +2885,7 @@ async function main() {
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Schedule chip fixture ${chip.id}: ${chip.risk}, ${chip.closed}, ${chip.ok}.`);
+  console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
