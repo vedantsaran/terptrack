@@ -4810,3 +4810,70 @@ Next pass candidates:
 - Add a mobile rendered verifier for onboarding and Browse replacement flows.
 - Add a release checklist panel in Settings that summarizes source links, live audit history, and account/cloud setup status.
 - Add catalog-year targeting controls for students following an older catalog year.
+
+## 2026-06-30 Pass 93
+
+Focus: add one ordered release-check command for the current TerpTrack verification stack.
+
+Planned changes:
+- Add a release orchestrator script that runs local checks in the intended order.
+- Keep live PlanetTerp verification opt-in so quick release gates can run without network flakiness.
+- Support targeted rendered and live subsets for fast debugging.
+- Prove both the default release path and live path work.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scripts/run-release-checks.js`.
+- Default release checks now run, in order:
+  - JS syntax checks for every `.js` file under `api/`, `js/`, and `scripts/`.
+  - `scripts/test-umd-proxy.js`.
+  - `scripts/test-generated-plans.js`.
+  - `scripts/verify-rendered-generated-plans.js`.
+- Added release-check options:
+  - `--live`.
+  - `--live-all`.
+  - `--live-majors A,B,C`.
+  - `--live-count N`.
+  - `--live-seed SEED`.
+  - `--rendered-majors A,B,C`.
+  - `--rendered-viewports A,B`.
+  - `--rendered-timeout-ms N`.
+  - `--skip-syntax`.
+  - `--skip-proxy`.
+  - `--skip-generated`.
+  - `--skip-rendered`.
+- The default focused live set is the current high-risk rendered target group:
+  - `PHYS`.
+  - `ARTT`.
+  - `PLSC`.
+  - `KNES`.
+  - `ENAE`.
+  - `ENCE`.
+- The script uses `process.execPath` and `child_process.spawn()` with inherited stdio rather than shell chaining.
+
+Verification:
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node scripts/run-release-checks.js --help`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 42 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed all generated-plan and planner fixtures.
+  - It passed the rendered generated-plan verifier:
+    - 12 rendered template viewport runs.
+    - 6 majors x 2 viewports.
+    - clean proxy-backed console.
+  - It skipped live PlanetTerp verification with an explicit message explaining the opt-in flags.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --live --live-seed pass93-release-check-live`.
+  - It delegated to `scripts/verify-random-schedules.js`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+
+Findings for next pass:
+- The repo now has a single ordered release gate, but onboarding and Browse replacement flows still lack comparable rendered mobile coverage.
+- A Settings release checklist panel could surface the same evidence to students/admins, not just developers.
+
+Next pass candidates:
+- Add a mobile rendered verifier for onboarding and Browse replacement flows.
+- Add a release checklist panel in Settings that summarizes source links, live audit history, release-check status, and account/cloud setup status.
+- Add catalog-year targeting controls for students following an older catalog year.
+- Add a `--json` output mode to `scripts/run-release-checks.js` for future CI/reporting.
