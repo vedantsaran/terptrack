@@ -797,6 +797,111 @@ function accountStatsHtml() {
   `;
 }
 
+function accountPlanPayload(source) {
+  return source?.payload?.state || source?.payload || source?.state || source || {};
+}
+
+function accountPlanCourseCodes(payload) {
+  const plan = accountPlanPayload(payload);
+  const seen = new Set();
+  const add = code => {
+    const norm = typeof normalizeCode === 'function' ? normalizeCode(code) : String(code || '').toUpperCase().replace(/\s+/g, '');
+    if (norm) seen.add(norm);
+  };
+  Object.keys(plan.courses || {}).forEach(add);
+  (plan.customCourses || []).forEach(course => add(course.code));
+  [...(plan.activeSchedule || []), ...(plan.customSemesters || [])]
+    .forEach(sem => (sem.courses || []).forEach(course => add(course.code)));
+  return Array.from(seen);
+}
+
+function accountSelectedSectionItems(selectedSections) {
+  const items = [];
+  const push = (semId, codeKey, rawSection) => {
+    if (!rawSection) return;
+    const section = typeof rawSection === 'string'
+      ? { number: rawSection, section_id: rawSection, meetings: [] }
+      : rawSection;
+    const code = displayCode(section.course || codeKey || '');
+    if (!normalizeCode(code)) return;
+    items.push({
+      semId: semId || String(section.semester || ''),
+      code,
+      course: { code, title: code },
+      section,
+    });
+  };
+  Object.entries(selectedSections || {}).forEach(([semOrCode, value]) => {
+    if (!value) return;
+    if (typeof value === 'string' || value.section_id || value.number || value.course || Array.isArray(value.meetings)) {
+      push('', semOrCode, value);
+      return;
+    }
+    Object.entries(value || {}).forEach(([code, section]) => push(semOrCode, code, section));
+  });
+  return items;
+}
+
+function accountCurrentPlanPayload() {
+  return typeof _planSharePayload === 'function' ? _planSharePayload() : accountCloudPayload().state;
+}
+
+function accountMeetingOverlapSummary(friendItems, currentItems) {
+  if (typeof sectionBlocks !== 'function' || typeof blocksConflict !== 'function') return { count: 0, samples: [] };
+  const friendBlocks = [];
+  const currentBlocks = [];
+  friendItems.forEach(item => sectionBlocks(item.section, item.course).forEach(block => friendBlocks.push({ ...block, code: item.code })));
+  currentItems.forEach(item => sectionBlocks(item.section, item.course).forEach(block => currentBlocks.push({ ...block, code: item.code })));
+  const samples = [];
+  let count = 0;
+  friendBlocks.forEach(friendBlock => {
+    currentBlocks.forEach(currentBlock => {
+      if (!blocksConflict(friendBlock, currentBlock)) return;
+      count += 1;
+      if (samples.length < 3) {
+        const time = typeof formatMeetingTime === 'function'
+          ? `${formatMeetingTime(Math.max(friendBlock.start, currentBlock.start))}-${formatMeetingTime(Math.min(friendBlock.end, currentBlock.end))}`
+          : friendBlock.day;
+        samples.push(`${friendBlock.code} with your ${currentBlock.code} ${friendBlock.day} ${time}`);
+      }
+    });
+  });
+  return { count, samples };
+}
+
+function accountFriendPlanSummary(plan) {
+  const payload = accountPlanPayload(plan);
+  const current = accountCurrentPlanPayload();
+  const friendCodes = accountPlanCourseCodes(payload);
+  const currentCodes = new Set(accountPlanCourseCodes(current));
+  const friendItems = accountSelectedSectionItems(payload.selectedSections || {});
+  const currentItems = accountSelectedSectionItems(current.selectedSections || {});
+  const overlaps = accountMeetingOverlapSummary(friendItems, currentItems);
+  return {
+    majorName: payload.settings?.programName || payload.settings?.majorName || payload.majorId || 'Shared plan',
+    courseCount: friendCodes.length,
+    selectedCount: friendItems.length,
+    sharedCourseCount: friendCodes.filter(code => currentCodes.has(code)).length,
+    meetingOverlapCount: overlaps.count,
+    meetingOverlapSamples: overlaps.samples,
+  };
+}
+
+function accountFriendPlanSummaryHtml(summary) {
+  const overlapText = summary.meetingOverlapSamples.length
+    ? summary.meetingOverlapSamples.join(' · ')
+    : (summary.selectedCount ? 'No picked-section overlaps with your current plan.' : 'Friend plan has no picked sections yet.');
+  return `
+    <div class="account-friend-compare">
+      <span><strong>${accountEscape(summary.courseCount)}</strong> courses</span>
+      <span><strong>${accountEscape(summary.selectedCount)}</strong> picked sections</span>
+      <span><strong>${accountEscape(summary.sharedCourseCount)}</strong> shared courses</span>
+      <span><strong>${accountEscape(summary.meetingOverlapCount)}</strong> meeting overlaps</span>
+    </div>
+    <em class="account-friend-overlaps">${accountEscape(overlapText)}</em>
+  `;
+}
+
 function accountFriendStatusText(invite) {
   const direction = invite.direction === 'received' ? 'from' : 'to';
   const source = invite.source === 'cloud' ? 'cloud' : 'local';
@@ -844,12 +949,14 @@ function accountFriendPlansHtml() {
     <div class="account-friend-list">
       ${accountFriendPlans.map(plan => {
         const owner = accountProfileLabel(plan.owner_id, plan.owner_id ? `friend ${accountShortId(plan.owner_id)}` : 'friend');
+        const summary = accountFriendPlanSummary(plan);
         return `
           <div class="account-friend-row">
             <div class="account-friend-info">
               <strong>${accountEscape(plan.name || 'Friend plan')}</strong>
-              <span>${accountEscape(owner)}</span>
+              <span>${accountEscape(owner)} · ${accountEscape(summary.majorName)}</span>
               <small>Updated ${accountEscape(accountTime(plan.updated_at))}</small>
+              ${accountFriendPlanSummaryHtml(summary)}
             </div>
             <div class="account-friend-actions">
               <button class="btn small" type="button" onclick="accountOpenFriendPlan('${accountEscape(plan.id)}')">Open</button>

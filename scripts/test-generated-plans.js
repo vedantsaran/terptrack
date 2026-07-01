@@ -224,13 +224,76 @@ function testAccountAndShareState(context) {
       courses: { 'CMSC 131': { status: 'passed' } },
       customCourses: [],
       customSemesters: [],
-      activeSchedule: null,
-      selectedSections: {},
+      activeSchedule: [{
+        id: 'F26',
+        name: 'Fall 2026',
+        courses: [
+          { code: 'MATH 140', title: 'Calculus I', cr: 4 },
+          { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4 }
+        ]
+      }],
+      selectedSections: {
+        F26: {
+          MATH140: {
+            course: 'MATH 140',
+            section_id: 'MATH140-0101',
+            number: '0101',
+            semester: '202608',
+            meetings: [{ days: 'M', start_time: '10:00am', end_time: '10:50am', building: 'IRB', room: '1101' }]
+          }
+        }
+      },
       schedulePrefs: {},
       browseSavedSearches: [],
       profilePrefs: defaultProfilePrefs(),
       settings: { ...DEFAULT_SETTINGS }
     };
+    accountFriendProfiles = {
+      'user-pal-1': { user_id: 'user-pal-1', display_name: 'Pal', major_name: 'Mathematics' }
+    };
+    accountFriendPlans = [{
+      id: 'shared-pal',
+      owner_id: 'user-pal-1',
+      name: 'Pal STEM plan',
+      updated_at: '2026-07-01T12:00:00.000Z',
+      payload: {
+        state: {
+          v: 1,
+          activeSchedule: [{
+            id: 'F26',
+            name: 'Fall 2026',
+            courses: [
+              { code: 'MATH 140', title: 'Calculus I', cr: 4 },
+              { code: 'ENGL 101', title: 'Academic Writing', cr: 3 }
+            ]
+          }],
+          customCourses: [],
+          customSemesters: [],
+          selectedSections: {
+            F26: {
+              MATH140: {
+                course: 'MATH 140',
+                section_id: 'MATH140-0201',
+                number: '0201',
+                semester: '202608',
+                meetings: [{ days: 'M', start_time: '10:30am', end_time: '11:20am', building: 'IRB', room: '1201' }]
+              },
+              ENGL101: {
+                course: 'ENGL 101',
+                section_id: 'ENGL101-0101',
+                number: '0101',
+                semester: '202608',
+                meetings: [{ days: 'Tu', start_time: '9:30am', end_time: '10:45am', building: 'TWS', room: '0201' }]
+              }
+            }
+          },
+          settings: { ...DEFAULT_SETTINGS, programName: 'Mathematics' },
+          profilePrefs: defaultProfilePrefs()
+        }
+      }
+    }];
+    const friendSummary = accountFriendPlanSummary(accountFriendPlans[0]);
+    const friendPlansHtml = accountFriendPlansHtml();
     const applied = applySharedPlanData({
       v: 1,
       courses: { 'MATH 140': { status: 'passed' } },
@@ -272,6 +335,8 @@ function testAccountAndShareState(context) {
       outputPreset: state.scheduleOutputPreset,
       advisorImportHash,
       advisorImportUrl,
+      friendSummary,
+      friendPlansHtml,
     })
   `, context));
 
@@ -293,6 +358,14 @@ function testAccountAndShareState(context) {
   assert(result.browseSearchQuery === 'ethics', 'shared plan: saved browse search keyword should persist');
   assert(result.outputPreset === 'advisor', 'shared plan: output preset should persist');
   assert(/^#plan=/.test(result.advisorImportHash) && result.advisorImportUrl === result.advisorImportHash, 'advisor packet import: should create a same-format shared-plan hash without a browser origin');
+  assert(result.friendSummary.courseCount === 2, 'friend compare: should count friend plan courses');
+  assert(result.friendSummary.selectedCount === 2, 'friend compare: should count picked friend sections');
+  assert(result.friendSummary.sharedCourseCount === 1, 'friend compare: should count courses shared with current plan');
+  assert(result.friendSummary.meetingOverlapCount === 1, 'friend compare: should count timed overlaps with current plan');
+  assert(/Pal STEM plan/.test(result.friendPlansHtml) && /Mathematics/.test(result.friendPlansHtml), 'friend compare: should render friend plan identity');
+  assert(/2<\/strong> courses/.test(result.friendPlansHtml) && /2<\/strong> picked sections/.test(result.friendPlansHtml), 'friend compare: should render course and section counts');
+  assert(/1<\/strong> shared courses/.test(result.friendPlansHtml) && /1<\/strong> meeting overlaps/.test(result.friendPlansHtml), 'friend compare: should render shared and overlap counts');
+  assert(/MATH 140 with your MATH 140 M 10:30am-10:50am/.test(result.friendPlansHtml), 'friend compare: should render overlap sample');
 
   return {
     id: 'ACCOUNT-FRIENDS',

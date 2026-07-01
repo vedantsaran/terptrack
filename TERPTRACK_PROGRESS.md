@@ -5782,3 +5782,67 @@ Verification:
   - It randomly verified `HIST`, `PLSC`, `THET`, `EDUC`, `ARTH`, and `SOCY` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 109
+
+Focus: make friend shared plans safer to inspect before replacing the current plan.
+
+Planned changes:
+- Add a comparison preview for loaded friend plans in the Account modal.
+- Compare friend plan courses and picked sections against the current local plan.
+- Surface shared courses and timed meeting overlaps before the student clicks `Open`.
+- Verify the comparison in unit-style account/share coverage and rendered mobile Account UI.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added friend-plan comparison helpers in `js/account.js`:
+  - `accountPlanPayload()`.
+  - `accountPlanCourseCodes()`.
+  - `accountSelectedSectionItems()`.
+  - `accountCurrentPlanPayload()`.
+  - `accountMeetingOverlapSummary()`.
+  - `accountFriendPlanSummary()`.
+  - `accountFriendPlanSummaryHtml()`.
+- Updated loaded friend plan rows:
+  - show the friend plan's major/program label.
+  - show total course count.
+  - show picked-section count.
+  - show courses shared with the current plan.
+  - show timed meeting overlaps with the current plan.
+  - include short overlap examples such as `MATH 140 with your MATH 140 M 10:30am-10:50am`.
+- Kept older shared-plan shapes supported:
+  - modern nested `selectedSections[semester][course]` data.
+  - flat older `selectedSections[course]` payloads.
+- Added compact mobile-safe styles for account comparison chips.
+- Bumped cache tags:
+  - `styles.css?v=81`.
+  - `js/account.js?v=9`.
+- Extended tests:
+  - `ACCOUNT-FRIENDS` now verifies friend plan course count, picked-section count, shared-course count, meeting-overlap count, and rendered comparison text.
+  - Rendered mobile Account setup now injects a loaded friend plan and verifies the comparison row with no overflow.
+
+Verification:
+- Ran `node --check js/account.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the account/share fixture with friend-plan comparison coverage.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with friend invite and friend-plan comparison.
+  - It passed mobile advisor packet workflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including account/share comparison coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup with friend-plan comparison, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass109-friend-plan-compare-live`.
+  - It randomly verified `HESP`, `HLTH`, `ARTT`, `MUSC`, `AOSC`, and `NFSC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

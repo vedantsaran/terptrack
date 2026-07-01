@@ -173,9 +173,10 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=80'), 'workflow app did not load styles.css?v=80');
+  assert(snapshot.styles.includes('styles.css?v=81'), 'workflow app did not load styles.css?v=81');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
+  assert(snapshot.scripts.includes('js/account.js?v=9'), 'workflow app did not load js/account.js?v=9');
   return snapshot;
 }
 
@@ -463,6 +464,82 @@ async function verifyAccountSetupMobile(page, url, opts) {
       && modalText.includes('roommate@umd.edu')
       && modalText.includes('review cmsc plan');
   }, null, { timeout: opts.timeoutMs });
+  await page.evaluate(() => {
+    state.activeSchedule = [{
+      id: 'F26',
+      name: 'Fall 2026',
+      courses: [
+        { code: 'MATH 140', title: 'Calculus I', cr: 4 },
+        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4 },
+      ],
+    }];
+    state.selectedSections = {
+      F26: {
+        MATH140: {
+          course: 'MATH 140',
+          section_id: 'MATH140-0101',
+          number: '0101',
+          semester: '202608',
+          meetings: [{ days: 'M', start_time: '10:00am', end_time: '10:50am', building: 'IRB', room: '1101' }],
+        },
+      },
+    };
+    accountFriendProfiles = {
+      'friend-pal': { user_id: 'friend-pal', display_name: 'Pal', major_name: 'Mathematics' },
+    };
+    accountFriendPlans = [{
+      id: 'pal-plan',
+      owner_id: 'friend-pal',
+      name: 'Pal STEM plan',
+      updated_at: '2026-07-01T12:00:00.000Z',
+      payload: {
+        state: {
+          v: 1,
+          activeSchedule: [{
+            id: 'F26',
+            name: 'Fall 2026',
+            courses: [
+              { code: 'MATH 140', title: 'Calculus I', cr: 4 },
+              { code: 'ENGL 101', title: 'Academic Writing', cr: 3 },
+            ],
+          }],
+          customCourses: [],
+          customSemesters: [],
+          selectedSections: {
+            F26: {
+              MATH140: {
+                course: 'MATH 140',
+                section_id: 'MATH140-0201',
+                number: '0201',
+                semester: '202608',
+                meetings: [{ days: 'M', start_time: '10:30am', end_time: '11:20am', building: 'IRB', room: '1201' }],
+              },
+              ENGL101: {
+                course: 'ENGL 101',
+                section_id: 'ENGL101-0101',
+                number: '0101',
+                semester: '202608',
+                meetings: [{ days: 'Tu', start_time: '9:30am', end_time: '10:45am', building: 'TWS', room: '0201' }],
+              },
+            },
+          },
+          settings: { ...DEFAULT_SETTINGS, programName: 'Mathematics' },
+          profilePrefs: defaultProfilePrefs(),
+        },
+      },
+    }];
+    saveState();
+    renderAccountModal();
+  });
+  await page.waitForFunction(() => {
+    const modalText = document.querySelector('#account-modal.open')?.textContent?.replace(/\s+/g, ' ') || '';
+    return modalText.includes('Pal STEM plan')
+      && modalText.includes('2 courses')
+      && modalText.includes('2 picked sections')
+      && modalText.includes('1 shared courses')
+      && modalText.includes('1 meeting overlaps')
+      && modalText.includes('MATH 140 with your MATH 140 M 10:30am-10:50am');
+  }, null, { timeout: opts.timeoutMs });
 
   const snapshot = await page.evaluate(snapshotScript());
   const prefs = await page.evaluate(() => getAccountPrefs());
@@ -470,9 +547,9 @@ async function verifyAccountSetupMobile(page, url, opts) {
   assert((prefs.friendInvites || []).some(invite => invite.email === 'roommate@umd.edu'), 'account setup: friend invite should persist locally');
   assert(snapshot.accountText.includes('Local only'), 'account setup: modal should identify local-only config');
   assert(snapshot.accountText.includes('Friend invite saved locally.'), 'account setup: modal should preserve local invite status');
-  assert(snapshot.accountText.includes('No loaded friend plans'), 'account setup: modal should show empty friend-plan state');
+  assert(snapshot.accountText.includes('Pal STEM plan') && snapshot.accountText.includes('meeting overlaps'), 'account setup: modal should show friend-plan comparison');
   assertNoOverflow('account setup mobile', snapshot);
-  console.log('Account setup [mobile]: rendered local-first cloud checklist, profile save, friend invite, and no overflow.');
+  console.log('Account setup [mobile]: rendered local-first cloud checklist, profile save, friend invite, friend-plan comparison, and no overflow.');
 }
 
 async function verifyAdvisorPacketMobile(page, url, opts) {
