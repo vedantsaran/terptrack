@@ -4950,3 +4950,66 @@ Next pass candidates:
 - Add catalog-year targeting controls for students following an older catalog year.
 - Add a `--json` output mode to `scripts/run-release-checks.js` for future CI/reporting.
 - Add rendered mobile coverage for Account setup and advisor packet export.
+
+## 2026-07-01 Pass 95
+
+Focus: surface launch-readiness evidence inside Settings so release confidence is visible in the app, not only in developer scripts.
+
+Planned changes:
+- Add a Settings release-readiness panel.
+- Summarize official UMD source links for the selected major.
+- Summarize live generated-template audit history.
+- Summarize the default developer release gate.
+- Reuse the existing account/cloud setup checklist status.
+- Extend rendered Settings verification to cover the new panel on desktop and mobile.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `RELEASE_CHECK_SNAPSHOT` metadata for the Pass 95 default gate.
+- Added a Settings `Release Readiness` panel with four rows:
+  - Official source links.
+  - Live generated-template audit.
+  - Default release gate.
+  - Cloud account setup.
+- The source row updates when the selected Settings major changes.
+- The cloud row asynchronously checks `/api/config` through the existing account config loader and reuses `accountCloudSetupChecks`.
+- Added an `Open Account` action from the cloud setup row.
+- Added responsive CSS for the release panel and source-link chips.
+- Bumped browser cache tags:
+  - `styles.css?v=75`.
+  - `js/settings.js?v=23`.
+- Extended `scripts/verify-rendered-generated-plans.js` to assert:
+  - the new release panel is rendered.
+  - `3/4 launch checks ready` appears in local mode.
+  - source links, generated audit, Pass 95 release gate, and Supabase/Vercel setup details appear.
+  - the release panel has no horizontal overflow.
+- Updated `scripts/verify-rendered-workflows.js` for the `styles.css?v=75` cache tag.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js && node --check js/settings.js`.
+- Ran `node scripts/verify-rendered-generated-plans.js --majors=PHYS --viewports=mobile --timeout-ms=120000`.
+  - It passed the mobile release panel assertions.
+  - It rendered Physics with `20/20 live course records` and clean proxy-backed console output.
+- Ran `node --check scripts/verify-rendered-workflows.js && node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding preview verification.
+  - It passed mobile Browse replacement verification.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed all generated-plan and planner fixtures.
+  - It passed 12 rendered generated-plan viewport runs with release-panel assertions.
+  - It passed rendered mobile onboarding and Browse replacement workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+
+Findings for next pass:
+- Settings now exposes release-readiness evidence inside the app.
+- The default local cloud state still shows `3/4 launch checks ready` because Supabase/Vercel credentials are not configured in `/api/config`.
+
+Next pass candidates:
+- Add catalog-year targeting controls for students following an older catalog year.
+- Add a `--json` output mode to `scripts/run-release-checks.js` for future CI/reporting.
+- Add rendered mobile coverage for Account setup and advisor packet export.

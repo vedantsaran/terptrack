@@ -20,6 +20,7 @@ function populateMajorSelect() {
   sel.value = state.majorId || 'CE';
   sel.onchange = () => {
     renderMajorSelectNote(sel.value);
+    renderReleaseChecklist();
     renderAutoPlanReview(sel.value);
   };
   renderMajorSelectNote(sel.value);
@@ -84,6 +85,21 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
     scope: 'All generated templates for the initial Settings freshness panel.',
   },
 ]);
+const RELEASE_CHECK_SNAPSHOT = Object.freeze({
+  checkedAt: 'July 1, 2026',
+  pass: 'Pass 95',
+  status: 'passed',
+  command: 'node scripts/run-release-checks.js',
+  liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
+  liveMajors: ['PHYS', 'ARTT', 'PLSC', 'KNES', 'ENAE', 'ENCE'],
+  defaultChecks: [
+    'JS syntax',
+    '/api/umd proxy fixture',
+    'generated-plan fixtures',
+    'rendered generated-plan UI',
+    'rendered mobile workflows',
+  ],
+});
 
 function settingsHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -244,6 +260,158 @@ function generatedTemplateFreshnessHtml(review) {
       ${generatedTemplateAuditHistoryHtml(summary)}
     </div>
   `;
+}
+
+let releaseChecklistSeq = 0;
+
+function releaseChecklistStatusLabel(status) {
+  if (status === 'ok') return 'Ready';
+  if (status === 'warn') return 'Check';
+  return 'Missing';
+}
+
+function releaseChecklistSourceLinksHtml(links) {
+  if (!links.length) return '';
+  return `
+    <div class="release-source-links">
+      ${links.slice(0, 4).map(link => `
+        <a href="${settingsHtml(link.url)}" target="_blank" rel="noopener noreferrer">${settingsHtml(link.label || 'UMD source')}</a>
+      `).join('')}
+    </div>
+  `;
+}
+
+function releaseChecklistCloudChecks(config, clientReady) {
+  if (typeof accountCloudSetupChecks === 'function') {
+    try {
+      return accountCloudSetupChecks(config || {}, clientReady);
+    } catch {}
+  }
+  return [{
+    status: 'missing',
+    label: 'Cloud setup',
+    detail: 'Account tools are still loading.',
+  }];
+}
+
+function releaseChecklistItems(config, clientReady) {
+  const selectedMajorId = document.getElementById('set-major')?.value || state?.majorId || 'CE';
+  const tpl = typeof getMajorTemplate === 'function' ? getMajorTemplate(selectedMajorId) : null;
+  const sourceLinks = typeof majorOfficialSources === 'function'
+    ? majorOfficialSources(selectedMajorId, { includeGeneral: true })
+    : [];
+  const sourceYears = Array.from(new Set(sourceLinks.map(link => link.year).filter(Boolean)));
+  const sourceChecked = Array.from(new Set(sourceLinks.map(link => link.checkedAt).filter(Boolean)));
+  const audit = GENERATED_TEMPLATE_AUDIT;
+  const auditHistory = GENERATED_TEMPLATE_AUDIT_HISTORY || [];
+  const auditOk = audit.failedSchedules === 0 && auditHistory.length > 0;
+  const cloudChecks = releaseChecklistCloudChecks(config, clientReady);
+  const cloudOk = cloudChecks.filter(check => check.status === 'ok').length;
+  const cloudMissing = cloudChecks.some(check => check.status === 'missing');
+  const configLabel = typeof accountConfigLabel === 'function'
+    ? accountConfigLabel(config?.source || 'none')
+    : (config?.source || 'Local only');
+
+  return [
+    {
+      id: 'sources',
+      status: sourceLinks.length ? 'ok' : 'warn',
+      title: 'Official source links',
+      detail: sourceLinks.length
+        ? `${sourceLinks.length} UMD source${sourceLinks.length === 1 ? '' : 's'} attached to ${tpl?.name || selectedMajorId}.`
+        : `No official source link is attached to ${tpl?.name || selectedMajorId}.`,
+      meta: [
+        sourceYears.length ? `Catalog year ${sourceYears.join(', ')}` : '',
+        sourceChecked.length ? `checked ${sourceChecked.join(', ')}` : '',
+      ].filter(Boolean).join(' · '),
+      extraHtml: releaseChecklistSourceLinksHtml(sourceLinks),
+    },
+    {
+      id: 'audit',
+      status: auditOk ? 'ok' : 'warn',
+      title: 'Live generated-template audit',
+      detail: `${audit.verifiedSchedules} generated templates verified against ${audit.source}; ${audit.failedSchedules} issue${audit.failedSchedules === 1 ? '' : 's'} recorded.`,
+      meta: `${audit.checkedAt} · ${audit.seed} · ${auditHistory.length} saved runs`,
+    },
+    {
+      id: 'release',
+      status: RELEASE_CHECK_SNAPSHOT.status === 'passed' ? 'ok' : 'warn',
+      title: 'Default release gate',
+      detail: `${RELEASE_CHECK_SNAPSHOT.pass} passed ${RELEASE_CHECK_SNAPSHOT.defaultChecks.join(', ')}.`,
+      meta: `${RELEASE_CHECK_SNAPSHOT.checkedAt} · ${RELEASE_CHECK_SNAPSHOT.command}`,
+    },
+    {
+      id: 'cloud',
+      status: cloudOk === cloudChecks.length ? 'ok' : cloudMissing ? 'missing' : 'warn',
+      title: 'Cloud account setup',
+      detail: `${cloudOk}/${cloudChecks.length} setup checks ready from ${configLabel}.`,
+      meta: cloudChecks
+        .filter(check => check.status !== 'ok')
+        .slice(0, 2)
+        .map(check => check.detail)
+        .join(' · ') || 'Account sync, friends, and cloud plans are ready.',
+      actionHtml: '<button class="btn small" type="button" data-open-account-config="1">Open Account</button>',
+    },
+  ];
+}
+
+function releaseChecklistHtml(config, clientReady, opts = {}) {
+  const items = releaseChecklistItems(config, clientReady);
+  const ready = items.filter(item => item.status === 'ok').length;
+  const overall = ready === items.length ? 'ok' : 'warn';
+  const loading = opts.loading ? '<span class="release-checklist-loading">Checking cloud config...</span>' : '';
+  return `
+    <div class="release-checklist ${overall}">
+      <div class="release-checklist-head">
+        <div>
+          <span class="auto-plan-review-label">Release Readiness</span>
+          <strong>${ready}/${items.length} launch checks ready</strong>
+        </div>
+        <span class="release-checklist-badge ${overall}">${overall === 'ok' ? 'Ready' : 'Needs setup'}</span>
+      </div>
+      ${loading}
+      <div class="release-checklist-grid">
+        ${items.map(item => `
+          <div class="release-check ${settingsHtml(item.status)}">
+            <div class="release-check-top">
+              <b>${settingsHtml(releaseChecklistStatusLabel(item.status))}</b>
+              ${item.actionHtml || ''}
+            </div>
+            <strong>${settingsHtml(item.title)}</strong>
+            <p>${settingsHtml(item.detail)}</p>
+            ${item.meta ? `<span>${settingsHtml(item.meta)}</span>` : ''}
+            ${item.extraHtml || ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function releaseChecklistClientReady() {
+  try {
+    return typeof accountClient !== 'undefined' && !!accountClient;
+  } catch {
+    return false;
+  }
+}
+
+async function renderReleaseChecklist() {
+  const root = document.getElementById('set-release-checklist');
+  if (!root) return;
+  const seq = ++releaseChecklistSeq;
+  root.hidden = false;
+  root.innerHTML = releaseChecklistHtml(null, false, { loading: true });
+  let config = null;
+  try {
+    config = typeof accountLoadConfig === 'function'
+      ? await accountLoadConfig()
+      : { source: 'none', supabaseUrl: '', supabaseAnonKey: '' };
+  } catch {
+    config = { source: 'none', supabaseUrl: '', supabaseAnonKey: '' };
+  }
+  if (seq !== releaseChecklistSeq) return;
+  root.innerHTML = releaseChecklistHtml(config, releaseChecklistClientReady());
 }
 
 function autoPlanTermList(terms) {
@@ -461,6 +629,14 @@ function autoPlanOpenBrowseReplacement(button) {
 }
 
 document.addEventListener('click', (event) => {
+  const accountButton = event.target && event.target.closest ? event.target.closest('[data-open-account-config]') : null;
+  if (accountButton) {
+    event.preventDefault();
+    closeSettings();
+    if (typeof openAccountModal === 'function') openAccountModal();
+    else if (typeof toastInfo === 'function') toastInfo('Account tools are still loading.');
+    return;
+  }
   const button = event.target && event.target.closest ? event.target.closest('[data-auto-plan-browse-placeholder]') : null;
   if (!button) return;
   event.preventDefault();
@@ -819,6 +995,7 @@ function openSettings() {
   const status = document.getElementById('set-major-status');
   if (status) status.textContent = '';
   renderSettingsPriorCreditControls();
+  renderReleaseChecklist();
   document.getElementById('settings-modal').classList.add('open');
   bindProfileReviewUpdates();
   renderAutoPlanReview(document.getElementById('set-major')?.value);
@@ -852,6 +1029,7 @@ async function applyMajorFromSettings() {
     document.getElementById('set-eyebrow').value = s.eyebrow || '';
     document.getElementById('set-total-credits').value = s.totalCredits || 125;
     document.getElementById('set-goals').value = (s.goalCourses || []).join(', ');
+    renderReleaseChecklist();
   } catch (e) {
     status.style.color = 'var(--red)';
     status.textContent = 'Error: ' + e.message;

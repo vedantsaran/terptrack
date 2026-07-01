@@ -2346,6 +2346,169 @@ h1.hero-title em {
 }
 .account-status.ok { color: var(--green); }
 .account-status.warn { color: var(--red); }
+.release-checklist-shell {
+  margin: 0 0 14px;
+}
+.release-checklist {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cream) 76%, var(--paper));
+  padding: 12px;
+}
+.release-checklist.ok {
+  border-color: rgba(47,125,75,.28);
+}
+.release-checklist.warn {
+  border-color: rgba(201,151,0,.34);
+}
+.release-checklist-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.release-checklist-head > div {
+  min-width: 0;
+}
+.release-checklist-head strong {
+  display: block;
+  color: var(--ink);
+  font-family: 'Fraunces', serif;
+  font-size: .98rem;
+  line-height: 1.15;
+}
+.release-checklist-badge {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+.release-checklist-badge.ok {
+  border-color: rgba(47,125,75,.3);
+  color: var(--green);
+}
+.release-checklist-badge.warn {
+  border-color: rgba(201,151,0,.42);
+  color: var(--amber);
+}
+.release-checklist-loading {
+  display: block;
+  color: var(--slate);
+  font-size: .72rem;
+  line-height: 1.35;
+  margin-top: 6px;
+}
+.release-checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.release-check {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 9px;
+}
+.release-check.ok { border-left-color: var(--green); }
+.release-check.warn { border-left-color: var(--amber); }
+.release-check.missing { border-left-color: var(--red); }
+.release-check-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.release-check-top b {
+  border-radius: 999px;
+  background: rgba(46,92,139,.1);
+  color: var(--blue);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  letter-spacing: .05em;
+  padding: 3px 6px;
+  text-transform: uppercase;
+}
+.release-check.ok .release-check-top b {
+  background: rgba(46,107,63,.12);
+  color: var(--green);
+}
+.release-check.warn .release-check-top b {
+  background: rgba(245,158,11,.14);
+  color: var(--amber);
+}
+.release-check.missing .release-check-top b {
+  background: rgba(175,35,35,.10);
+  color: var(--red);
+}
+.release-check-top .btn {
+  min-height: 28px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+.release-check > strong,
+.release-check > p,
+.release-check > span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.release-check > strong {
+  color: var(--ink);
+  font-size: .78rem;
+  line-height: 1.2;
+}
+.release-check > p {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: .7rem;
+  line-height: 1.35;
+}
+.release-check > span {
+  margin-top: 6px;
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  line-height: 1.3;
+}
+.release-source-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.release-source-links a {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--blue);
+  font-size: .64rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 3px 7px;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
+}
+.release-source-links a:hover {
+  border-color: rgba(47,92,139,.34);
+  background: rgba(47,92,139,.07);
+}
 .auto-plan-review {
   margin-top: 10px;
   padding: 12px;
@@ -6430,6 +6593,17 @@ h1.hero-title em {
   }
   .account-friend-actions {
     justify-content: flex-start;
+  }
+  .release-checklist-head {
+    flex-direction: column;
+    gap: 7px;
+  }
+  .release-checklist-grid {
+    grid-template-columns: 1fr;
+  }
+  .release-check-top {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
   .auto-plan-review-head {
     flex-direction: column;

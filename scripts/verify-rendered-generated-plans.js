@@ -297,10 +297,13 @@ function cardSnapshotScript() {
     });
     const review = document.querySelector('#set-auto-plan-review');
     const reviewVisible = review && !review.hidden && review.offsetParent !== null;
+    const release = document.querySelector('#set-release-checklist');
+    const releaseVisible = release && !release.hidden && release.offsetParent !== null;
     const modal = document.querySelector('#settings-modal .modal, #settings-modal');
     return {
       cards,
       reviewText: review ? review.textContent.replace(/\\s+/g, ' ').trim() : '',
+      releaseText: release ? release.textContent.replace(/\\s+/g, ' ').trim() : '',
       statusText: document.querySelector('#set-major-status')?.textContent?.replace(/\\s+/g, ' ').trim() || '',
       scripts: Array.from(document.scripts).map(script => script.getAttribute('src')).filter(Boolean),
       styles: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link => link.getAttribute('href')),
@@ -309,6 +312,7 @@ function cardSnapshotScript() {
         body: document.body.scrollWidth > window.innerWidth + 1,
         modal: modal ? modal.scrollWidth > modal.clientWidth + 1 : false,
         review: reviewVisible ? review.scrollWidth > review.clientWidth + 1 : false,
+        release: releaseVisible ? release.scrollWidth > release.clientWidth + 1 : false,
       },
     };
   })()`;
@@ -406,14 +410,29 @@ async function runViewport(browser, url, viewport, selected, opts) {
     }
     await page.locator('#settings-btn').click({ timeout: opts.timeoutMs });
     await page.locator('#settings-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
+    await page.waitForFunction(() => {
+      const release = document.querySelector('#set-release-checklist');
+      const text = release ? release.textContent.replace(/\s+/g, ' ') : '';
+      return text.includes('Release Readiness')
+        && text.includes('Default release gate')
+        && text.includes('Cloud account setup')
+        && !text.includes('Checking cloud config');
+    }, null, { timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.styles.includes('styles.css?v=74'), `${viewport.label}: rendered app did not load styles.css?v=74`);
+    assert(initialSnapshot.styles.includes('styles.css?v=75'), `${viewport.label}: rendered app did not load styles.css?v=75`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=2'), `${viewport.label}: rendered app did not load js/majors.js?v=2`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=2'), `${viewport.label}: rendered app did not load js/planetterp.js?v=2`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=3'), `${viewport.label}: rendered app did not load js/api.js?v=3`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=22'), `${viewport.label}: rendered app did not load js/settings.js?v=22`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=23'), `${viewport.label}: rendered app did not load js/settings.js?v=23`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=9'), `${viewport.label}: rendered app did not load js/import.js?v=9`);
+    assert(initialSnapshot.releaseText.includes('3/4 launch checks ready'), `${viewport.label}: release checklist did not show 3/4 ready status`);
+    assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
+    assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
+    assert(initialSnapshot.releaseText.includes('Default release gate'), `${viewport.label}: release checklist missing release gate row`);
+    assert(initialSnapshot.releaseText.includes('Pass 95'), `${viewport.label}: release checklist missing Pass 95 snapshot`);
+    assert(initialSnapshot.releaseText.includes('Cloud account setup'), `${viewport.label}: release checklist missing cloud setup row`);
+    assert(initialSnapshot.releaseText.includes('SUPABASE_URL'), `${viewport.label}: release checklist missing Vercel/Supabase setup detail`);
     Object.entries(initialSnapshot.overflow || {}).forEach(([key, value]) => {
       assert(!value, `${viewport.label}: initial ${key} has horizontal overflow`);
     });
