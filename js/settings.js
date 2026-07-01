@@ -167,6 +167,14 @@ function autoPlanOfficialSourceLinksHtml(review, opts = {}) {
   const links = autoPlanOfficialSourceLinks(review, opts);
   if (!links.length) return '';
   const label = opts.label || 'Official sources';
+  const years = Array.from(new Set(links.map(link => link.year).filter(Boolean)));
+  const checked = Array.from(new Set(links.map(link => link.checkedAt).filter(Boolean)));
+  const meta = opts.showMeta === false || (!years.length && !checked.length)
+    ? ''
+    : [
+        years.length ? `Catalog year ${years.join(', ')}` : '',
+        checked.length ? `checked ${checked.join(', ')}` : '',
+      ].filter(Boolean).join(' · ');
   return `
     <div class="auto-plan-official-sources ${opts.compact ? 'compact' : ''}">
       <span>${settingsHtml(label)}</span>
@@ -175,6 +183,7 @@ function autoPlanOfficialSourceLinksHtml(review, opts = {}) {
           <a href="${settingsHtml(link.url)}" target="_blank" rel="noopener noreferrer">${settingsHtml(link.label || 'UMD source')}</a>
         `).join('')}
       </div>
+      ${meta ? `<small>${settingsHtml(meta)}</small>` : ''}
     </div>
   `;
 }
@@ -469,7 +478,7 @@ function autoPlanSourceSamplesHtml(review, opts = {}) {
   if (!live.length && !missing.length && !placeholderSamples.length) return '';
   return `
     <div class="auto-plan-source-samples">
-      ${autoPlanOfficialSourceLinksHtml(review, { includeGeneral: false, compact: true, label: 'Requirement source' })}
+      ${autoPlanOfficialSourceLinksHtml(review, { includeGeneral: false, compact: true, label: 'Requirement source', showMeta: false })}
       ${live.length ? `<span><strong>Live metadata</strong>${settingsHtml(live.join(', '))}</span>` : ''}
       ${missing.length ? `<span><strong>Template fallback</strong>${settingsHtml(missing.join(', '))}${metadata.missing > missing.length ? ` +${settingsHtml(metadata.missing - missing.length)} more` : ''}</span>` : ''}
       ${placeholderSamples.length ? `

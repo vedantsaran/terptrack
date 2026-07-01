@@ -4687,3 +4687,67 @@ Next pass candidates:
 - Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
 - Add a mobile rendered verifier for onboarding and Browse replacement flows, not just Settings-generated plans.
 - Add a release checklist panel in Settings that summarizes source links, live audit history, and account/cloud setup status.
+
+## 2026-06-30 Pass 91
+
+Focus: add catalog-year metadata to official source links and fix source-link wrapping caught by rendered verification.
+
+Planned changes:
+- Confirm the current UMD Undergraduate Catalog year before displaying it.
+- Carry catalog-year and checked-date metadata on official source links.
+- Show that metadata in the Settings generated-catalog freshness panel.
+- Keep the compact requirement-source row uncluttered.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Fetched UMD Undergraduate Catalog pages directly:
+  - `https://academiccatalog.umd.edu/undergraduate/`.
+  - `https://academiccatalog.umd.edu/undergraduate/programs/`.
+- Confirmed both pages expose the current catalog year as `2026-2027`.
+- Added source metadata in `js/majors.js`:
+  - `UMD_CATALOG_YEAR = '2026-2027'`.
+  - `UMD_CATALOG_CHECKED_AT = 'June 30, 2026'`.
+- `majorOfficialSources()` now attaches `year` and `checkedAt` to selected-major, program-index, and course-catalog links.
+- Updated Settings source-link rendering to show:
+  - `Catalog year 2026-2027`.
+  - `checked June 30, 2026`.
+- Kept the compact `Requirement source` row from duplicating the metadata line.
+- Fixed a real rendered UI overflow caught during verification:
+  - The normal official-source row now uses a two-column grid with a bounded link column.
+  - Link chips can break long labels safely.
+  - The metadata line spans the full row and aligns left on mobile.
+- Updated the rendered verifier to ignore hidden review overflow while still checking visible review overflow.
+- Bumped cache tags:
+  - `styles.css?v=74`.
+  - `js/majors.js?v=2`.
+  - `js/settings.js?v=22`.
+
+Verification:
+- Ran a direct catalog-year check against UMD Undergraduate Catalog pages and confirmed `2026-2027`.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan and planner fixtures.
+  - It asserted source-year metadata appears in freshness HTML.
+  - It asserted preview source objects carry `year: 2026-2027` and `checkedAt: June 30, 2026`.
+- Ran a Playwright DOM diagnostic after the first rendered failure.
+  - It found the overflowing child was `.auto-plan-official-sources` in the initial curated Settings review.
+  - The grid/link-wrap fix removed the overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It passed 12 rendered template viewport runs: 6 majors x 2 viewports.
+  - It confirmed `styles.css?v=74`, `js/majors.js?v=2`, and `js/settings.js?v=22` loaded.
+  - It confirmed `Catalog year 2026-2027` rendered in real Settings reviews.
+  - It kept the proxy-backed browser console clean.
+  - It found no checked horizontal overflow on desktop or mobile.
+- Ran `node scripts/verify-random-schedules.js --majors PHYS,ARTT,PLSC,KNES,ENAE,ENCE --keep-going --seed pass91-catalog-year`.
+  - Verified all six rendered targets against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+
+Findings for next pass:
+- Generated Settings has strong trust evidence now: live audit freshness, history, official source links, catalog year, and rendered desktop/mobile verification.
+- Onboarding and Browse replacement flows still need comparable mobile rendered verification.
+
+Next pass candidates:
+- Add a mobile rendered verifier for onboarding and Browse replacement flows, not just Settings-generated plans.
+- Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
+- Add a release checklist panel in Settings that summarizes source links, live audit history, and account/cloud setup status.
+- Add catalog-year targeting controls for students following an older catalog year.

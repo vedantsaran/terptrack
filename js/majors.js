@@ -26,6 +26,8 @@ const COLLEGES = {
 const UMD_CATALOG_ORIGIN = 'https://academiccatalog.umd.edu';
 const UMD_CATALOG_PROGRAMS_URL = `${UMD_CATALOG_ORIGIN}/undergraduate/programs/`;
 const UMD_COURSE_CATALOG_URL = `${UMD_CATALOG_ORIGIN}/undergraduate/approved-courses/`;
+const UMD_CATALOG_YEAR = '2026-2027';
+const UMD_CATALOG_CHECKED_AT = 'June 30, 2026';
 
 const MAJOR_CATALOG_SOURCES = Object.freeze({
   AAST: { label: 'African American and Africana Studies Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/african-american-africana-studies/african-american-africana-studies-major/' },
@@ -1087,12 +1089,14 @@ function majorOfficialSources(majorOrId, opts = {}) {
       label: source.label || 'UMD Catalog major',
       url: `${UMD_CATALOG_ORIGIN}${source.path}`,
       kind: 'major-catalog',
+      year: UMD_CATALOG_YEAR,
+      checkedAt: UMD_CATALOG_CHECKED_AT,
     });
   }
   if (opts.includeGeneral !== false) {
     links.push(
-      { label: 'UMD Catalog programs', url: UMD_CATALOG_PROGRAMS_URL, kind: 'catalog-index' },
-      { label: 'UMD course catalog', url: UMD_COURSE_CATALOG_URL, kind: 'course-catalog' },
+      { label: 'UMD Catalog programs', url: UMD_CATALOG_PROGRAMS_URL, kind: 'catalog-index', year: UMD_CATALOG_YEAR, checkedAt: UMD_CATALOG_CHECKED_AT },
+      { label: 'UMD course catalog', url: UMD_COURSE_CATALOG_URL, kind: 'course-catalog', year: UMD_CATALOG_YEAR, checkedAt: UMD_CATALOG_CHECKED_AT },
     );
   }
   const seen = new Set();

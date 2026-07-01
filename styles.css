@@ -2624,9 +2624,9 @@ h1.hero-title em {
   line-height: 1.25;
 }
 .auto-plan-official-sources {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: flex-start;
-  justify-content: space-between;
   gap: 10px;
   min-width: 0;
   margin-top: 9px;
@@ -2649,9 +2649,18 @@ h1.hero-title em {
   gap: 6px;
   min-width: 0;
 }
+.auto-plan-official-sources > small {
+  grid-column: 1 / -1;
+  color: var(--slate);
+  font-size: .62rem;
+  line-height: 1.25;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
 .auto-plan-official-sources a {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
   max-width: 100%;
   padding: 3px 7px;
   border: 1px solid var(--line);
@@ -2663,12 +2672,15 @@ h1.hero-title em {
   line-height: 1.2;
   text-decoration: none;
   overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
 }
 .auto-plan-official-sources a:hover {
   border-color: rgba(47,92,139,.34);
   background: rgba(47,92,139,.07);
 }
 .auto-plan-official-sources.compact {
+  display: flex;
   align-items: center;
   margin-top: 0;
   padding-top: 0;
@@ -2676,6 +2688,9 @@ h1.hero-title em {
 }
 .auto-plan-official-sources.compact > div {
   justify-content: flex-start;
+}
+.auto-plan-official-sources.compact > small {
+  display: none;
 }
 .auto-plan-audit-history {
   margin-top: 8px;
@@ -6439,6 +6454,9 @@ h1.hero-title em {
   }
   .auto-plan-official-sources > div {
     justify-content: flex-start;
+  }
+  .auto-plan-official-sources > small {
+    text-align: left;
   }
   .auto-plan-audit-history summary {
     align-items: flex-start;
