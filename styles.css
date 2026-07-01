@@ -4320,6 +4320,87 @@ h1.hero-title em {
   margin-top: 8px;
   padding-top: 8px;
 }
+.schedule-final-checklist {
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 10px;
+}
+.schedule-final-checklist.warn {
+  border-left-color: var(--amber);
+  background: color-mix(in srgb, var(--paper) 80%, var(--amber-soft));
+}
+.schedule-final-checklist.danger {
+  border-left-color: var(--red);
+  background: color-mix(in srgb, var(--paper) 82%, var(--red-soft));
+}
+.schedule-final-checklist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.schedule-final-checklist-head h4 {
+  margin: 0;
+  font-family: 'Fraunces', serif;
+}
+.schedule-final-checklist-head span,
+.schedule-final-check span {
+  display: block;
+  color: var(--slate);
+  font-size: .74rem;
+  line-height: 1.35;
+}
+.schedule-final-checklist-head strong {
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-final-checklist-score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.schedule-final-checklist-score strong {
+  font-size: 1rem;
+}
+.schedule-final-checklist-score span {
+  color: var(--slate);
+  font-size: .72rem;
+}
+.schedule-final-checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.schedule-final-check {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px;
+}
+.schedule-final-check.ok {
+  border-left: 4px solid var(--green);
+}
+.schedule-final-check.warn {
+  border-left: 4px solid var(--amber);
+}
+.schedule-final-check.danger {
+  border-left: 4px solid var(--red);
+}
+.schedule-final-check b {
+  display: block;
+  font-size: .78rem;
+  margin-bottom: 3px;
+}
 .schedule-seat-freshness {
   margin: 10px 0;
   border: 1px solid var(--line);
@@ -8200,6 +8281,13 @@ h1.hero-title em {
   .schedule-registration-appointment-head {
     flex-direction: column;
     gap: 4px;
+  }
+  .schedule-final-checklist-head {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .schedule-final-checklist-grid {
+    grid-template-columns: 1fr;
   }
   .schedule-seat-freshness-head {
     flex-direction: column;

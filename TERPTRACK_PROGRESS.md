@@ -7678,3 +7678,61 @@ Verification:
   - It randomly verified `ENFP`, `WMST`, `NFSC`, `MUSC`, `ENST`, and `ENMA` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 140
+
+Focus: add a final registration launch checklist that tells students whether the full schedule packet is actually ready before they open Testudo.
+
+Planned changes:
+- Summarize registration readiness, Testudo entry queue, seat freshness, backup sections, calendar export, and registration appointment in one final launch card.
+- Include the same checklist in schedule output text, registration-list exports, advisor packet HTML, and advisor text exports.
+- Keep no-course terms from falsely failing the Testudo queue check.
+- Verify the checklist in generated fixtures, rendered mobile workflows, release checks, and live PlanetTerp validation.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleFinalRegistrationChecklist()` in `js/schedule.js`.
+  - It reports `Ready for Testudo`, `Final review`, or `Fix before Testudo`.
+  - It counts ready launch checks out of 6 and carries individual levels for readiness, Testudo queue, seat freshness, backups, calendar, and appointment.
+  - It treats terms with no registration-ready courses as not needing Testudo queue entries.
+- Added checklist rendering and text export helpers.
+  - The Schedule output now shows a `Final Registration Checklist` card after Registration Readiness.
+  - Schedule text exports include final checklist rows.
+  - Registration-list text exports include the same final checklist before backup and readiness-map handoffs.
+  - Advisor packet HTML and advisor text exports include the checklist.
+- Added app CSS and standalone advisor CSS for the final checklist card, including mobile one-column stacking.
+- Bumped cache tags:
+  - `styles.css?v=106`.
+  - `js/schedule.js?v=60`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts the final checklist object, `1/6` launch score, backup warning, schedule text, registration-list text, advisor HTML, advisor text, and exported advisor document markup.
+  - The rendered mobile advisor packet workflow now waits for the final checklist, verifies `scheduleOutputCache.finalChecklist`, checks advisor exports, checks rendered output text, and includes the checklist in mobile no-overflow snapshots.
+  - Rendered workflow logs now name `final registration checklist` coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with final checklist coverage.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule ready backups, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with the final registration checklist, ready backup apply, calendar omission auto-fill, clear-picks undo, calendar omission review, partial-calendar warning toast, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js --live --live-seed=pass140-final-registration-checklist-live`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including final checklist coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with final checklist coverage.
+  - It live-verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp with every generated required course reporting a matching live title/credit pair.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass140-final-registration-checklist-random-live`.
+  - It randomly verified `AMST`, `STAT`, `CINE`, `ACCOUNTING`, `ENMA`, and `ARTT` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
