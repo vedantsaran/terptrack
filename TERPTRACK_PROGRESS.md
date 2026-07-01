@@ -4,6 +4,17 @@ Goal name: TerpTrack Definitive UMD Planner
 
 This file tracks each implementation pass toward making TerpTrack a polished, individualized UMD degree, course-finding, GenEd, recommendation, automatic planning, class timing, and weekly scheduling app.
 
+## Long-Term End Goals
+
+- Real four-year schedules for every supported UMD major, progressing from freshman intro courses through senior 400-level work.
+- Requirement-group correctness for every generated major, with complete core, supporting, upper-level, GenEd, elective, and credit-target tracking.
+- Live-course grounding: generated required courses must match PlanetTerp title/credit data and rendered previews must recover cleanly when any live source is slow.
+- Posted-section scheduling: real class meetings, seats, waitlists, conflicts, timing preferences, registration readiness, Testudo handoff, calendar export, and advisor packet coverage.
+- Individualization: onboarding, interests, preferred departments, career goals, prior credit, saved searches, recommendations, and smart class replacement should shape plans without hiding requirements.
+- Accounts and collaboration: local-first profiles, Vercel/Supabase readiness, friend invites, shared plans, shared free time, meeting planning, and clear setup checks.
+- Beautiful simple UI: mobile-first workflows, no accidental overflow, dense but readable operational screens, and consistent cache-verified assets.
+- Release discipline: every pass updates this file, runs focused tests plus full release checks, runs random live PlanetTerp validation, keeps `README.md` untouched, commits, and pushes `main`.
+
 ## 2026-06-29 Pass 1
 
 Focus: turn the existing degree tracker into a fuller scheduling app by adding live section times, weekly calendar planning, conflict detection, and persisted per-semester section choices.
@@ -6780,5 +6791,68 @@ Verification:
   - It skipped live PlanetTerp verification with the expected opt-in message.
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass124-seat-refresh-action-live`.
   - It randomly verified `SOCY`, `EDUC`, `NEUR`, `ENGL`, `CINE`, and `THET` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 125
+
+Focus: make friend shared plans actionable for real student coordination and harden live PlanetTerp metadata fetches.
+
+Planned changes:
+- Turn existing friend-plan shared free windows into ranked meeting suggestions.
+- Add a copyable meeting note so students can coordinate with friends outside TerpTrack.
+- Keep the account modal compact and mobile-safe.
+- Add a bounded PlanetTerp request timeout so rendered generated-plan previews cannot hang at partial metadata counts.
+- Add explicit long-term end goals to this progress log.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `accountRecommendedMeetingWindows()` and meeting-slot scoring in `js/account.js`.
+  - Shared free windows now retain duration and campus-aligned day metadata.
+  - Suggested slots prefer practical mid-day windows and days where both students already have picked classes.
+- Added `accountFriendMeetingPlanHtml()` inside friend-plan comparisons.
+  - It shows a best suggested slot, backup slots, and a `Copy meeting note` action.
+  - Empty states still explain when picked sections are needed.
+- Added `accountFriendMeetingPlanText()` and `accountCopyFriendMeetingNote()`.
+  - The note includes the friend plan, best shared slot, backups, and overlap warning.
+  - Clipboard failures degrade to a visible ready-to-copy account status.
+- Added compact account modal styling for the meeting planner, including mobile stacking.
+- Added `planetTerpFetchWithTimeout()` in `js/planetterp.js`.
+  - PlanetTerp course metadata requests now abort after a bounded timeout and continue through the existing retry path.
+  - Generated-plan previews can finish from UMD metadata instead of stalling forever when a PlanetTerp request hangs.
+- Bumped cache tags:
+  - `styles.css?v=95`.
+  - `js/planetterp.js?v=3`.
+  - `js/account.js?v=12`.
+- Updated rendered verifier cache assertions for the new CSS, PlanetTerp, and account script tags.
+- Added a `Long-Term End Goals` section near the top of this file.
+
+Verification:
+- Ran `node --check js/account.js`.
+- Ran `node --check js/planetterp.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `ACCOUNT-FRIENDS` fixture with ranked meeting suggestions.
+  - It verified the campus-aligned best slot `Mon 12:00pm-1:15pm`, the meeting planner UI, and the copy-note text.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account setup, recommendations, Browse, audit, onboarding, prior-credit, schedule timing, registration readiness, and seat-risk tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with friend invite, friend-plan meeting planner, copy-note status, and no overflow.
+  - It passed mobile advisor packet workflow with registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the previously flaky ARTT mobile rendered preview at `12/12 live course records`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including friend meeting planner coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass125-friend-meeting-planner-live`.
+  - It randomly verified `SOCY`, `PHSC`, `ACCOUNTING`, `AAST`, `HESP`, and `EDUC` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

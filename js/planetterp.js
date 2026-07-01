@@ -23,6 +23,32 @@ function ptCachePut(code, value) {
   ptCacheSave(cache);
 }
 
+async function planetTerpFetchWithTimeout(url, timeoutMs = 6500) {
+  if (typeof AbortController === 'undefined') {
+    let timer = null;
+    try {
+      return await Promise.race([
+        fetch(url),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('PlanetTerp request timed out')), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    if (error && error.name === 'AbortError') throw new Error('PlanetTerp request timed out');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function planetTerpFetchCourse(code) {
   const key = normalizeCode(code);
   const cached = ptCacheGet(key);
@@ -31,7 +57,7 @@ async function planetTerpFetchCourse(code) {
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const resp = await fetch(url);
+      const resp = await planetTerpFetchWithTimeout(url);
       if (!resp.ok) {
         let msg = `HTTP ${resp.status}`;
         try { const body = await resp.json(); if (body && body.error) msg = body.error; } catch {}

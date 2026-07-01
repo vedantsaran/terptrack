@@ -2416,6 +2416,70 @@ h1.hero-title em {
   margin-bottom: 2px;
   text-transform: uppercase;
 }
+.account-meeting-plan {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 8px;
+}
+.account-meeting-plan.empty {
+  border-style: dashed;
+}
+.account-meeting-plan p {
+  color: var(--slate);
+  font-size: .7rem;
+  line-height: 1.35;
+  margin: 0;
+}
+.account-meeting-head {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+.account-meeting-head strong {
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .63rem;
+  text-transform: uppercase;
+}
+.account-meeting-head span {
+  color: var(--slate);
+  font-size: .64rem;
+  text-align: right;
+}
+.account-meeting-best {
+  display: grid;
+  gap: 2px;
+}
+.account-meeting-best b {
+  color: var(--maroon);
+  font-size: .8rem;
+}
+.account-meeting-best span {
+  color: var(--slate);
+  font-size: .68rem;
+}
+.account-meeting-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.account-meeting-options span {
+  border: 1px solid rgba(46,107,63,.25);
+  border-radius: 999px;
+  background: rgba(46,107,63,.08);
+  color: var(--green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .61rem;
+  padding: 3px 6px;
+}
+.account-meeting-copy {
+  justify-self: start;
+}
 .account-friend-actions {
   display: flex;
   flex-wrap: wrap;
@@ -7387,6 +7451,14 @@ h1.hero-title em {
   .account-friend-row {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+  .account-meeting-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .account-meeting-head span {
+    text-align: left;
   }
   .account-friend-actions {
     justify-content: flex-start;

@@ -923,6 +923,7 @@ function accountSharedFreeWindows(friendItems, currentItems, options = {}) {
   const startDay = options.start || 8 * 60;
   const endDay = options.end || 20 * 60;
   const minDuration = options.minDuration || 60;
+  const limit = Number.isFinite(options.limit) ? Math.max(0, Math.floor(options.limit)) : 4;
   const days = typeof SCHEDULE_DAY_DEFS !== 'undefined'
     ? SCHEDULE_DAY_DEFS
     : [
@@ -933,14 +934,20 @@ function accountSharedFreeWindows(friendItems, currentItems, options = {}) {
       { key: 'F', label: 'Fri' },
     ];
   const byDay = Object.fromEntries(days.map(day => [day.key, []]));
-  [...friendItems, ...currentItems].forEach(item => {
-    sectionBlocks(item.section, item.course).forEach(block => {
-      if (!byDay[block.day]) return;
-      const start = Math.max(startDay, block.start);
-      const end = Math.min(endDay, block.end);
-      if (end > start) byDay[block.day].push({ start, end });
+  const daySources = Object.fromEntries(days.map(day => [day.key, { friend: 0, current: 0 }]));
+  const collectBlocks = (items, source) => {
+    (items || []).forEach(item => {
+      sectionBlocks(item.section, item.course).forEach(block => {
+        if (!byDay[block.day]) return;
+        const start = Math.max(startDay, block.start);
+        const end = Math.min(endDay, block.end);
+        if (end > start) byDay[block.day].push({ start, end });
+        if (daySources[block.day]) daySources[block.day][source] += 1;
+      });
     });
-  });
+  };
+  collectBlocks(friendItems, 'friend');
+  collectBlocks(currentItems, 'current');
   const windows = [];
   days.forEach(day => {
     const blocks = (byDay[day.key] || []).sort((a, b) => a.start - b.start || a.end - b.end);
@@ -953,18 +960,89 @@ function accountSharedFreeWindows(friendItems, currentItems, options = {}) {
     let cursor = startDay;
     merged.forEach(block => {
       if (block.start - cursor >= minDuration) {
-        windows.push({ day: day.key, label: day.label, start: cursor, end: block.start });
+        const sources = daySources[day.key] || {};
+        windows.push({ day: day.key, label: day.label, start: cursor, end: block.start, campusAligned: Boolean(sources.friend && sources.current) });
       }
       cursor = Math.max(cursor, block.end);
     });
     if (endDay - cursor >= minDuration) {
-      windows.push({ day: day.key, label: day.label, start: cursor, end: endDay });
+      const sources = daySources[day.key] || {};
+      windows.push({ day: day.key, label: day.label, start: cursor, end: endDay, campusAligned: Boolean(sources.friend && sources.current) });
     }
   });
-  return windows.slice(0, 4).map(window => ({
+  return (limit ? windows.slice(0, limit) : windows).map(window => ({
     ...window,
+    duration: window.end - window.start,
     text: `${window.label} ${formatMeetingTime(window.start)}-${formatMeetingTime(window.end)}`,
   }));
+}
+
+function accountMeetingDurationText(minutes) {
+  const total = Math.max(0, Math.round(Number(minutes) || 0));
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (hours && mins) return `${hours}h ${mins}m`;
+  if (hours) return `${hours}h`;
+  return `${mins}m`;
+}
+
+function accountClampMeetingTime(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function accountSuggestedMeetingSlot(window, options = {}) {
+  if (!window || typeof formatMeetingTime !== 'function') return null;
+  const available = Math.max(0, window.end - window.start);
+  if (available < 45) return null;
+  const preferredDuration = options.duration || 75;
+  const duration = Math.min(preferredDuration, available);
+  const latestStart = Math.max(window.start, window.end - duration);
+  const preferredStarts = options.preferredStarts || [12 * 60, 13 * 60 + 30, 10 * 60, 15 * 60 + 30, 17 * 60];
+  let bestStart = window.start;
+  let bestDistance = Infinity;
+  preferredStarts.forEach(preferred => {
+    const clamped = accountClampMeetingTime(preferred, window.start, latestStart);
+    const snapped = accountClampMeetingTime(Math.round(clamped / 15) * 15, window.start, latestStart);
+    const distance = Math.abs(snapped - preferred);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestStart = snapped;
+    }
+  });
+  const suggestedEnd = bestStart + duration;
+  return {
+    ...window,
+    duration,
+    availableDuration: available,
+    suggestedStart: bestStart,
+    suggestedEnd,
+    suggestedText: `${window.label} ${formatMeetingTime(bestStart)}-${formatMeetingTime(suggestedEnd)}`,
+    availableText: window.text || `${window.label} ${formatMeetingTime(window.start)}-${formatMeetingTime(window.end)}`,
+    durationText: accountMeetingDurationText(duration),
+    availableDurationText: accountMeetingDurationText(available),
+  };
+}
+
+function accountMeetingSlotScore(slot) {
+  if (!slot) return -Infinity;
+  const center = (slot.suggestedStart + slot.suggestedEnd) / 2;
+  const centerFit = 4 - Math.abs(center - 13 * 60) / 120;
+  const durationFit = Math.min(slot.duration, 90) / 30;
+  const edgePenalty = slot.suggestedStart < 9 * 60 || slot.suggestedEnd > 18 * 60 ? 1.5 : 0;
+  const campusFit = slot.campusAligned ? 2 : -1;
+  return centerFit + durationFit + campusFit - edgePenalty;
+}
+
+function accountRecommendedMeetingWindows(windows, limit = 3) {
+  return (windows || [])
+    .map(window => accountSuggestedMeetingSlot(window))
+    .filter(Boolean)
+    .sort((a, b) => (
+      accountMeetingSlotScore(b) - accountMeetingSlotScore(a)
+      || b.availableDuration - a.availableDuration
+      || a.start - b.start
+    ))
+    .slice(0, limit);
 }
 
 function accountFriendPlanSummary(plan) {
@@ -975,7 +1053,8 @@ function accountFriendPlanSummary(plan) {
   const friendItems = accountSelectedSectionItems(payload.selectedSections || {});
   const currentItems = accountSelectedSectionItems(current.selectedSections || {});
   const overlaps = accountMeetingOverlapSummary(friendItems, currentItems);
-  const sharedFreeWindows = accountSharedFreeWindows(friendItems, currentItems);
+  const sharedFreeWindows = accountSharedFreeWindows(friendItems, currentItems, { limit: 8 });
+  const recommendedMeetingWindows = accountRecommendedMeetingWindows(sharedFreeWindows);
   return {
     majorName: payload.settings?.programName || payload.settings?.majorName || payload.majorId || 'Shared plan',
     courseCount: friendCodes.length,
@@ -984,10 +1063,62 @@ function accountFriendPlanSummary(plan) {
     meetingOverlapCount: overlaps.count,
     meetingOverlapSamples: overlaps.samples,
     sharedFreeWindows,
+    recommendedMeetingWindows,
   };
 }
 
-function accountFriendPlanSummaryHtml(summary) {
+function accountFriendMeetingPlanText(plan, summary) {
+  const owner = accountProfileLabel(plan?.owner_id, plan?.owner_id ? `friend ${accountShortId(plan.owner_id)}` : 'friend');
+  const title = plan?.name || 'Friend plan';
+  const picks = summary?.recommendedMeetingWindows || [];
+  const conflict = summary?.meetingOverlapCount
+    ? `${summary.meetingOverlapCount} picked-section overlap${summary.meetingOverlapCount === 1 ? '' : 's'} to review first.`
+    : 'No picked-section overlaps.';
+  if (!picks.length) {
+    return `TerpTrack meeting plan for ${title} (${owner}): pick sections in both plans to find shared meeting windows. ${conflict}`;
+  }
+  const [best, ...backups] = picks;
+  const backupText = backups.length ? ` Backups: ${backups.map(slot => slot.suggestedText).join('; ')}.` : '';
+  return `TerpTrack meeting plan for ${title} (${owner}): best shared slot ${best.suggestedText} (${best.durationText}, inside ${best.availableText}).${backupText} ${conflict}`;
+}
+
+function accountFriendMeetingPlanHtml(summary, plan = null) {
+  const picks = summary.recommendedMeetingWindows || [];
+  if (!picks.length) {
+    const empty = summary.selectedCount
+      ? 'No meeting slot is available from picked sections. Try different sections or expand the day window.'
+      : 'Pick sections in both plans to generate meeting suggestions.';
+    return `
+      <div class="account-meeting-plan empty">
+        <div class="account-meeting-head">
+          <strong>Meeting planner</strong>
+          <span>Needs picked sections</span>
+        </div>
+        <p>${accountEscape(empty)}</p>
+      </div>
+    `;
+  }
+  const best = picks[0];
+  const planId = String(plan?.id || '');
+  return `
+    <div class="account-meeting-plan">
+      <div class="account-meeting-head">
+        <strong>Meeting planner</strong>
+        <span>${accountEscape(summary.meetingOverlapCount ? 'Review overlaps' : 'Ready to coordinate')}</span>
+      </div>
+      <div class="account-meeting-best">
+        <b>${accountEscape(best.suggestedText)}</b>
+        <span>${accountEscape(`${best.durationText} inside ${best.availableText}`)}</span>
+      </div>
+      <div class="account-meeting-options" aria-label="Backup meeting windows">
+        ${picks.slice(1).map(slot => `<span>${accountEscape(slot.suggestedText)}</span>`).join('') || '<span>No backup needed</span>'}
+      </div>
+      ${planId ? `<button class="btn small account-meeting-copy" type="button" onclick="accountCopyFriendMeetingNote('${accountEscape(planId)}')">Copy meeting note</button>` : ''}
+    </div>
+  `;
+}
+
+function accountFriendPlanSummaryHtml(summary, plan = null) {
   const overlapText = summary.meetingOverlapSamples.length
     ? summary.meetingOverlapSamples.join(' · ')
     : (summary.selectedCount ? 'No picked-section overlaps with your current plan.' : 'Friend plan has no picked sections yet.');
@@ -1003,7 +1134,26 @@ function accountFriendPlanSummaryHtml(summary) {
     </div>
     <em class="account-friend-overlaps">${accountEscape(overlapText)}</em>
     <em class="account-friend-free"><strong>Shared free windows</strong>${accountEscape(freeText)}</em>
+    ${accountFriendMeetingPlanHtml(summary, plan)}
   `;
+}
+
+async function accountCopyFriendMeetingNote(id) {
+  const plan = accountFriendPlans.find(item => String(item.id) === String(id));
+  if (!plan) {
+    accountSetStatus('Friend plan not found.', 'warn');
+    return;
+  }
+  const summary = accountFriendPlanSummary(plan);
+  const note = accountFriendMeetingPlanText(plan, summary);
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(note);
+    const first = summary.recommendedMeetingWindows?.[0]?.suggestedText;
+    accountSetStatus(first ? `Meeting note copied. Best slot: ${first}.` : 'Meeting note copied.', 'ok');
+  } catch {
+    accountSetStatus(`Meeting note ready: ${note}`, 'ok');
+  }
 }
 
 function accountFriendStatusText(invite) {
@@ -1060,7 +1210,7 @@ function accountFriendPlansHtml() {
               <strong>${accountEscape(plan.name || 'Friend plan')}</strong>
               <span>${accountEscape(owner)} · ${accountEscape(summary.majorName)}</span>
               <small>Updated ${accountEscape(accountTime(plan.updated_at))}</small>
-              ${accountFriendPlanSummaryHtml(summary)}
+              ${accountFriendPlanSummaryHtml(summary, plan)}
             </div>
             <div class="account-friend-actions">
               <button class="btn small" type="button" onclick="accountOpenFriendPlan('${accountEscape(plan.id)}')">Open</button>

@@ -294,6 +294,7 @@ function testAccountAndShareState(context) {
     }];
     const friendSummary = accountFriendPlanSummary(accountFriendPlans[0]);
     const friendPlansHtml = accountFriendPlansHtml();
+    const meetingNote = accountFriendMeetingPlanText(accountFriendPlans[0], friendSummary);
     const applied = applySharedPlanData({
       v: 1,
       courses: { 'MATH 140': { status: 'passed' } },
@@ -337,7 +338,13 @@ function testAccountAndShareState(context) {
       advisorImportUrl,
       friendSummary,
       friendPlansHtml,
+      meetingNote,
       sharedFreeWindows: friendSummary.sharedFreeWindows.map(window => window.text),
+      recommendedMeetingWindows: friendSummary.recommendedMeetingWindows.map(window => ({
+        suggestedText: window.suggestedText,
+        availableText: window.availableText,
+        campusAligned: window.campusAligned,
+      })),
     })
   `, context));
 
@@ -365,11 +372,17 @@ function testAccountAndShareState(context) {
   assert(result.friendSummary.meetingOverlapCount === 1, 'friend compare: should count timed overlaps with current plan');
   assert(result.friendSummary.sharedFreeWindows.length >= 3, 'friend compare: should compute shared free windows');
   assert(result.sharedFreeWindows[0] === 'Mon 8:00am-10:00am', 'friend compare: first shared free window should precede both Monday meetings');
+  assert(result.friendSummary.recommendedMeetingWindows.length >= 3, 'friend meeting planner: should rank suggested meeting slots');
+  assert(result.recommendedMeetingWindows[0].suggestedText === 'Mon 12:00pm-1:15pm', 'friend meeting planner: should prefer a campus-aligned Monday lunch slot');
+  assert(result.recommendedMeetingWindows[0].campusAligned, 'friend meeting planner: best slot should be marked campus aligned');
   assert(/Pal STEM plan/.test(result.friendPlansHtml) && /Mathematics/.test(result.friendPlansHtml), 'friend compare: should render friend plan identity');
   assert(/2<\/strong> courses/.test(result.friendPlansHtml) && /2<\/strong> picked sections/.test(result.friendPlansHtml), 'friend compare: should render course and section counts');
   assert(/1<\/strong> shared courses/.test(result.friendPlansHtml) && /1<\/strong> meeting overlaps/.test(result.friendPlansHtml), 'friend compare: should render shared and overlap counts');
   assert(/MATH 140 with your MATH 140 M 10:30am-10:50am/.test(result.friendPlansHtml), 'friend compare: should render overlap sample');
   assert(/Shared free windows/.test(result.friendPlansHtml) && /Mon 8:00am-10:00am/.test(result.friendPlansHtml), 'friend compare: should render shared free windows');
+  assert(/Meeting planner/.test(result.friendPlansHtml) && /Mon 12:00pm-1:15pm/.test(result.friendPlansHtml), 'friend meeting planner: should render best meeting slot');
+  assert(/Copy meeting note/.test(result.friendPlansHtml), 'friend meeting planner: should render copy note action');
+  assert(/best shared slot Mon 12:00pm-1:15pm/.test(result.meetingNote) && /1 picked-section overlap/.test(result.meetingNote), 'friend meeting planner: should generate a concrete copy note');
 
   return {
     id: 'ACCOUNT-FRIENDS',
