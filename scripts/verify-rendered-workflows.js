@@ -176,8 +176,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=99'), 'workflow app did not load styles.css?v=99');
-  assert(snapshot.scripts.includes('js/schedule.js?v=52'), 'workflow app did not load js/schedule.js?v=52');
+  assert(snapshot.styles.includes('styles.css?v=100'), 'workflow app did not load styles.css?v=100');
+  assert(snapshot.scripts.includes('js/schedule.js?v=53'), 'workflow app did not load js/schedule.js?v=53');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -744,6 +744,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Download calendar')
       && text.includes('Download advisor packet')
       && text.includes('Registration Readiness')
+      && text.includes('Plan Readiness Map')
+      && text.includes('0/2 terms registration-ready')
       && text.includes('Registration Appointment')
       && text.includes('Aug 25, 2099 at 9:30am')
       && text.includes('Seat Data Freshness')
@@ -880,6 +882,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Registration appointment: Scheduled - Aug 25, 2099 at 9:30am/.test(result.registrationText), 'advisor packet: registration export should include appointment summary');
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.registrationText), 'advisor packet: registration export should include seat freshness');
   assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.registrationText), 'advisor packet: registration export should include seat-refresh action guidance');
+  assert(/Plan readiness map:[\s\S]*Fall 2026 \(Fall 2026\): Needs sections[\s\S]*Spring 2027 \(Spring 2027\): Needs sections/.test(result.registrationText), 'advisor packet: registration export should include plan-wide readiness rows');
   assert(/Testudo entry queue:[\s\S]*1\. MATH 140 0201 \| Section ID: MATH140-0201/.test(result.registrationText), 'advisor packet: registration export should include Testudo queue');
   assert(result.registrationBackupPlan[0]?.backupId === 'MATH140-0301', 'advisor packet: output cache should include backup section ID');
   assert(/Backup ID: MATH140-0301/.test(result.registrationText), 'advisor packet: registration export should include backup ID in Testudo queue');
@@ -892,6 +895,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/DTSTART;TZID=America\/New_York:20260902T090000/.test(result.calendarText), 'advisor packet: calendar export should include configured Fall 2026 class dates');
   assert(/Calendar range set in Terp Track: 2026-09-02 to 2026-12-14/.test(result.calendarText), 'advisor packet: calendar export should include custom date-range note');
   assert(/schedule-advisor-catalog-warning/.test(result.advisorDocument), 'advisor packet: exported HTML should include catalog warning markup');
+  assert(/schedule-advisor-readiness-map/.test(result.advisorDocument) && /Plan Readiness Map/.test(result.advisorDocument), 'advisor packet: exported HTML should include plan-wide readiness map');
   assert(/Registration Blockers/.test(result.advisorDocument), 'advisor packet: exported HTML should include blocker view heading');
   assert(/Registration Readiness/.test(result.advisorDocument) && /Fix before registration/.test(result.advisorDocument), 'advisor packet: exported HTML should include registration readiness gates');
   assert(/Registration Appointment/.test(result.advisorDocument) && /Aug 25, 2099 at 9:30am/.test(result.advisorDocument), 'advisor packet: exported HTML should include appointment');
@@ -904,6 +908,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Quick actions/.test(result.advisorDocument) && /data-readiness-action="auto-pick"/.test(result.advisorDocument), 'advisor packet: exported HTML should include readiness quick actions');
   assert(/MATH 140 0201: 2 seats open/.test(result.advisorDocument) && /backup section/.test(result.advisorDocument), 'advisor packet: exported HTML should include low-seat backup warning');
   assert(/Catalog-year verification/.test(result.advisorText), 'advisor packet: exported text should include catalog-year verification');
+  assert(/Plan readiness map:[\s\S]*Summary: 0\/2 terms registration-ready/.test(result.advisorText), 'advisor packet: exported text should include plan-wide readiness summary');
   assert(/Registration readiness/.test(result.advisorText) && /Sections: 2\/3/.test(result.advisorText), 'advisor packet: exported text should include registration readiness gates');
   assert(/Registration appointment:[\s\S]*Use the registration list to submit exact section IDs/.test(result.advisorText), 'advisor packet: exported text should include appointment checklist');
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.advisorText), 'advisor packet: exported text should include seat freshness');

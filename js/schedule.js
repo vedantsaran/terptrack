@@ -1748,6 +1748,61 @@ function renderScheduleReadinessMap(activeSemId, activeTerm, activeCourses, acti
   `;
 }
 
+function scheduleAdvisorReadinessMapSummary(rows) {
+  const activeRows = (rows || []).filter(row => row && row.courses && row.courses.length);
+  const ready = activeRows.filter(row => row.readiness.level === 'ok').length;
+  const danger = activeRows.filter(row => row.readiness.level === 'danger').length;
+  const warn = activeRows.filter(row => row.readiness.level === 'warn').length;
+  const label = danger ? `${danger} fix` : warn ? `${warn} review` : 'Ready';
+  return { rows: activeRows, ready, danger, warn, label };
+}
+
+function scheduleAdvisorReadinessMapHtml(rows) {
+  const summary = scheduleAdvisorReadinessMapSummary(rows);
+  if (!summary.rows.length) return '';
+  return `
+    <section class="schedule-advisor-readiness-map">
+      <div class="schedule-advisor-readiness-map-head">
+        <div>
+          <h4>Plan Readiness Map</h4>
+          <span>${scheduleEscape(`${summary.ready}/${summary.rows.length} terms registration-ready across the plan.`)}</span>
+        </div>
+        <strong>${scheduleEscape(summary.label)}</strong>
+      </div>
+      <div class="schedule-advisor-readiness-map-list">
+        ${summary.rows.map(row => `
+          <div class="schedule-advisor-readiness-row ${scheduleEscape(row.readiness.level)}">
+            <div>
+              <strong>${scheduleEscape(row.sem.name || row.sem.id)}</strong>
+              <span>${scheduleEscape(scheduleTermLabel(row.term))}</span>
+            </div>
+            <div>
+              <b>${scheduleEscape(row.status.label)}</b>
+              <span>${scheduleEscape(row.status.detail)}</span>
+            </div>
+            <em>${row.selectedItems.length}/${row.courses.length} picked · ${row.loadedCount}/${row.courses.length} loaded · ${row.postedCount} posted sections</em>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function scheduleAdvisorReadinessMapText(rows) {
+  const summary = scheduleAdvisorReadinessMapSummary(rows);
+  if (!summary.rows.length) return [];
+  const lines = [
+    '',
+    'Plan readiness map:',
+    `- Summary: ${summary.ready}/${summary.rows.length} terms registration-ready; ${summary.danger} fix; ${summary.warn} review.`,
+  ];
+  summary.rows.forEach(row => {
+    lines.push(`- ${row.sem.name || row.sem.id} (${scheduleTermLabel(row.term)}): ${row.status.label}; ${row.selectedItems.length}/${row.courses.length} picked; ${row.loadedCount}/${row.courses.length} loaded; ${row.postedCount} posted sections.`);
+    lines.push(`  ${row.status.detail}`);
+  });
+  return lines;
+}
+
 function renderScheduleWarnings(warnings) {
   const root = document.getElementById('schedule-warnings');
   if (!root) return;
@@ -3547,7 +3602,7 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
   return { html, totalCourses, shownCourses, totalCredits, shownCredits };
 }
 
-function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null) {
+function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = []) {
   const stats = scheduleAdvisorStats();
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
@@ -3586,6 +3641,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
+  lines.push(...scheduleAdvisorReadinessMapText(readinessRows));
   lines.push(...scheduleAdvisorCatalogYearText());
   if (outputOptions.auditIssues) lines.push(...scheduleAdvisorAuditSummaryText(auditIssues));
   if (outputOptions.auditIssues && auditIssues.length) lines.push(...scheduleAdvisorLiveLinkNoticeText());
@@ -3631,7 +3687,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-print-meta,.schedule-advisor-metrics,.schedule-advisor-flags{display:flex;flex-wrap:wrap;gap:6px}
     .schedule-print-meta span,.schedule-advisor-metrics span,.schedule-advisor-flags span{border:1px solid #d8cec0;border-radius:999px;background:#fff;padding:3px 8px;font-size:12px}
     .schedule-print-prefs,.schedule-advisor-note{color:#5d5962;font-size:13px}
-    .schedule-advisor-view-note,.schedule-advisor-catalog-warning{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:9px 10px;color:#5d5962;font-size:12px;margin:10px 0}
+    .schedule-advisor-view-note,.schedule-advisor-catalog-warning,.schedule-advisor-readiness-map{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:9px 10px;color:#5d5962;font-size:12px;margin:10px 0}
     .schedule-advisor-catalog-warning{border-color:#f1c45c;background:#fff7dc;color:#241f1f}
     .schedule-advisor-catalog-warning strong{display:block;color:#8b0000}
     .schedule-advisor-catalog-warning p{margin:4px 0;color:#5d5962;line-height:1.4}
@@ -3640,6 +3696,17 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-live-note strong{display:block;color:#2e5c8b;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
     .schedule-advisor-live-note p{margin:3px 0 0;color:#5d5962;line-height:1.4}
     .schedule-advisor-import-link{display:inline-flex;margin-top:7px;border:1px solid #2e5c8b;border-radius:999px;background:#2e5c8b;color:#fff;font-size:11px;font-weight:700;padding:5px 9px;text-decoration:none}
+    .schedule-advisor-readiness-map-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-advisor-readiness-map-head h4{margin:0;color:#241f1f}
+    .schedule-advisor-readiness-map-head span{display:block;color:#5d5962;font-size:12px}
+    .schedule-advisor-readiness-map-head strong{font-size:12px;text-transform:uppercase;color:#8b0000}
+    .schedule-advisor-readiness-map-list{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-advisor-readiness-row{border:1px solid #d8cec0;border-left:4px solid #7b8b55;border-radius:8px;background:#fbf7ef;padding:7px}
+    .schedule-advisor-readiness-row.warn{border-left-color:#c99700;background:#fffaf0}
+    .schedule-advisor-readiness-row.danger{border-left-color:#8b0000;background:#fff5f3}
+    .schedule-advisor-readiness-row strong,.schedule-advisor-readiness-row b,.schedule-advisor-readiness-row span,.schedule-advisor-readiness-row em{display:block}
+    .schedule-advisor-readiness-row strong,.schedule-advisor-readiness-row b{color:#241f1f}
+    .schedule-advisor-readiness-row span,.schedule-advisor-readiness-row em{color:#5d5962;font-size:12px;font-style:normal;line-height:1.35}
     .schedule-advisor-diagnostics,.schedule-advisor-audit{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-advisor-diagnostics-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-advisor-diagnostics-head h4{margin:0}
@@ -3774,12 +3841,12 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-seat-freshness-list{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-seat-freshness-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-advisor-readiness-map-list,.schedule-seat-freshness-list{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-seat-freshness-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head,.schedule-advisor-readiness-map-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = []) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
@@ -3835,6 +3902,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         ${outputOptions.unscheduled ? (unscheduled.length ? `<span>${unscheduled.length} unscheduled course${unscheduled.length === 1 ? '' : 's'}</span>` : '<span>All current-term courses scheduled</span>') : ''}
       </div>
       ${scheduleRegistrationReadinessHtml(readiness)}
+      ${scheduleAdvisorReadinessMapHtml(readinessRows)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
       ${renderScheduleSeatFreshnessHtml(freshness)}
       ${renderScheduleRegistrationHandoffHtml(registrationHandoff)}
@@ -3877,7 +3945,7 @@ ${advisorHtml}
 </html>`;
 }
 
-function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null) {
+function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = []) {
   const outputOptions = normalizeScheduleOutputOptions(options);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
@@ -3898,6 +3966,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   lines.push(`Timing fit: ${timing.score}/100 - ${timing.label}`);
   timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
   lines.push(...scheduleRegistrationReadinessText(readiness));
+  lines.push(...scheduleAdvisorReadinessMapText(readinessRows));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
   lines.push(...scheduleSeatFreshnessText(freshness));
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
@@ -3934,7 +4003,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   return lines.join('\n');
 }
 
-function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null, freshness = null) {
+function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null, freshness = null, readinessRows = []) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
   const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course.code)));
@@ -3972,6 +4041,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
 
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
+  lines.push(...scheduleAdvisorReadinessMapText(readinessRows));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
   lines.push(...scheduleSeatFreshnessText(freshness));
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
@@ -4067,8 +4137,9 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, registrationBackupPlan);
   const seatFreshness = scheduleSeatFreshness(semId, term, courses, sectionsByCode);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
-  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness);
-  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment, seatFreshness);
+  const readinessRows = scheduleReadinessMapRows(semId, term, courses, selectedItems, conflicts, warnings, sectionsByCode);
+  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows);
+  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows);
   const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
   const courseRows = selectedItems
     .slice()
@@ -4117,9 +4188,9 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${scheduleChangeDigestHtml(changes, 'Schedule summary')}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
-  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness);
+  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows);
 
   return {
     text,
@@ -4137,6 +4208,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     calendarEventCount: scheduleCalendarEventCount(calendar),
     advisorHtml,
     advisorText,
+    readinessRows,
     advisorFilter,
     outputPreset,
     outputOptions,
