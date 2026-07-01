@@ -4751,3 +4751,62 @@ Next pass candidates:
 - Add a lightweight offline fixture for the `/api/umd` proxy shape plus an opt-in network mode for release passes.
 - Add a release checklist panel in Settings that summarizes source links, live audit history, and account/cloud setup status.
 - Add catalog-year targeting controls for students following an older catalog year.
+
+## 2026-06-30 Pass 92
+
+Focus: add deterministic offline coverage for the `/api/umd` proxy contract.
+
+Planned changes:
+- Test the same-origin umd.io proxy without depending on live network.
+- Cover allowlist rejection, marker headers, success forwarding, safe upstream fallbacks, fetch-error fallbacks, and method rejection.
+- Keep the existing rendered and live generated-plan release checks green.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scripts/test-umd-proxy.js`.
+- The new fixture imports `api/umd.js` directly and mocks `global.fetch`.
+- Covered proxy success behavior:
+  - `/courses/ENEE244` calls `https://api.umd.io/v1/courses/ENEE244`.
+  - The proxy marker header is present.
+  - The `Accept` header is forwarded.
+  - Successful upstream responses get the edge cache policy.
+  - Upstream JSON bodies are forwarded.
+- Covered path normalization:
+  - Array query values use the first entry.
+  - Missing leading slash is normalized for `/courses/semesters`.
+- Covered rejection behavior:
+  - non-`/courses` paths.
+  - protocol URLs.
+  - double-slash URLs.
+  - empty paths.
+  - unsupported methods with `Allow: GET, HEAD`.
+- Covered safe fallback behavior:
+  - single-course upstream failure returns HTTP 200 with `null`.
+  - section upstream failure returns HTTP 200 with `[]`.
+  - fetch errors for course lists return HTTP 200 with `[]`.
+  - fallback responses set `Cache-Control: no-store`.
+  - fallback responses expose `x-terptrack-upstream-status`.
+
+Verification:
+- Ran `node scripts/test-umd-proxy.js`.
+  - It passed all offline proxy fixtures.
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan and planner fixtures.
+- Ran `node scripts/verify-random-schedules.js --majors PHYS,ARTT,PLSC,KNES,ENAE,ENCE --keep-going --seed pass92-umd-proxy-fixture`.
+  - Verified all six rendered targets against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It passed 12 rendered template viewport runs: 6 majors x 2 viewports.
+  - It kept the proxy-backed browser console clean.
+  - It found no checked horizontal overflow on desktop or mobile.
+
+Findings for next pass:
+- The proxy now has deterministic unit-style coverage, but there is still no single command that runs all release checks in the intended order.
+- Onboarding and Browse replacement flows still need rendered mobile coverage comparable to generated Settings.
+
+Next pass candidates:
+- Add a release-check script that runs syntax, proxy fixtures, generated fixtures, rendered verifier, and optional live verifier in order.
+- Add a mobile rendered verifier for onboarding and Browse replacement flows.
+- Add a release checklist panel in Settings that summarizes source links, live audit history, and account/cloud setup status.
+- Add catalog-year targeting controls for students following an older catalog year.
