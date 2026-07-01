@@ -7336,3 +7336,58 @@ Verification:
   - It randomly verified `HESP`, `AAST`, `PHSC`, `SPAN`, `CINE`, and `EDUC` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 134
+
+Focus: make calendar downloads auditable before export so students can see event count, date range, and TBA omissions before trusting an `.ics` file.
+
+Planned changes:
+- Add a reusable calendar export readiness summary for picked sections.
+- Surface event count, timed-pick coverage, term date range, and calendar notes in the Schedule output and advisor packet.
+- Include the same calendar evidence in schedule, registration, and advisor text exports.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleCalendarExportSummary()` in `js/schedule.js`.
+  - It reports the active term range, custom/inferred date note, ICS event count, timed picked-section coverage, and TBA/no-event picks.
+  - It derives event counts from the same generated ICS content used by the calendar download.
+- Added shared HTML and text renderers:
+  - `renderScheduleCalendarExportHtml()` renders a `Calendar Export` readiness card in the Schedule output and advisor packet.
+  - `scheduleCalendarExportText()` adds the same event/range/course evidence to copyable schedule text, registration lists, and advisor text.
+- Threaded `calendarSummary` through `buildScheduleOutput()`, `buildScheduleOutputText()`, `buildScheduleRegistrationText()`, `scheduleAdvisorPacketHtml()`, and `scheduleAdvisorText()`.
+- Added app and standalone advisor styles for the calendar export card, with mobile one-column behavior for course rows.
+- Bumped cache tags:
+  - `styles.css?v=101`.
+  - `js/schedule.js?v=54`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts the calendar summary object, visible schedule card, registration text, advisor HTML/text, and exported advisor document.
+  - The rendered mobile advisor packet workflow now waits for the `Calendar Export` card and asserts the cached summary, exported HTML, exported text, and no-overflow behavior.
+  - Rendered cache checks now expect the updated stylesheet and Schedule script tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with calendar export readiness assertions.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, canonical titles, schedule timing, registration readiness, readiness map undo, schedule chips, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with calendar readiness, Readiness Map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including calendar export readiness coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with calendar readiness coverage.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass134-calendar-readiness-live`.
+  - It randomly verified `BCHM`, `CHEM`, `ASTR`, `ENMA`, `WMST`, and `AOSC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

@@ -2937,6 +2937,111 @@ function scheduleCalendarEventCount(ics) {
   return (String(ics || '').match(/BEGIN:VEVENT/g) || []).length;
 }
 
+function scheduleCalendarDateLabel(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return 'date unavailable';
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
+}
+
+function scheduleCalendarExportSummary(sem, term, selectedItems = [], prefs = DEFAULT_SCHEDULE_PREFS, ics = '') {
+  const picked = Array.isArray(selectedItems) ? selectedItems : [];
+  const termWindow = scheduleCalendarTermWindow(term, prefs);
+  const rows = picked.map(item => {
+    const blocks = sectionBlocks(item.section, item.course);
+    return {
+      courseCode: item.course?.code || displayCode(item.section?.course || ''),
+      title: item.course?.title || '',
+      sectionLabel: scheduleSectionShortLabel(item.section),
+      eventCount: blocks.length,
+      meetings: scheduleSectionMeetingLines(item.section),
+    };
+  });
+  const eventCount = ics ? scheduleCalendarEventCount(ics) : rows.reduce((sum, row) => sum + row.eventCount, 0);
+  const timedCourseCount = rows.filter(row => row.eventCount > 0).length;
+  const tbaRows = rows.filter(row => row.eventCount === 0);
+  const windowLabel = `${scheduleCalendarDateLabel(termWindow.start)} to ${scheduleCalendarDateLabel(termWindow.end)}`;
+  const level = !picked.length ? 'warn'
+    : !eventCount ? 'danger'
+      : tbaRows.length ? 'warn'
+        : 'ok';
+  const label = !picked.length ? 'Pick timed sections'
+    : !eventCount ? 'No timed events'
+      : tbaRows.length ? 'Review TBA meetings'
+        : 'Calendar ready';
+  const detail = !picked.length
+    ? 'Pick posted sections before exporting a calendar.'
+    : eventCount
+      ? `${eventCount} weekly event${eventCount === 1 ? '' : 's'} across ${timedCourseCount}/${picked.length} picked section${picked.length === 1 ? '' : 's'}.`
+      : 'Picked sections do not have posted meeting times yet.';
+  return {
+    level,
+    label,
+    detail,
+    termLabel: scheduleTermLabel(term),
+    semesterLabel: sem?.name || 'Selected semester',
+    windowLabel,
+    windowNote: termWindow.note,
+    customRange: !!termWindow.custom,
+    eventCount,
+    pickedCount: picked.length,
+    timedCourseCount,
+    tbaCount: tbaRows.length,
+    rows,
+    tbaRows,
+  };
+}
+
+function renderScheduleCalendarExportHtml(summary, heading = 'Calendar Export') {
+  if (!summary) return '';
+  const rows = Array.isArray(summary.rows) ? summary.rows : [];
+  return `
+    <section class="schedule-calendar-export ${scheduleEscape(summary.level)}">
+      <div class="schedule-calendar-export-head">
+        <div>
+          <h4>${scheduleEscape(heading)}</h4>
+          <span>${scheduleEscape(summary.windowLabel)} · ${scheduleEscape(summary.termLabel)}</span>
+        </div>
+        <strong>${scheduleEscape(summary.label)}</strong>
+      </div>
+      <p>${scheduleEscape(summary.detail)} ${scheduleEscape(summary.windowNote)}</p>
+      <div class="schedule-calendar-export-metrics">
+        <span><strong>${summary.eventCount}</strong><em>calendar events</em></span>
+        <span><strong>${summary.timedCourseCount}/${summary.pickedCount}</strong><em>timed picks</em></span>
+        <span><strong>${summary.tbaCount}</strong><em>TBA picks</em></span>
+      </div>
+      ${rows.length ? `
+        <div class="schedule-calendar-export-list">
+          ${rows.slice(0, 8).map(row => `
+            <div class="schedule-calendar-export-row ${row.eventCount ? 'ok' : 'warn'}">
+              <strong>${scheduleEscape(row.courseCode)} ${scheduleEscape(row.sectionLabel)}</strong>
+              <span>${row.eventCount ? `${row.eventCount} calendar event${row.eventCount === 1 ? '' : 's'}` : 'No timed calendar event'}</span>
+              <em>${scheduleEscape(row.meetings.join(' / '))}</em>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </section>
+  `;
+}
+
+function scheduleCalendarExportText(summary) {
+  if (!summary) return [];
+  const lines = [
+    '',
+    'Calendar export:',
+    `- ${summary.label}: ${summary.detail}`,
+    `- Range: ${summary.windowLabel} (${summary.termLabel}).`,
+    `- Note: ${summary.windowNote}`,
+  ];
+  (summary.rows || []).forEach(row => {
+    lines.push(`- ${row.courseCode} ${row.sectionLabel}: ${row.eventCount} calendar event${row.eventCount === 1 ? '' : 's'}; ${row.meetings.join('; ')}.`);
+  });
+  if (summary.tbaCount) {
+    lines.push(`- TBA/no-event picks: ${summary.tbaRows.map(row => `${row.courseCode} ${row.sectionLabel}`).join(', ')}.`);
+  }
+  return lines;
+}
+
 function scheduleRecentChanges(limit = 5) {
   return typeof recentPlanChanges === 'function' ? recentPlanChanges().slice(0, limit) : [];
 }
@@ -3602,7 +3707,7 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
   return { html, totalCourses, shownCourses, totalCredits, shownCredits };
 }
 
-function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = []) {
+function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, scheduleText, advisorFilter = getScheduleAdvisorFilter(), unscheduled = [], options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null) {
   const stats = scheduleAdvisorStats();
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
   const filterDef = scheduleAdvisorFilterDef(filter);
@@ -3638,6 +3743,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleRegistrationAppointmentText(appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows)));
   lines.push(...scheduleSeatFreshnessText(freshness));
+  lines.push(...scheduleCalendarExportText(calendarSummary));
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
@@ -3777,6 +3883,20 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-seat-freshness-actions strong{font-size:10px;text-transform:uppercase;color:#8b0000}
     .schedule-seat-freshness-actions .btn{border:1px solid #d8cec0;border-radius:999px;background:#fff;color:#2e5c8b;font-size:11px;font-weight:700;padding:5px 8px}
     .schedule-seat-freshness-actions .btn.primary{border-color:#8b0000;background:#8b0000;color:#fff}
+    .schedule-calendar-export{border:1px solid #d8cec0;border-left:4px solid #7b8b55;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-calendar-export.warn{border-left-color:#c99700;background:#fffaf0}
+    .schedule-calendar-export.danger{border-left-color:#8b0000;background:#fff5f3}
+    .schedule-calendar-export-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-calendar-export-head h4{margin:0}
+    .schedule-calendar-export-head span,.schedule-calendar-export p,.schedule-calendar-export-row span,.schedule-calendar-export-row em,.schedule-calendar-export-metrics em{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
+    .schedule-calendar-export-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-calendar-export-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+    .schedule-calendar-export-metrics span{border:1px solid #d8cec0;border-radius:8px;background:#fbf7ef;padding:7px}
+    .schedule-calendar-export-metrics strong{display:block;font-size:14px}
+    .schedule-calendar-export-list{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-calendar-export-row{border:1px solid #d8cec0;border-radius:7px;background:#fbf7ef;padding:7px}
+    .schedule-calendar-export-row.warn{border-color:#f1c45c;background:#fffaf0}
+    .schedule-calendar-export-row strong{display:block;color:#241f1f}
     .schedule-registration-handoff{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-registration-handoff-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-registration-handoff-head h4{margin:0}
@@ -3841,12 +3961,12 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-advisor-readiness-map-list,.schedule-seat-freshness-list{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-seat-freshness-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head,.schedule-advisor-readiness-map-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid,.schedule-calendar-export-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-readiness-map-list,.schedule-seat-freshness-list,.schedule-calendar-export-list{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-seat-freshness-head,.schedule-calendar-export-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head,.schedule-advisor-readiness-map-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
 
-function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = []) {
+function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter = getScheduleAdvisorFilter(), changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null) {
   const stats = scheduleAdvisorStats();
   const label = scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings);
   const filter = normalizeScheduleAdvisorFilter(advisorFilter);
@@ -3905,6 +4025,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       ${scheduleAdvisorReadinessMapHtml(readinessRows)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
       ${renderScheduleSeatFreshnessHtml(freshness)}
+      ${renderScheduleCalendarExportHtml(calendarSummary)}
       ${renderScheduleRegistrationHandoffHtml(registrationHandoff)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(backupRows)}
@@ -3945,7 +4066,7 @@ ${advisorHtml}
 </html>`;
 }
 
-function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = []) {
+function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes = scheduleRecentChanges(), options = getScheduleOutputOptions(), backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null) {
   const outputOptions = normalizeScheduleOutputOptions(options);
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
@@ -3969,6 +4090,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   lines.push(...scheduleAdvisorReadinessMapText(readinessRows));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
   lines.push(...scheduleSeatFreshnessText(freshness));
+  lines.push(...scheduleCalendarExportText(calendarSummary));
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
   lines.push(...scheduleRegistrationOrderText(registrationOrder));
   lines.push(...scheduleRegistrationBackupText(backupRows));
@@ -4003,7 +4125,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   return lines.join('\n');
 }
 
-function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null, freshness = null, readinessRows = []) {
+function buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduledOverride = null, backupRows = [], appointment = null, freshness = null, readinessRows = [], calendarSummary = null) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
   const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course.code)));
@@ -4044,6 +4166,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
   lines.push(...scheduleAdvisorReadinessMapText(readinessRows));
   lines.push(...scheduleRegistrationAppointmentText(registrationAppointment));
   lines.push(...scheduleSeatFreshnessText(freshness));
+  lines.push(...scheduleCalendarExportText(calendarSummary));
   lines.push(...scheduleRegistrationHandoffText(registrationHandoff));
 
   if (unscheduled.length) {
@@ -4138,9 +4261,10 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
   const seatFreshness = scheduleSeatFreshness(semId, term, courses, sectionsByCode);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const readinessRows = scheduleReadinessMapRows(semId, term, courses, selectedItems, conflicts, warnings, sectionsByCode);
-  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows);
-  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows);
   const calendar = buildScheduleCalendarIcs(sem, term, selectedItems, prefs);
+  const calendarSummary = scheduleCalendarExportSummary(sem, term, selectedItems, prefs, calendar);
+  const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary);
+  const registrationText = buildScheduleRegistrationText(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary);
   const courseRows = selectedItems
     .slice()
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
@@ -4175,6 +4299,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleRegistrationAppointmentHtml(registrationAppointment)}
       ${renderScheduleSeatFreshnessHtml(seatFreshness)}
+      ${renderScheduleCalendarExportHtml(calendarSummary)}
       ${renderScheduleRegistrationHandoffHtml(registrationHandoff)}
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(registrationBackupPlan)}
@@ -4188,9 +4313,9 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${scheduleChangeDigestHtml(changes, 'Schedule summary')}
     </article>
   `;
-  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows);
+  const advisorHtml = scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts, warnings, prefs, unscheduled, totalOpenSeats, advisorFilter, changes, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary);
   const advisorTitle = `Terp Track Advisor Packet - ${getSettings().programName || 'UMD degree plan'}`;
-  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows);
+  const advisorText = scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warnings, prefs, text, advisorFilter, unscheduled, outputOptions, registrationBackupPlan, registrationAppointment, seatFreshness, readinessRows, calendarSummary);
 
   return {
     text,
@@ -4205,7 +4330,8 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     html: scheduleHtml,
     calendar,
     calendarFilename: scheduleCalendarFilename(term),
-    calendarEventCount: scheduleCalendarEventCount(calendar),
+    calendarEventCount: calendarSummary.eventCount,
+    calendarSummary,
     advisorHtml,
     advisorText,
     readinessRows,
