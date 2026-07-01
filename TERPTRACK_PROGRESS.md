@@ -5652,3 +5652,70 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass106-visible-gened-scope-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 107
+
+Focus: make generated schedules prove they move from real freshman/sophomore requirements into later 300/400-level major work.
+
+Planned changes:
+- Bias generated major schedules by course level while keeping prerequisite depth as the hard ordering signal.
+- Add review diagnostics that show whether an auto-generated major plan starts with real 100/200-level requirements and reaches later 300/400-level and 400-level courses.
+- Strengthen generated-plan and live PlanetTerp verification so this freshman-to-senior path is tested instead of assumed.
+- Clean up direct GenEd handoffs so placeholder replacement opens a broad real-course search instead of carrying stale department/search filters.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added course-level helpers in `js/import.js`:
+  - `autoPlanCourseNumber()`.
+  - `autoPlanCourseLevelBand()`.
+  - `autoPlanPreferredTermIndex()`.
+  - `autoPlanLevelProgression()`.
+- Updated generated scheduling in `autoSchedule()`:
+  - 100-level requirements keep the earliest placement bias.
+  - 200-level requirements prefer early follow-up terms.
+  - 300-level requirements prefer junior-year terms.
+  - 400-level and `major-upper` requirements prefer later terms.
+  - prerequisite ordering still sets the earliest legal term before the level preference is applied.
+- Added `levelProgression` to every auto-plan review analysis.
+- Added an `Intro-to-400 path` diagnostic in Settings auto-plan review:
+  - shows real 100/200-level requirement counts in early terms.
+  - shows real 300/400-level requirement counts in later terms.
+  - explicitly reports 400-level course coverage.
+- Updated generated-plan regression coverage:
+  - each fixture now asserts early lower-level requirements, later upper-level requirements, and 400-level senior options.
+  - the diagnostics fixture asserts the new review card renders with `100/200-level` and `400-level` language.
+- Updated random live PlanetTerp verification:
+  - every sampled generated major must now satisfy the level-progression checks.
+  - verifier output prints early lower/later upper/400-level counts beside live title/credit matches.
+- Updated `genEdJumpToBrowse()` in `js/gened.js`:
+  - direct GenEd jumps now select the explicit all-departments Browse scope.
+  - stale Browse keyword search is cleared before rendering the replacement results.
+- Bumped cache tags:
+  - `js/import.js?v=11`.
+  - `js/settings.js?v=25`.
+  - `js/gened.js?v=1`.
+
+Verification:
+- Ran `node --check js/import.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check js/gened.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan fixtures.
+  - The fixture table reported level paths for `ENAE`, `BIOE`, `AAST`, `SPAN`, `AOSC`, and `STAT`.
+  - Example counts included `ENAE` at 10 early lower / 11 later upper / 11 400-level and `STAT` at 6 early lower / 9 later upper / 9 400-level.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It verified 12 generated-template viewport runs across desktop and mobile.
+  - It confirmed current cache tags for `js/import.js?v=11` and `js/settings.js?v=25`.
+  - Browser console output stayed clean.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the new course-level progression assertions.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass107-level-progression-live`.
+  - It randomly verified `ENCE`, `HLTH`, `ENFP`, `MGMT`, `BCHM`, and `HESP` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed the early lower / later upper / 400-level progression checks.

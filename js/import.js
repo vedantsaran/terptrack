@@ -295,11 +295,94 @@ function autoPlanFlatCourses(semesters) {
   return out;
 }
 
+function autoPlanCourseNumber(courseOrCode) {
+  const raw = typeof courseOrCode === 'string' ? courseOrCode : (courseOrCode && courseOrCode.code);
+  const normalized = typeof normalizeCode === 'function'
+    ? normalizeCode(raw || '')
+    : String(raw || '').toUpperCase().replace(/\s+/g, '');
+  const match = normalized.match(/^[A-Z]{2,4}(\d{3})[A-Z]?$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function autoPlanCourseLevelBand(courseOrCode) {
+  const number = autoPlanCourseNumber(courseOrCode);
+  return number ? Math.floor(number / 100) * 100 : 0;
+}
+
+function autoPlanPreferredTermIndex(course, numSemesters) {
+  const terms = Math.max(1, numSemesters || 8);
+  const level = autoPlanCourseLevelBand(course);
+  const category = String(course && course.category || '');
+  if (category === 'major-upper') return Math.min(terms - 1, Math.max(4, Math.floor(terms * 0.62)));
+  if (level >= 400) return Math.min(terms - 1, Math.max(4, Math.floor(terms * 0.55)));
+  if (level >= 300) return Math.min(terms - 1, Math.max(3, Math.floor(terms * 0.42)));
+  if (level >= 200) return Math.min(terms - 1, Math.max(1, Math.floor(terms * 0.18)));
+  return 0;
+}
+
+function autoPlanLevelProgression(semesters) {
+  const terms = semesters || [];
+  const termCount = Math.max(terms.length, 1);
+  const earlyTermLimit = Math.min(2, termCount);
+  const laterTermStart = Math.min(termCount - 1, Math.max(0, Math.floor(termCount / 2)));
+  const courses = [];
+  terms.forEach((sem, semIndex) => {
+    (sem.courses || []).forEach(course => {
+      const number = autoPlanCourseNumber(course);
+      if (!number) return;
+      const level = autoPlanCourseLevelBand(course);
+      courses.push({
+        code: typeof displayCode === 'function' ? displayCode(course.code) : String(course.code || ''),
+        title: course.title || '',
+        semIndex,
+        semName: sem.name || `Term ${semIndex + 1}`,
+        number,
+        level,
+        category: course.category || '',
+      });
+    });
+  });
+  const intro = courses.filter(course => course.level > 0 && course.level < 300);
+  const advanced = courses.filter(course => course.level >= 300);
+  const upper400 = courses.filter(course => course.level >= 400);
+  const earlyIntro = intro.filter(course => course.semIndex < earlyTermLimit);
+  const lateAdvanced = advanced.filter(course => course.semIndex >= laterTermStart);
+  const earlyAdvanced = advanced.filter(course => course.semIndex < earlyTermLimit);
+  const firstBy = list => list.reduce((best, course) => (
+    !best || course.semIndex < best.semIndex ? course : best
+  ), null);
+  const lastBy = list => list.reduce((best, course) => (
+    !best || course.semIndex > best.semIndex ? course : best
+  ), null);
+  const samples = list => list.slice(0, 5).map(course => course.code);
+  return {
+    realCount: courses.length,
+    introCount: intro.length,
+    advancedCount: advanced.length,
+    upper400Count: upper400.length,
+    earlyIntroCount: earlyIntro.length,
+    lateAdvancedCount: lateAdvanced.length,
+    earlyAdvancedCount: earlyAdvanced.length,
+    hasEarlyIntro: earlyIntro.length > 0,
+    hasLateAdvanced: lateAdvanced.length > 0,
+    hasUpper400: upper400.length > 0,
+    laterTermStart,
+    firstIntroTerm: firstBy(intro)?.semName || '',
+    firstAdvancedTerm: firstBy(advanced)?.semName || '',
+    firstUpper400Term: firstBy(upper400)?.semName || '',
+    lastUpper400Term: lastBy(upper400)?.semName || '',
+    earlyIntroSamples: samples(earlyIntro),
+    lateAdvancedSamples: samples(lateAdvanced),
+    upper400Samples: samples(upper400),
+  };
+}
+
 function autoPlanAnalyzeSchedule(semesters, opts = {}) {
   const targetCredits = opts.targetCredits || 120;
   const prefs = opts.profilePrefs || null;
   const courses = autoPlanFlatCourses(semesters);
   const termLoads = autoPlanTermLoads(semesters);
+  const levelProgression = autoPlanLevelProgression(semesters);
   const genEdCounts = autoPlanRequirementCounts(semesters);
   const genEdSummary = AUTO_PLAN_GENED_REQUIREMENTS.map(req => {
     const have = genEdCounts[req.id] || 0;
@@ -324,6 +407,7 @@ function autoPlanAnalyzeSchedule(semesters, opts = {}) {
   return {
     semesters,
     termLoads,
+    levelProgression,
     totalCredits: autoPlanTotalCredits(semesters),
     targetCredits,
     courseCount: courses.length,
@@ -507,6 +591,9 @@ function autoSchedule(courses, opts) {
     const da = depth[normalizeCode(a.code)] || 0;
     const db = depth[normalizeCode(b.code)] || 0;
     if (da !== db) return da - db;
+    const pa = autoPlanPreferredTermIndex(a, numSemesters);
+    const pb = autoPlanPreferredTermIndex(b, numSemesters);
+    if (pa !== pb) return pa - pb;
     return a.code.localeCompare(b.code);
   });
 
@@ -523,9 +610,15 @@ function autoSchedule(courses, opts) {
       const idx = placed[p];
       return idx === undefined ? max : Math.max(max, idx + 1);
     }, 0);
+    const preferred = Math.max(earliest, autoPlanPreferredTermIndex(c, numSemesters));
     let target = -1;
-    for (let i = earliest; i < numSemesters; i++) {
+    for (let i = preferred; i < numSemesters; i++) {
       if (semesters[i]._credits + autoPlanCredits(c) <= creditCap) { target = i; break; }
+    }
+    if (target === -1 && preferred > earliest) {
+      for (let i = earliest; i < preferred; i++) {
+        if (semesters[i]._credits + autoPlanCredits(c) <= creditCap) { target = i; break; }
+      }
     }
     if (target === -1) { unplaced.push(c); continue; }
     semesters[target].courses.push({

@@ -130,6 +130,9 @@ async function testMajorFixture(context, fixture) {
   assert(review.metadataCoverage.found === 0, `${fixture.id}: noFetch preview should not report live metadata`);
   assert(review.metadataCoverage.total === review.requirementCourseCount, `${fixture.id}: metadata coverage should match requirement count`);
   assert(review.requirementCourseCount >= fixture.minRequirementCourses, `${fixture.id}: expected at least ${fixture.minRequirementCourses} requirements`);
+  assert(review.levelProgression?.hasEarlyIntro, `${fixture.id}: expected early 100/200-level real requirements`);
+  assert(review.levelProgression?.hasLateAdvanced, `${fixture.id}: expected later 300/400-level real requirements`);
+  assert(review.levelProgression?.hasUpper400, `${fixture.id}: expected 400-level senior options`);
   assert(review.genEdPlaceholders >= fixture.minGenEdPlaceholders, `${fixture.id}: expected at least ${fixture.minGenEdPlaceholders} GenEd placeholders`);
   assert(review.freeElectives >= fixture.minFreeElectives, `${fixture.id}: expected at least ${fixture.minFreeElectives} free electives`);
   assertNoDuplicateCodes(courses, fixture.id);
@@ -144,6 +147,7 @@ async function testMajorFixture(context, fixture) {
     genEdPlaceholders: review.genEdPlaceholders,
     freeElectives: review.freeElectives,
     requirements: review.requirementCourseCount,
+    levels: `${review.levelProgression.earlyIntroCount} early lower/${review.levelProgression.lateAdvancedCount} later upper/${review.levelProgression.upper400Count} 400-level`,
   };
 }
 
@@ -358,6 +362,7 @@ async function testAutoPlanDiagnostics(context) {
 
       return {
         templateCoverage: template.metadataCoverage,
+        templateProgression: template.levelProgression,
         templateOfficialSources: template.officialSources,
         templateTitles: templateDiagnostics.map(item => item.title),
         templateHtml,
@@ -367,6 +372,7 @@ async function testAutoPlanDiagnostics(context) {
         placeholderAction,
         replacementBrowse,
         mixedCoverage: mixed.metadataCoverage,
+        mixedProgression: mixed.levelProgression,
         mixedTitles: mixedDiagnostics.map(item => item.title),
         mixedHtml,
         mixedFreshnessHtml,
@@ -378,8 +384,14 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.templateCoverage.coveragePct === 0, 'auto plan diagnostics: template-only preview should show 0% live coverage');
   assert(result.templateCoverage.missingCodes.length > 0, 'auto plan diagnostics: template-only preview should list fallback codes');
   assert(result.templateTitles.includes('Template-only preview'), 'auto plan diagnostics: should flag template-only source');
+  assert(result.templateTitles.includes('Intro-to-400 path'), 'auto plan diagnostics: should flag course-level progression');
+  assert(result.templateProgression.realCount === result.templateCoverage.total, 'auto plan diagnostics: level progression should count real template requirements');
+  assert(result.templateProgression.hasEarlyIntro, 'auto plan diagnostics: level progression should include early lower-level requirements');
+  assert(result.templateProgression.hasLateAdvanced, 'auto plan diagnostics: level progression should include later upper-level requirements');
+  assert(result.templateProgression.hasUpper400, 'auto plan diagnostics: level progression should include 400-level requirements');
   assert(result.templateTitles.includes('Replacement work'), 'auto plan diagnostics: should flag placeholder replacement work');
   assert(/Template fallback/.test(result.templateHtml), 'auto plan diagnostics: source samples should include template fallback row');
+  assert(/Intro-to-400 path/.test(result.templateHtml) && /100\/200-level/.test(result.templateHtml) && /400-level/.test(result.templateHtml), 'auto plan diagnostics: review should render course-level progression');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
@@ -411,6 +423,7 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.mixedCoverage.coveragePct > 0 && result.mixedCoverage.coveragePct < 100, 'auto plan diagnostics: mixed preview should show partial coverage percent');
   assert(result.mixedCoverage.liveCodes.length === 3, 'auto plan diagnostics: mixed preview should include live code samples');
   assert(result.mixedTitles.includes('Mixed metadata sources'), 'auto plan diagnostics: should flag mixed metadata sources');
+  assert(result.mixedProgression.hasLateAdvanced && result.mixedProgression.hasUpper400, 'auto plan diagnostics: mixed preview should preserve later upper-level progression');
   assert(/Live metadata/.test(result.mixedHtml) && /Template fallback/.test(result.mixedHtml), 'auto plan diagnostics: mixed source samples should compare live and fallback rows');
   assert(
     result.mixedFreshnessHtml.includes(`${result.mixedCoverage.found}/${result.mixedCoverage.total}`),

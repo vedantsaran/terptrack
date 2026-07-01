@@ -308,6 +308,9 @@ async function verifyMajor(context, major, rand) {
   assert(overTarget <= 4, `${major.id}: generated ${overTarget} credits over target`);
   assert(maxTermLoad <= 18, `${major.id}: term load exceeds 18 credits (${maxTermLoad})`);
   assert((review.genEdSummary || []).every(req => req.complete), `${major.id}: incomplete generated GenEd coverage`);
+  assert(review.levelProgression?.hasEarlyIntro, `${major.id}: generated schedule missing early 100/200-level real requirements`);
+  assert(review.levelProgression?.hasLateAdvanced, `${major.id}: generated schedule missing later 300/400-level real requirements`);
+  assert(review.levelProgression?.hasUpper400, `${major.id}: generated schedule missing 400-level senior options`);
   assert(!duplicates.length, `${major.id}: duplicate generated real course codes: ${duplicates.join(', ')}`);
   assert(review.metadataCoverage?.found === review.metadataCoverage?.total, `${major.id}: live metadata coverage ${review.metadataCoverage?.found}/${review.metadataCoverage?.total}; missing ${(review.metadataCoverage?.missingCodes || []).join(', ')}`);
   const missingScheduled = (result.required || []).filter(code => !scheduledByCode.has(normalizeCode(code)));
@@ -352,6 +355,7 @@ async function verifyMajor(context, major, rand) {
     placeholders: courses.length - nonPlaceholder.length,
     credits: review.totalCredits,
     maxTermLoad,
+    levelPath: `${review.levelProgression.earlyIntroCount} early lower/${review.levelProgression.lateAdvancedCount} later upper/${review.levelProgression.upper400Count} 400-level`,
     titleCreditChecked: checks.length,
   };
 }
@@ -377,7 +381,7 @@ async function main() {
     try {
       const row = await verifyMajor(context, major, rand);
       rows.push(row);
-      console.log(`${row.id}: ${row.credits} credits, ${row.required} required courses verified in PlanetTerp, ${row.titleCreditChecked} live title/credit pairs matched, ${row.placeholders} placeholders, max ${row.maxTermLoad} cr (${row.profile}, ${row.start})`);
+      console.log(`${row.id}: ${row.credits} credits, ${row.required} required courses verified in PlanetTerp, ${row.titleCreditChecked} live title/credit pairs matched, ${row.placeholders} placeholders, ${row.levelPath}, max ${row.maxTermLoad} cr (${row.profile}, ${row.start})`);
     } catch (error) {
       if (!opts.keepGoing) throw error;
       const message = error?.message || String(error);

@@ -108,9 +108,13 @@ function genEdJumpToBrowse(tag) {
   const sel = document.getElementById('br-gened');
   if (sel) sel.value = tag;
   const dept = document.getElementById('br-dept');
-  if (dept) dept.value = '';
-  browseDept = '';
+  const nextDept = typeof BROWSE_ALL_DEPTS_VALUE !== 'undefined' ? BROWSE_ALL_DEPTS_VALUE : '';
+  if (dept) dept.value = nextDept;
+  const search = document.getElementById('br-search');
+  if (search) search.value = '';
+  browseDept = nextDept;
   browseGenEd = tag;
+  browseSearch = '';
   browseCache = [];
   browseCacheKey = '';
   switchTab('browse');

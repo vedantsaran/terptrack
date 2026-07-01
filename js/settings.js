@@ -507,6 +507,30 @@ function autoPlanDiagnostics(review) {
     }
   }
 
+  const progression = review.levelProgression || null;
+  if (progression && progression.realCount) {
+    const progressionMeta = `${progression.introCount || 0} lower · ${progression.advancedCount || 0} upper`;
+    if (progression.hasEarlyIntro && progression.hasLateAdvanced && progression.hasUpper400) {
+      diagnostics.push(autoPlanDiagnostic(
+        'ok',
+        'Intro-to-400 path',
+        `Early terms include ${progression.earlyIntroCount} real 100/200-level requirement${progression.earlyIntroCount === 1 ? '' : 's'}; later terms include ${progression.lateAdvancedCount} real 300/400-level requirement${progression.lateAdvancedCount === 1 ? '' : 's'}, including ${progression.upper400Count} 400-level course${progression.upper400Count === 1 ? '' : 's'}.`,
+        progressionMeta,
+      ));
+    } else {
+      const missing = [];
+      if (!progression.hasEarlyIntro) missing.push('early 100/200-level requirements');
+      if (!progression.hasLateAdvanced) missing.push('later 300/400-level requirements');
+      if (!progression.hasUpper400) missing.push('400-level senior options');
+      diagnostics.push(autoPlanDiagnostic(
+        'warn',
+        'Review course levels',
+        `This generated draft needs advisor review for ${missing.join(', ')} before registration.`,
+        progressionMeta,
+      ));
+    }
+  }
+
   const heavyTerms = review.heavyTerms || [];
   const fullTerms = review.fullTerms || [];
   if (heavyTerms.length) {
