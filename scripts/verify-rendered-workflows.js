@@ -173,8 +173,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=86'), 'workflow app did not load styles.css?v=86');
-  assert(snapshot.scripts.includes('js/schedule.js?v=38'), 'workflow app did not load js/schedule.js?v=38');
+  assert(snapshot.styles.includes('styles.css?v=87'), 'workflow app did not load styles.css?v=87');
+  assert(snapshot.scripts.includes('js/schedule.js?v=39'), 'workflow app did not load js/schedule.js?v=39');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -688,6 +688,10 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Fix before registration')
       && text.includes('Recommended fixes')
       && text.includes('Pick sections for ENGL 101')
+      && text.includes('Quick actions')
+      && text.includes('Auto-pick sections')
+      && text.includes('Generate alternatives')
+      && text.includes('Review section picks')
       && text.includes('Confirm 2024-2025 catalog requirements')
       && text.includes('ENGL 101 needs a section choice')
       && text.includes('MATH 140 0201: 2 seats open')
@@ -696,6 +700,13 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && sectionText.includes('0301')
       && sectionText.includes('Apply backup')
       && text.includes('Picked CMSC 131 0101');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-readiness-action="review-sections"]').first().click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const output = document.querySelector('#schedule-output');
+    const panel = document.querySelector('.schedule-sections');
+    return output?.dataset.lastReadinessAction === 'review-sections'
+      && panel?.classList.contains('readiness-focus');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-advisor-filter="blockers"]').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
@@ -724,6 +735,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Registration Blockers/.test(result.advisorDocument), 'advisor packet: exported HTML should include blocker view heading');
   assert(/Registration Readiness/.test(result.advisorDocument) && /Fix before registration/.test(result.advisorDocument), 'advisor packet: exported HTML should include registration readiness gates');
   assert(/Recommended fixes/.test(result.advisorDocument) && /Pick sections for ENGL 101/.test(result.advisorDocument), 'advisor packet: exported HTML should include readiness fix guidance');
+  assert(/Quick actions/.test(result.advisorDocument) && /data-readiness-action="auto-pick"/.test(result.advisorDocument), 'advisor packet: exported HTML should include readiness quick actions');
   assert(/MATH 140 0201: 2 seats open/.test(result.advisorDocument) && /backup section/.test(result.advisorDocument), 'advisor packet: exported HTML should include low-seat backup warning');
   assert(/Catalog-year verification/.test(result.advisorText), 'advisor packet: exported text should include catalog-year verification');
   assert(/Registration readiness/.test(result.advisorText) && /Sections: 2\/3/.test(result.advisorText), 'advisor packet: exported text should include registration readiness gates');
@@ -731,12 +743,14 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/MATH 140 0201: 2 seats open/.test(result.advisorText) && /backup section/.test(result.advisorText), 'advisor packet: exported text should include low-seat backup warning');
   assert(/Registration Readiness/.test(result.outputText) && /Fix before registration/.test(result.outputText), 'advisor packet: rendered packet should include registration readiness gates');
   assert(/Recommended fixes/.test(result.outputText) && /Pick sections for ENGL 101/.test(result.outputText), 'advisor packet: rendered packet should include readiness fix guidance');
+  assert(/Quick actions/.test(result.outputText) && /Review section picks/.test(result.outputText), 'advisor packet: rendered packet should include readiness quick actions');
   assert(/ENGL 101 needs a section choice/.test(result.outputText), 'advisor packet: rendered packet should include unscheduled follow-up');
   assert(/MATH 140 0201: 2 seats open/.test(result.outputText) && /backup section/.test(result.outputText), 'advisor packet: rendered packet should include low-seat backup warning');
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.scheduleText.includes('Advisor view'), 'advisor packet: rendered output should include advisor controls');
   assert(snapshot.scheduleText.includes('Registration Readiness'), 'advisor packet: mobile snapshot should include readiness panel');
   assert(snapshot.scheduleText.includes('Recommended fixes'), 'advisor packet: mobile snapshot should include readiness fixes');
+  assert(snapshot.scheduleText.includes('Quick actions'), 'advisor packet: mobile snapshot should include readiness quick actions');
   assert(snapshot.scheduleText.includes('Registration Blockers'), 'advisor packet: rendered output should show blocker view');
   assert(snapshot.scheduleText.includes('MATH 140 0201: 2 seats open'), 'advisor packet: mobile snapshot should include low-seat backup warning');
   assertNoOverflow('advisor packet mobile', snapshot);
@@ -760,7 +774,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(!/MATH 140 0201: 2 seats open/.test(backupResult.outputText), 'advisor packet: backup apply should clear the prior low-seat warning');
   const backupSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet backup apply mobile', backupSnapshot);
-  console.log('Advisor packet [mobile]: rendered blocker view, registration readiness with recommended fixes, catalog warning, low-seat backup warning, backup apply action, export action, and no overflow.');
+  console.log('Advisor packet [mobile]: rendered blocker view, registration readiness with recommended fixes and quick actions, catalog warning, low-seat backup warning, backup apply action, export action, and no overflow.');
 }
 
 async function main() {

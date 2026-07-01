@@ -6152,3 +6152,74 @@ Verification:
   - It randomly verified `PLSC`, `AMST`, `ASTR`, `STAT`, `HLTH`, and `EDUC` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 115
+
+Focus: make Schedule registration-readiness recommendations actionable from the Schedule Output and advisor packet.
+
+Planned changes:
+- Keep the Pass 114 textual recommended fixes as export-friendly advisor language.
+- Add quick-action metadata to readiness so blocked schedules can invoke existing schedule workflows directly.
+- Wire the actions to Auto-pick sections, Generate alternatives, and Review section picks.
+- Verify the action model in fixture tests and the rendered mobile advisor-packet workflow.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleRegistrationFixActions()` in `js/schedule.js`.
+  - Missing section picks now expose `Auto-pick sections` and `Review section picks`.
+  - Time conflicts, timing warnings, preference warnings, and seat-risk gates now expose `Generate alternatives` when comparison schedules can help.
+  - Seat-risk gates also expose `Review section picks` so students can jump to backup-section controls.
+- Added `actions` to `scheduleRegistrationReadiness()`.
+- Rendered `Quick actions` below `Recommended fixes` in:
+  - the visible Schedule Output readiness card.
+  - the advisor packet in the app.
+  - the downloaded advisor-packet HTML document.
+- Wired readiness action buttons in `renderScheduleOutputPanel()`.
+  - `Auto-pick sections` calls the existing section auto-picker.
+  - `Generate alternatives` calls the existing alternative-schedule generator and scrolls to alternatives.
+  - `Review section picks` scrolls to the section picker, temporarily highlights the panel, and records `lastReadinessAction`.
+- Added app and standalone advisor-packet CSS for `.schedule-readiness-actions`.
+- Added print rules so quick-action controls do not appear in printed schedule/advisor output.
+- Added `.schedule-sections.readiness-focus` styling for the review-section jump.
+- Bumped cache tags:
+  - `styles.css?v=87`.
+  - `js/schedule.js?v=39`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts quick-action IDs and action-button HTML in schedule/advisor/export output.
+  - Rendered mobile advisor packet now asserts `Quick actions`, all three action labels, exported quick-action markup, and a real `Review section picks` click/focus path.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with quick-action assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - The first run timed out in the advisor-packet initial wait because the fixture had no conflict gate and therefore no alternatives action.
+  - Added `Generate alternatives` for seat-risk gates as a useful higher-seat comparison path.
+- Re-ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness quick actions, review-section focus, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - The first full run passed syntax, proxy, and generated-plan fixtures, then hit a rendered generated-plan timeout while PHYS metadata was still loading.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=120000`.
+  - The first direct rerun timed out waiting for the Settings release checklist.
+- Re-ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=120000`.
+  - It passed all 12 generated-template viewport runs.
+- Re-ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including readiness quick-action coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with quick actions.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass115-readiness-quick-actions-live`.
+  - It randomly verified `WMST`, `MARKETING`, `HESP`, `PLSC`, `EDUC`, and `MATH` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

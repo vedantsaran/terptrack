@@ -1563,6 +1563,78 @@ function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats
   return Array.from(new Set(fixes)).slice(0, 5);
 }
 
+function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings) {
+  if (!courseList.length) return [];
+  const gateById = Object.fromEntries((gates || []).map(gate => [gate.id, gate]));
+  const actions = [];
+  const addAction = action => {
+    if (actions.some(existing => existing.id === action.id)) return;
+    actions.push(action);
+  };
+
+  if (gateById.sections?.level === 'danger') {
+    const names = (unscheduled || []).slice(0, 3).map(course => course.code).join(', ');
+    addAction({
+      id: 'auto-pick',
+      label: 'Auto-pick sections',
+      detail: names
+        ? `Try the best posted sections for ${names}.`
+        : 'Try the best posted sections for this semester.',
+      kind: 'primary',
+    });
+    addAction({
+      id: 'review-sections',
+      label: 'Review section picks',
+      detail: 'Open the section list to choose missing sections or apply backups.',
+      kind: 'secondary',
+    });
+  }
+
+  if (gateById.conflicts?.level === 'danger') {
+    addAction({
+      id: 'alternatives',
+      label: 'Generate alternatives',
+      detail: 'Compare posted section combinations with fewer overlaps.',
+      kind: actions.length ? 'secondary' : 'primary',
+    });
+  }
+
+  if (gateById.seats?.level === 'danger' || gateById.seats?.level === 'warn') {
+    const risky = [...(urgentSeats || []), ...(watchSeats || [])]
+      .slice(0, 2)
+      .map(row => row.label)
+      .join(', ');
+    addAction({
+      id: 'review-sections',
+      label: 'Review section picks',
+      detail: risky ? `Open backup options for ${risky}.` : 'Open backup options for risky sections.',
+      kind: actions.length ? 'secondary' : 'primary',
+    });
+    addAction({
+      id: 'alternatives',
+      label: 'Generate alternatives',
+      detail: risky ? `Compare schedules with safer sections for ${risky}.` : 'Compare schedules with safer seat choices.',
+      kind: actions.length ? 'secondary' : 'primary',
+    });
+  }
+
+  if (gateById.timing?.level === 'danger' || gateById.timing?.level === 'warn' || gateById.preferences?.level === 'warn') {
+    const untimed = timing?.metrics?.untimedCount || 0;
+    addAction({
+      id: 'alternatives',
+      label: 'Generate alternatives',
+      detail: untimed
+        ? 'Compare schedules while tracking TBA meeting-time risk.'
+        : (nonSeatWarnings || []).length
+          ? 'Compare schedules against saved time, day, block, and campus preferences.'
+          : 'Compare schedules against saved timing preferences.',
+      kind: actions.length ? 'secondary' : 'primary',
+    });
+  }
+
+  return actions.slice(0, 3);
+}
+
 function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflicts = [], warnings = [], prefs = DEFAULT_SCHEDULE_PREFS, unscheduledOverride = null) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
@@ -1659,6 +1731,7 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
       : warnCount ? `${warnCount} item${warnCount === 1 ? '' : 's'} should be reviewed before registering.`
         : 'All picked sections clear core registration checks.';
   const fixes = scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings);
+  const actions = scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings);
 
   return {
     level,
@@ -1666,6 +1739,7 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
     detail,
     gates,
     fixes,
+    actions,
     unscheduled,
     timing,
     warningCount: warningList.length,
@@ -1698,6 +1772,16 @@ function scheduleRegistrationReadinessHtml(readiness, heading = 'Registration Re
         <strong>Recommended fixes</strong>
         ${(readiness.fixes || []).map(fix => `<span>${scheduleEscape(fix)}</span>`).join('')}
       </div>
+      ${(readiness.actions || []).length ? `
+        <div class="schedule-readiness-actions">
+          <strong>Quick actions</strong>
+          <div>
+            ${(readiness.actions || []).map(action => `
+              <button class="btn small ${action.kind === 'primary' ? 'primary' : ''}" type="button" data-readiness-action="${scheduleEscape(action.id)}" title="${scheduleEscape(action.detail || action.label)}">${scheduleEscape(action.label)}</button>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
     </section>
   `;
 }
@@ -2555,6 +2639,11 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-readiness-fixes{display:grid;gap:4px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px;font-size:12px}
     .schedule-readiness-fixes strong{font-size:10px;text-transform:uppercase;color:#8b0000}
     .schedule-readiness-fixes span{display:block;color:#5d5962;line-height:1.35}
+    .schedule-readiness-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-readiness-actions strong{font-size:10px;text-transform:uppercase;color:#8b0000}
+    .schedule-readiness-actions div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+    .schedule-readiness-actions .btn{border:1px solid #d8cec0;border-radius:999px;background:#fff;color:#2e5c8b;font-size:11px;font-weight:700;padding:5px 8px}
+    .schedule-readiness-actions .btn.primary{border-color:#8b0000;background:#8b0000;color:#fff}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
@@ -2584,8 +2673,8 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
-    @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-readiness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions{display:none}}
   `;
 }
 
@@ -2947,6 +3036,12 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       setScheduleAdvisorFilter(btn.dataset.advisorFilter);
     });
   });
+  root.querySelectorAll('[data-readiness-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      handleScheduleReadinessAction(btn.dataset.readinessAction);
+    });
+  });
   root.querySelectorAll('[data-schedule-audit-primary]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
@@ -3014,12 +3109,38 @@ function printScheduleAdvisorPacket() {
   setTimeout(() => document.body.classList.remove('print-advisor-packet'), 400);
 }
 
+async function handleScheduleReadinessAction(action) {
+  const root = document.getElementById('schedule-output');
+  if (root) root.dataset.lastReadinessAction = action || '';
+  if (action === 'auto-pick') {
+    await autoPickScheduleSections();
+    return;
+  }
+  if (action === 'alternatives') {
+    await generateScheduleAlternatives();
+    const alternatives = document.getElementById('schedule-alternatives');
+    if (alternatives) alternatives.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    return;
+  }
+  if (action === 'review-sections') {
+    const list = document.getElementById('schedule-section-list');
+    if (list) {
+      const panel = list.closest('.schedule-sections') || list;
+      panel.classList.add('readiness-focus');
+      list.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      setTimeout(() => panel.classList.remove('readiness-focus'), 1800);
+    }
+    toastInfo('Review section picks and backup options below.');
+  }
+}
+
 if (typeof window !== 'undefined') {
   window.copyScheduleOutputSummary = copyScheduleOutputSummary;
   window.downloadScheduleOutputSummary = downloadScheduleOutputSummary;
   window.downloadScheduleAdvisorPacket = downloadScheduleAdvisorPacket;
   window.printScheduleOutputSummary = printScheduleOutputSummary;
   window.printScheduleAdvisorPacket = printScheduleAdvisorPacket;
+  window.handleScheduleReadinessAction = handleScheduleReadinessAction;
 }
 
 function renderMiniSchedulePreview(items, unavailableBlocks = []) {

@@ -3827,6 +3827,33 @@ h1.hero-title em {
   font-size: .72rem;
   line-height: 1.35;
 }
+.schedule-readiness-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 9px;
+}
+.schedule-readiness-actions strong {
+  color: var(--maroon);
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .64rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.schedule-readiness-actions div {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.schedule-readiness-actions .btn {
+  min-height: 30px;
+  white-space: normal;
+}
 .schedule-output {
   margin: -4px 0 18px;
 }
@@ -4727,6 +4754,10 @@ h1.hero-title em {
 .schedule-sections {
   padding: 18px;
 }
+.schedule-sections.readiness-focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(46,92,139,.22), var(--shadow-md);
+}
 .schedule-sections h3 {
   font-family: 'Fraunces', serif;
   font-size: 1.1rem;
@@ -5275,7 +5306,8 @@ h1.hero-title em {
   body.print-schedule .schedule-output-head,
   body.print-schedule .schedule-output-actions,
   body.print-schedule .schedule-output-presets,
-  body.print-schedule .schedule-output-options {
+  body.print-schedule .schedule-output-options,
+  body.print-schedule .schedule-readiness-actions {
     display: none !important;
   }
   body.print-schedule .schedule-print-sheet {
@@ -5314,7 +5346,8 @@ h1.hero-title em {
   body.print-advisor-packet .schedule-output-head,
   body.print-advisor-packet .schedule-output-actions,
   body.print-advisor-packet .schedule-output-presets,
-  body.print-advisor-packet .schedule-output-options {
+  body.print-advisor-packet .schedule-output-options,
+  body.print-advisor-packet .schedule-readiness-actions {
     display: none !important;
   }
   body.print-advisor-packet .schedule-print-sheet,
@@ -7122,6 +7155,14 @@ h1.hero-title em {
   }
   .schedule-readiness-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .schedule-readiness-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .schedule-readiness-actions div {
+    justify-content: flex-start;
   }
   .schedule-output-head,
   .schedule-print-head {

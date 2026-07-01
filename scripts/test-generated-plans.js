@@ -818,6 +818,7 @@ function testScheduleRegistrationReadiness(context) {
         label: readiness.label,
         detail: readiness.detail,
         fixes: readiness.fixes,
+        actions: readiness.actions.map(action => action.id),
         gateLevels: Object.fromEntries(readiness.gates.map(gate => [gate.id, gate.level])),
         sectionsDetail: gateMap.sections.detail,
         conflictsDetail: gateMap.conflicts.detail,
@@ -845,18 +846,25 @@ function testScheduleRegistrationReadiness(context) {
   assert(result.fixes.some(fix => /Pick sections for ENGL 101/.test(fix)), 'registration readiness: fixes should include missing section action');
   assert(result.fixes.some(fix => /overlapping section|0 conflicts/.test(fix)), 'registration readiness: fixes should include conflict action');
   assert(result.fixes.some(fix => /backup section|higher-seat/.test(fix)), 'registration readiness: fixes should include seat-risk action');
+  assert(result.actions.includes('auto-pick'), 'registration readiness: actions should include auto-pick for missing sections');
+  assert(result.actions.includes('alternatives'), 'registration readiness: actions should include alternatives for conflicts/timing');
+  assert(result.actions.includes('review-sections'), 'registration readiness: actions should include section review for picks and backups');
   assert(/Registration Readiness/.test(result.html) && /Fix before registration/.test(result.html), 'registration readiness: HTML should render overall status');
   assert(/Recommended fixes/.test(result.html) && /Pick sections for ENGL 101/.test(result.html), 'registration readiness: HTML should render recommended fixes');
+  assert(/Quick actions/.test(result.html) && /data-readiness-action="auto-pick"/.test(result.html), 'registration readiness: HTML should render quick actions');
   assert(/Registration readiness/.test(result.text) && result.text.includes('Sections: 2/3'), 'registration readiness: text should include gate lines');
   assert(/Fix: Pick sections for ENGL 101/.test(result.text), 'registration readiness: text should include recommended fixes');
   assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
   assert(/Recommended fixes/.test(result.outputHtml) && /Generate alternatives/.test(result.outputHtml), 'registration readiness: schedule output HTML should include fix guidance');
+  assert(/Quick actions/.test(result.outputHtml) && /data-readiness-action="alternatives"/.test(result.outputHtml), 'registration readiness: schedule output HTML should include action buttons');
   assert(/Registration readiness/.test(result.outputText) && /Conflicts: 1/.test(result.outputText), 'registration readiness: schedule text should include readiness gates');
   assert(/Fix: Apply a backup section/.test(result.outputText), 'registration readiness: schedule text should include fix guidance');
   assert(/Registration Readiness/.test(result.advisorHtml) && /Fix before registration/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness gates');
+  assert(/Quick actions/.test(result.advisorHtml) && /Review section picks/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness quick actions');
   assert(/Registration readiness/.test(result.advisorText) && result.advisorText.includes('Sections: 2/3'), 'registration readiness: advisor text should include readiness gates');
   assert(/Fix: Pick sections for ENGL 101/.test(result.advisorText), 'registration readiness: advisor text should include recommended fixes');
   assert(/schedule-readiness/.test(result.advisorDocument) && /Recommended fixes/.test(result.advisorDocument), 'registration readiness: exported advisor document should include readiness markup and fixes');
+  assert(/schedule-readiness-actions/.test(result.advisorDocument) && /data-readiness-action="review-sections"/.test(result.advisorDocument), 'registration readiness: exported advisor document should include quick-action markup');
 
   return {
     id: 'SCHEDULE-READINESS',
