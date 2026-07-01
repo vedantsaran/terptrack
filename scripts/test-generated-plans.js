@@ -378,7 +378,7 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Generated Catalog Freshness/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render a title');
   assert(/50\/50/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
   assert(/PlanetTerp/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should name the live source');
-  assert(/pass85-all-final/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
+  assert(/pass86-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
   assert(result.templatePlaceholderSamples.length > 0, 'auto plan diagnostics: should include placeholder samples');
   assert(result.placeholderAction.genEd, 'auto plan diagnostics: placeholder action should infer a GenEd filter');
   assert(result.placeholderAction.dept === '__PROFILE_DEPTS__', 'auto plan diagnostics: placeholder action should use profile departments when profile is active');

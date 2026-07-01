@@ -4373,3 +4373,66 @@ Next pass candidates:
 - Add a dedicated browser/UI verifier that applies generated templates in a disposable browser profile and inspects rendered course cards without relying on manual Chrome interactions.
 - Add a Settings history drawer for the last few generated-template audit seeds and results.
 - Add a lightweight CI/offline fixture for the live-verifier shape with an opt-in network mode for release passes.
+
+## 2026-06-30 Pass 86
+
+Focus: add repeatable rendered-browser verification for generated templates, replacing brittle manual Chrome apply checks.
+
+Planned changes:
+- Add a browser/UI verifier that starts the static app in a disposable local server and headless browser.
+- Verify real Settings previews and rendered course cards for the generated majors that previously exposed live metadata drift.
+- Keep the Settings freshness panel aligned with the newest all-major live audit.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scripts/verify-rendered-generated-plans.js`.
+- The rendered verifier:
+  - Loads the static app through an internal local HTTP server.
+  - Finds bundled Playwright from local dependencies or the Codex runtime path.
+  - Uses a fresh browser context and skips onboarding when it appears.
+  - Opens Settings through the real `#settings-btn`.
+  - Selects generated majors and waits for the live preview/freshness panel.
+  - Applies each generated major through the real Settings Apply button.
+  - Accepts the local replacement confirmation dialog when needed.
+  - Inspects rendered `.course` cards in the actual DOM.
+  - Checks document/body/modal/review horizontal overflow.
+  - Fails on browser page errors and unexpected console errors.
+  - Ignores known local-network noise from `/api/config` and browser CORS fallback attempts while still verifying rendered outcomes.
+- Covered six high-risk generated majors:
+  - `PHYS`: verifies `PHYS402` and `PHYS410` render as 4-credit cards.
+  - `ARTT`: verifies `ARTT489C` renders as a 3-credit card.
+  - `PLSC`: verifies `PLSC201` renders as a 4-credit card.
+  - `KNES`: verifies `KNES385` renders as a 3-credit card.
+  - `ENAE`: verifies `ENAE432` renders as a 3-credit card.
+  - `ENCE`: verifies `ENCE215` renders as a 3-credit card.
+- Updated the Settings generated-catalog freshness audit seed from `pass85-all-final` to `pass86-all`.
+- Bumped `js/settings.js` cache tag to `v=18`.
+- Updated the generated-plan fixture to assert the new freshness seed.
+
+Verification:
+- Ran `for f in js/*.js scripts/*.js api/*.js; do node --check "$f" || exit 1; done`.
+- Ran `node scripts/test-generated-plans.js`; it passed all generated-plan and planner fixtures.
+- Ran `node scripts/verify-rendered-generated-plans.js --majors PHYS,ARTT --timeout-ms 60000`; it passed after the verifier learned to skip onboarding and filter expected network fallback noise.
+- Ran `node scripts/verify-rendered-generated-plans.js --majors ENCE --timeout-ms 120000`; it passed after correcting the expected Civil Engineering display from `124/122` to `124/124`.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`; it passed:
+  - `PHYS`: `20/20 live course records`; `PHYS402:4cr`, `PHYS410:4cr`.
+  - `ARTT`: `12/12 live course records`; `ARTT489C:3cr`.
+  - `PLSC`: `17/17 live course records`; `PLSC201:4cr`.
+  - `KNES`: `16/16 live course records`; `KNES385:3cr`.
+  - `ENAE`: `30/30 live course records`; `ENAE432:3cr`.
+  - `ENCE`: `25/25 live course records`; `ENCE215:3cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed pass86-all`.
+  - Verified all 50 generated schedules against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+- Ran the rendered verifier again after the freshness seed update:
+  - `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It passed all six rendered targets and confirmed the app loaded `js/settings.js?v=18`.
+
+Findings for next pass:
+- The rendered browser logs expected network noise from local `/api/config` 404s and browser CORS-blocked umd.io fallback requests. The app still renders through PlanetTerp, but a dedicated same-origin proxy for umd.io metadata/sections would make browser behavior cleaner and more reliable.
+
+Next pass candidates:
+- Add a Vercel/serverless umd.io proxy and switch browser metadata/section fetches to same-origin requests before falling back to direct external URLs.
+- Add official per-major citation links beside generated requirement groups and Settings freshness rows.
+- Add a Settings history drawer for the last few generated-template audit seeds and results.
+- Add a lightweight CI/offline fixture for the live-verifier shape with an opt-in network mode for release passes.
