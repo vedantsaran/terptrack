@@ -421,6 +421,90 @@ async function testAutoPlanDiagnostics(context) {
   };
 }
 
+async function testCatalogYearTargeting(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, catalogYear: '2024' });
+      state.majorId = 'CS';
+      const normalized = getSettings().catalogYear;
+      const options = catalogYearOptions(normalized);
+      const links = majorOfficialSources('CS', { includeGeneral: true, catalogYear: normalized });
+      const sourceHtml = autoPlanOfficialSourceLinksHtml({ majorId: 'CS', catalogYear: normalized }, { includeGeneral: true });
+      const releaseHtml = releaseChecklistHtml({ source: 'none', supabaseUrl: '', supabaseAnonKey: '' }, false);
+      const preview = await buildAutoPlanPreview('STAT', {
+        noFetch: true,
+        force: true,
+        catalogYear: normalized
+      });
+      const reviewHtml = autoPlanReviewHtml(preview, { actions: false });
+      const sem = getAllSemesters()[0];
+      const advisorText = scheduleAdvisorText(
+        sem,
+        '202608',
+        sem.courses || [],
+        [],
+        [],
+        [],
+        {},
+        'Schedule summary',
+        'all',
+        [],
+        { preferences: false, warnings: false, unscheduled: false, recentChanges: false, auditIssues: false }
+      );
+      const advisorHtml = scheduleAdvisorPacketHtml(
+        sem,
+        '202608',
+        sem.courses || [],
+        [],
+        [],
+        [],
+        {},
+        [],
+        0,
+        'all',
+        [],
+        { preferences: false, warnings: false, unscheduled: false, recentChanges: false, auditIssues: false }
+      );
+      return {
+        normalized,
+        current: currentCatalogYear(),
+        enDash: normalizeCatalogYear('2023–2024'),
+        invalid: normalizeCatalogYear('not a year'),
+        options,
+        firstLink: links[0],
+        sourceHtml,
+        releaseHtml,
+        previewCatalogYear: preview.catalogYear,
+        previewSource: preview.officialSources[0],
+        reviewHtml,
+        advisorText,
+        advisorHtml,
+      };
+    })()
+  `, context));
+
+  assert(result.normalized === '2024-2025', 'catalog year: single-year input should normalize to an academic year span');
+  assert(result.enDash === '2023-2024', 'catalog year: en dash input should normalize');
+  assert(result.invalid === result.current, 'catalog year: invalid input should fall back to current catalog year');
+  assert(result.options.includes(result.current) && result.options.includes('2024-2025'), 'catalog year: selector options should include current and selected years');
+  assert(result.firstLink.targetYear === '2024-2025', 'catalog year: source links should carry student target year');
+  assert(result.firstLink.sourceYear === result.current && result.firstLink.year === result.current, 'catalog year: source links should preserve checked source year');
+  assert(result.firstLink.isCurrentCatalog === false, 'catalog year: older target should be marked non-current');
+  assert(/Catalog target 2024-2025/.test(result.sourceHtml) && /linked source 2026-2027/.test(result.sourceHtml), 'catalog year: source HTML should compare target and linked source years');
+  assert(/Catalog target 2024-2025/.test(result.releaseHtml), 'catalog year: release checklist should show selected target year');
+  assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
+  assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
+  assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
+  assert(/Catalog year: 2024-2025/.test(result.advisorText), 'catalog year: advisor text should include target catalog year');
+  assert(/Catalog 2024-2025/.test(result.advisorHtml), 'catalog year: advisor HTML should include target catalog year');
+
+  return {
+    id: 'CATALOG-YEAR',
+    target: result.normalized,
+    source: result.firstLink.sourceYear,
+  };
+}
+
 function testScheduleTimingFit(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -2388,6 +2472,7 @@ async function main() {
   }
   const prereq = testSyntheticPrerequisites(context);
   const diagnostics = await testAutoPlanDiagnostics(context);
+  const catalogYear = await testCatalogYearTargeting(context);
   const account = testAccountAndShareState(context);
   const accountSetup = testAccountCloudSetup(context);
   const timing = testScheduleTimingFit(context);
@@ -2409,6 +2494,7 @@ async function main() {
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
   console.log(`Auto-plan diagnostics fixture ${diagnostics.id}: template missing ${diagnostics.templateMissing}; mixed ${diagnostics.mixedCoverage}.`);
+  console.log(`Catalog year fixture ${catalogYear.id}: target ${catalogYear.target}; source ${catalogYear.source}.`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
@@ -2426,7 +2512,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

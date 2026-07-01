@@ -5013,3 +5013,95 @@ Next pass candidates:
 - Add catalog-year targeting controls for students following an older catalog year.
 - Add a `--json` output mode to `scripts/run-release-checks.js` for future CI/reporting.
 - Add rendered mobile coverage for Account setup and advisor packet export.
+
+## 2026-07-01 Pass 96
+
+Focus: add student-specific catalog-year targeting so plans can record the requirement catalog year a student is following.
+
+Planned changes:
+- Add a durable `catalogYear` setting.
+- Add Settings and onboarding controls for requirement catalog year.
+- Keep official source metadata honest by separating student target year from linked checked source year.
+- Thread catalog year into auto-plan previews, release readiness, footer text, and advisor packet exports.
+- Add fixture and rendered mobile coverage.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `DEFAULT_SETTINGS.catalogYear` with a current default of `2026-2027`.
+- Replaced the old hardcoded CE footer-year note with a generic advisor confirmation note.
+- Added state helpers:
+  - `currentCatalogYear()`.
+  - `normalizeCatalogYear()`.
+  - `catalogYearOptions()`.
+  - `catalogYearIsCurrent()`.
+  - `normalizeSettings()`.
+- Updated saved-state loading to normalize settings and catalog years.
+- Updated restore/import paths to normalize settings:
+  - share links.
+  - JSON import.
+  - snapshots.
+  - cloud load.
+- Updated official UMD source records to include:
+  - `targetYear`.
+  - `sourceYear`.
+  - `isCurrentCatalog`.
+- Updated Settings:
+  - Added `Requirement Catalog Year` selector.
+  - Added target/source-year note.
+  - Release Readiness source row updates when the catalog year changes.
+  - Auto Plan Review receives the selected catalog year.
+  - Applying a major preserves the selected catalog year.
+  - Footer now shows `Catalog <year>`.
+- Updated onboarding:
+  - Added requirement catalog-year selector next to starting Fall semester.
+  - Preview summary shows the selected catalog year.
+  - Auto-plan preview source metadata shows older target year vs linked current source year.
+  - Finished plan saves the selected catalog year.
+- Updated advisor packet text and HTML to include the saved catalog year.
+- Added `CATALOG-YEAR` fixture coverage in `scripts/test-generated-plans.js`.
+- Updated rendered verifiers for cache tags:
+  - `styles.css?v=76`.
+  - `js/majors.js?v=3`.
+  - `js/state.js?v=16`.
+  - `js/import.js?v=10`.
+  - `js/settings.js?v=24`.
+  - `js/onboarding.js?v=16`.
+  - `js/schedule.js?v=32`.
+  - `js/io.js?v=12`.
+  - `js/share.js?v=12`.
+  - `js/snapshots.js?v=11`.
+  - `js/account.js?v=8`.
+- Extended the rendered mobile workflow verifier to choose `2024-2025` during onboarding and assert:
+  - `Catalog year`.
+  - `2024-2025`.
+  - `Catalog target 2024-2025`.
+  - `linked source 2026-2027`.
+
+Verification:
+- Ran syntax checks for touched app and verifier files.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `CATALOG-YEAR` fixture.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding with the older catalog-year target.
+  - It passed mobile Browse replacement mode.
+- Ran `node scripts/verify-rendered-generated-plans.js --majors=PHYS --viewports=mobile --timeout-ms=120000`.
+  - It passed the updated rendered Settings/cache assertions.
+  - It rendered Physics with `20/20 live course records`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed all generated-plan and planner fixtures, including `CATALOG-YEAR`.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding and Browse replacement workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass96-catalog-year-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+
+Findings for next pass:
+- Catalog-year targeting is now saved and visible, but older-year requirement differences still require advisor/official-audit comparison because built-in templates are sourced from the checked current catalog pages.
+
+Next pass candidates:
+- Add a `--json` output mode to `scripts/run-release-checks.js` for future CI/reporting.
+- Add rendered mobile coverage for Account setup and advisor packet export.
+- Add an advisor-facing catalog-year warning/checklist item when the selected target year differs from the checked source year.

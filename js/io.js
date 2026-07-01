@@ -28,7 +28,7 @@ document.getElementById('import-file').addEventListener('change', (e) => {
         state = {
           ...state,
           ...data,
-          settings: { ...DEFAULT_SETTINGS, ...(data.settings || state.settings || {}) },
+          settings: typeof normalizeSettings === 'function' ? normalizeSettings({ ...DEFAULT_SETTINGS, ...(data.settings || state.settings || {}) }) : { ...DEFAULT_SETTINGS, ...(data.settings || state.settings || {}) },
           customSemesters: data.customSemesters || state.customSemesters || [],
           selectedSections: data.selectedSections || {},
           schedulePrefs: data.schedulePrefs || {},

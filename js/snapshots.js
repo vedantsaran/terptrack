@@ -58,7 +58,7 @@ function loadSnapshot(id) {
     recentChanges: Array.isArray(snap.payload.recentChanges) ? snap.payload.recentChanges.slice(0, 12) : [],
     majorId: snap.payload.majorId,
     profilePrefs: normalizeProfilePrefs(snap.payload.profilePrefs || {}),
-    settings: { ...DEFAULT_SETTINGS, ...(snap.payload.settings || {}) },
+    settings: typeof normalizeSettings === 'function' ? normalizeSettings({ ...DEFAULT_SETTINGS, ...(snap.payload.settings || {}) }) : { ...DEFAULT_SETTINGS, ...(snap.payload.settings || {}) },
   });
   saveState();
   applyTheme();

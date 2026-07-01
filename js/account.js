@@ -323,7 +323,7 @@ function accountNormalizeLoadedState(cloudState) {
   return {
     ...state,
     ...cloudState,
-    settings: { ...DEFAULT_SETTINGS, ...(cloudState.settings || {}) },
+    settings: typeof normalizeSettings === 'function' ? normalizeSettings({ ...DEFAULT_SETTINGS, ...(cloudState.settings || {}) }) : { ...DEFAULT_SETTINGS, ...(cloudState.settings || {}) },
     customCourses: cloudState.customCourses || [],
     customSemesters: cloudState.customSemesters || [],
     customMajors: cloudState.customMajors || [],

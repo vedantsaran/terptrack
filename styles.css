@@ -3028,6 +3028,11 @@ h1.hero-title em {
   margin-top: 14px;
   padding-top: 12px;
 }
+.catalog-year-section {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 10px;
+}
 .profile-help {
   color: var(--slate);
   font-size: .76rem;

@@ -98,7 +98,7 @@ function applySharedPlanData(data, options = {}) {
   state = {
     ...state,
     ...payload,
-    settings: { ...DEFAULT_SETTINGS, ...(payload.settings || {}) },
+    settings: typeof normalizeSettings === 'function' ? normalizeSettings({ ...DEFAULT_SETTINGS, ...(payload.settings || {}) }) : { ...DEFAULT_SETTINGS, ...(payload.settings || {}) },
     selectedSections: payload.selectedSections || {},
     schedulePrefs: payload.schedulePrefs || {},
     scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(payload.scheduleAdvisorFilter) ? payload.scheduleAdvisorFilter : 'all',

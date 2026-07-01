@@ -65,6 +65,56 @@ function defaultProfilePrefs() {
   return { interests: [], careerGoal: '', genEdDepts: [] };
 }
 
+function currentCatalogYear() {
+  return String(
+    (typeof UMD_CATALOG_YEAR !== 'undefined' && UMD_CATALOG_YEAR)
+    || DEFAULT_SETTINGS.catalogYear
+    || '2026-2027'
+  );
+}
+
+function normalizeCatalogYear(value, fallback = currentCatalogYear()) {
+  const source = String(value || '').replace(/[–—]/g, '-').trim();
+  const firstMatch = source.match(/\b(20\d{2})\b/);
+  const first = firstMatch ? Number(firstMatch[1]) : NaN;
+  if (!Number.isFinite(first) || first < 2010 || first > 2040) return currentCatalogYear();
+  const secondMatch = source.slice(firstMatch.index + firstMatch[0].length).match(/\b(20\d{2})\b|\b(\d{2})\b/);
+  const second = secondMatch
+    ? Number(secondMatch[1] || `20${secondMatch[2]}`)
+    : first + 1;
+  if (second !== first + 1) return normalizeCatalogYear(fallback || currentCatalogYear());
+  return `${first}-${second}`;
+}
+
+function catalogYearOptions(extraYear = '') {
+  const current = normalizeCatalogYear(currentCatalogYear());
+  const latest = Number(current.slice(0, 4));
+  const years = [];
+  for (let year = latest; year >= latest - 8; year -= 1) {
+    years.push(`${year}-${year + 1}`);
+  }
+  const extra = normalizeCatalogYear(extraYear || current);
+  if (!years.includes(extra)) years.push(extra);
+  return Array.from(new Set(years)).sort((a, b) => Number(b.slice(0, 4)) - Number(a.slice(0, 4)));
+}
+
+function catalogYearIsCurrent(year) {
+  return normalizeCatalogYear(year) === normalizeCatalogYear(currentCatalogYear());
+}
+
+function normalizeSettings(value) {
+  const merged = { ...DEFAULT_SETTINGS, ...(value || {}) };
+  return {
+    ...merged,
+    programName: String(merged.programName || DEFAULT_SETTINGS.programName).trim() || DEFAULT_SETTINGS.programName,
+    eyebrow: String(merged.eyebrow || '').trim() || DEFAULT_SETTINGS.eyebrow,
+    catalogYear: normalizeCatalogYear(merged.catalogYear),
+    totalCredits: Number(merged.totalCredits) || DEFAULT_SETTINGS.totalCredits,
+    goalCourses: Array.isArray(merged.goalCourses) ? merged.goalCourses.map(item => String(item || '').trim()).filter(Boolean) : [],
+    footerNote: String(merged.footerNote || '').trim(),
+  };
+}
+
 function normalizeProfilePrefs(value) {
   const validInterests = new Set(PROFILE_INTEREST_DEFS.map(def => def.id));
   const interests = Array.from(new Set(Array.isArray(value?.interests) ? value.interests : []))
@@ -277,7 +327,7 @@ function loadState() {
     accountPrefs: defaultAccountPrefs(),
     profilePrefs: defaultProfilePrefs(),
     onboardingComplete: false,
-    settings: { ...DEFAULT_SETTINGS },
+    settings: normalizeSettings(DEFAULT_SETTINGS),
     welcomeDismissed: false,
     theme: "dark",
   };
@@ -288,7 +338,7 @@ function loadState() {
       return {
         ...fallback,
         ...parsed,
-        settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+        settings: normalizeSettings({ ...DEFAULT_SETTINGS, ...(parsed.settings || {}) }),
         customSemesters: parsed.customSemesters || [],
         selectedSections: parsed.selectedSections || {},
         schedulePrefs: parsed.schedulePrefs || {},
@@ -314,7 +364,10 @@ function loadState() {
   return fallback;
 }
 
-function getSettings() { return state.settings || DEFAULT_SETTINGS; }
+function getSettings() {
+  state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, ...(state.settings || {}) });
+  return state.settings;
+}
 function getGoalCodes() {
   const fromSettings = (getSettings().goalCourses || []).map(s => s.trim()).filter(Boolean);
   // Always include any course flagged isGoal in the data (legacy + custom)

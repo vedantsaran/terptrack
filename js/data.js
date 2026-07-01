@@ -99,9 +99,10 @@ const PT_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 const DEFAULT_SETTINGS = {
   programName: "Computer Engineering",
   eyebrow: "UMD · Computer Engineering · 2026–2030",
+  catalogYear: "2026-2027",
   totalCredits: 125,
   goalCourses: ["ENEE 436", "CMSC 451", "CMSC 472"],
-  footerNote: "Plan validated against UMD 2024–2025 CE catalog · Always confirm with your advisor before registration",
+  footerNote: "Always confirm with your advisor before registration",
 };
 
 const GRADE_POINTS = {

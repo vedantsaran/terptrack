@@ -157,8 +157,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=75'), 'workflow app did not load styles.css?v=75');
-  assert(snapshot.scripts.includes('js/onboarding.js?v=15'), 'workflow app did not load js/onboarding.js?v=15');
+  assert(snapshot.styles.includes('styles.css?v=76'), 'workflow app did not load styles.css?v=76');
+  assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=12'), 'workflow app did not load js/browse.js?v=12');
   return snapshot;
 }
@@ -174,6 +174,7 @@ async function verifyOnboardingMobile(page, url, opts) {
   await page.locator('#onboard-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
   await page.selectOption('#ob-major', 'STAT');
   await page.fill('#ob-start-year', '2027');
+  await page.selectOption('#ob-catalog-year', '2024-2025');
   await page.locator('#ob-next').click({ timeout: opts.timeoutMs });
   await page.fill('#ob-career-goal', 'machine learning for public policy');
   await page.fill('#ob-gened-depts', 'INST, PSYC, GVPT');
@@ -193,7 +194,10 @@ async function verifyOnboardingMobile(page, url, opts) {
     const text = document.querySelector('#ob-plan-preview')?.textContent?.replace(/\s+/g, ' ') || '';
     return text.includes('Auto Plan Review')
       && text.includes('Statistics')
-      && text.includes('Catalog year 2026-2027')
+      && text.includes('Catalog year')
+      && text.includes('2024-2025')
+      && text.includes('Catalog target 2024-2025')
+      && text.includes('linked source 2026-2027')
       && text.includes('Schedule defaults');
   }, null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());

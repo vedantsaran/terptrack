@@ -2180,6 +2180,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
     '',
     'Advisor packet',
     `Program: ${getSettings().programName || 'UMD degree plan'}`,
+    `Catalog year: ${getSettings().catalogYear || 'Not set'}`,
     `Plan term: ${sem?.name || 'Selected semester'} / ${scheduleTermLabel(term)}`,
     `Advisor view: ${filterDef.label} - ${filterDef.description}`,
     `Review status: ${scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings)}`,
@@ -2319,6 +2320,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         </div>
         <div class="schedule-advisor-flags">
           <span>${scheduleEscape(label)}</span>
+          <span>${scheduleEscape(`Catalog ${getSettings().catalogYear || 'not set'}`)}</span>
           <span>${scheduleEscape(sem?.name || 'Selected semester')}</span>
           <span>${scheduleEscape(scheduleTermLabel(term))}</span>
           <span>${scheduleEscape(filterDef.label)} view</span>
@@ -2334,6 +2336,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       ${outputOptions.preferences ? `<p class="schedule-advisor-note">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
       <div class="schedule-advisor-metrics">
         <span>${stats.inProgressCredits} in-progress credits</span>
+        <span>Catalog ${scheduleEscape(getSettings().catalogYear || 'not set')}</span>
         <span>${stats.remainingCredits} remaining planned credits</span>
         <span>${stats.genEdCredits} GenEd credits in plan</span>
         <span>${stats.goalDone}/${stats.goalTotal} goal courses complete</span>

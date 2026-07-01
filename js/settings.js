@@ -111,6 +111,48 @@ function settingsHtml(value) {
   }[ch]));
 }
 
+function settingsCatalogYearValue() {
+  const selected = document.getElementById('set-catalog-year')?.value;
+  return typeof normalizeCatalogYear === 'function'
+    ? normalizeCatalogYear(selected || getSettings().catalogYear)
+    : (selected || getSettings().catalogYear || '2026-2027');
+}
+
+function populateCatalogYearSelect(id, selectedYear) {
+  const select = document.getElementById(id);
+  if (!select) return;
+  const selected = typeof normalizeCatalogYear === 'function'
+    ? normalizeCatalogYear(selectedYear || getSettings().catalogYear)
+    : (selectedYear || getSettings().catalogYear || '2026-2027');
+  const values = typeof catalogYearOptions === 'function'
+    ? catalogYearOptions(selected)
+    : [selected];
+  select.innerHTML = values.map(year => `<option value="${settingsHtml(year)}">${settingsHtml(year)}</option>`).join('');
+  select.value = selected;
+}
+
+function catalogSourceMetaText(links) {
+  const targetYears = Array.from(new Set(links.map(link => link.targetYear || link.year).filter(Boolean)));
+  const sourceYears = Array.from(new Set(links.map(link => link.sourceYear || link.year).filter(Boolean)));
+  const checked = Array.from(new Set(links.map(link => link.checkedAt).filter(Boolean)));
+  const sameYear = targetYears.length === 1 && sourceYears.length === 1 && targetYears[0] === sourceYears[0];
+  return [
+    targetYears.length ? (sameYear ? `Catalog year ${targetYears.join(', ')}` : `Catalog target ${targetYears.join(', ')}`) : '',
+    !sameYear && sourceYears.length ? `linked source ${sourceYears.join(', ')}` : '',
+    checked.length ? `checked ${checked.join(', ')}` : '',
+  ].filter(Boolean).join(' · ');
+}
+
+function renderSettingsCatalogYearNote() {
+  const note = document.getElementById('set-catalog-year-note');
+  if (!note) return;
+  const year = settingsCatalogYearValue();
+  const current = typeof currentCatalogYear === 'function' ? currentCatalogYear() : '2026-2027';
+  note.textContent = year === current
+    ? `Using the currently linked UMD catalog source year (${current}).`
+    : `Targeting ${year}; linked requirement pages are checked against ${current}, so compare with the official audit or advisor notes.`;
+}
+
 function autoPlanReviewStat(label, value, detail) {
   return `
     <div class="auto-plan-stat">
@@ -167,7 +209,10 @@ function autoPlanOfficialSourceLinks(review, opts = {}) {
   const majorId = review?.majorId || state?.majorId || '';
   let links = [];
   if (typeof majorOfficialSources === 'function') {
-    links = majorOfficialSources(majorId, { includeGeneral: opts.includeGeneral !== false });
+    links = majorOfficialSources(majorId, {
+      includeGeneral: opts.includeGeneral !== false,
+      catalogYear: opts.catalogYear || review?.catalogYear || settingsCatalogYearValue(),
+    });
   }
   if (!links.length && Array.isArray(review?.officialSources)) links = review.officialSources;
   const seen = new Set();
@@ -183,14 +228,8 @@ function autoPlanOfficialSourceLinksHtml(review, opts = {}) {
   const links = autoPlanOfficialSourceLinks(review, opts);
   if (!links.length) return '';
   const label = opts.label || 'Official sources';
-  const years = Array.from(new Set(links.map(link => link.year).filter(Boolean)));
-  const checked = Array.from(new Set(links.map(link => link.checkedAt).filter(Boolean)));
-  const meta = opts.showMeta === false || (!years.length && !checked.length)
-    ? ''
-    : [
-        years.length ? `Catalog year ${years.join(', ')}` : '',
-        checked.length ? `checked ${checked.join(', ')}` : '',
-      ].filter(Boolean).join(' · ');
+  const metaText = catalogSourceMetaText(links);
+  const meta = opts.showMeta === false || !metaText ? '' : metaText;
   return `
     <div class="auto-plan-official-sources ${opts.compact ? 'compact' : ''}">
       <span>${settingsHtml(label)}</span>
@@ -298,10 +337,9 @@ function releaseChecklistItems(config, clientReady) {
   const selectedMajorId = document.getElementById('set-major')?.value || state?.majorId || 'CE';
   const tpl = typeof getMajorTemplate === 'function' ? getMajorTemplate(selectedMajorId) : null;
   const sourceLinks = typeof majorOfficialSources === 'function'
-    ? majorOfficialSources(selectedMajorId, { includeGeneral: true })
+    ? majorOfficialSources(selectedMajorId, { includeGeneral: true, catalogYear: settingsCatalogYearValue() })
     : [];
-  const sourceYears = Array.from(new Set(sourceLinks.map(link => link.year).filter(Boolean)));
-  const sourceChecked = Array.from(new Set(sourceLinks.map(link => link.checkedAt).filter(Boolean)));
+  const sourceMeta = catalogSourceMetaText(sourceLinks);
   const audit = GENERATED_TEMPLATE_AUDIT;
   const auditHistory = GENERATED_TEMPLATE_AUDIT_HISTORY || [];
   const auditOk = audit.failedSchedules === 0 && auditHistory.length > 0;
@@ -320,10 +358,7 @@ function releaseChecklistItems(config, clientReady) {
       detail: sourceLinks.length
         ? `${sourceLinks.length} UMD source${sourceLinks.length === 1 ? '' : 's'} attached to ${tpl?.name || selectedMajorId}.`
         : `No official source link is attached to ${tpl?.name || selectedMajorId}.`,
-      meta: [
-        sourceYears.length ? `Catalog year ${sourceYears.join(', ')}` : '',
-        sourceChecked.length ? `checked ${sourceChecked.join(', ')}` : '',
-      ].filter(Boolean).join(' · '),
+      meta: sourceMeta,
       extraHtml: releaseChecklistSourceLinksHtml(sourceLinks),
     },
     {
@@ -782,8 +817,10 @@ async function renderAutoPlanReview(majorId) {
   }
   try {
     const profilePrefs = readProfileForm('set');
+    const catalogYear = settingsCatalogYearValue();
     const review = await buildAutoPlanPreview(majorId, {
       profilePrefs,
+      catalogYear,
       onProgress(done, total) {
         if (seq !== autoPlanReviewSeq) return;
         const line = root.querySelector('.auto-plan-review-head span');
@@ -816,6 +853,15 @@ function bindProfileReviewUpdates() {
     el.dataset.reviewBound = '1';
     el.addEventListener(el.tagName === 'INPUT' && el.type === 'text' ? 'input' : 'change', queueAutoPlanReview);
   });
+  const catalogYear = document.getElementById('set-catalog-year');
+  if (catalogYear && !catalogYear.dataset.reviewBound) {
+    catalogYear.dataset.reviewBound = '1';
+    catalogYear.addEventListener('change', () => {
+      renderSettingsCatalogYearNote();
+      renderReleaseChecklist();
+      queueAutoPlanReview();
+    });
+  }
 }
 
 function profileInterestGridHtml(selectedIds = [], name = 'profile-interest') {
@@ -988,6 +1034,8 @@ function openSettings() {
   populateMajorSelect();
   document.getElementById('set-program').value = s.programName || '';
   document.getElementById('set-eyebrow').value = s.eyebrow || '';
+  populateCatalogYearSelect('set-catalog-year', s.catalogYear);
+  renderSettingsCatalogYearNote();
   document.getElementById('set-total-credits').value = s.totalCredits || 125;
   document.getElementById('set-goals').value = (s.goalCourses || []).join(', ');
   document.getElementById('set-footer').value = s.footerNote || '';
@@ -1017,7 +1065,7 @@ async function applyMajorFromSettings() {
   status.style.color = 'var(--slate)';
   status.textContent = isMajorFullyBaked(tpl) ? 'Applying curated schedule…' : 'Generating schedule from API…';
   try {
-    await applyMajorTemplate(id, {});
+    await applyMajorTemplate(id, { catalogYear: settingsCatalogYearValue() });
     const courseCount = (state.activeSchedule || []).reduce((a, sem) => a + (sem.courses || []).length, 0);
     const baked = isMajorFullyBaked(tpl);
     status.style.color = 'var(--green)';
@@ -1027,6 +1075,8 @@ async function applyMajorFromSettings() {
     const s = getSettings();
     document.getElementById('set-program').value = s.programName || '';
     document.getElementById('set-eyebrow').value = s.eyebrow || '';
+    populateCatalogYearSelect('set-catalog-year', s.catalogYear);
+    renderSettingsCatalogYearNote();
     document.getElementById('set-total-credits').value = s.totalCredits || 125;
     document.getElementById('set-goals').value = (s.goalCourses || []).join(', ');
     renderReleaseChecklist();
@@ -1042,11 +1092,12 @@ function closeSettings() {
 function saveSettings() {
   const programName = document.getElementById('set-program').value.trim() || 'Computer Engineering';
   const eyebrow     = document.getElementById('set-eyebrow').value.trim() || `UMD · ${programName}`;
+  const catalogYear = settingsCatalogYearValue();
   const totalCredits = parseInt(document.getElementById('set-total-credits').value) || 125;
   const goalCourses = document.getElementById('set-goals').value
     .split(',').map(s => s.trim()).filter(Boolean);
   const footerNote = document.getElementById('set-footer').value.trim();
-  state.settings = { ...DEFAULT_SETTINGS, ...state.settings, programName, eyebrow, totalCredits, goalCourses, footerNote };
+  state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, ...state.settings, programName, eyebrow, catalogYear, totalCredits, goalCourses, footerNote });
   state.profilePrefs = readProfileForm('set');
   saveState();
   applySettings();
@@ -1073,7 +1124,8 @@ function applySettings() {
   const footer = document.getElementById('footer-text');
   if (footer) {
     const note = s.footerNote ? ` · ${s.footerNote}` : '';
-    footer.innerHTML = `<em>Terp Track</em> · ${s.programName || 'Degree'} planner${note} · Saves locally to your browser`;
+    const catalog = s.catalogYear ? ` · Catalog ${settingsHtml(s.catalogYear)}` : '';
+    footer.innerHTML = `<em>Terp Track</em> · ${s.programName || 'Degree'} planner${catalog}${note} · Saves locally to your browser`;
   }
   // Populate semester filter dropdown in table view
   const semSel = document.getElementById('table-filter-sem');

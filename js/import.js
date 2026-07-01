@@ -364,10 +364,14 @@ async function buildAutoPlanPreview(majorId, opts = {}) {
   const profilePrefs = opts.profilePrefs
     ? normalizeProfilePrefs(opts.profilePrefs)
     : (typeof getProfilePrefs === 'function' ? getProfilePrefs() : defaultProfilePrefs());
+  const catalogYear = typeof normalizeCatalogYear === 'function'
+    ? normalizeCatalogYear(opts.catalogYear || (typeof getSettings === 'function' ? getSettings().catalogYear : ''))
+    : (opts.catalogYear || '');
   const targetCredits = tpl.totalCredits || 120;
   const cacheKey = JSON.stringify({
     majorId,
     targetCredits,
+    catalogYear,
     startTerm: opts.startTerm || 'Fall',
     startYear: opts.startYear || 2026,
     creditCap: opts.creditCap || 17,
@@ -382,9 +386,10 @@ async function buildAutoPlanPreview(majorId, opts = {}) {
       majorName: tpl.name,
       programName: tpl.programName || tpl.name,
       targetCredits,
+      catalogYear,
       notes: tpl.notes || '',
       officialSources: typeof majorOfficialSources === 'function'
-        ? majorOfficialSources(tpl, { includeGeneral: false })
+        ? majorOfficialSources(tpl, { includeGeneral: false, catalogYear })
         : [],
     };
     const curatedSchedule = tpl.useDefaultSchedule && typeof SCHEDULE !== 'undefined'
@@ -564,10 +569,11 @@ async function applyMajorTemplate(majorId, opts) {
     state.selectedSections = {};
     state.schedulePrefs = {};
     state.majorId = majorId;
-    state.settings = { ...state.settings,
+    state.settings = normalizeSettings({ ...state.settings,
       programName: tpl.programName, eyebrow: majorEyebrowForStart(tpl, opts),
       totalCredits: tpl.totalCredits, goalCourses: tpl.goals || state.settings.goalCourses,
-    };
+      catalogYear: opts.catalogYear || state.settings.catalogYear,
+    });
     saveState(); applySettings(); render();
     return { ok: true, schedule: state.activeSchedule || SCHEDULE };
   }
@@ -596,10 +602,11 @@ async function applyMajorTemplate(majorId, opts) {
     state.majorId = majorId;
     // Union template goals with isGoal-flagged rows in the schedule
     const goalSet = new Set([...(tpl.goals || []), ...goalsFromSchedule]);
-    state.settings = { ...state.settings,
+    state.settings = normalizeSettings({ ...state.settings,
       programName: tpl.programName, eyebrow: majorEyebrowForStart(tpl, opts),
       totalCredits: tpl.totalCredits, goalCourses: Array.from(goalSet),
-    };
+      catalogYear: opts.catalogYear || state.settings.catalogYear,
+    });
     saveState();
     applySettings();
     render();
@@ -638,10 +645,11 @@ async function applyMajorTemplate(majorId, opts) {
   state.selectedSections = {};
   state.schedulePrefs = {};
   state.majorId = majorId;
-  state.settings = { ...state.settings,
+  state.settings = normalizeSettings({ ...state.settings,
     programName: tpl.programName, eyebrow: majorEyebrowForStart(tpl, opts),
     totalCredits: tpl.totalCredits, goalCourses: tpl.goals || [],
-  };
+    catalogYear: opts.catalogYear || state.settings.catalogYear,
+  });
   saveState();
   applySettings();
   render();

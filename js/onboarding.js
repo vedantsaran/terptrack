@@ -880,10 +880,14 @@ function onboardReadSetup() {
   const startYear = onboardNumber('ob-start-year', new Date().getFullYear());
   const gradTerm = document.getElementById('ob-grad-term')?.value === 'Fall' ? 'Fall' : 'Spring';
   const gradYear = onboardNumber('ob-grad-year', startYear + 4);
+  const catalogYear = typeof normalizeCatalogYear === 'function'
+    ? normalizeCatalogYear(document.getElementById('ob-catalog-year')?.value || getSettings().catalogYear)
+    : (document.getElementById('ob-catalog-year')?.value || getSettings().catalogYear || '2026-2027');
   const creditCap = Math.max(15, Math.min(18, onboardNumber('ob-credit-cap', 17)));
   return {
     majorId: document.getElementById('ob-major')?.value || 'CE',
     startYear,
+    catalogYear,
     currentYear: Math.max(1, Math.min(4, onboardNumber('ob-current-year', 1))),
     gradTerm,
     gradYear,
@@ -911,6 +915,7 @@ function onboardPreviewSummaryHtml(setup) {
   return `
     <div class="onboard-preview-summary">
       <span><strong>Timeline</strong>${onboardEscape(`Fall ${setup.startYear} to ${setup.gradTerm} ${setup.gradYear} · ${setup.numSemesters} terms · ${setup.creditCap} credit cap`)}</span>
+      <span><strong>Catalog year</strong>${onboardEscape(setup.catalogYear || getSettings().catalogYear)}</span>
       <span><strong>Schedule defaults</strong>${onboardEscape(onboardScheduleSummary(setup.schedulePrefs))}</span>
       <span><strong>Prior credit</strong>${onboardEscape(onboardPriorSummaryText(prior))}</span>
     </div>
@@ -967,6 +972,7 @@ async function renderOnboardingPreview() {
       profilePrefs: setup.profilePrefs,
       startTerm: 'Fall',
       startYear: setup.startYear,
+      catalogYear: setup.catalogYear,
       numSemesters: setup.numSemesters,
       creditCap: setup.creditCap,
       noFetch: true,
@@ -1021,6 +1027,7 @@ function startOnboarding() {
   const now = new Date();
   const startYear = now.getMonth() < 6 ? now.getFullYear() : now.getFullYear() + 1;
   document.getElementById('ob-start-year').value = startYear;
+  if (typeof populateCatalogYearSelect === 'function') populateCatalogYearSelect('ob-catalog-year', getSettings().catalogYear);
   document.getElementById('ob-grad-term').value = 'Spring';
   document.getElementById('ob-grad-year').value = startYear + 4;
   document.getElementById('ob-current-year').value = '1';
@@ -1093,6 +1100,7 @@ async function finishOnboarding() {
     await applyMajorTemplate(majorId, {
       startTerm: 'Fall',
       startYear: setup.startYear,
+      catalogYear: setup.catalogYear,
       numSemesters: setup.numSemesters,
       creditCap: setup.creditCap,
       statusId: 'ob-finish-status',

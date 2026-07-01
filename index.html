@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=75">
+<link rel="stylesheet" href="styles.css?v=76">
 </head>
 <body data-theme="dark">
 
@@ -599,6 +599,12 @@
     <label>Eyebrow Subtitle (small caps text above hero)</label>
     <input type="text" id="set-eyebrow" placeholder="e.g., UMD · Computer Engineering · 2026–2030">
 
+    <div class="catalog-year-section">
+      <label>Requirement Catalog Year</label>
+      <select id="set-catalog-year"></select>
+      <p id="set-catalog-year-note" class="profile-help"></p>
+    </div>
+
     <label>Total Credits Required</label>
     <input type="number" id="set-total-credits" min="30" max="200" step="1" value="125">
 
@@ -675,8 +681,16 @@
         <strong>★</strong> = curated 4-year schedule. <strong>✱</strong> = auto-generated full 4-year draft with editable placeholders.
         Live data via umd.io + PlanetTerp. You can swap or customize anytime.
       </p>
-      <label>Starting Fall semester (year)</label>
-      <input type="number" id="ob-start-year" min="2020" max="2035" step="1">
+      <div class="onboard-inline-grid">
+        <label>
+          Starting Fall semester
+          <input type="number" id="ob-start-year" min="2020" max="2035" step="1">
+        </label>
+        <label>
+          Requirement catalog year
+          <select id="ob-catalog-year"></select>
+        </label>
+      </div>
     </div>
 
     <div id="ob-step-profile" style="display:none">
@@ -976,8 +990,8 @@
 <script src="js/toast.js"></script>
 <script src="js/data.js"></script>
 <script src="js/major-schedules.js"></script>
-<script src="js/majors.js?v=2"></script>
-<script src="js/state.js?v=15"></script>
+<script src="js/majors.js?v=3"></script>
+<script src="js/state.js?v=16"></script>
 <script src="js/theme.js"></script>
 <script src="js/tabs.js"></script>
 <script src="js/render.js?v=2"></script>
@@ -986,25 +1000,25 @@
 <script src="js/roadmap.js?v=6"></script>
 <script src="js/planetterp.js?v=2"></script>
 <script src="js/api.js?v=3"></script>
-<script src="js/schedule.js?v=31"></script>
+<script src="js/schedule.js?v=32"></script>
 <script src="js/courses.js"></script>
-<script src="js/settings.js?v=23"></script>
+<script src="js/settings.js?v=24"></script>
 <script src="js/semesters.js"></script>
-<script src="js/io.js?v=11"></script>
-<script src="js/import.js?v=9"></script>
+<script src="js/io.js?v=12"></script>
+<script src="js/import.js?v=10"></script>
 <script src="js/prereq-resolver.js"></script>
 <script src="js/recommendations.js?v=11"></script>
 <script src="js/major-builder.js"></script>
-<script src="js/onboarding.js?v=15"></script>
+<script src="js/onboarding.js?v=16"></script>
 <script src="js/browse.js?v=12"></script>
 <script src="js/dnd.js"></script>
 <script src="js/bulk.js"></script>
-<script src="js/share.js?v=11"></script>
+<script src="js/share.js?v=12"></script>
 <script src="js/gened.js"></script>
 <script src="js/placeholder-search.js?v=9"></script>
 <script src="js/gpa-sim.js"></script>
-<script src="js/snapshots.js?v=10"></script>
-<script src="js/account.js?v=7"></script>
+<script src="js/snapshots.js?v=11"></script>
+<script src="js/account.js?v=8"></script>
 <script src="js/events.js?v=5"></script>
 <script src="js/table.js"></script>
 <script src="js/main.js?v=3"></script>

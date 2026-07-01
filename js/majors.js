@@ -1082,6 +1082,17 @@ function majorOfficialSources(majorOrId, opts = {}) {
     ? getMajorTemplate(majorOrId)
     : majorOrId;
   const id = String(tpl?.id || majorOrId || '').trim().toUpperCase();
+  const targetYear = typeof normalizeCatalogYear === 'function'
+    ? normalizeCatalogYear(opts.catalogYear || (typeof getSettings === 'function' ? getSettings().catalogYear : UMD_CATALOG_YEAR))
+    : (opts.catalogYear || UMD_CATALOG_YEAR);
+  const isCurrentCatalog = targetYear === UMD_CATALOG_YEAR;
+  const sourceMeta = {
+    year: UMD_CATALOG_YEAR,
+    sourceYear: UMD_CATALOG_YEAR,
+    targetYear,
+    isCurrentCatalog,
+    checkedAt: UMD_CATALOG_CHECKED_AT,
+  };
   const links = [];
   const source = MAJOR_CATALOG_SOURCES[id];
   if (source && source.path) {
@@ -1089,14 +1100,13 @@ function majorOfficialSources(majorOrId, opts = {}) {
       label: source.label || 'UMD Catalog major',
       url: `${UMD_CATALOG_ORIGIN}${source.path}`,
       kind: 'major-catalog',
-      year: UMD_CATALOG_YEAR,
-      checkedAt: UMD_CATALOG_CHECKED_AT,
+      ...sourceMeta,
     });
   }
   if (opts.includeGeneral !== false) {
     links.push(
-      { label: 'UMD Catalog programs', url: UMD_CATALOG_PROGRAMS_URL, kind: 'catalog-index', year: UMD_CATALOG_YEAR, checkedAt: UMD_CATALOG_CHECKED_AT },
-      { label: 'UMD course catalog', url: UMD_COURSE_CATALOG_URL, kind: 'course-catalog', year: UMD_CATALOG_YEAR, checkedAt: UMD_CATALOG_CHECKED_AT },
+      { label: 'UMD Catalog programs', url: UMD_CATALOG_PROGRAMS_URL, kind: 'catalog-index', ...sourceMeta },
+      { label: 'UMD course catalog', url: UMD_COURSE_CATALOG_URL, kind: 'course-catalog', ...sourceMeta },
     );
   }
   const seen = new Set();
