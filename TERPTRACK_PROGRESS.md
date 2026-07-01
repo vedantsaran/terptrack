@@ -5961,3 +5961,67 @@ Verification:
   - It randomly verified `ENGL`, `ARCH`, `SOCY`, `BIOE`, `CINE`, and `STAT` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 112
+
+Focus: make the Schedule tab show a concrete registration-readiness checklist before students register.
+
+Planned changes:
+- Add one shared readiness model for current-term section registration.
+- Surface the same readiness gates in the visible Schedule Output card, text export, advisor packet, and exported advisor HTML.
+- Treat unpicked sections, time conflicts, low/closed seats, weak timing, TBA times, and preference warnings as explicit gates.
+- Verify the checklist in unit-style schedule tests and rendered mobile advisor-packet workflow.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleRegistrationReadiness()` in `js/schedule.js`.
+  - Checks section-pick completion.
+  - Checks picked-section conflicts.
+  - Checks urgent and watch-level seat risk from real posted seat data.
+  - Checks timing score and TBA meeting times.
+  - Checks non-seat schedule warnings from saved time, block, and campus preferences.
+- Added shared render/export helpers:
+  - `scheduleRegistrationReadinessHtml()`.
+  - `scheduleRegistrationReadinessText()`.
+- Rendered `Registration Readiness` in:
+  - the visible Schedule Output card.
+  - the advisor packet in the app.
+  - the downloaded advisor-packet HTML document.
+  - the plain-text schedule summary.
+  - the plain-text advisor packet.
+- Added responsive styling for `.schedule-readiness`, `.schedule-readiness-grid`, and `.schedule-readiness-gate`.
+- Added standalone advisor-packet CSS for the readiness block so downloaded/printed packets keep the same checklist layout.
+- Bumped cache tags:
+  - `styles.css?v=84`.
+  - `js/schedule.js?v=37`.
+- Extended tests:
+  - Added `SCHEDULE-READINESS` fixture to `scripts/test-generated-plans.js`.
+  - The fixture verifies a realistic blocker case with one unpicked course, one section conflict, and one low-seat section across readiness object, HTML, text, schedule output, advisor HTML, advisor text, and exported advisor document.
+  - Rendered mobile advisor-packet workflow now asserts `Registration Readiness`, `Fix before registration`, and exported readiness text.
+  - Rendered verifiers now assert the updated style/script cache tags.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `SCHEDULE-READINESS` fixture.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, catalog warning, low-seat backup warning, backup apply, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including registration readiness coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass112-registration-readiness-live`.
+  - It randomly verified `EDUC`, `ARCH`, `PHIL`, `PHSC`, `ENCE`, and `HESP` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

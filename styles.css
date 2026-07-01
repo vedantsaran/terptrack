@@ -3721,6 +3721,92 @@ h1.hero-title em {
   font-size: .75rem;
   line-height: 1.35;
 }
+.schedule-readiness {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 10px;
+  background: var(--paper);
+  margin: 10px 0 12px;
+  padding: 12px;
+}
+.schedule-readiness.warn {
+  border-left-color: var(--amber);
+  background: color-mix(in srgb, var(--paper) 80%, var(--amber-soft));
+}
+.schedule-readiness.danger {
+  border-left-color: var(--red);
+  background: color-mix(in srgb, var(--paper) 82%, var(--red-soft));
+}
+.schedule-readiness-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.schedule-readiness-head h4 {
+  margin: 0 0 2px;
+  color: var(--ink);
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+}
+.schedule-readiness-head span {
+  color: var(--slate);
+  display: block;
+  font-size: .74rem;
+  line-height: 1.35;
+}
+.schedule-readiness-head > strong {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--maroon);
+  font-size: .64rem;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  padding: 4px 8px;
+  text-align: right;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.schedule-readiness-gate {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cream) 66%, var(--paper));
+  min-width: 0;
+  padding: 8px;
+}
+.schedule-readiness-gate b,
+.schedule-readiness-gate strong,
+.schedule-readiness-gate span {
+  display: block;
+}
+.schedule-readiness-gate b {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.schedule-readiness-gate strong {
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .86rem;
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+.schedule-readiness-gate.ok strong { color: var(--green); }
+.schedule-readiness-gate.warn strong { color: var(--amber); }
+.schedule-readiness-gate.danger strong { color: var(--red); }
+.schedule-readiness-gate span {
+  color: var(--ink-soft);
+  font-size: .7rem;
+  line-height: 1.35;
+}
 .schedule-output {
   margin: -4px 0 18px;
 }
@@ -6948,6 +7034,14 @@ h1.hero-title em {
     gap: 4px;
   }
   .schedule-fit-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .schedule-readiness-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .schedule-readiness-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .schedule-output-head,

@@ -759,6 +759,102 @@ function testScheduleTimingFit(context) {
   };
 }
 
+function testScheduleRegistrationReadiness(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      recoGenEdGaps = () => [];
+      state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, catalogYear: '2026-2027', programName: 'Readiness Plan', totalCredits: 120 });
+      const courses = [
+        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, kind: 'core', category: 'major-core' },
+        { code: 'MATH 140', title: 'Calculus I', cr: 4, kind: 'core', category: 'gened-fsma' },
+        { code: 'ENGL 101', title: 'Academic Writing', cr: 3, kind: 'gened', category: 'gened-fspw' },
+      ];
+      const cmscSection = {
+        course: 'CMSC131',
+        section_id: 'CMSC131-0101',
+        semester: '202608',
+        number: '0101',
+        instructors: ['Ada Lovelace'],
+        meetings: [{ days: 'MW', start_time: '9:00am', end_time: '10:15am', building: 'IRB', room: '1101' }],
+        open_seats: '16',
+        seats: '30',
+        waitlist: '0',
+      };
+      const mathSection = {
+        course: 'MATH140',
+        section_id: 'MATH140-0201',
+        semester: '202608',
+        number: '0201',
+        instructors: ['Emmy Noether'],
+        meetings: [{ days: 'M', start_time: '9:30am', end_time: '10:45am', building: 'MTH', room: '0101' }],
+        open_seats: '2',
+        seats: '30',
+        waitlist: '0',
+      };
+      state.activeSchedule = [{ id: 'PASS112F', name: 'Fall 2026', year: 'Year 1', courses }];
+      state.customCourses = [];
+      state.courses = {};
+      state.selectedSections = {};
+      state.schedulePrefs = { PASS112F: { ...DEFAULT_SCHEDULE_PREFS, term: '202608', minBreak: 15, mode: 'balanced' } };
+      state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: false, auditIssues: true };
+      state.scheduleAdvisorFilter = 'all';
+      state.scheduleOutputPreset = 'personal';
+      setSelectedSection('PASS112F', 'CMSC 131', cmscSection);
+      setSelectedSection('PASS112F', 'MATH 140', mathSection);
+      const prefs = getSchedulePrefs('PASS112F');
+      const selectedItems = [
+        { course: courses[0], section: cmscSection },
+        { course: courses[1], section: mathSection },
+      ];
+      const { conflicts } = detectScheduleConflicts(selectedItems);
+      const warnings = selectedScheduleWarnings(selectedItems, prefs);
+      const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs);
+      const gateMap = Object.fromEntries(readiness.gates.map(gate => [gate.id, gate]));
+      const html = scheduleRegistrationReadinessHtml(readiness);
+      const text = scheduleRegistrationReadinessText(readiness).join('\\n');
+      const output = buildScheduleOutput('PASS112F', '202608', courses, selectedItems, conflicts, warnings, prefs);
+      return {
+        level: readiness.level,
+        label: readiness.label,
+        detail: readiness.detail,
+        gateLevels: Object.fromEntries(readiness.gates.map(gate => [gate.id, gate.level])),
+        sectionsDetail: gateMap.sections.detail,
+        conflictsDetail: gateMap.conflicts.detail,
+        seatsDetail: gateMap.seats.detail,
+        timingDetail: gateMap.timing.detail,
+        html,
+        text,
+        outputHtml: output.html,
+        outputText: output.text,
+        advisorHtml: output.advisorHtml,
+        advisorText: output.advisorText,
+        advisorDocument: output.advisorDocument,
+      };
+    })()
+  `, context));
+
+  assert(result.level === 'danger' && result.label === 'Fix before registration', 'registration readiness: blocker scenario should require fixes');
+  assert(result.gateLevels.sections === 'danger', 'registration readiness: unpicked current-term course should block registration');
+  assert(result.gateLevels.conflicts === 'danger', 'registration readiness: picked-section conflict should block registration');
+  assert(result.gateLevels.seats === 'danger', 'registration readiness: low-seat section should block registration');
+  assert(/ENGL 101/.test(result.sectionsDetail), 'registration readiness: sections gate should name the unpicked course');
+  assert(/1 overlap/.test(result.conflictsDetail), 'registration readiness: conflicts gate should summarize overlap count');
+  assert(/MATH 140 0201: 2 seats open/.test(result.seatsDetail), 'registration readiness: seats gate should name the risky section');
+  assert(/Registration Readiness/.test(result.html) && /Fix before registration/.test(result.html), 'registration readiness: HTML should render overall status');
+  assert(/Registration readiness/.test(result.text) && result.text.includes('Sections: 2/3'), 'registration readiness: text should include gate lines');
+  assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
+  assert(/Registration readiness/.test(result.outputText) && /Conflicts: 1/.test(result.outputText), 'registration readiness: schedule text should include readiness gates');
+  assert(/Registration Readiness/.test(result.advisorHtml) && /Fix before registration/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness gates');
+  assert(/Registration readiness/.test(result.advisorText) && result.advisorText.includes('Sections: 2/3'), 'registration readiness: advisor text should include readiness gates');
+  assert(/schedule-readiness/.test(result.advisorDocument), 'registration readiness: exported advisor document should include readiness markup');
+
+  return {
+    id: 'SCHEDULE-READINESS',
+    label: result.label,
+    gates: Object.entries(result.gateLevels).map(([key, level]) => `${key}:${level}`).join(','),
+  };
+}
+
 function testScheduleCourseChip(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -3076,6 +3172,7 @@ async function main() {
   const accountSetup = testAccountCloudSetup(context);
   const releaseJson = testReleaseJsonReport();
   const timing = testScheduleTimingFit(context);
+  const readiness = testScheduleRegistrationReadiness(context);
   const chip = testScheduleCourseChip(context);
   const seatRisk = testScheduleSeatRiskBackups(context);
   const recoMove = testRecommendationMoveAction(context);
@@ -3104,6 +3201,7 @@ async function main() {
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
+  console.log(`Schedule readiness fixture ${readiness.id}: ${readiness.label}; gates ${readiness.gates}.`);
   console.log(`Schedule chip fixture ${chip.id}: ${chip.risk}, ${chip.closed}, ${chip.ok}.`);
   console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
@@ -3122,7 +3220,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + registration readiness + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

@@ -1526,6 +1526,153 @@ function scheduleAdvisorTimingDiagnosticsText(timing) {
   ];
 }
 
+function scheduleRegistrationGate(id, label, level, value, detail) {
+  return { id, label, level, value, detail };
+}
+
+function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflicts = [], warnings = [], prefs = DEFAULT_SCHEDULE_PREFS, unscheduledOverride = null) {
+  const courseList = Array.isArray(courses) ? courses : [];
+  const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
+  const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course?.code || item.section?.course || '')));
+  const unscheduled = Array.isArray(unscheduledOverride)
+    ? unscheduledOverride
+    : courseList.filter(course => !selectedCodes.has(normalizeCode(course.code)));
+  const conflictList = Array.isArray(conflicts) ? conflicts : [];
+  const warningList = Array.isArray(warnings) ? warnings : selectedScheduleWarnings(selectedList, prefs);
+  const seatWarningSet = new Set(selectedSeatRiskWarnings(selectedList));
+  const nonSeatWarnings = warningList.filter(warning => !seatWarningSet.has(warning));
+  const timing = scheduleTimingFit(selectedList, prefs, conflictList);
+  const seatRows = selectedList.map(item => ({
+    item,
+    risk: sectionSeatRisk(item.section),
+    label: `${item.course?.code || displayCode(item.section?.course || '')} ${scheduleSectionShortLabel(item.section)}`.trim(),
+  }));
+  const urgentSeats = seatRows.filter(row => row.risk.level === 'closed' || row.risk.level === 'risk');
+  const watchSeats = seatRows.filter(row => row.risk.level === 'watch' || row.risk.level === 'unknown');
+  const untimedCount = timing.metrics?.untimedCount || 0;
+  const gates = [];
+
+  gates.push(scheduleRegistrationGate(
+    'sections',
+    'Sections',
+    unscheduled.length ? 'danger' : 'ok',
+    `${selectedList.length}/${courseList.length}`,
+    !courseList.length
+      ? 'No unsatisfied UMD-coded courses are in this semester.'
+      : unscheduled.length
+        ? `Pick sections for ${unscheduled.slice(0, 4).map(course => course.code).join(', ')}${unscheduled.length > 4 ? ` and ${unscheduled.length - 4} more` : ''}.`
+        : 'Every current-term course has a picked section.'
+  ));
+
+  gates.push(scheduleRegistrationGate(
+    'conflicts',
+    'Conflicts',
+    conflictList.length ? 'danger' : 'ok',
+    String(conflictList.length),
+    conflictList.length
+      ? `${conflictList.length} overlap${conflictList.length === 1 ? '' : 's'} must be resolved before registration.`
+      : 'No picked-section time overlaps.'
+  ));
+
+  gates.push(scheduleRegistrationGate(
+    'seats',
+    'Seats',
+    !courseList.length ? 'ok' : urgentSeats.length ? 'danger' : watchSeats.length ? 'warn' : 'ok',
+    selectedList.length ? `${selectedList.length - urgentSeats.length}/${selectedList.length}` : 'n/a',
+    !courseList.length
+      ? 'No seats need review for this semester.'
+      : !selectedList.length
+      ? 'Pick sections to check seat availability.'
+      : urgentSeats.length
+        ? `Seat risk: ${urgentSeats.slice(0, 3).map(row => `${row.label}: ${row.risk.detail}`).join(' · ')}${urgentSeats.length > 3 ? ` · +${urgentSeats.length - 3} more` : ''}.`
+        : watchSeats.length
+          ? `Watch seats: ${watchSeats.slice(0, 3).map(row => `${row.label}: ${row.risk.detail}`).join(' · ')}${watchSeats.length > 3 ? ` · +${watchSeats.length - 3} more` : ''}.`
+          : 'Picked sections have posted open seats.'
+  ));
+
+  gates.push(scheduleRegistrationGate(
+    'timing',
+    'Timing',
+    !courseList.length ? 'ok' : !selectedList.length ? 'warn' : timing.score < 61 ? 'danger' : timing.score < 76 || untimedCount ? 'warn' : 'ok',
+    `${timing.score}/100`,
+    !courseList.length
+      ? 'No weekly schedule needs timing review.'
+      : !selectedList.length
+      ? 'Pick sections to score weekly timing.'
+      : untimedCount
+        ? `${untimedCount} picked section${untimedCount === 1 ? '' : 's'} still has time TBA.`
+        : timing.insights[0] || timing.label
+  ));
+
+  gates.push(scheduleRegistrationGate(
+    'preferences',
+    'Preferences',
+    nonSeatWarnings.length ? 'warn' : 'ok',
+    String(nonSeatWarnings.length),
+    nonSeatWarnings.length
+      ? nonSeatWarnings.slice(0, 3).join(' ')
+      : 'Picked sections fit saved time, block, and campus preferences.'
+  ));
+
+  const dangerCount = gates.filter(gate => gate.level === 'danger').length;
+  const warnCount = gates.filter(gate => gate.level === 'warn').length;
+  const level = dangerCount ? 'danger' : warnCount ? 'warn' : 'ok';
+  const label = !courseList.length ? 'No registration courses'
+    : level === 'danger' ? 'Fix before registration'
+      : level === 'warn' ? 'Review before registration'
+        : 'Registration ready';
+  const detail = !courseList.length ? 'This term has no schedule-ready UMD-coded courses.'
+    : dangerCount ? `${dangerCount} blocker${dangerCount === 1 ? '' : 's'} need action before registration.`
+      : warnCount ? `${warnCount} item${warnCount === 1 ? '' : 's'} should be reviewed before registering.`
+        : 'All picked sections clear core registration checks.';
+
+  return {
+    level,
+    label,
+    detail,
+    gates,
+    unscheduled,
+    timing,
+    warningCount: warningList.length,
+    dangerCount,
+    warnCount,
+  };
+}
+
+function scheduleRegistrationReadinessHtml(readiness, heading = 'Registration Readiness') {
+  if (!readiness) return '';
+  return `
+    <section class="schedule-readiness ${scheduleEscape(readiness.level)}">
+      <div class="schedule-readiness-head">
+        <div>
+          <h4>${scheduleEscape(heading)}</h4>
+          <span>${scheduleEscape(readiness.detail)}</span>
+        </div>
+        <strong>${scheduleEscape(readiness.label)}</strong>
+      </div>
+      <div class="schedule-readiness-grid">
+        ${(readiness.gates || []).map(gate => `
+          <div class="schedule-readiness-gate ${scheduleEscape(gate.level)}">
+            <b>${scheduleEscape(gate.label)}</b>
+            <strong>${scheduleEscape(gate.value)}</strong>
+            <span>${scheduleEscape(gate.detail)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function scheduleRegistrationReadinessText(readiness) {
+  if (!readiness) return [];
+  return [
+    '',
+    'Registration readiness:',
+    `- Overall: ${readiness.label}. ${readiness.detail}`,
+    ...(readiness.gates || []).map(gate => `- ${gate.label}: ${gate.value} - ${gate.detail}`),
+  ];
+}
+
 function scheduleSectionMeetingLines(section) {
   const timed = (section && section.meetings || []).filter(m => m.days && m.start_time && m.end_time);
   if (!timed.length) return ['Time TBA'];
@@ -2249,6 +2396,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   const outputOptions = normalizeScheduleOutputOptions(options);
   const auditIssues = outputOptions.auditIssues ? scheduleAdvisorAuditIssues(6) : [];
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const context = scheduleAdvisorFilterContext(
     sem?.id || '',
     selectedItems,
@@ -2272,6 +2420,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   ];
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
+  lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push(...scheduleAdvisorCatalogYearText());
   if (outputOptions.auditIssues) lines.push(...scheduleAdvisorAuditSummaryText(auditIssues));
   if (outputOptions.auditIssues && auditIssues.length) lines.push(...scheduleAdvisorLiveLinkNoticeText());
@@ -2349,6 +2498,20 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-audit-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
     .schedule-advisor-audit-link{display:inline-flex;align-items:center;border:1px solid #9fb4c8;border-radius:999px;background:#eef4fa;color:#2e5c8b;font-size:11px;font-weight:700;padding:4px 8px;text-decoration:none}
     .schedule-advisor-audit-link.primary{border-color:#2e5c8b;background:#2e5c8b;color:#fff}
+    .schedule-readiness{border:1px solid #d8cec0;border-left:4px solid #7b8b55;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
+    .schedule-readiness.warn{border-left-color:#c99700;background:#fffaf0}
+    .schedule-readiness.danger{border-left-color:#8b0000;background:#fff5f3}
+    .schedule-readiness-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-readiness-head h4{margin:0}
+    .schedule-readiness-head span,.schedule-readiness-gate span{display:block;color:#5d5962;font-size:12px;line-height:1.35}
+    .schedule-readiness-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-readiness-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+    .schedule-readiness-gate{border:1px solid #d8cec0;border-radius:8px;background:#fbf7ef;padding:7px}
+    .schedule-readiness-gate b{display:block;color:#5d5962;font-size:10px;text-transform:uppercase}
+    .schedule-readiness-gate strong{display:block;font-size:14px;margin:2px 0}
+    .schedule-readiness-gate.ok strong{color:#2f6f4e}
+    .schedule-readiness-gate.warn strong{color:#8a6300}
+    .schedule-readiness-gate.danger strong{color:#8b0000}
     .schedule-output-week{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
     .schedule-output-day-grid{position:relative;min-height:132px;border:1px solid #d8cec0;border-radius:8px;background:#fff;overflow:hidden}
     .schedule-output-block{position:absolute;left:5px;right:5px;border-radius:6px;border:1px solid rgba(0,0,0,.16);padding:3px 5px;overflow:hidden;color:#1f1f1f;background:#f4c65d;font-size:11px}
@@ -2378,7 +2541,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid{grid-template-columns:repeat(2,1fr)}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}}
   `;
 }
@@ -2398,6 +2561,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
   const plan = scheduleAdvisorPlanHtml(sem?.id || '', selectedItems, filterContext);
   const generated = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   return `
     <article class="schedule-advisor-packet" id="schedule-advisor-packet">
       <div class="schedule-advisor-head">
@@ -2407,6 +2571,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         </div>
         <div class="schedule-advisor-flags">
           <span>${scheduleEscape(label)}</span>
+          <span>${scheduleEscape(readiness.label)}</span>
           <span>${scheduleEscape(`Catalog ${getSettings().catalogYear || 'not set'}`)}</span>
           <span>${scheduleEscape(sem?.name || 'Selected semester')}</span>
           <span>${scheduleEscape(scheduleTermLabel(term))}</span>
@@ -2433,6 +2598,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         <span>${plan.shownCredits}/${plan.totalCredits} credits shown</span>
         ${outputOptions.unscheduled ? (unscheduled.length ? `<span>${unscheduled.length} unscheduled course${unscheduled.length === 1 ? '' : 's'}</span>` : '<span>All current-term courses scheduled</span>') : ''}
       </div>
+      ${scheduleRegistrationReadinessHtml(readiness)}
       ${scheduleAdvisorCatalogYearHtml()}
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
@@ -2475,6 +2641,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const lines = [
     `Terp Track Schedule`,
     `Plan semester: ${sem?.name || 'Selected semester'}`,
@@ -2486,6 +2653,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
   lines.push(`Timing fit: ${timing.score}/100 - ${timing.label}`);
   timing.insights.slice(0, 3).forEach(insight => lines.push(`Timing note: ${insight}`));
+  lines.push(...scheduleRegistrationReadinessText(readiness));
   lines.push('', 'Picked sections:');
 
   if (!selectedItems.length) lines.push('- No picked sections yet.');
@@ -2571,6 +2739,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     ...selectedItems.flatMap(item => sectionBlocks(item.section, item.course)),
   ];
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
   const changes = outputOptions.recentChanges ? scheduleRecentChanges() : [];
   const text = buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, warnings, prefs, changes, outputOptions);
   const courseRows = selectedItems
@@ -2604,6 +2773,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
         </div>
       </div>
       ${outputOptions.preferences ? `<p class="schedule-print-prefs">${scheduleEscape(schedulePreferenceSummary(prefs))}</p>` : ''}
+      ${scheduleRegistrationReadinessHtml(readiness)}
       ${renderScheduleOutputWeek(blocks)}
       <table class="schedule-output-table">
         <thead><tr><th>Course</th><th>Section</th><th>Meetings</th><th>Instructor</th><th>Seats</th></tr></thead>
