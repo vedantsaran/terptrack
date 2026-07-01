@@ -177,7 +177,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.styles.includes('styles.css?v=99'), 'workflow app did not load styles.css?v=99');
-  assert(snapshot.scripts.includes('js/schedule.js?v=50'), 'workflow app did not load js/schedule.js?v=50');
+  assert(snapshot.scripts.includes('js/schedule.js?v=51'), 'workflow app did not load js/schedule.js?v=51');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -621,6 +621,26 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       seats: '19',
       waitlist: '0',
     };
+    const cmsc132Section = {
+      section_id: 'CMSC132-0101',
+      semester: '202701',
+      number: '0101',
+      instructors: ['Grace Hopper'],
+      meetings: [{ days: 'TuTh', start_time: '10:00am', end_time: '11:15am', building: 'IRB', room: '1207' }],
+      open_seats: '16',
+      seats: '32',
+      waitlist: '0',
+    };
+    const commSection = {
+      section_id: 'COMM107-0201',
+      semester: '202701',
+      number: '0201',
+      instructors: ['Pauli Murray'],
+      meetings: [{ days: 'MWF', start_time: '12:00pm', end_time: '12:50pm', building: 'KEY', room: '0103' }],
+      open_seats: '12',
+      seats: '24',
+      waitlist: '0',
+    };
     state.onboardingComplete = true;
     document.querySelector('#onboard-modal')?.classList.remove('open');
     state.majorId = 'CMSC';
@@ -692,7 +712,14 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     scheduleSectionsMeta[scheduleSectionCacheKey('PASS98F', '202608', 'CMSC 131')] = { fetchedAt: new Date(sectionMetaNow - (3 * 60 * 1000)).toISOString(), source: 'fixture', count: 1 };
     scheduleSectionsMeta[scheduleSectionCacheKey('PASS98F', '202608', 'MATH 140')] = { fetchedAt: new Date(sectionMetaNow - (90 * 60 * 1000)).toISOString(), source: 'fixture', count: 2 };
     scheduleSectionsMeta[scheduleSectionCacheKey('PASS98F', '202608', 'ENGL 101')] = { fetchedAt: new Date(sectionMetaNow - (3 * 60 * 1000)).toISOString(), source: 'fixture', count: 1 };
-    schedulePostedTerms = ['202608'];
+    const originalUmdioFetchSections = umdioFetchSections;
+    umdioFetchSections = async (code, term) => {
+      const norm = normalizeCode(code);
+      if (String(term) === '202701' && norm === 'CMSC132') return [cmsc132Section];
+      if (String(term) === '202701' && norm === 'COMM107') return [commSection];
+      return originalUmdioFetchSections(code, term);
+    };
+    schedulePostedTerms = ['202608', '202701'];
     scheduleCurrentSemId = 'PASS98F';
     currentTab = 'schedule';
     document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === 'view-schedule'));
@@ -748,10 +775,24 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   await page.waitForFunction(() => {
     const spring = document.querySelector('[data-schedule-jump-sem="PASS98S"]')?.textContent?.replace(/\s+/g, ' ') || '';
     const loadBtn = document.querySelector('[data-schedule-map-load]');
+    const pickBtn = document.querySelector('[data-schedule-map-pick]');
     return loadBtn?.disabled
+      && !pickBtn?.disabled
       && spring.includes('Spring 2027')
       && spring.includes('0/2')
       && spring.includes('2/2');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-map-pick]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const spring = document.querySelector('[data-schedule-jump-sem="PASS98S"]')?.textContent?.replace(/\s+/g, ' ') || '';
+    const pickedCmsc = getSelectedSection('PASS98S', 'CMSC 132')?.section_id || '';
+    const pickedComm = getSelectedSection('PASS98S', 'COMM 107')?.section_id || '';
+    const change = (state.recentChanges || [])[0] || {};
+    return pickedCmsc === 'CMSC132-0101'
+      && pickedComm === 'COMM107-0201'
+      && /Auto-picked 2 map sections/.test(change.title || '')
+      && spring.includes('2/2')
+      && spring.includes('Ready');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-schedule-jump-sem="PASS98S"]').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
@@ -760,8 +801,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     return sem === 'PASS98S'
       && scheduleCurrentSemId === 'PASS98S'
       && mapText.includes('Spring 2027')
-      && mapText.includes('0/2')
-      && mapText.includes('Needs sections');
+      && mapText.includes('2/2')
+      && mapText.includes('Ready');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-schedule-jump-sem="PASS98F"]').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => document.querySelector('#schedule-semester')?.value === 'PASS98F' && scheduleCurrentSemId === 'PASS98F', null, { timeout: opts.timeoutMs });

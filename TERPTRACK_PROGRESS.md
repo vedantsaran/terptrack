@@ -7164,3 +7164,56 @@ Verification:
   - It randomly verified `THET`, `HESP`, `BCHM`, `BIOE`, `PHIL`, and `ENFP` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 131
+
+Focus: let students turn loaded Schedule Readiness Map evidence into concrete section picks across future terms.
+
+Planned changes:
+- Add a bounded Readiness Map action that fills missing section selections in loaded non-active terms.
+- Preserve existing section choices while filling only the missing course picks.
+- Keep the active Schedule term untouched so a student does not lose the context they are editing.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added an `Auto-pick loaded` button to the Schedule Readiness Map header.
+- Added `scheduleReadinessMapPickTargets()` in `js/schedule.js`.
+  - It finds loaded, non-active schedule-ready terms with courses that still lack selected sections.
+  - It keeps the active term out of the bulk action.
+- Added `autoPickScheduleReadinessMap()`.
+  - It reuses the existing schedule candidate builder.
+  - It pins and preserves already-selected sections before filling missing courses.
+  - It writes one recent-change entry summarizing the map sections it filled.
+  - It rerenders Schedule and Semesters after a successful bulk pick.
+- Bumped the Schedule cache tag to `js/schedule.js?v=51`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts that loaded non-active terms become auto-pick targets.
+  - The rendered advisor packet workflow loads Spring map data, runs `Auto-pick loaded`, verifies the selected Spring sections, and confirms the Spring card becomes ready.
+  - Rendered workflow cache checks now expect the updated Schedule script tag.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with readiness-map auto-pick target assertions.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, recommendations, Browse, audit, onboarding, prior-credit, schedule timing, registration readiness, and seat-risk tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with Readiness Map loading, auto-pick loaded sections, jump-to-term behavior, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, exports, backup apply, seat refresh action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the readiness-map auto-pick coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with readiness-map auto-pick coverage.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass131-readiness-map-autopick-live`.
+  - It randomly verified `JOUR`, `FMSC`, `ASTR`, `CHEM`, `ENAE`, and `GEOL` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

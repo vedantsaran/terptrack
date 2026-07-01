@@ -123,6 +123,7 @@ let scheduleAlternatives = [];
 let scheduleOutputCache = null;
 let scheduleUndoAction = null;
 let scheduleReadinessMapLoading = false;
+let scheduleReadinessMapPicking = false;
 const scheduleSectionsCache = {};
 const scheduleSectionsMeta = {};
 const SCHEDULE_SEAT_WARN_MS = 15 * 60 * 1000;
@@ -1573,6 +1574,78 @@ async function loadScheduleReadinessMapData() {
   }
 }
 
+function scheduleReadinessMapPickTargets(activeSemId = scheduleCurrentSemId || scheduleDefaultSemesterId()) {
+  return getAllSemesters()
+    .filter(sem => sem.id !== activeSemId)
+    .map(sem => {
+      const courses = scheduleCoursesForSemester(sem.id);
+      const term = ((state.schedulePrefs || {})[sem.id]?.term || scheduleInferTermCode(sem));
+      const sectionsByCode = scheduleReadinessMapSectionsFor(sem.id, term, courses, {}, '');
+      const selectedItems = scheduleSelectedItemsFor(sem.id, term, courses, sectionsByCode);
+      const postedCount = Object.values(sectionsByCode).reduce((sum, sections) => sum + ((sections || []).length), 0);
+      return { sem, term, courses, sectionsByCode, selectedItems, postedCount };
+    })
+    .filter(row => row.courses.length && row.selectedItems.length < row.courses.length && row.postedCount > 0);
+}
+
+async function autoPickScheduleReadinessMap() {
+  if (scheduleReadinessMapPicking) return;
+  const activeSemId = scheduleCurrentSemId || scheduleDefaultSemesterId();
+  const targets = scheduleReadinessMapPickTargets(activeSemId);
+  if (!targets.length) {
+    if (typeof toastInfo === 'function') toastInfo('Load map data before auto-picking other terms.');
+    return;
+  }
+  scheduleReadinessMapPicking = true;
+  const root = document.getElementById('schedule-readiness-map');
+  const btn = root?.querySelector('[data-schedule-map-pick]');
+  const status = document.getElementById('schedule-status');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Picking...';
+  }
+  let filled = 0;
+  let terms = 0;
+  const highlights = [];
+  try {
+    targets.forEach(row => {
+      const prefs = getSchedulePrefs(row.sem.id);
+      const selectedCodes = new Set(row.selectedItems.map(item => normalizeCode(item.course.code)));
+      const preserved = row.selectedItems.map(item => ({ course: item.course, section: { ...item.section, pinned: true } }));
+      const candidate = buildScheduleCandidate(row.courses, row.sectionsByCode, prefs, 0, preserved);
+      const newItems = candidate.items.filter(item => !selectedCodes.has(normalizeCode(item.course.code)));
+      if (!newItems.length) return;
+      candidate.items.forEach(item => setSelectedSection(row.sem.id, item.course.code, item.section));
+      filled += newItems.length;
+      terms += 1;
+      highlights.push(`${row.sem.name || row.sem.id}: ${newItems.map(item => `${item.course.code} ${scheduleSectionShortLabel(item.section)}`).join(', ')}`);
+    });
+    if (filled) {
+      recordPlanChange({
+        type: 'auto-pick',
+        source: 'Schedule',
+        title: `Auto-picked ${filled} map section${filled === 1 ? '' : 's'}`,
+        detail: `Filled missing section picks across ${terms} loaded term${terms === 1 ? '' : 's'} without changing the active term.`,
+        meta: 'Readiness Map',
+        highlights: highlights.slice(0, 6),
+      }, { save: false });
+      saveState();
+      await renderSchedule();
+      renderSemesters();
+      if (status) status.textContent = `Auto-picked ${filled} section${filled === 1 ? '' : 's'} across ${terms} loaded term${terms === 1 ? '' : 's'}.`;
+      if (typeof toastSuccess === 'function') toastSuccess(`Auto-picked ${filled} map section${filled === 1 ? '' : 's'}.`);
+    } else if (typeof toastInfo === 'function') {
+      toastInfo('No loaded map terms had pickable sections.');
+    }
+  } finally {
+    scheduleReadinessMapPicking = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Auto-pick loaded';
+    }
+  }
+}
+
 function renderScheduleReadinessMap(activeSemId, activeTerm, activeCourses, activeSelectedItems, activeConflicts, activeWarnings, activeSectionsByCode) {
   const root = document.getElementById('schedule-readiness-map');
   if (!root) return;
@@ -1582,6 +1655,7 @@ function renderScheduleReadinessMap(activeSemId, activeTerm, activeCourses, acti
   const dangerRows = activeRows.filter(row => row.readiness.level === 'danger').length;
   const warnRows = activeRows.filter(row => row.readiness.level === 'warn').length;
   const loadTargetCount = activeRows.filter(row => row.loadedCount < row.courses.length).length;
+  const pickTargetCount = scheduleReadinessMapPickTargets(activeSemId).length;
   root.innerHTML = `
     <section class="schedule-readiness-map-panel">
       <div class="schedule-readiness-map-head">
@@ -1592,6 +1666,7 @@ function renderScheduleReadinessMap(activeSemId, activeTerm, activeCourses, acti
         <div class="schedule-readiness-map-actions">
           <strong>${dangerRows ? `${dangerRows} fix` : warnRows ? `${warnRows} review` : 'Ready'}</strong>
           <button class="btn small" type="button" data-schedule-map-load ${loadTargetCount ? '' : 'disabled'} title="${scheduleEscape(loadTargetCount ? `Load section evidence for ${loadTargetCount} term${loadTargetCount === 1 ? '' : 's'}.` : 'All map terms have loaded evidence.')}">Load map data</button>
+          <button class="btn small" type="button" data-schedule-map-pick ${pickTargetCount ? '' : 'disabled'} title="${scheduleEscape(pickTargetCount ? `Auto-pick missing sections for ${pickTargetCount} loaded non-active term${pickTargetCount === 1 ? '' : 's'}.` : 'Load non-active term section evidence before auto-picking.')}">Auto-pick loaded</button>
         </div>
       </div>
       <div class="schedule-readiness-term-grid">
@@ -4832,6 +4907,11 @@ function initScheduleEvents() {
     const loadBtn = e.target.closest('[data-schedule-map-load]');
     if (loadBtn) {
       loadScheduleReadinessMapData();
+      return;
+    }
+    const pickBtn = e.target.closest('[data-schedule-map-pick]');
+    if (pickBtn) {
+      autoPickScheduleReadinessMap();
       return;
     }
     const btn = e.target.closest('[data-schedule-jump-sem]');

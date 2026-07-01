@@ -889,6 +889,27 @@ function testScheduleRegistrationReadiness(context) {
       const mapFall = mapRows.find(row => row.sem.id === 'PASS112F');
       const mapSpring = mapRows.find(row => row.sem.id === 'PASS112S');
       const mapTargets = scheduleReadinessMapLoadTargets('PASS112F');
+      scheduleSectionsCache[scheduleSectionCacheKey('PASS112S', '202701', 'CMSC 132')] = [{
+        course: 'CMSC132',
+        section_id: 'CMSC132-0101',
+        semester: '202701',
+        number: '0101',
+        meetings: [{ days: 'TuTh', start_time: '10:00am', end_time: '11:15am', building: 'IRB', room: '1207' }],
+        open_seats: '16',
+        seats: '32',
+        waitlist: '0',
+      }];
+      scheduleSectionsCache[scheduleSectionCacheKey('PASS112S', '202701', 'MATH 141')] = [{
+        course: 'MATH141',
+        section_id: 'MATH141-0201',
+        semester: '202701',
+        number: '0201',
+        meetings: [{ days: 'MWF', start_time: '11:00am', end_time: '11:50am', building: 'MTH', room: '0101' }],
+        open_seats: '14',
+        seats: '30',
+        waitlist: '0',
+      }];
+      const pickTargets = scheduleReadinessMapPickTargets('PASS112F');
       return {
         level: readiness.level,
         label: readiness.label,
@@ -930,6 +951,7 @@ function testScheduleRegistrationReadiness(context) {
           springPicked: (mapSpring?.selectedItems?.length || 0) + '/' + (mapSpring?.courses?.length || 0),
           springLoaded: (mapSpring?.loadedCount || 0) + '/' + (mapSpring?.courses?.length || 0),
           loadTargets: mapTargets.map(row => row.sem.id + ':' + row.loadedCount + '/' + row.courses.length).join(','),
+          pickTargets: pickTargets.map(row => row.sem.id + ':' + row.selectedItems.length + '/' + row.courses.length).join(','),
         },
       };
     })()
@@ -1026,6 +1048,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(result.map.springLevel === 'danger' && result.map.springStatus === 'Needs sections', 'readiness map: future term should expose missing section work');
   assert(result.map.springPicked === '0/2' && result.map.springLoaded === '0/2', 'readiness map: future term should show no saved section evidence yet');
   assert(result.map.loadTargets === 'PASS112S:0/2', 'readiness map: loader should target only terms missing section evidence');
+  assert(result.map.pickTargets === 'PASS112S:0/2', 'readiness map: auto-pick should target loaded non-active terms with missing picks');
 
   return {
     id: 'SCHEDULE-READINESS',
