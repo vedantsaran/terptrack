@@ -4877,3 +4877,76 @@ Next pass candidates:
 - Add a release checklist panel in Settings that summarizes source links, live audit history, release-check status, and account/cloud setup status.
 - Add catalog-year targeting controls for students following an older catalog year.
 - Add a `--json` output mode to `scripts/run-release-checks.js` for future CI/reporting.
+
+## 2026-06-30 Pass 94
+
+Focus: add rendered mobile verification for onboarding and Browse replacement workflows, not just Settings-generated plans.
+
+Planned changes:
+- Add a focused Playwright verifier for mobile onboarding preview.
+- Add a focused Playwright verifier for mobile Browse placeholder replacement mode.
+- Keep the workflow verifier deterministic by avoiding live catalog/network dependencies.
+- Include the new workflow verifier in the ordered release gate.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scripts/verify-rendered-workflows.js`.
+- The workflow verifier starts a local static server with:
+  - empty `/api/config`.
+  - deterministic `/api/umd` fallback response for workflow checks.
+- Added mobile onboarding verification:
+  - Opens the real onboarding modal.
+  - Selects `STAT`.
+  - Sets start year, profile goal, preferred departments, current year, graduation year, credit cap, schedule preferences, and a manual `MATH140` prior-credit code.
+  - Advances through the real onboarding buttons to the finish step.
+  - Waits for the real `#ob-plan-preview`.
+  - Asserts the preview includes `Statistics`, `Auto Plan Review`, `Schedule defaults`, `MATH 140`, `13/13`, and `Catalog year 2026-2027`.
+  - Checks document/body/modal/preview horizontal overflow on a `390x844` mobile viewport.
+- Added mobile Browse replacement verification:
+  - Seeds the real app state with the default CE GenEd placeholder target `GenEd HS-1`.
+  - Sets replacement tags to `DSHS`.
+  - Renders Browse with a deterministic cached `GVPT200` row.
+  - Asserts the real Browse grid includes:
+    - replacement banner for `GenEd HS-1`.
+    - `GVPT 200`.
+    - `Replace GenEd HS-1`.
+    - `Preview`.
+    - `Why`.
+    - `Full results`.
+    - `Fills gap`.
+  - Checks document/body/Browse/grid horizontal overflow on mobile.
+- The verifier fails on browser page errors and console errors.
+- Updated `scripts/run-release-checks.js` so default release checks now include:
+  - `scripts/verify-rendered-workflows.js`.
+- Added release-check flags:
+  - `--skip-workflows`.
+  - `--workflows-timeout-ms N`.
+
+Verification:
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed onboarding mobile verification.
+  - It passed Browse replacement mobile verification.
+- Ran `node --check scripts/run-release-checks.js && node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/run-release-checks.js --help`.
+  - It showed the new workflow timeout and skip flags.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed all generated-plan and planner fixtures.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding and Browse replacement workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass94-workflow-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+
+Findings for next pass:
+- Rendered mobile coverage now includes generated Settings, onboarding preview, and Browse replacement mode.
+- The release gate is useful for developers, but students/admins still cannot see a release-readiness checklist inside the app.
+
+Next pass candidates:
+- Add a release checklist panel in Settings that summarizes source links, live audit history, release-check status, and account/cloud setup status.
+- Add catalog-year targeting controls for students following an older catalog year.
+- Add a `--json` output mode to `scripts/run-release-checks.js` for future CI/reporting.
+- Add rendered mobile coverage for Account setup and advisor packet export.

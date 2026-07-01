@@ -19,7 +19,9 @@ function parseArgs(argv) {
     proxy: true,
     generated: true,
     rendered: true,
+    workflows: true,
     renderedTimeoutMs: Number(process.env.TERPTRACK_RENDER_TIMEOUT_MS || 120000),
+    workflowsTimeoutMs: Number(process.env.TERPTRACK_WORKFLOW_TIMEOUT_MS || process.env.TERPTRACK_RENDER_TIMEOUT_MS || 120000),
     renderedMajors: [],
     renderedViewports: [],
     live: false,
@@ -40,10 +42,16 @@ function parseArgs(argv) {
       opts.generated = false;
     } else if (arg === '--skip-rendered') {
       opts.rendered = false;
+    } else if (arg === '--skip-workflows') {
+      opts.workflows = false;
     } else if (arg === '--rendered-timeout-ms') {
       opts.renderedTimeoutMs = Number(argv[++i] || opts.renderedTimeoutMs);
     } else if (arg.startsWith('--rendered-timeout-ms=')) {
       opts.renderedTimeoutMs = Number(arg.slice('--rendered-timeout-ms='.length) || opts.renderedTimeoutMs);
+    } else if (arg === '--workflows-timeout-ms') {
+      opts.workflowsTimeoutMs = Number(argv[++i] || opts.workflowsTimeoutMs);
+    } else if (arg.startsWith('--workflows-timeout-ms=')) {
+      opts.workflowsTimeoutMs = Number(arg.slice('--workflows-timeout-ms='.length) || opts.workflowsTimeoutMs);
     } else if (arg === '--rendered-majors') {
       opts.renderedMajors.push(...String(argv[++i] || '').split(','));
     } else if (arg.startsWith('--rendered-majors=')) {
@@ -83,6 +91,7 @@ function parseArgs(argv) {
   opts.renderedViewports = uniqueClean(opts.renderedViewports, item => item.toLowerCase());
   opts.liveMajors = uniqueClean(opts.liveMajors, item => item.toUpperCase());
   opts.renderedTimeoutMs = Number.isFinite(opts.renderedTimeoutMs) && opts.renderedTimeoutMs > 0 ? Math.floor(opts.renderedTimeoutMs) : 120000;
+  opts.workflowsTimeoutMs = Number.isFinite(opts.workflowsTimeoutMs) && opts.workflowsTimeoutMs > 0 ? Math.floor(opts.workflowsTimeoutMs) : 120000;
   opts.liveCount = Number.isFinite(opts.liveCount) && opts.liveCount > 0 ? Math.floor(opts.liveCount) : null;
   return opts;
 }
@@ -99,7 +108,7 @@ function usage() {
     'Usage: node scripts/run-release-checks.js [options]',
     '',
     'Default checks:',
-    '  syntax, offline /api/umd proxy fixture, generated-plan fixtures, rendered browser verifier',
+    '  syntax, offline /api/umd proxy fixture, generated-plan fixtures, rendered browser verifiers',
     '',
     'Options:',
     '  --live                         Also run focused live PlanetTerp verification',
@@ -110,10 +119,12 @@ function usage() {
     '  --rendered-majors A,B,C        Rendered verifier major subset',
     '  --rendered-viewports A,B       Rendered verifier viewport subset',
     '  --rendered-timeout-ms N        Rendered verifier timeout',
+    '  --workflows-timeout-ms N       Rendered workflow verifier timeout',
     '  --skip-syntax                  Skip JS syntax checks',
     '  --skip-proxy                   Skip offline proxy fixture',
     '  --skip-generated               Skip generated-plan fixtures',
     '  --skip-rendered                Skip rendered browser verifier',
+    '  --skip-workflows               Skip rendered onboarding/Browse workflow verifier',
   ].join('\n');
 }
 
@@ -161,6 +172,9 @@ async function runReleaseChecks(opts) {
     if (opts.renderedMajors.length) args.push(`--majors=${opts.renderedMajors.join(',')}`);
     if (opts.renderedViewports.length) args.push(`--viewports=${opts.renderedViewports.join(',')}`);
     await runCommand('rendered generated-plan verifier', args);
+  }
+  if (opts.workflows) {
+    await runCommand('rendered onboarding and Browse workflow verifier', ['scripts/verify-rendered-workflows.js', `--timeout-ms=${opts.workflowsTimeoutMs}`]);
   }
   if (opts.live) {
     const args = ['scripts/verify-random-schedules.js', '--keep-going', `--seed=${opts.liveSeed}`];
