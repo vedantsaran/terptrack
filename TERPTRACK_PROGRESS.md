@@ -5719,3 +5719,66 @@ Verification:
   - It randomly verified `ENCE`, `HLTH`, `ENFP`, `MGMT`, `BCHM`, and `HESP` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed the early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 108
+
+Focus: make generated major requirement coverage auditable by group instead of hiding it behind one requirement count.
+
+Planned changes:
+- Preserve generated major requirement categories through the auto-plan review.
+- Show students whether core, supporting, and upper-level requirement groups are fully represented in the generated draft.
+- Add a broad no-fetch regression sweep across every built-in generated major so all generated templates prove grouped requirement coverage.
+- Extend rendered and live verification to cover the new requirement-group evidence.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `autoPlanRequirementGroupSummary()` in `js/import.js`.
+  - Groups generated requirements into `Core Requirements`, `Supporting Courses`, `Upper-Level Choices`, and `Other Requirements` when needed.
+  - Counts scheduled vs expected courses for each group.
+  - Carries sample scheduled codes and missing-code samples for display and diagnostics.
+- Added `requirementGroupSummary` to generated auto-plan review analysis.
+- Added `autoPlanRequirementGroupList()` in `js/settings.js`.
+- Added a `Major Requirement Groups` block to the generated Auto Plan Review:
+  - shows per-group scheduled/total counts.
+  - shows representative real course codes for each group.
+  - highlights incomplete groups if a future template or custom major fails coverage.
+- Added responsive styles for `.auto-plan-req-groups` and `.auto-plan-req-group`.
+- Extended generated-plan tests:
+  - representative fixtures now assert complete requirement groups and group totals.
+  - diagnostics fixture now checks the rendered review includes `Major Requirement Groups`, `Core Requirements`, and `Upper-Level Choices`.
+  - added `ALL-GENERATED-REQ-GROUPS`, which sweeps all 50 built-in generated majors and all 843 generated requirement rows.
+- Extended rendered generated-plan verification:
+  - Settings modal review must now show the requirement group block on desktop and mobile.
+- Extended random live PlanetTerp verification:
+  - sampled generated majors must have complete requirement groups.
+  - live verifier output now prints group counts beside title/credit matches.
+- Bumped cache tags:
+  - `styles.css?v=80`.
+  - `js/import.js?v=12`.
+  - `js/settings.js?v=26`.
+
+Verification:
+- Ran `node --check js/import.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-random-schedules.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed representative generated-plan fixtures.
+  - It reported grouped requirement counts such as `ENAE` at `Core Requirements:17/17 | Supporting Courses:9/9 | Upper-Level Choices:4/4`.
+  - It passed `ALL-GENERATED-REQ-GROUPS`: 50 majors and 843 grouped requirements.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms 120000`.
+  - It verified 12 generated-template viewport runs across desktop and mobile.
+  - It confirmed the rendered review includes the new requirement group block.
+  - Browser console output stayed clean.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including all generated requirement groups.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass108-requirement-groups-live`.
+  - It randomly verified `HIST`, `PLSC`, `THET`, `EDUC`, `ARTH`, and `SOCY` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

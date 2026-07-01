@@ -308,6 +308,15 @@ async function verifyMajor(context, major, rand) {
   assert(overTarget <= 4, `${major.id}: generated ${overTarget} credits over target`);
   assert(maxTermLoad <= 18, `${major.id}: term load exceeds 18 credits (${maxTermLoad})`);
   assert((review.genEdSummary || []).every(req => req.complete), `${major.id}: incomplete generated GenEd coverage`);
+  assert((review.requirementGroupSummary || []).length >= 2, `${major.id}: missing generated requirement group summary`);
+  assert(
+    (review.requirementGroupSummary || []).every(group => group.complete),
+    `${major.id}: incomplete generated requirement groups ${(review.requirementGroupSummary || []).filter(group => !group.complete).map(group => `${group.label} ${group.scheduled}/${group.total}`).join(', ')}`,
+  );
+  assert(
+    (review.requirementGroupSummary || []).reduce((sum, group) => sum + group.total, 0) === (result.required || []).length,
+    `${major.id}: requirement groups do not match required course count`,
+  );
   assert(review.levelProgression?.hasEarlyIntro, `${major.id}: generated schedule missing early 100/200-level real requirements`);
   assert(review.levelProgression?.hasLateAdvanced, `${major.id}: generated schedule missing later 300/400-level real requirements`);
   assert(review.levelProgression?.hasUpper400, `${major.id}: generated schedule missing 400-level senior options`);
@@ -355,6 +364,7 @@ async function verifyMajor(context, major, rand) {
     placeholders: courses.length - nonPlaceholder.length,
     credits: review.totalCredits,
     maxTermLoad,
+    requirementGroups: (review.requirementGroupSummary || []).map(group => `${group.label} ${group.scheduled}/${group.total}`).join('; '),
     levelPath: `${review.levelProgression.earlyIntroCount} early lower/${review.levelProgression.lateAdvancedCount} later upper/${review.levelProgression.upper400Count} 400-level`,
     titleCreditChecked: checks.length,
   };
@@ -381,7 +391,7 @@ async function main() {
     try {
       const row = await verifyMajor(context, major, rand);
       rows.push(row);
-      console.log(`${row.id}: ${row.credits} credits, ${row.required} required courses verified in PlanetTerp, ${row.titleCreditChecked} live title/credit pairs matched, ${row.placeholders} placeholders, ${row.levelPath}, max ${row.maxTermLoad} cr (${row.profile}, ${row.start})`);
+      console.log(`${row.id}: ${row.credits} credits, ${row.required} required courses verified in PlanetTerp, ${row.titleCreditChecked} live title/credit pairs matched, ${row.placeholders} placeholders, ${row.requirementGroups}, ${row.levelPath}, max ${row.maxTermLoad} cr (${row.profile}, ${row.start})`);
     } catch (error) {
       if (!opts.keepGoing) throw error;
       const message = error?.message || String(error);

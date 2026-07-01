@@ -467,6 +467,25 @@ function autoPlanGenEdList(summary) {
   `).join('');
 }
 
+function autoPlanRequirementGroupList(summary) {
+  return (summary || []).map(group => {
+    const samples = group.sampleCodes || [];
+    const missing = group.missingCodes || [];
+    const detail = missing.length
+      ? `Missing ${missing.join(', ')}${group.total - group.scheduled > missing.length ? ` +${group.total - group.scheduled - missing.length} more` : ''}`
+      : (samples.length ? samples.join(', ') : 'All scheduled');
+    return `
+      <div class="auto-plan-req-group ${group.complete ? 'complete' : 'missing'}">
+        <span>
+          <strong>${settingsHtml(group.label)}</strong>
+          <b>${settingsHtml(group.scheduled)}/${settingsHtml(group.total)}</b>
+        </span>
+        <small>${settingsHtml(detail)}</small>
+      </div>
+    `;
+  }).join('');
+}
+
 function autoPlanDiagnostic(level, title, body, meta = '') {
   return { level: level || 'info', title, body, meta };
 }
@@ -746,6 +765,7 @@ function autoPlanReviewHtml(review, opts = {}) {
   const profileText = profile.active
     ? profileBits.join(' · ')
     : 'Neutral profile. Add interests below to personalize generated elective placeholders.';
+  const requirementGroups = autoPlanRequirementGroupList(review.requirementGroupSummary || []);
   const sampleElectives = (review.freeElectiveSamples || []).map(course => `
     <li>
       <strong>${settingsHtml(course.title || course.code)}</strong>
@@ -799,6 +819,12 @@ function autoPlanReviewHtml(review, opts = {}) {
       <span class="auto-plan-review-label">Term Loads</span>
       <div class="auto-plan-loads">${autoPlanTermList(review.termLoads)}</div>
     </div>
+    ${requirementGroups ? `
+      <div class="auto-plan-review-block">
+        <span class="auto-plan-review-label">Major Requirement Groups</span>
+        <div class="auto-plan-req-groups">${requirementGroups}</div>
+      </div>
+    ` : ''}
     <div class="auto-plan-review-block">
       <span class="auto-plan-review-label">GenEd / I-Series Coverage</span>
       <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>

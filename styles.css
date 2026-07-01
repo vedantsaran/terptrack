@@ -2611,7 +2611,8 @@ h1.hero-title em {
   margin-bottom: 6px;
 }
 .auto-plan-loads,
-.auto-plan-geneds {
+.auto-plan-geneds,
+.auto-plan-req-groups {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -2671,6 +2672,51 @@ h1.hero-title em {
 .auto-plan-gened-chip.missing {
   border-color: rgba(139,0,0,.28);
   background: rgba(139,0,0,.06);
+}
+.auto-plan-req-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+.auto-plan-req-group {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.auto-plan-req-group.missing {
+  border-left-color: var(--amber);
+  background: rgba(232,185,35,.08);
+}
+.auto-plan-req-group span {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.auto-plan-req-group strong,
+.auto-plan-req-group b {
+  color: var(--ink);
+  font-size: .72rem;
+  line-height: 1.2;
+}
+.auto-plan-req-group strong {
+  min-width: 0;
+}
+.auto-plan-req-group b {
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', monospace;
+}
+.auto-plan-req-group small {
+  display: block;
+  margin-top: 5px;
+  color: var(--slate);
+  font-size: .66rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 .auto-plan-diagnostics {
   margin-top: 10px;
@@ -6706,6 +6752,9 @@ h1.hero-title em {
   }
   .auto-plan-freshness-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .auto-plan-req-groups {
+    grid-template-columns: 1fr;
   }
   .auto-plan-official-sources {
     flex-direction: column;

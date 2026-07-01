@@ -173,7 +173,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=79'), 'workflow app did not load styles.css?v=79');
+  assert(snapshot.styles.includes('styles.css?v=80'), 'workflow app did not load styles.css?v=80');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
   return snapshot;

@@ -130,6 +130,15 @@ async function testMajorFixture(context, fixture) {
   assert(review.metadataCoverage.found === 0, `${fixture.id}: noFetch preview should not report live metadata`);
   assert(review.metadataCoverage.total === review.requirementCourseCount, `${fixture.id}: metadata coverage should match requirement count`);
   assert(review.requirementCourseCount >= fixture.minRequirementCourses, `${fixture.id}: expected at least ${fixture.minRequirementCourses} requirements`);
+  assert((review.requirementGroupSummary || []).length >= 2, `${fixture.id}: expected requirement group summary`);
+  assert(
+    review.requirementGroupSummary.every(group => group.complete),
+    `${fixture.id}: incomplete requirement groups ${review.requirementGroupSummary.filter(group => !group.complete).map(group => group.label).join(', ')}`,
+  );
+  assert(
+    review.requirementGroupSummary.reduce((sum, group) => sum + group.total, 0) === review.requirementCourseCount,
+    `${fixture.id}: requirement groups should sum to requirement count`,
+  );
   assert(review.levelProgression?.hasEarlyIntro, `${fixture.id}: expected early 100/200-level real requirements`);
   assert(review.levelProgression?.hasLateAdvanced, `${fixture.id}: expected later 300/400-level real requirements`);
   assert(review.levelProgression?.hasUpper400, `${fixture.id}: expected 400-level senior options`);
@@ -147,6 +156,7 @@ async function testMajorFixture(context, fixture) {
     genEdPlaceholders: review.genEdPlaceholders,
     freeElectives: review.freeElectives,
     requirements: review.requirementCourseCount,
+    requirementGroups: review.requirementGroupSummary.map(group => `${group.label}:${group.scheduled}/${group.total}`).join(' | '),
     levels: `${review.levelProgression.earlyIntroCount} early lower/${review.levelProgression.lateAdvancedCount} later upper/${review.levelProgression.upper400Count} 400-level`,
   };
 }
@@ -306,7 +316,7 @@ async function testAutoPlanDiagnostics(context) {
         profilePrefs: getProfilePrefs()
       });
       const templateDiagnostics = autoPlanDiagnostics(template);
-      const templateHtml = autoPlanDiagnosticsHtml(template) + autoPlanSourceSamplesHtml(template);
+      const templateHtml = autoPlanReviewHtml(template);
       const templateFreshnessSummary = generatedTemplateFreshnessSummary(template);
       const templateFreshnessHtml = generatedTemplateFreshnessHtml(template);
       const samplePlaceholder = template.placeholderSamples.find(course => /^GenEd/i.test(course.code)) || template.placeholderSamples[0];
@@ -353,7 +363,7 @@ async function testAutoPlanDiagnostics(context) {
         profilePrefs: getProfilePrefs()
       });
       const mixedDiagnostics = autoPlanDiagnostics(mixed);
-      const mixedHtml = autoPlanDiagnosticsHtml(mixed) + autoPlanSourceSamplesHtml(mixed);
+      const mixedHtml = autoPlanReviewHtml(mixed);
       const mixedFreshnessHtml = generatedTemplateFreshnessHtml(mixed);
       const builtInSourceMissing = listMajors()
         .filter(major => major && !major.isCustom)
@@ -363,6 +373,7 @@ async function testAutoPlanDiagnostics(context) {
       return {
         templateCoverage: template.metadataCoverage,
         templateProgression: template.levelProgression,
+        templateGroups: template.requirementGroupSummary,
         templateOfficialSources: template.officialSources,
         templateTitles: templateDiagnostics.map(item => item.title),
         templateHtml,
@@ -373,6 +384,7 @@ async function testAutoPlanDiagnostics(context) {
         replacementBrowse,
         mixedCoverage: mixed.metadataCoverage,
         mixedProgression: mixed.levelProgression,
+        mixedGroups: mixed.requirementGroupSummary,
         mixedTitles: mixedDiagnostics.map(item => item.title),
         mixedHtml,
         mixedFreshnessHtml,
@@ -385,6 +397,7 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.templateCoverage.missingCodes.length > 0, 'auto plan diagnostics: template-only preview should list fallback codes');
   assert(result.templateTitles.includes('Template-only preview'), 'auto plan diagnostics: should flag template-only source');
   assert(result.templateTitles.includes('Intro-to-400 path'), 'auto plan diagnostics: should flag course-level progression');
+  assert(result.templateGroups.every(group => group.complete), 'auto plan diagnostics: requirement groups should be complete');
   assert(result.templateProgression.realCount === result.templateCoverage.total, 'auto plan diagnostics: level progression should count real template requirements');
   assert(result.templateProgression.hasEarlyIntro, 'auto plan diagnostics: level progression should include early lower-level requirements');
   assert(result.templateProgression.hasLateAdvanced, 'auto plan diagnostics: level progression should include later upper-level requirements');
@@ -392,6 +405,7 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.templateTitles.includes('Replacement work'), 'auto plan diagnostics: should flag placeholder replacement work');
   assert(/Template fallback/.test(result.templateHtml), 'auto plan diagnostics: source samples should include template fallback row');
   assert(/Intro-to-400 path/.test(result.templateHtml) && /100\/200-level/.test(result.templateHtml) && /400-level/.test(result.templateHtml), 'auto plan diagnostics: review should render course-level progression');
+  assert(/Major Requirement Groups/.test(result.templateHtml) && /Core Requirements/.test(result.templateHtml) && /Upper-Level Choices/.test(result.templateHtml), 'auto plan diagnostics: review should render requirement groups');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
@@ -424,6 +438,7 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.mixedCoverage.liveCodes.length === 3, 'auto plan diagnostics: mixed preview should include live code samples');
   assert(result.mixedTitles.includes('Mixed metadata sources'), 'auto plan diagnostics: should flag mixed metadata sources');
   assert(result.mixedProgression.hasLateAdvanced && result.mixedProgression.hasUpper400, 'auto plan diagnostics: mixed preview should preserve later upper-level progression');
+  assert(result.mixedGroups.every(group => group.complete), 'auto plan diagnostics: mixed preview should preserve complete requirement groups');
   assert(/Live metadata/.test(result.mixedHtml) && /Template fallback/.test(result.mixedHtml), 'auto plan diagnostics: mixed source samples should compare live and fallback rows');
   assert(
     result.mixedFreshnessHtml.includes(`${result.mixedCoverage.found}/${result.mixedCoverage.total}`),
@@ -434,6 +449,44 @@ async function testAutoPlanDiagnostics(context) {
     id: 'AUTO-PLAN-DIAGNOSTICS',
     templateMissing: result.templateCoverage.missing,
     mixedCoverage: `${result.mixedCoverage.found}/${result.mixedCoverage.total}`,
+  };
+}
+
+async function testAllGeneratedRequirementGroups(context) {
+  const rows = clone(await vm.runInContext(`
+    (async () => {
+      const majors = listMajors()
+        .filter(major => major && !major.isCustom && !isMajorFullyBaked(major) && majorAllCodes(major).length)
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const out = [];
+      for (const major of majors) {
+        const review = await buildAutoPlanPreview(major.id, {
+          noFetch: true,
+          force: true,
+          profilePrefs: getProfilePrefs()
+        });
+        out.push({
+          id: major.id,
+          requirementCourseCount: review.requirementCourseCount,
+          groups: review.requirementGroupSummary || []
+        });
+      }
+      return out;
+    })()
+  `, context));
+  assert(rows.length >= 50, `all generated requirement groups: expected at least 50 generated majors, saw ${rows.length}`);
+  rows.forEach(row => {
+    const groupTotal = row.groups.reduce((sum, group) => sum + group.total, 0);
+    const groupScheduled = row.groups.reduce((sum, group) => sum + group.scheduled, 0);
+    assert(groupTotal === row.requirementCourseCount, `${row.id}: requirement groups should sum to ${row.requirementCourseCount}, saw ${groupTotal}`);
+    assert(groupScheduled === row.requirementCourseCount, `${row.id}: requirement groups should schedule every requirement, saw ${groupScheduled}/${row.requirementCourseCount}`);
+    assert(row.groups.some(group => group.id === 'major-core'), `${row.id}: missing core requirement group`);
+    assert(row.groups.some(group => group.id === 'major-upper'), `${row.id}: missing upper requirement group`);
+  });
+  return {
+    id: 'ALL-GENERATED-REQ-GROUPS',
+    majors: rows.length,
+    requirements: rows.reduce((sum, row) => sum + row.requirementCourseCount, 0),
   };
 }
 
@@ -2934,6 +2987,7 @@ async function main() {
   }
   const prereq = testSyntheticPrerequisites(context);
   const diagnostics = await testAutoPlanDiagnostics(context);
+  const allGroups = await testAllGeneratedRequirementGroups(context);
   const catalogYear = await testCatalogYearTargeting(context);
   const account = testAccountAndShareState(context);
   const accountSetup = testAccountCloudSetup(context);
@@ -2961,6 +3015,7 @@ async function main() {
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
   console.log(`Auto-plan diagnostics fixture ${diagnostics.id}: template missing ${diagnostics.templateMissing}; mixed ${diagnostics.mixedCoverage}.`);
+  console.log(`All generated requirement groups fixture ${allGroups.id}: ${allGroups.majors} majors; ${allGroups.requirements} grouped requirements.`);
   console.log(`Catalog year fixture ${catalogYear.id}: target ${catalogYear.target}; source ${catalogYear.source}.`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
@@ -2984,7 +3039,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

@@ -377,12 +377,61 @@ function autoPlanLevelProgression(semesters) {
   };
 }
 
+function autoPlanRequirementGroupSummary(semesters, requirementCatalog) {
+  const requirements = Array.isArray(requirementCatalog) ? requirementCatalog : [];
+  if (!requirements.length) return [];
+  const scheduled = new Set(autoPlanFlatCourses(semesters)
+    .map(course => normalizeCode(course.code))
+    .filter(Boolean));
+  const groupDefs = [
+    { id: 'major-core', label: 'Core Requirements' },
+    { id: 'major-support', label: 'Supporting Courses' },
+    { id: 'major-upper', label: 'Upper-Level Choices' },
+  ];
+  const byGroup = {};
+  groupDefs.forEach(def => {
+    byGroup[def.id] = {
+      ...def,
+      total: 0,
+      scheduled: 0,
+      sampleCodes: [],
+      missingCodes: [],
+    };
+  });
+  byGroup.other = {
+    id: 'other',
+    label: 'Other Requirements',
+    total: 0,
+    scheduled: 0,
+    sampleCodes: [],
+    missingCodes: [],
+  };
+  requirements.forEach(item => {
+    const category = byGroup[item.category] ? item.category : 'other';
+    const group = byGroup[category];
+    const code = normalizeCode(item.code);
+    const display = typeof displayCode === 'function' ? displayCode(item.code) : String(item.code || '');
+    const isScheduled = scheduled.has(code);
+    group.total += 1;
+    if (isScheduled) group.scheduled += 1;
+    if (isScheduled && group.sampleCodes.length < 6) group.sampleCodes.push(display);
+    if (!isScheduled && group.missingCodes.length < 6) group.missingCodes.push(display);
+  });
+  return [...groupDefs.map(def => byGroup[def.id]), byGroup.other]
+    .filter(group => group.total > 0)
+    .map(group => ({
+      ...group,
+      complete: group.scheduled >= group.total,
+    }));
+}
+
 function autoPlanAnalyzeSchedule(semesters, opts = {}) {
   const targetCredits = opts.targetCredits || 120;
   const prefs = opts.profilePrefs || null;
   const courses = autoPlanFlatCourses(semesters);
   const termLoads = autoPlanTermLoads(semesters);
   const levelProgression = autoPlanLevelProgression(semesters);
+  const requirementGroupSummary = autoPlanRequirementGroupSummary(semesters, opts.requirementCatalog || []);
   const genEdCounts = autoPlanRequirementCounts(semesters);
   const genEdSummary = AUTO_PLAN_GENED_REQUIREMENTS.map(req => {
     const have = genEdCounts[req.id] || 0;
@@ -408,6 +457,7 @@ function autoPlanAnalyzeSchedule(semesters, opts = {}) {
     semesters,
     termLoads,
     levelProgression,
+    requirementGroupSummary,
     totalCredits: autoPlanTotalCredits(semesters),
     targetCredits,
     courseCount: courses.length,
@@ -484,7 +534,7 @@ async function buildAutoPlanPreview(majorId, opts = {}) {
         ? relabelScheduleTerms(curatedSchedule, opts.startTerm || 'Fall', opts.startYear || 2026)
         : curatedSchedule;
       const analysis = previewSchedule
-        ? autoPlanAnalyzeSchedule(previewSchedule, { targetCredits, profilePrefs, requirementCourseCount: 0 })
+        ? autoPlanAnalyzeSchedule(previewSchedule, { targetCredits, profilePrefs, requirementCourseCount: 0, requirementCatalog: [] })
         : {};
       return {
         ...base,
@@ -522,6 +572,7 @@ async function buildAutoPlanPreview(majorId, opts = {}) {
       targetCredits,
       profilePrefs,
       requirementCourseCount: tplCatalog.length,
+      requirementCatalog: tplCatalog,
     });
     const liveCodes = tplCatalog
       .filter(item => fetched && fetched[normalizeCode(item.code)])
