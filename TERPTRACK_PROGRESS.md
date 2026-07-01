@@ -7504,3 +7504,59 @@ Verification:
   - It randomly verified `STAT`, `ANSC`, `HESP`, `WMST`, `AREC`, and `AAST` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 137
+
+Focus: make calendar omissions fixable from the Calendar Export card without forcing students to manually hunt for timed sections.
+
+Planned changes:
+- Add an `Auto-fill timed sections` action for omitted planned courses.
+- Preserve existing section picks while filling only missing or TBA-only calendar omissions.
+- Make the auto-fill action undoable and record it in Recent changes.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added an `Auto-fill timed sections` primary action beside `Review omitted courses` when the Calendar Export card has omissions.
+- Added `autoFillScheduleCalendarOmissions()` in `js/schedule.js`.
+  - It fetches current-term sections for omitted planned courses.
+  - It keeps existing timed section picks.
+  - It chooses conflict-free timed sections that respect blocked meeting preferences.
+  - It skips courses when no conflict-free timed section is available.
+  - It refreshes the schedule, records a Recent changes entry, and shows success/partial-success toasts.
+- Generalized schedule undo handling for batched section changes while preserving the existing Readiness Map undo labels and toasts.
+- Added nested calendar action styling in app CSS and standalone schedule CSS.
+- Bumped cache tags:
+  - `styles.css?v=104`.
+  - `js/schedule.js?v=57`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts both calendar omission actions in schedule output, advisor HTML, and exported advisor documents.
+  - The rendered mobile advisor packet workflow now clicks `Auto-fill timed sections`, verifies `ENGL 101` receives a timed section, confirms the calendar becomes ready, checks the undo entry, undoes the fill, and then verifies the existing review/download omission warning path.
+  - Rendered workflow logs now name `calendar omission auto-fill` coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with both calendar omission actions.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule chips, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with calendar omission auto-fill, undo, calendar omission review, partial-calendar warning toast, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including calendar omission auto-fill coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with calendar omission auto-fill coverage.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass137-calendar-auto-fill-live`.
+  - It randomly verified `HESP`, `FMSC`, `EDUC`, `ARTT`, `ARCH`, and `MARKETING` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

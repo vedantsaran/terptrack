@@ -176,8 +176,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=103'), 'workflow app did not load styles.css?v=103');
-  assert(snapshot.scripts.includes('js/schedule.js?v=56'), 'workflow app did not load js/schedule.js?v=56');
+  assert(snapshot.styles.includes('styles.css?v=104'), 'workflow app did not load styles.css?v=104');
+  assert(snapshot.scripts.includes('js/schedule.js?v=57'), 'workflow app did not load js/schedule.js?v=57');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -755,6 +755,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Calendar incomplete')
       && text.includes('calendar events')
       && text.includes('omitted courses')
+      && text.includes('Auto-fill timed sections')
       && text.includes('Review omitted courses')
       && text.includes('Sep 2, 2026 to Dec 14, 2026')
       && text.includes('Testudo Entry Queue')
@@ -830,6 +831,31 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-schedule-jump-sem="PASS98F"]').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => document.querySelector('#schedule-semester')?.value === 'PASS98F' && scheduleCurrentSemId === 'PASS98F', null, { timeout: opts.timeoutMs });
+  await page.locator('[data-calendar-export-action="auto-fill-omissions"]').first().click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const output = document.querySelector('#schedule-output');
+    const text = output?.textContent?.replace(/\s+/g, ' ') || '';
+    const picked = getSelectedSection('PASS98F', 'ENGL 101')?.section_id || '';
+    const undo = document.querySelector('#schedule-undo')?.textContent?.replace(/\s+/g, ' ') || '';
+    const change = (state.recentChanges || [])[0] || {};
+    return output?.dataset.lastCalendarAction === 'auto-fill-omissions'
+      && picked === 'ENGL101-0301'
+      && text.includes('Calendar ready')
+      && text.includes('3/3')
+      && undo.includes('Auto-filled 1 calendar section')
+      && /Auto-filled 1 calendar omitted section/.test(change.title || '');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('[data-schedule-undo]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const output = document.querySelector('#schedule-output');
+    const text = output?.textContent?.replace(/\s+/g, ' ') || '';
+    const picked = getSelectedSection('PASS98F', 'ENGL 101');
+    const change = (state.recentChanges || [])[0] || {};
+    return !picked
+      && text.includes('Calendar incomplete')
+      && text.includes('1 course still needs a section')
+      && /Undid calendar auto-fill/.test(change.title || '');
+  }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-calendar-export-action="review-omissions"]').first().click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
     const output = document.querySelector('#schedule-output');
@@ -925,7 +951,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Registration Readiness/.test(result.advisorDocument) && /Fix before registration/.test(result.advisorDocument), 'advisor packet: exported HTML should include registration readiness gates');
   assert(/Registration Appointment/.test(result.advisorDocument) && /Aug 25, 2099 at 9:30am/.test(result.advisorDocument), 'advisor packet: exported HTML should include appointment');
   assert(/Seat Data Freshness/.test(result.advisorDocument) && /Refresh seats/.test(result.advisorDocument), 'advisor packet: exported HTML should include seat freshness');
-  assert(/schedule-calendar-export/.test(result.advisorDocument) && /Calendar Export/.test(result.advisorDocument) && /calendar events/.test(result.advisorDocument) && /data-calendar-export-action="review-omissions"/.test(result.advisorDocument), 'advisor packet: exported HTML should include calendar omission action');
+  assert(/schedule-calendar-export/.test(result.advisorDocument) && /Calendar Export/.test(result.advisorDocument) && /calendar events/.test(result.advisorDocument) && /data-calendar-export-action="auto-fill-omissions"/.test(result.advisorDocument) && /data-calendar-export-action="review-omissions"/.test(result.advisorDocument), 'advisor packet: exported HTML should include calendar omission actions');
   assert(/data-seat-freshness-action="refresh"/.test(result.advisorDocument), 'advisor packet: exported HTML should include seat refresh action');
   assert(/Testudo Entry Queue/.test(result.advisorDocument) && /Section ID MATH140-0201/.test(result.advisorDocument), 'advisor packet: exported HTML should include Testudo queue');
   assert(/Enrollment Order/.test(result.advisorDocument) && /MATH 140 0201/.test(result.advisorDocument), 'advisor packet: exported HTML should include enrollment order');
@@ -1003,7 +1029,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }, null, { timeout: opts.timeoutMs });
   const refreshSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet seat refresh mobile', refreshSnapshot);
-  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, registration appointment, seat freshness, calendar readiness, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, seat refresh action, export action, and no overflow.');
+  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, seat refresh action, export action, and no overflow.');
 }
 
 async function main() {

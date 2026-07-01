@@ -491,8 +491,17 @@ function renderScheduleUndo() {
   const root = document.getElementById('schedule-undo');
   if (!root) return;
   const currentSemId = scheduleCurrentSemId || scheduleDefaultSemesterId();
-  const isBatch = scheduleUndoAction?.type === 'readiness-map-auto-pick' && Array.isArray(scheduleUndoAction.changes);
-  if (!scheduleUndoAction || (!isBatch && scheduleUndoAction.semId !== currentSemId)) {
+  const isBatch = Array.isArray(scheduleUndoAction?.changes);
+  const isReadinessMapBatch = isBatch && scheduleUndoAction?.type === 'readiness-map-auto-pick';
+  const isCurrentBatch = isBatch && (
+    scheduleUndoAction?.semId === currentSemId
+    || (scheduleUndoAction?.changes || []).some(change => change?.semId === currentSemId)
+  );
+  if (
+    !scheduleUndoAction
+    || (!isBatch && scheduleUndoAction.semId !== currentSemId)
+    || (isBatch && !isReadinessMapBatch && !isCurrentBatch)
+  ) {
     root.innerHTML = '';
     return;
   }
@@ -530,23 +539,26 @@ function renderScheduleUndo() {
 function undoScheduleSectionChange() {
   if (!scheduleUndoAction) return;
   const action = scheduleUndoAction;
-  if (action.type === 'readiness-map-auto-pick' && Array.isArray(action.changes)) {
+  if (Array.isArray(action.changes)) {
     const termCount = action.termCount || 1;
     action.changes.forEach(change => {
       restoreSelectedSection(change.semId, change.code, change.previousSection, change.previousPinned);
     });
     scheduleUndoAction = null;
+    const isReadinessMapUndo = action.type === 'readiness-map-auto-pick';
     recordPlanChange({
       type: 'auto-pick',
       source: 'Schedule',
-      title: 'Undid Readiness Map auto-pick',
-      detail: `Restored previous section choices for ${action.changes.length} course${action.changes.length === 1 ? '' : 's'} across ${termCount} term${termCount === 1 ? '' : 's'}.`,
-      meta: 'Undo readiness map',
+      title: action.undoTitle || (isReadinessMapUndo ? 'Undid Readiness Map auto-pick' : 'Undid section auto-fill'),
+      detail: action.undoDetail || `Restored previous section choices for ${action.changes.length} course${action.changes.length === 1 ? '' : 's'} across ${termCount} term${termCount === 1 ? '' : 's'}.`,
+      meta: action.undoMeta || (isReadinessMapUndo ? 'Undo readiness map' : 'Undo section auto-fill'),
     }, { save: false });
     saveState();
     renderSchedule();
     renderSemesters();
-    toastInfo(`Restored ${action.changes.length} Readiness Map section pick${action.changes.length === 1 ? '' : 's'}.`);
+    toastInfo(action.undoToast || (isReadinessMapUndo
+      ? `Restored ${action.changes.length} Readiness Map section pick${action.changes.length === 1 ? '' : 's'}.`
+      : `Restored ${action.changes.length} section pick${action.changes.length === 1 ? '' : 's'}.`));
     return;
   }
   restoreSelectedSection(action.semId, action.code, action.previousSection, action.previousPinned);
@@ -3050,7 +3062,10 @@ function renderScheduleCalendarExportHtml(summary, heading = 'Calendar Export') 
       ${(summary.omittedCount || 0) > 0 ? `
         <div class="schedule-calendar-export-actions">
           <strong>Before download</strong>
-          <button class="btn small primary" type="button" data-calendar-export-action="review-omissions">Review omitted courses</button>
+          <div>
+            <button class="btn small primary" type="button" data-calendar-export-action="auto-fill-omissions">Auto-fill timed sections</button>
+            <button class="btn small" type="button" data-calendar-export-action="review-omissions">Review omitted courses</button>
+          </div>
         </div>
       ` : ''}
     </section>
@@ -3937,7 +3952,9 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-calendar-export-row strong{display:block;color:#241f1f}
     .schedule-calendar-export-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
     .schedule-calendar-export-actions strong{font-size:10px;text-transform:uppercase;color:#8b0000}
-    .schedule-calendar-export-actions .btn{border:1px solid #8b0000;border-radius:999px;background:#8b0000;color:#fff;font-size:11px;font-weight:700;padding:5px 8px}
+    .schedule-calendar-export-actions div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+    .schedule-calendar-export-actions .btn{border:1px solid #d8cec0;border-radius:999px;background:#fff;color:#2e5c8b;font-size:11px;font-weight:700;padding:5px 8px}
+    .schedule-calendar-export-actions .btn.primary{border-color:#8b0000;background:#8b0000;color:#fff}
     .schedule-registration-handoff{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:10px;margin:10px 0}
     .schedule-registration-handoff-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .schedule-registration-handoff-head h4{margin:0}
@@ -4633,9 +4650,104 @@ async function handleScheduleReadinessAction(action) {
   }
 }
 
-function handleScheduleCalendarExportAction(action) {
+async function autoFillScheduleCalendarOmissions() {
+  const semId = scheduleCurrentSemId || scheduleDefaultSemesterId();
+  const sem = getAllSemesters().find(s => s.id === semId);
+  if (!sem) return;
+  const term = (state.schedulePrefs && state.schedulePrefs[semId] && state.schedulePrefs[semId].term) || scheduleInferTermCode(sem);
+  const prefs = getSchedulePrefs(semId);
+  const courses = scheduleCoursesForSemester(semId);
+  const sectionsByCode = await scheduleFetchSectionsFor(semId, term, courses);
+  const currentItems = scheduleSelectedItemsFor(semId, term, courses, sectionsByCode);
+  const targetCodes = new Set();
+  currentItems.forEach(item => {
+    if (!sectionHasTimedMeetings(item.section)) targetCodes.add(normalizeCode(item.course.code));
+  });
+  courses.forEach(course => {
+    if (!getSelectedSection(semId, course.code)) targetCodes.add(normalizeCode(course.code));
+  });
+  if (!targetCodes.size) {
+    toastInfo('Calendar export already has timed sections for every picked course.');
+    return;
+  }
+  const chosen = currentItems
+    .filter(item => !targetCodes.has(normalizeCode(item.course.code)))
+    .map(item => ({ course: item.course, section: item.section }));
+  const targetCourses = courses
+    .filter(course => targetCodes.has(normalizeCode(course.code)))
+    .sort((a, b) => {
+      const sa = (sectionsByCode[normalizeCode(a.code)] || []).filter(sectionHasTimedMeetings).length;
+      const sb = (sectionsByCode[normalizeCode(b.code)] || []).filter(sectionHasTimedMeetings).length;
+      return sa - sb || a.code.localeCompare(b.code);
+    });
+  const changes = [];
+  const skipped = [];
+  targetCourses.forEach(course => {
+    const norm = normalizeCode(course.code);
+    const sections = (sectionsByCode[norm] || [])
+      .filter(sectionHasTimedMeetings)
+      .sort((a, b) => sectionScore(b, prefs, course, chosen) - sectionScore(a, prefs, course, chosen));
+    const viable = sections.filter(section => {
+      const candidateBlocks = sectionBlocks(section, course);
+      const existingBlocks = chosen.flatMap(item => sectionBlocks(item.section, item.course));
+      const blockedOverlap = sectionBlockedOverlaps(section, prefs, course).length > 0;
+      return !blockedOverlap && !candidateBlocks.some(a => existingBlocks.some(b => blocksConflict(a, b)));
+    });
+    const pick = viable[0] || null;
+    if (!pick) {
+      skipped.push(course.code);
+      return;
+    }
+    const previous = getSelectedSection(semId, course.code);
+    chosen.push({ course, section: pick });
+    changes.push({
+      semId,
+      code: course.code,
+      previousSection: scheduleCloneSection(previous),
+      previousPinned: !!previous?.pinned,
+      nextSection: scheduleCloneSection(pick),
+    });
+  });
+  if (!changes.length) {
+    toastInfo(skipped.length ? `No conflict-free timed sections found for ${skipped.join(', ')}.` : 'No calendar omissions could be auto-filled.');
+    return;
+  }
+  changes.forEach(change => setSelectedSection(change.semId, change.code, change.nextSection));
+  registerScheduleUndo({
+    type: 'calendar-omission-auto-fill',
+    semId,
+    changes,
+    termCount: 1,
+    title: `Auto-filled ${changes.length} calendar section${changes.length === 1 ? '' : 's'}`,
+    detail: 'Undo restores the previous picks for calendar omitted courses.',
+    undoTitle: 'Undid calendar auto-fill',
+    undoDetail: `Restored previous section choices for ${changes.length} calendar omitted course${changes.length === 1 ? '' : 's'}.`,
+    undoMeta: 'Undo calendar auto-fill',
+    undoToast: `Restored ${changes.length} calendar auto-fill pick${changes.length === 1 ? '' : 's'}.`,
+  });
+  recordPlanChange({
+    type: 'auto-pick',
+    source: 'Schedule',
+    title: `Auto-filled ${changes.length} calendar omitted section${changes.length === 1 ? '' : 's'}`,
+    detail: changes.map(change => `${change.code} ${scheduleSectionShortLabel(change.nextSection)}`).join(' · '),
+    meta: `${scheduleTermLabel(term)}${skipped.length ? ` · skipped ${skipped.join(', ')}` : ''}`,
+  }, { save: false });
+  saveState();
+  renderSchedule();
+  renderSemesters();
+  if (skipped.length) toastInfo(`Filled ${changes.length}; no conflict-free timed sections found for ${skipped.join(', ')}.`);
+  else toastSuccess(`Filled ${changes.length} omitted calendar section${changes.length === 1 ? '' : 's'}.`);
+}
+
+async function handleScheduleCalendarExportAction(action) {
   const root = document.getElementById('schedule-output');
   if (root) root.dataset.lastCalendarAction = action || '';
+  if (action === 'auto-fill-omissions') {
+    await autoFillScheduleCalendarOmissions();
+    const nextRoot = document.getElementById('schedule-output');
+    if (nextRoot) nextRoot.dataset.lastCalendarAction = action;
+    return;
+  }
   if (action !== 'review-omissions') return;
   const summary = scheduleOutputCache?.calendarSummary || {};
   const rows = [...(summary.missingRows || []), ...(summary.tbaRows || [])];
@@ -4677,6 +4789,7 @@ if (typeof window !== 'undefined') {
   window.printScheduleAdvisorPacket = printScheduleAdvisorPacket;
   window.handleScheduleReadinessAction = handleScheduleReadinessAction;
   window.handleScheduleCalendarExportAction = handleScheduleCalendarExportAction;
+  window.autoFillScheduleCalendarOmissions = autoFillScheduleCalendarOmissions;
   window.handleScheduleSeatFreshnessAction = handleScheduleSeatFreshnessAction;
 }
 

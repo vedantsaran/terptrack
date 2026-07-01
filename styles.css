@@ -4527,6 +4527,12 @@ h1.hero-title em {
   letter-spacing: .06em;
   text-transform: uppercase;
 }
+.schedule-calendar-export-actions div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
 .schedule-calendar-export-actions .btn {
   min-height: 30px;
   white-space: normal;
@@ -8207,6 +8213,9 @@ h1.hero-title em {
     align-items: flex-start;
     flex-direction: column;
     gap: 7px;
+  }
+  .schedule-calendar-export-actions div {
+    justify-content: flex-start;
   }
   .schedule-registration-handoff-head {
     flex-direction: column;
