@@ -243,6 +243,15 @@ function plannerRegistrationChecklist(advisor) {
     label: 'Open Schedule',
     attrs: `data-planner-schedule="${timelineEscape(nextSem.id)}"`,
   };
+  const catalogWarning = typeof catalogYearAdvisingWarning === 'function' ? catalogYearAdvisingWarning() : null;
+  if (catalogWarning) {
+    items.push(plannerChecklistItem(
+      'warn',
+      catalogWarning.title,
+      catalogWarning.body,
+      catalogWarning.meta,
+    ));
+  }
 
   if (load > PLANNER_MAX_CREDITS) {
     items.push(plannerChecklistItem(
@@ -389,6 +398,16 @@ function plannerAdvisorQuestions(advisor, checklist = []) {
     label: 'Open Schedule',
     attrs: `data-planner-schedule="${timelineEscape(nextSem.id)}"`,
   };
+  const catalogWarning = typeof catalogYearAdvisingWarning === 'function' ? catalogYearAdvisingWarning() : null;
+  if (catalogWarning) {
+    questions.push(plannerAdvisorQuestion(
+      'warn',
+      'Catalog-year confirmation',
+      `Does my official audit or advisor worksheet confirm I should follow the ${catalogWarning.targetYear} catalog requirements?`,
+      catalogWarning.body,
+      catalogWarning.meta,
+    ));
+  }
 
   if (load > PLANNER_MAX_CREDITS) {
     questions.push(plannerAdvisorQuestion(

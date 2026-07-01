@@ -5105,3 +5105,55 @@ Next pass candidates:
 - Add a `--json` output mode to `scripts/run-release-checks.js` for future CI/reporting.
 - Add rendered mobile coverage for Account setup and advisor packet export.
 - Add an advisor-facing catalog-year warning/checklist item when the selected target year differs from the checked source year.
+
+## 2026-07-01 Pass 97
+
+Focus: make catalog-year targeting actionable for students and advisors, not just visible metadata.
+
+Planned changes:
+- Add a shared catalog-year advising warning when the selected target catalog year differs from the linked checked source year.
+- Show the warning in the Timeline registration checklist.
+- Show an advisor question about confirming the target catalog year.
+- Show the warning in advisor packet HTML, copied text, and downloaded standalone advisor packet.
+- Add fixture coverage for checklist, advisor question, advisor packet HTML/text/document, and catalog-year helper output.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `catalogYearAdvisingWarning()` in state helpers.
+- Registration Checklist now includes a warning such as `Confirm 2024-2025 catalog requirements` when the plan targets an older catalog year.
+- Advisor Questions now include a catalog-year confirmation question when target/source years differ.
+- Advisor Packet now includes:
+  - a dedicated `schedule-advisor-catalog-warning` section in HTML.
+  - `Catalog-year verification` lines in copied text.
+  - matching warning styles/markup in standalone downloaded advisor packets.
+- Added restrained app and standalone packet styling for the warning block.
+- Bumped cache tags:
+  - `styles.css?v=77`.
+  - `js/state.js?v=17`.
+  - `js/timeline.js?v=18`.
+  - `js/schedule.js?v=33`.
+- Updated rendered verifiers for `styles.css?v=77`.
+- Extended `scripts/test-generated-plans.js` assertions for:
+  - catalog-year helper target/source years.
+  - planner checklist warning text.
+  - advisor question warning text.
+  - advisor packet HTML/text/document warning output.
+
+Verification:
+- Ran syntax checks for touched app and verifier files.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the updated `CATALOG-YEAR`, `PLANNER-CHECKLIST`, `PLANNER-QUESTIONS`, and advisor export assertions.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding and Browse replacement workflows.
+- Ran `node scripts/verify-rendered-generated-plans.js --majors=PHYS --viewports=mobile --timeout-ms=120000`.
+  - It passed rendered Settings/cache assertions and rendered Physics with `20/20 live course records`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan and planner fixtures with the new catalog-year advisor warnings.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding and Browse replacement workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass97-catalog-warning-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.

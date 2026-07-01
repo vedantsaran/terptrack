@@ -3988,7 +3988,8 @@ h1.hero-title em {
   background: var(--maroon);
   color: #FAF6EC;
 }
-.schedule-advisor-view-note {
+.schedule-advisor-view-note,
+.schedule-advisor-catalog-warning {
   margin: 10px 0 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -4000,6 +4001,29 @@ h1.hero-title em {
 }
 .schedule-advisor-view-note strong {
   color: var(--ink);
+}
+.schedule-advisor-catalog-warning {
+  border-color: rgba(201,151,0,.38);
+  background: rgba(232,185,35,.10);
+}
+.schedule-advisor-catalog-warning strong,
+.schedule-advisor-catalog-warning span {
+  display: block;
+}
+.schedule-advisor-catalog-warning strong {
+  color: var(--maroon);
+}
+.schedule-advisor-catalog-warning p {
+  color: var(--ink-soft);
+  font-size: .74rem;
+  line-height: 1.4;
+  margin: 4px 0 0;
+}
+.schedule-advisor-catalog-warning span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  margin-top: 5px;
 }
 .schedule-advisor-live-note {
   margin: 10px 0 0;

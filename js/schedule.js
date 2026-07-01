@@ -2049,6 +2049,34 @@ function scheduleAdvisorReviewLabel(courses, selectedItems, conflicts, warnings)
   return 'Ready for advisor review';
 }
 
+function scheduleCatalogYearWarning() {
+  return typeof catalogYearAdvisingWarning === 'function' ? catalogYearAdvisingWarning() : null;
+}
+
+function scheduleAdvisorCatalogYearHtml() {
+  const warning = scheduleCatalogYearWarning();
+  if (!warning) return '';
+  return `
+    <section class="schedule-advisor-catalog-warning">
+      <strong>${scheduleEscape(warning.title)}</strong>
+      <p>${scheduleEscape(warning.body)}</p>
+      <span>${scheduleEscape(warning.meta)}</span>
+    </section>
+  `;
+}
+
+function scheduleAdvisorCatalogYearText() {
+  const warning = scheduleCatalogYearWarning();
+  if (!warning) return [];
+  return [
+    '',
+    'Catalog-year verification:',
+    `- ${warning.title}`,
+    `  ${warning.body}`,
+    `  ${warning.meta}`,
+  ];
+}
+
 function scheduleAdvisorSelectedSectionMap(semId, selectedItems) {
   const map = {};
   selectedItems.forEach(item => { map[`${semId}:${normalizeCode(item.course.code)}`] = item.section; });
@@ -2190,6 +2218,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   ];
   if (outputOptions.preferences) lines.push(`Preferences: ${schedulePreferenceSummary(prefs)}`);
   lines.push('', ...scheduleAdvisorTimingDiagnosticsText(timing));
+  lines.push(...scheduleAdvisorCatalogYearText());
   if (outputOptions.auditIssues) lines.push(...scheduleAdvisorAuditSummaryText(auditIssues));
   if (outputOptions.auditIssues && auditIssues.length) lines.push(...scheduleAdvisorLiveLinkNoticeText());
   lines.push('', `${filterDef.heading}:`);
@@ -2234,7 +2263,11 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-print-meta,.schedule-advisor-metrics,.schedule-advisor-flags{display:flex;flex-wrap:wrap;gap:6px}
     .schedule-print-meta span,.schedule-advisor-metrics span,.schedule-advisor-flags span{border:1px solid #d8cec0;border-radius:999px;background:#fff;padding:3px 8px;font-size:12px}
     .schedule-print-prefs,.schedule-advisor-note{color:#5d5962;font-size:13px}
-    .schedule-advisor-view-note{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:9px 10px;color:#5d5962;font-size:12px;margin:10px 0}
+    .schedule-advisor-view-note,.schedule-advisor-catalog-warning{border:1px solid #d8cec0;border-radius:8px;background:#fff;padding:9px 10px;color:#5d5962;font-size:12px;margin:10px 0}
+    .schedule-advisor-catalog-warning{border-color:#f1c45c;background:#fff7dc;color:#241f1f}
+    .schedule-advisor-catalog-warning strong{display:block;color:#8b0000}
+    .schedule-advisor-catalog-warning p{margin:4px 0;color:#5d5962;line-height:1.4}
+    .schedule-advisor-catalog-warning span{display:block;color:#5d5962;font-size:11px}
     .schedule-advisor-live-note{border:1px solid #9fb4c8;border-radius:8px;background:#eef4fa;padding:9px 10px;color:#241f1f;font-size:12px;margin:10px 0}
     .schedule-advisor-live-note strong{display:block;color:#2e5c8b;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
     .schedule-advisor-live-note p{margin:3px 0 0;color:#5d5962;line-height:1.4}
@@ -2346,6 +2379,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
         <span>${plan.shownCredits}/${plan.totalCredits} credits shown</span>
         ${outputOptions.unscheduled ? (unscheduled.length ? `<span>${unscheduled.length} unscheduled course${unscheduled.length === 1 ? '' : 's'}</span>` : '<span>All current-term courses scheduled</span>') : ''}
       </div>
+      ${scheduleAdvisorCatalogYearHtml()}
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
       ${scheduleAdvisorTimingDiagnosticsHtml(timing)}

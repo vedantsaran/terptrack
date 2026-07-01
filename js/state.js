@@ -102,6 +102,21 @@ function catalogYearIsCurrent(year) {
   return normalizeCatalogYear(year) === normalizeCatalogYear(currentCatalogYear());
 }
 
+function catalogYearAdvisingWarning(settings = null) {
+  const rawSettings = settings || (typeof getSettings === 'function' ? getSettings() : DEFAULT_SETTINGS);
+  const targetYear = normalizeCatalogYear(rawSettings?.catalogYear);
+  const sourceYear = currentCatalogYear();
+  if (targetYear === sourceYear) return null;
+  return {
+    level: 'warn',
+    targetYear,
+    sourceYear,
+    title: `Confirm ${targetYear} catalog requirements`,
+    body: `This plan targets the ${targetYear} catalog, while TerpTrack's built-in requirement links were checked against ${sourceYear}. Bring the official UMD audit or advisor worksheet before treating requirement coverage as final.`,
+    meta: `Target ${targetYear} · linked source ${sourceYear}`,
+  };
+}
+
 function normalizeSettings(value) {
   const merged = { ...DEFAULT_SETTINGS, ...(value || {}) };
   return {

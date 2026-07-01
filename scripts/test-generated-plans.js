@@ -437,6 +437,7 @@ async function testCatalogYearTargeting(context) {
         catalogYear: normalized
       });
       const reviewHtml = autoPlanReviewHtml(preview, { actions: false });
+      const warning = catalogYearAdvisingWarning();
       const sem = getAllSemesters()[0];
       const advisorText = scheduleAdvisorText(
         sem,
@@ -477,6 +478,7 @@ async function testCatalogYearTargeting(context) {
         previewCatalogYear: preview.catalogYear,
         previewSource: preview.officialSources[0],
         reviewHtml,
+        warning,
         advisorText,
         advisorHtml,
       };
@@ -495,8 +497,12 @@ async function testCatalogYearTargeting(context) {
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
+  assert(result.warning?.targetYear === '2024-2025' && result.warning?.sourceYear === '2026-2027', 'catalog year: advising warning should expose target and source years');
+  assert(/official UMD audit|advisor worksheet/.test(result.warning?.body || ''), 'catalog year: advising warning should tell students what evidence to bring');
   assert(/Catalog year: 2024-2025/.test(result.advisorText), 'catalog year: advisor text should include target catalog year');
+  assert(/Catalog-year verification/.test(result.advisorText) && /Confirm 2024-2025 catalog requirements/.test(result.advisorText), 'catalog year: advisor text should include catalog-year verification warning');
   assert(/Catalog 2024-2025/.test(result.advisorHtml), 'catalog year: advisor HTML should include target catalog year');
+  assert(/schedule-advisor-catalog-warning/.test(result.advisorHtml) && /Confirm 2024-2025 catalog requirements/.test(result.advisorHtml), 'catalog year: advisor HTML should include warning block');
 
   return {
     id: 'CATALOG-YEAR',
@@ -645,6 +651,7 @@ function testPlannerRegistrationChecklist(context) {
   const result = clone(vm.runInContext(`
     (() => {
       recoGenEdGaps = () => [{ id: 'DSHU', label: 'Humanities', have: 0, need: 1 }];
+      state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, catalogYear: '2024-2025' });
       state.activeSchedule = [
         {
           id: 'pass40-fall',
@@ -699,11 +706,13 @@ function testPlannerRegistrationChecklist(context) {
   `, context));
 
   assert(result.titles.some(title => /full-time|credit load|credits/i.test(title)), 'planner checklist: should include next-term credit-load status');
+  assert(result.titles.some(title => /Confirm 2024-2025 catalog requirements/.test(title)), 'planner checklist: should include catalog-year confirmation when target differs from source');
   assert(result.titles.some(title => /prerequisite/i.test(title)), 'planner checklist: should include prerequisite order risk');
   assert(result.titles.some(title => /timing fit/i.test(title)), 'planner checklist: should include picked-section timing fit');
   assert(result.titles.some(title => /Humanities|DSHU/i.test(title)), 'planner checklist: should include GenEd gap action');
   assert(result.levels.includes('danger') || result.levels.includes('warn'), 'planner checklist: should flag registration risks');
   assert(/Registration checklist/.test(result.text) && /CMSC 216/.test(result.text), 'planner checklist: export text should include checklist details');
+  assert(/Target 2024-2025/.test(result.text) && /linked source 2026-2027/.test(result.text), 'planner checklist: export text should include catalog target/source metadata');
   assert(result.hasScheduleButton, 'planner checklist: should render an open Schedule action');
   assert(result.hasGenEdButton, 'planner checklist: should render a GenEd search action');
 
@@ -718,6 +727,7 @@ function testPlannerAdvisorQuestions(context) {
   const result = clone(vm.runInContext(`
     (() => {
       recoGenEdGaps = () => [{ id: 'DSHU', label: 'Humanities', have: 0, need: 1 }];
+      state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, catalogYear: '2024-2025' });
       state.activeSchedule = [
         {
           id: 'pass41-fall',
@@ -775,11 +785,13 @@ function testPlannerAdvisorQuestions(context) {
   `, context));
 
   assert(result.titles.some(title => /credit|load|full-time/i.test(title)), 'planner questions: should include credit-load advisor question');
+  assert(result.titles.some(title => /Catalog-year confirmation/.test(title)), 'planner questions: should include catalog-year advisor question');
   assert(result.titles.some(title => /CMSC 216 prerequisite/i.test(title)), 'planner questions: should include prerequisite advisor question');
   assert(/switch any Pass 41 Fall sections|timing|schedule/i.test(result.questions), 'planner questions: should include picked-section timing question');
   assert(/DSHU|Humanities|GenEd/i.test(result.questions + result.whys), 'planner questions: should include GenEd advisor question');
   assert(result.levels.includes('danger') || result.levels.includes('warn'), 'planner questions: should preserve risk levels');
   assert(/Advisor questions/.test(result.text) && /CMSC 216/.test(result.text), 'planner questions: export text should include question details');
+  assert(/2024-2025 catalog requirements/.test(result.text) && /official UMD audit/.test(result.text), 'planner questions: export text should include catalog-year evidence question');
   assert(result.hasCopyButton, 'planner questions: should render select questions action');
   assert(result.hasScheduleButton, 'planner questions: should render an open Schedule action');
   assert(result.hasGenEdButton, 'planner questions: should render a GenEd search action');
@@ -1757,6 +1769,7 @@ function testAuditIssueDrawer(context) {
       }];
       state.customCourses = [];
       state.courses = {};
+      state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, catalogYear: '2024-2025' });
       state.recentChanges = [{
         id: 'prior-conflict-1',
         type: 'prior-credit',
@@ -1934,15 +1947,18 @@ function testAuditIssueDrawer(context) {
   assert(/Next action|Browse target|data-schedule-audit-primary|data-schedule-audit-browse/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include quick-link actions and targets');
   assert(/href="[^"]*#advisor-action=primary&amp;issue=/.test(result.advisorHtml) && /href="[^"]*#advisor-action=browse&amp;issue=/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include live-app deep links');
   assert(/Live TerpTrack links/.test(result.advisorHtml) && /same browser profile\/local plan state/.test(result.advisorHtml), 'advisor audit export: advisor HTML should explain live-link browser-state requirements');
+  assert(/schedule-advisor-catalog-warning/.test(result.advisorHtml) && /Confirm 2024-2025 catalog requirements/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include catalog-year warning');
   assert(/open\/import the matching plan/.test(result.advisorHtml) && /Next action and Browse target/.test(result.advisorHtml), 'advisor audit export: live-link notice should explain fallback review steps');
   assert(/Open\/import matching plan/.test(result.advisorHtml) && /href="#plan=/.test(result.advisorHtml), 'advisor audit export: advisor HTML should include an embedded shared-plan import link');
   assert(/Degree audit snapshot/.test(result.advisorText) && /Satisfies:/.test(result.advisorText), 'advisor audit export: advisor text should include audit snapshot details');
   assert(/Next action:|Browse target:/.test(result.advisorText), 'advisor audit export: advisor text should include quick-link action details');
   assert(/Live TerpTrack links/.test(result.advisorText) && /same browser profile\/local plan state/.test(result.advisorText), 'advisor audit export: advisor text should include live-link browser-state guidance');
+  assert(/Catalog-year verification/.test(result.advisorText) && /Confirm 2024-2025 catalog requirements/.test(result.advisorText), 'advisor audit export: advisor text should include catalog-year warning');
   assert(/Open\/import matching plan: #plan=/.test(result.advisorText), 'advisor audit export: advisor text should include the shared-plan import hash');
   assert(/schedule-advisor-audit-link/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include audit quick-link CSS/markup');
   assert(/#advisor-action=primary&amp;issue=/.test(result.advisorDocument) && /#advisor-action=browse&amp;issue=/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include live-app deep links');
   assert(/schedule-advisor-live-note/.test(result.advisorDocument) && /same browser profile\/local plan state/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include live-link guidance CSS/markup');
+  assert(/schedule-advisor-catalog-warning/.test(result.advisorDocument) && /Target 2024-2025/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include catalog-year warning CSS/markup');
   assert(/schedule-advisor-import-link/.test(result.advisorDocument) && /href="#plan=/.test(result.advisorDocument), 'advisor audit export: standalone advisor document should include the shared-plan import link');
   assert(!/Degree Audit Snapshot/.test(result.advisorHtmlNoAudit), 'advisor audit export: audit snapshot should hide when auditIssues option is off');
   assert(!/Live TerpTrack links/.test(result.advisorHtmlNoAudit), 'advisor audit export: live-link notice should hide when audit actions are off');
