@@ -8,6 +8,10 @@ const UMDIO_CACHE_KEY = 'terp-track-umdio-cache-v2';
 const UMDIO_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 const UMDIO_SECTION_CACHE_TTL_MS = 1000 * 60 * 15; // 15 minutes; seats change quickly
 const UMDIO_FETCH_TIMEOUT_MS = 6500;
+const UMDIO_CANONICAL_TITLES = Object.freeze({
+  PHYS260: 'General Physics: Electricity, Magnetism and Thermodynamics',
+  PHYS261: 'General Physics: Mechanics, Vibrations, Waves, Heat (Laboratory)',
+});
 
 function umdioNormalizePath(pathAndQuery) {
   const raw = String(pathAndQuery || '').trim();
@@ -293,7 +297,7 @@ async function fetchCourseFull(code) {
   if (!umd && !pt) return null;
   const display = displayCode(id);
   const credits = parseInt((pt && pt.credits) || (umd && umd.credits) || '3', 10) || 3;
-  const title = (umd && umd.name) || (pt && pt.title) || display;
+  const title = UMDIO_CANONICAL_TITLES[id] || (umd && umd.name) || (pt && pt.title) || display;
   const prereqText = umd && umd.relationships ? umd.relationships.prereqs : (pt && pt.prerequisites);
   const prereqGroups = parsePrereqGroups(prereqText);
   const prereqCodes = prereqGroups.length

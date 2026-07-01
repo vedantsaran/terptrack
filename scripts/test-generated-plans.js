@@ -51,6 +51,7 @@ function buildContext() {
     'js/major-schedules.js',
     'js/majors.js',
     'js/state.js',
+    'js/planetterp.js',
     'js/api.js',
     'js/import.js',
     'js/settings.js',
@@ -60,6 +61,7 @@ function buildContext() {
     'js/timeline.js',
     'js/browse.js',
     'js/gened.js',
+    'js/recommendations.js',
     'js/placeholder-search.js',
     'js/audit.js',
     'js/onboarding.js',
@@ -611,6 +613,87 @@ function testScheduleTimingFit(context) {
     idleScore: result.idleScore,
     tightTransitions: result.tightTransitions,
     comparisonTimingDelta: result.comparisonTimingDelta,
+  };
+}
+
+function testRecommendationMoveAction(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      let renderCalls = 0;
+      const originalRender = render;
+      render = () => { renderCalls += 1; };
+      currentTab = 'plan';
+      state.activeSchedule = [{
+        id: 'PASS100F',
+        name: 'Pass 100 Fall',
+        year: 'Year 1',
+        courses: [{
+          code: 'CMSC 131',
+          title: 'Object-Oriented Programming I',
+          cr: 4,
+          prereqs: [],
+          kind: 'core',
+          category: 'major-core'
+        }]
+      }, {
+        id: 'PASS100S',
+        name: 'Pass 100 Spring',
+        year: 'Year 1',
+        courses: [{
+          code: 'CMSC 132',
+          title: 'Object-Oriented Programming II',
+          cr: 4,
+          prereqs: ['CMSC 131'],
+          kind: 'core',
+          category: 'major-core'
+        }, {
+          code: 'MATH 140',
+          title: 'Calculus I',
+          cr: 4,
+          prereqs: [],
+          kind: 'core',
+          category: 'gened-fsma'
+        }]
+      }];
+      state.customSemesters = [];
+      state.customCourses = [];
+      state.courses = { 'CMSC 131': { status: 'passed', grade: 'A' } };
+      state.schedulePrefs = { PASS100F: { term: '202608' } };
+      state.recentChanges = [];
+      const ctx = { semId: 'PASS100F', term: '202608', termLabel: 'Fall 2026' };
+      const candidate = recoBaseCandidates().find(item => normalizeCode(item.course.code) === 'CMSC132');
+      const htmlBefore = candidate ? recoRenderPick(candidate, 0, ctx) : '';
+      const moved = recoMoveToSemester('CMSC 132', 'PASS100F');
+      const freshCandidate = recoBaseCandidates().find(item => normalizeCode(item.course.code) === 'CMSC132');
+      const htmlAfter = freshCandidate ? recoRenderPick(freshCandidate, 0, ctx) : '';
+      render = originalRender;
+      return {
+        candidateCode: candidate?.course?.code || '',
+        candidateTerm: candidate?.course?.semId || '',
+        moved,
+        fallCodes: state.activeSchedule[0].courses.map(course => course.code),
+        springCodes: state.activeSchedule[1].courses.map(course => course.code),
+        htmlBefore,
+        htmlAfter,
+        change: state.recentChanges[0] || null,
+        renderCalls,
+      };
+    })()
+  `, context));
+
+  assert(result.candidateCode === 'CMSC 132' && result.candidateTerm === 'PASS100S', 'recommendation move: should find future ready course candidate');
+  assert(/Move here/.test(result.htmlBefore) && /Schedule/.test(result.htmlBefore), 'recommendation move: ready future pick should render move and schedule actions');
+  assert(result.moved === true, 'recommendation move: action should report successful move');
+  assert(result.fallCodes.includes('CMSC 132') && !result.springCodes.includes('CMSC 132'), 'recommendation move: course should move from future term to current term');
+  assert(/In this term/.test(result.htmlAfter), 'recommendation move: moved pick should render as already in current term');
+  assert(result.change?.type === 'recommendation-move' && /Moved CMSC 132/.test(result.change.title || ''), 'recommendation move: should record a recent plan change');
+  assert((result.change?.highlights || []).some(item => /posted section/i.test(item)), 'recommendation move: change should nudge student to choose a real section');
+  assert(result.renderCalls === 1, 'recommendation move: should rerender the app once after moving');
+
+  return {
+    id: 'RECO-MOVE',
+    moved: result.fallCodes.includes('CMSC 132') ? 'CMSC 132' : '',
+    from: result.candidateTerm,
   };
 }
 
@@ -2530,6 +2613,7 @@ async function main() {
   const accountSetup = testAccountCloudSetup(context);
   const releaseJson = testReleaseJsonReport();
   const timing = testScheduleTimingFit(context);
+  const recoMove = testRecommendationMoveAction(context);
   const planner = testPlannerRegistrationChecklist(context);
   const questions = testPlannerAdvisorQuestions(context);
   const browse = await testBrowseProfileDepartments(context);
@@ -2553,6 +2637,7 @@ async function main() {
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
+  console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
@@ -2567,7 +2652,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + recommendation move action + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

@@ -5261,3 +5261,59 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass99-release-json-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 100
+
+Focus: make Smart next picks actionable by letting students move a ready recommended course into the current registration term directly from the Plan view.
+
+Planned changes:
+- Add a recommendation action that moves a future ready course into the active registration term instead of only linking to Schedule.
+- Avoid duplicating courses; move the existing planned course object.
+- Record the move in recent plan changes so advisor context/history reflects the recommendation-driven adjustment.
+- Keep a Schedule jump next to the move action so students can immediately choose real posted sections.
+- Add fixture and rendered mobile coverage for the workflow.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added recommendation helpers in `js/recommendations.js`:
+  - current-term detection for each recommended course.
+  - mutable course placement lookup across active schedule, custom semesters, and custom courses.
+  - `recoMoveToSemester()` for moving a planned course to the current registration term.
+- Updated Smart next pick rows:
+  - future-term ready picks now show `Move here` plus `Schedule`.
+  - already-current picks show `In this term` plus `Schedule`.
+- Added recent-change logging for recommendation moves with a section-picking follow-up hint.
+- Added desktop/mobile action styling for recommendation rows.
+- Added canonical API titles for `PHYS 260` and `PHYS 261` so generated plans stay aligned with current UMD live metadata when upstream sources disagree.
+- Bumped cache tags:
+  - `styles.css?v=78`.
+  - `js/api.js?v=4`.
+  - `js/recommendations.js?v=12`.
+- Updated rendered verifiers for `styles.css?v=78` and `js/api.js?v=4`.
+- Added `RECO-MOVE` fixture coverage in `scripts/test-generated-plans.js`.
+- Extended rendered mobile workflow verification with a Recommendations move workflow.
+
+Verification:
+- Ran syntax checks for touched recommendation/verifier/test files.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `RECO-MOVE` fixture and existing generated-plan regression suite.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed the new mobile Recommendations move workflow.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet export.
+- Ran `node scripts/verify-rendered-generated-plans.js --majors=PHYS --viewports=mobile --timeout-ms=120000`.
+  - It passed rendered Settings/cache assertions and rendered Physics with `20/20 live course records`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including `RECO-MOVE`.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations move, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-majors PHYS --live-seed pass100-reco-move-live`.
+  - It verified the PHYS title stabilization against live PlanetTerp/UMD metadata.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass100-reco-move-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.

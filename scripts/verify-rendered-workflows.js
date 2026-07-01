@@ -134,6 +134,7 @@ function snapshotScript() {
     const schedule = document.querySelector('#view-schedule');
     const scheduleOutput = document.querySelector('#schedule-output');
     const advisorPacket = document.querySelector('#schedule-advisor-packet');
+    const recommendations = document.querySelector('#reco-container');
     return {
       scripts: Array.from(document.scripts).map(script => script.getAttribute('src')).filter(Boolean),
       styles: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link => link.getAttribute('href')),
@@ -141,6 +142,7 @@ function snapshotScript() {
       accountText: accountModal ? accountModal.textContent.replace(/\\s+/g, ' ').trim() : '',
       browseText: grid ? grid.textContent.replace(/\\s+/g, ' ').trim() : '',
       scheduleText: scheduleOutput ? scheduleOutput.textContent.replace(/\\s+/g, ' ').trim() : '',
+      recoText: recommendations ? recommendations.textContent.replace(/\\s+/g, ' ').trim() : '',
       overflow: {
         document: document.documentElement.scrollWidth > window.innerWidth + 1,
         body: document.body.scrollWidth > window.innerWidth + 1,
@@ -152,6 +154,7 @@ function snapshotScript() {
         schedule: schedule ? schedule.scrollWidth > schedule.clientWidth + 1 : false,
         scheduleOutput: scheduleOutput ? scheduleOutput.scrollWidth > scheduleOutput.clientWidth + 1 : false,
         advisorPacket: advisorPacket ? advisorPacket.scrollWidth > advisorPacket.clientWidth + 1 : false,
+        recommendations: recommendations ? recommendations.scrollWidth > recommendations.clientWidth + 1 : false,
       },
     };
   })()`;
@@ -167,7 +170,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=77'), 'workflow app did not load styles.css?v=77');
+  assert(snapshot.styles.includes('styles.css?v=78'), 'workflow app did not load styles.css?v=78');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=12'), 'workflow app did not load js/browse.js?v=12');
   return snapshot;
@@ -271,6 +274,97 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   assert(snapshot.browseText.includes('Fills gap'), 'browse: missing GenEd gap evidence');
   assertNoOverflow('browse replacement mobile', snapshot);
   console.log('Browse replacement [mobile]: rendered replacement banner, result card, actions, and no overflow.');
+}
+
+async function verifyRecommendationsMoveMobile(page, url, opts) {
+  await openFreshApp(page, url, opts, 'recommendations');
+  await page.evaluate(() => {
+    document.querySelector('#onboard-modal')?.classList.remove('open');
+    state.onboardingComplete = true;
+    state.activeSchedule = [{
+      id: 'PASS100F',
+      name: 'Pass 100 Fall',
+      year: 'Year 1',
+      courses: [{
+        code: 'CMSC 131',
+        title: 'Object-Oriented Programming I',
+        cr: 4,
+        prereqs: [],
+        kind: 'core',
+        category: 'major-core',
+      }, {
+        code: 'ENGL 101',
+        title: 'Academic Writing',
+        cr: 3,
+        prereqs: [],
+        kind: 'gened',
+        category: 'gened-fspw',
+      }],
+    }, {
+      id: 'PASS100S',
+      name: 'Pass 100 Spring',
+      year: 'Year 1',
+      courses: [{
+        code: 'CMSC 132',
+        title: 'Object-Oriented Programming II',
+        cr: 4,
+        prereqs: ['CMSC 131'],
+        kind: 'core',
+        category: 'major-core',
+      }, {
+        code: 'MATH 140',
+        title: 'Calculus I',
+        cr: 4,
+        prereqs: [],
+        kind: 'core',
+        category: 'gened-fsma',
+      }],
+    }];
+    state.customSemesters = [];
+    state.customCourses = [];
+    state.courses = { 'CMSC 131': { status: 'passed', grade: 'A' } };
+    state.schedulePrefs = { PASS100F: { term: '202608' } };
+    state.recentChanges = [];
+    scheduleSectionsCache['PASS100F:202608:CMSC132'] = [{
+      section_id: 'CMSC132-0101',
+      semester: '202608',
+      number: '0101',
+      instructors: ['Grace Hopper'],
+      meetings: [{ days: 'MW', start_time: '10:30am', end_time: '11:45am', building: 'IRB', room: '1201' }],
+      open_seats: '9',
+      seats: '30',
+      waitlist: '0',
+    }];
+    scheduleSectionsCache['PASS100F:202608:MATH140'] = [];
+    currentTab = 'plan';
+    document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === 'view-plan'));
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === 'plan'));
+    render();
+  });
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#reco-container')?.textContent?.replace(/\s+/g, ' ') || '';
+    return text.includes('Smart next picks')
+      && text.includes('CMSC 132')
+      && text.includes('Move here')
+      && text.includes('Schedule');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('#reco-container .reco-pick:has-text("CMSC 132") button:has-text("Move here")').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#reco-container')?.textContent?.replace(/\s+/g, ' ') || '';
+    return text.includes('CMSC 132') && text.includes('In this term');
+  }, null, { timeout: opts.timeoutMs });
+  const result = await page.evaluate(() => ({
+    fallCodes: state.activeSchedule[0].courses.map(course => course.code),
+    springCodes: state.activeSchedule[1].courses.map(course => course.code),
+    change: state.recentChanges[0] || null,
+  }));
+  assert(result.fallCodes.includes('CMSC 132'), 'recommendations: moved course should be in current term');
+  assert(!result.springCodes.includes('CMSC 132'), 'recommendations: moved course should leave future term');
+  assert(result.change?.type === 'recommendation-move', 'recommendations: move should record a recent change');
+  const snapshot = await page.evaluate(snapshotScript());
+  assert(snapshot.recoText.includes('In this term'), 'recommendations: rendered panel should show moved current-term state');
+  assertNoOverflow('recommendations move mobile', snapshot);
+  console.log('Recommendations [mobile]: rendered Smart next pick move action, moved a ready course, and no overflow.');
 }
 
 async function verifyAccountSetupMobile(page, url, opts) {
@@ -499,11 +593,12 @@ async function main() {
     page.on('pageerror', error => pageErrors.push(error.message));
     await verifyOnboardingMobile(page, url, opts);
     await verifyBrowseReplacementMobile(page, url, opts);
+    await verifyRecommendationsMoveMobile(page, url, opts);
     await verifyAccountSetupMobile(page, url, opts);
     await verifyAdvisorPacketMobile(page, url, opts);
     assert(!pageErrors.length, `Workflow page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
     assert(!consoleErrors.length, `Workflow console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
-    console.log('Verified rendered mobile onboarding, Browse replacement, Account setup, and advisor packet workflows.');
+    console.log('Verified rendered mobile onboarding, Browse replacement, Recommendations move, Account setup, and advisor packet workflows.');
     if (opts.keepOpen) await page.waitForTimeout(60_000);
   } finally {
     await browser.close().catch(() => {});

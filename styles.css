@@ -5249,6 +5249,28 @@ h1.hero-title em {
   font-size: .7rem;
   line-height: 1.35;
 }
+#reco-container .reco-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+#reco-container .reco-actions .btn {
+  justify-content: center;
+  min-width: 82px;
+}
+#reco-container .reco-current {
+  border: 1px solid rgba(16, 185, 129, .26);
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  font-weight: 800;
+  padding: 5px 7px;
+  text-align: center;
+  white-space: nowrap;
+}
 #reco-container .reco-more { font-size: .72rem; color: var(--slate); padding: 4px 8px; font-style: italic; }
 #reco-container .reco-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 #reco-container .reco-tag {
@@ -6868,6 +6890,20 @@ h1.hero-title em {
   }
   .change-history-head {
     flex-direction: column;
+  }
+  #reco-container .reco-pick {
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: start;
+  }
+  #reco-container .reco-actions {
+    grid-column: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  #reco-container .reco-actions .btn,
+  #reco-container .reco-current {
+    flex: 1 1 96px;
   }
   .planner-head,
   .planner-action,

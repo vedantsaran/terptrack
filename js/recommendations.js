@@ -238,8 +238,74 @@ function recoReason(item) {
   return reasons.join(' · ');
 }
 
+function recoCourseInContext(course, ctx) {
+  return !!(ctx?.semId && course?.semId && String(course.semId) === String(ctx.semId));
+}
+
+function recoMutableSemesters() {
+  return [...mutableSchedule(), ...(state.customSemesters || [])];
+}
+
+function recoFindCoursePlacement(code) {
+  const norm = normalizeCode(code);
+  const custom = (state.customCourses || []).find(course => normalizeCode(course.code) === norm);
+  if (custom) return { course: custom, semId: custom.semId || '', custom: true, sem: null };
+  for (const sem of recoMutableSemesters()) {
+    const course = (sem.courses || []).find(item => normalizeCode(item.code) === norm);
+    if (course) return { course, semId: sem.id, custom: false, sem };
+  }
+  return null;
+}
+
+function recoMoveToSemester(code, targetSemId) {
+  const target = recoMutableSemesters().find(sem => sem.id === targetSemId);
+  if (!target) {
+    toastError('Could not find that target term.');
+    return false;
+  }
+  const placement = recoFindCoursePlacement(code);
+  if (!placement) {
+    toastError(`Could not find ${displayCode(code)} in your plan.`);
+    return false;
+  }
+  if (placement.semId === targetSemId) {
+    toastInfo(`${placement.course.code} is already in ${target.name}.`);
+    recoOpenSchedule(targetSemId);
+    return false;
+  }
+  const sourceName = placement.sem?.name || (placement.semId ? placement.semId : 'Outside Plan');
+  if (placement.custom) {
+    placement.course.semId = targetSemId;
+  } else {
+    placement.sem.courses = (placement.sem.courses || []).filter(course => normalizeCode(course.code) !== normalizeCode(code));
+    target.courses = target.courses || [];
+    target.courses.push(placement.course);
+  }
+  recordPlanChange({
+    type: 'recommendation-move',
+    source: 'Smart next picks',
+    title: `Moved ${placement.course.code} to ${target.name}`,
+    detail: `${placement.course.code} moved from ${sourceName} to ${target.name} from the recommendations panel.`,
+    meta: 'Registration planning',
+    highlights: [
+      'Course is prerequisite-ready for the current registration term.',
+      'Open Schedule to choose a real posted section.',
+    ],
+  }, { save: false });
+  saveState();
+  render();
+  toastSuccess(`Moved ${placement.course.code} to ${target.name}.`);
+  return true;
+}
+
 function recoRenderPick(item, idx, ctx) {
   const course = item.course;
+  const inContext = recoCourseInContext(course, ctx);
+  const targetAction = ctx.semId
+    ? (inContext
+      ? '<span class="reco-current">In this term</span>'
+      : `<button class="btn small primary" type="button" onclick="recoMoveToSemester('${recoEscape(course.code)}','${recoEscape(ctx.semId)}')">Move here</button>`)
+    : '';
   return `
     <div class="reco-pick">
       <div class="reco-rank">${idx + 1}</div>
@@ -252,7 +318,10 @@ function recoRenderPick(item, idx, ctx) {
         <div class="reco-badges">${recoBadges(item).map(badge => `<span class="${badge.cls ? `seat-risk ${badge.cls}` : ''}">${recoEscape(badge.label)}</span>`).join('')}</div>
         <div class="reco-reason">${recoEscape(recoReason(item))}</div>
       </div>
-      <button class="btn small" type="button" onclick="recoOpenSchedule('${recoEscape(ctx.semId)}')">Schedule</button>
+      <div class="reco-actions">
+        ${targetAction}
+        <button class="btn small" type="button" onclick="recoOpenSchedule('${recoEscape(ctx.semId)}')">Schedule</button>
+      </div>
     </div>
   `;
 }
@@ -350,6 +419,7 @@ function recoFindGenEd(tag) {
 
 window.renderRecommendations = renderRecommendations;
 window.recoAddCourse = recoAddCourse;
+window.recoMoveToSemester = recoMoveToSemester;
 window.recoOpenSchedule = recoOpenSchedule;
 window.recoFindGenEd = recoFindGenEd;
 
