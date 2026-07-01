@@ -5604,3 +5604,51 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass105-all-depts-gened-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 106
+
+Focus: make the all-departments GenEd scope visible as an actual toggle whenever a GenEd Browse search is active.
+
+Planned changes:
+- Keep the profile department default and all-departments mode from Pass 105.
+- Keep the broad scope discoverable even when a student has no saved profile summary.
+- Show scope chips for GenEd searches instead of hiding them behind the department dropdown.
+- Verify the rendered mobile Browse flow exposes the scope toggle with no horizontal overflow.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `renderBrowseProfileHints()` in `js/browse.js`.
+  - The hint row now stays visible when a GenEd filter or profile/all-department scope is active.
+  - The row label changes to `GenEd search scope` for GenEd searches.
+  - `All departments` remains visible even with no profile departments configured.
+  - `All profile departments` only renders when profile departments are available.
+  - The fallback detail explicitly says broad GenEd search will search every department.
+- Bumped cache tag:
+  - `js/browse.js?v=14`.
+- Extended rendered mobile Browse workflow verification:
+  - clears profile preferences before the all-department DSHU search.
+  - verifies the scope toggle remains visible.
+  - verifies the toggle contains `All departments`.
+  - verifies the row explains that the broad search checks every department.
+
+Verification:
+- Ran `node --check js/browse.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the existing generated-plan regression suite, including the all-department Browse fixture from Pass 105.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement plus all-department GenEd search and visible scope toggle.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet export and backup apply workflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the all-department Browse fixture.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement with all-department GenEd search, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass106-visible-gened-scope-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.

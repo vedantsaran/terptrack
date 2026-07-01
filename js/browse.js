@@ -120,22 +120,26 @@ function renderBrowseProfileHints() {
   if (!root) return;
   const depts = browseProfileDepartments();
   const summary = browseProfileSummaryText(depts);
-  if (!summary) {
+  const genEdActive = !!browseGenEd;
+  const scopeActive = browseIsProfileDeptMode() || browseIsAllDeptMode();
+  if (!summary && !genEdActive && !scopeActive) {
     root.hidden = true;
     root.innerHTML = '';
     return;
   }
   root.hidden = false;
   const deptButtons = [
-    `<button type="button" class="browse-profile-chip ${browseIsProfileDeptMode() ? 'active' : ''}" data-br-profile-dept="${BROWSE_PROFILE_DEPTS_VALUE}">All profile departments</button>`,
+    depts.length ? `<button type="button" class="browse-profile-chip ${browseIsProfileDeptMode() ? 'active' : ''}" data-br-profile-dept="${BROWSE_PROFILE_DEPTS_VALUE}">All profile departments</button>` : '',
     `<button type="button" class="browse-profile-chip ${browseIsAllDeptMode() ? 'active' : ''}" data-br-profile-dept="${BROWSE_ALL_DEPTS_VALUE}">All departments</button>`,
     ...depts.map(dept => `
       <button type="button" class="browse-profile-chip ${browseDept === dept ? 'active' : ''}" data-br-profile-dept="${browseEscape(dept)}">${browseEscape(dept)}</button>
     `),
-  ].join('');
+  ].filter(Boolean).join('');
+  const heading = genEdActive ? 'GenEd search scope' : 'Profile search';
+  const detail = summary || 'Search every department for the selected GenEd tag.';
   root.innerHTML = `
-    <span>Profile search</span>
-    <strong>${browseEscape(summary)}</strong>
+    <span>${browseEscape(heading)}</span>
+    <strong>${browseEscape(detail)}</strong>
     <div>${deptButtons}</div>
   `;
   root.querySelectorAll('[data-br-profile-dept]').forEach(btn => {

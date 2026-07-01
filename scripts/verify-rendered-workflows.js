@@ -175,7 +175,7 @@ async function openFreshApp(page, url, opts, suffix) {
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.styles.includes('styles.css?v=79'), 'workflow app did not load styles.css?v=79');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
-  assert(snapshot.scripts.includes('js/browse.js?v=13'), 'workflow app did not load js/browse.js?v=13');
+  assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
   return snapshot;
 }
 
@@ -290,6 +290,7 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
         department: 'HIST',
       }];
     };
+    state.profilePrefs = normalizeProfilePrefs({});
     browseDept = BROWSE_ALL_DEPTS_VALUE;
     browseGenEd = 'DSHU';
     browseSearch = '';
@@ -305,11 +306,14 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
     hasOption: Array.from(document.querySelectorAll('#br-dept option'))
       .some(option => option.value === BROWSE_ALL_DEPTS_VALUE && /All departments/.test(option.textContent || '')),
     selected: document.querySelector('#br-dept')?.value || '',
+    hintText: document.querySelector('#br-profile-hints')?.textContent?.replace(/\s+/g, ' ').trim() || '',
     calls: window.__browseAllDeptCalls || [],
     text: document.querySelector('#br-grid')?.textContent?.replace(/\s+/g, ' ').trim() || '',
   }));
   assert(allDeptResult.hasOption, 'browse all departments: department selector should include All departments');
   assert(allDeptResult.selected === '__ALL_DEPTS__', 'browse all departments: selector should preserve the broad scope');
+  assert(/GenEd search scope/.test(allDeptResult.hintText) && /All departments/.test(allDeptResult.hintText), 'browse all departments: scope toggle should stay visible for GenEd search');
+  assert(/Search every department/.test(allDeptResult.hintText), 'browse all departments: scope toggle should explain broad GenEd search without a profile');
   assert(allDeptResult.calls.includes('gened:DSHU:'), 'browse all departments: should call GenEd search without a department');
   assert(!allDeptResult.calls.includes('gened:DSHU:GVPT'), 'browse all departments: should not stay limited to profile departments');
   assert(allDeptResult.text.includes('HIST 210'), 'browse all departments: broad GenEd search should render global results');
