@@ -5902,3 +5902,62 @@ Verification:
   - It randomly verified `FMSC`, `THET`, `HLTH`, `HESP`, `WMST`, and `ENMA` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 111
+
+Focus: make Supabase account setup more self-service from inside the app.
+
+Planned changes:
+- Keep Account cloud setup local-first but more explicit about the required database objects.
+- Add a copy action for the bundled Supabase schema SQL.
+- Verify the schema checklist in account setup tests and rendered mobile Account UI.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `ACCOUNT_SCHEMA_REQUIREMENTS` in `js/account.js` for:
+  - `profiles`.
+  - `plans`.
+  - `friend_requests`.
+  - `shared_plans`.
+  - `RLS policies`.
+  - `updated_at triggers`.
+- Added `accountSchemaChecklistItems()` and `accountSchemaChecklistHtml()`.
+- Added `accountCopySchemaSql()`:
+  - fetches `supabase/schema.sql`.
+  - copies it to the clipboard when browser permissions allow.
+  - falls back with a clear Account status if automatic copying fails.
+- Added a `Copy schema SQL` action to the Cloud config card.
+- Added a `Schema objects` checklist under Account cloud setup so deployers can confirm accounts, friend requests, and shared plans have the needed tables and policies.
+- Added compact responsive styles for `.account-schema-checklist`, `.account-schema-grid`, and `.account-schema-item`.
+- Bumped cache tags:
+  - `styles.css?v=83`.
+  - `js/account.js?v=11`.
+- Extended tests:
+  - `ACCOUNT-CLOUD-SETUP` now asserts the schema checklist IDs and rendered schema HTML.
+  - Rendered mobile Account setup now verifies `Schema objects`, `friend_requests`, `shared_plans`, `Copy schema SQL`, and `RLS policies`.
+
+Verification:
+- Ran `node --check js/account.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the cloud setup fixture with schema checklist assertions.
+  - It continued to pass generated-plan fixtures, account/share, all generated requirement groups, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with schema checklist, friend-plan comparison, and shared free windows.
+  - It passed mobile advisor packet workflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including cloud setup schema checklist coverage.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass111-account-schema-checklist-live`.
+  - It randomly verified `ENGL`, `ARCH`, `SOCY`, `BIOE`, `CINE`, and `STAT` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

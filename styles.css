@@ -2282,6 +2282,55 @@ h1.hero-title em {
   line-height: 1.35;
   margin-top: 2px;
 }
+.account-schema-checklist {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.account-schema-head strong,
+.account-schema-head span {
+  display: block;
+}
+.account-schema-head strong {
+  color: var(--ink);
+  font-size: .78rem;
+}
+.account-schema-head span {
+  color: var(--slate);
+  font-size: .68rem;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+.account-schema-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.account-schema-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  min-width: 0;
+  padding: 8px;
+}
+.account-schema-item strong,
+.account-schema-item span {
+  display: block;
+}
+.account-schema-item strong {
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  overflow-wrap: anywhere;
+}
+.account-schema-item span {
+  color: var(--slate);
+  font-size: .66rem;
+  line-height: 1.3;
+  margin-top: 3px;
+}
 .account-subsection {
   margin-top: 12px;
 }

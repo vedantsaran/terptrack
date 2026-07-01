@@ -5,6 +5,14 @@
 
 const ACCOUNT_CONFIG_STORAGE = 'terp-track-supabase-config';
 const ACCOUNT_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+const ACCOUNT_SCHEMA_REQUIREMENTS = [
+  { id: 'profiles', label: 'profiles', detail: 'student profile, major, profile preferences' },
+  { id: 'plans', label: 'plans', detail: 'private cloud save/load payloads' },
+  { id: 'friend_requests', label: 'friend_requests', detail: 'invites, accepted friends, recipient links' },
+  { id: 'shared_plans', label: 'shared_plans', detail: 'readable plans for accepted friends' },
+  { id: 'rls', label: 'RLS policies', detail: 'owner-only plans and accepted-friend visibility' },
+  { id: 'updated_at', label: 'updated_at triggers', detail: 'fresh timestamps after edits and publishes' },
+];
 let accountConfigPromise = null;
 let accountClient = null;
 let accountSession = null;
@@ -243,6 +251,46 @@ function accountCloudSetupHtml(config, clientReady) {
       `).join('')}
     </div>
   `;
+}
+
+function accountSchemaChecklistItems() {
+  return ACCOUNT_SCHEMA_REQUIREMENTS.slice();
+}
+
+function accountSchemaChecklistHtml() {
+  return `
+    <div class="account-schema-checklist">
+      <div class="account-schema-head">
+        <strong>Schema objects</strong>
+        <span>Required before accounts, friends, and shared plans are dependable.</span>
+      </div>
+      <div class="account-schema-grid">
+        ${accountSchemaChecklistItems().map(item => `
+          <div class="account-schema-item">
+            <strong>${accountEscape(item.label)}</strong>
+            <span>${accountEscape(item.detail)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function accountCopySchemaSql() {
+  try {
+    const response = await fetch('supabase/schema.sql', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const sql = await response.text();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(sql);
+      accountSetStatus('Schema SQL copied. Paste it into the Supabase SQL editor.', 'ok');
+    } else {
+      prompt('Copy this Supabase schema SQL:', sql);
+      accountSetStatus('Schema SQL ready to paste into Supabase.', 'ok');
+    }
+  } catch (err) {
+    accountSetStatus(`Could not copy schema SQL automatically. Open supabase/schema.sql from the repo. ${err.message || ''}`.trim(), 'warn');
+  }
 }
 
 function accountTime(value) {
@@ -1062,8 +1110,10 @@ async function renderAccountModal() {
       <div class="account-actions">
         <button class="btn small" type="button" onclick="accountSaveManualConfig()">Save dev config</button>
         <button class="btn small" type="button" onclick="accountClearManualConfig()">Clear dev config</button>
+        <button class="btn small" type="button" onclick="accountCopySchemaSql()">Copy schema SQL</button>
       </div>
       ${accountCloudSetupHtml(config, !!client)}
+      ${accountSchemaChecklistHtml()}
     </div>
   `;
 

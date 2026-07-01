@@ -173,10 +173,10 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=82'), 'workflow app did not load styles.css?v=82');
+  assert(snapshot.styles.includes('styles.css?v=83'), 'workflow app did not load styles.css?v=83');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
-  assert(snapshot.scripts.includes('js/account.js?v=10'), 'workflow app did not load js/account.js?v=10');
+  assert(snapshot.scripts.includes('js/account.js?v=11'), 'workflow app did not load js/account.js?v=11');
   return snapshot;
 }
 
@@ -441,6 +441,10 @@ async function verifyAccountSetupMobile(page, url, opts) {
     return text.includes('Cloud config')
       && text.includes('Cloud setup')
       && text.includes('SUPABASE_URL')
+      && text.includes('Schema objects')
+      && text.includes('friend_requests')
+      && text.includes('shared_plans')
+      && text.includes('Copy schema SQL')
       && text.includes('Student profile')
       && text.includes('Friends & shared plans')
       && text.includes('Needs config');
@@ -548,6 +552,7 @@ async function verifyAccountSetupMobile(page, url, opts) {
   assert(prefs.displayName === 'Pass 98 Student', 'account setup: profile display name should persist locally');
   assert((prefs.friendInvites || []).some(invite => invite.email === 'roommate@umd.edu'), 'account setup: friend invite should persist locally');
   assert(snapshot.accountText.includes('Local only'), 'account setup: modal should identify local-only config');
+  assert(snapshot.accountText.includes('Schema objects') && snapshot.accountText.includes('RLS policies'), 'account setup: modal should show schema checklist');
   assert(snapshot.accountText.includes('Friend invite saved locally.'), 'account setup: modal should preserve local invite status');
   assert(snapshot.accountText.includes('Pal STEM plan') && snapshot.accountText.includes('meeting overlaps'), 'account setup: modal should show friend-plan comparison');
   assert(snapshot.accountText.includes('Shared free windows') && snapshot.accountText.includes('Mon 8:00am-10:00am'), 'account setup: modal should show shared free windows');

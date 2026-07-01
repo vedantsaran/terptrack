@@ -1126,6 +1126,8 @@ function testAccountCloudSetup(context) {
       const manual = accountCloudSetupChecks({ source: 'manual', supabaseUrl: 'https://demo.supabase.co', supabaseAnonKey: 'a'.repeat(80) }, true, 'http://127.0.0.1:5174');
       const vercel = accountCloudSetupChecks({ source: 'vercel', supabaseUrl: 'https://demo.supabase.co', supabaseAnonKey: 'b'.repeat(80) }, true, 'https://terptrack.vercel.app');
       const html = accountCloudSetupHtml({ source: 'vercel', supabaseUrl: 'https://demo.supabase.co', supabaseAnonKey: 'b'.repeat(80) }, true);
+      const schemaItems = accountSchemaChecklistItems();
+      const schemaHtml = accountSchemaChecklistHtml();
       return {
         missingStatuses: missing.map(check => check.status).join(','),
         manualDeployment: manual.find(check => check.id === 'deployment')?.status || '',
@@ -1134,6 +1136,8 @@ function testAccountCloudSetup(context) {
         vercelCredentials: vercel.find(check => check.id === 'credentials')?.status || '',
         vercelClient: vercel.find(check => check.id === 'client')?.status || '',
         html,
+        schemaIds: schemaItems.map(item => item.id).join(','),
+        schemaHtml,
       };
     })()
   `, context));
@@ -1145,6 +1149,8 @@ function testAccountCloudSetup(context) {
   assert(result.vercelCredentials === 'ok', 'account setup: valid Supabase credentials should be ready');
   assert(result.vercelClient === 'ok', 'account setup: initialized Vercel client should be ready');
   assert(/Cloud setup/.test(result.html) && /Vercel env vars are serving/.test(result.html), 'account setup: readiness HTML should explain Vercel config');
+  assert(result.schemaIds === 'profiles,plans,friend_requests,shared_plans,rls,updated_at', 'account setup: schema checklist should include every required object group');
+  assert(/Schema objects/.test(result.schemaHtml) && /friend_requests/.test(result.schemaHtml) && /shared_plans/.test(result.schemaHtml) && /RLS policies/.test(result.schemaHtml), 'account setup: schema checklist HTML should render required Supabase objects');
 
   return {
     id: 'ACCOUNT-CLOUD-SETUP',
