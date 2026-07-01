@@ -406,6 +406,7 @@ async function testAutoPlanDiagnostics(context) {
         profilePrefs: getProfilePrefs()
       });
       const templateDiagnostics = autoPlanDiagnostics(template);
+      const templateReality = autoPlanRealitySummary(template);
       const templateHtml = autoPlanReviewHtml(template);
       const templateFreshnessSummary = generatedTemplateFreshnessSummary(template);
       const templateFreshnessHtml = generatedTemplateFreshnessHtml(template);
@@ -453,6 +454,7 @@ async function testAutoPlanDiagnostics(context) {
         profilePrefs: getProfilePrefs()
       });
       const mixedDiagnostics = autoPlanDiagnostics(mixed);
+      const mixedReality = autoPlanRealitySummary(mixed);
       const mixedHtml = autoPlanReviewHtml(mixed);
       const mixedFreshnessHtml = generatedTemplateFreshnessHtml(mixed);
       const builtInSourceMissing = listMajors()
@@ -466,6 +468,7 @@ async function testAutoPlanDiagnostics(context) {
         templateGroups: template.requirementGroupSummary,
         templateOfficialSources: template.officialSources,
         templateTitles: templateDiagnostics.map(item => item.title),
+        templateReality,
         templateHtml,
         templateFreshnessSummary,
         templateFreshnessHtml,
@@ -476,6 +479,7 @@ async function testAutoPlanDiagnostics(context) {
         mixedProgression: mixed.levelProgression,
         mixedGroups: mixed.requirementGroupSummary,
         mixedTitles: mixedDiagnostics.map(item => item.title),
+        mixedReality,
         mixedHtml,
         mixedFreshnessHtml,
         builtInSourceMissing,
@@ -487,6 +491,10 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.templateCoverage.missingCodes.length > 0, 'auto plan diagnostics: template-only preview should list fallback codes');
   assert(result.templateTitles.includes('Template-only preview'), 'auto plan diagnostics: should flag template-only source');
   assert(result.templateTitles.includes('Intro-to-400 path'), 'auto plan diagnostics: should flag course-level progression');
+  assert(result.templateReality.level === 'warn' && result.templateReality.title === 'Draft needs live replacements', 'auto plan reality: template-only preview should warn that live replacements are needed');
+  assert(result.templateReality.metrics.some(metric => metric.label === 'Live-backed requirements' && metric.value === `0/${result.templateCoverage.total}`), 'auto plan reality: should show live-backed requirement count');
+  assert(result.templateReality.metrics.some(metric => metric.label === 'Placeholder credits' && metric.level === 'warn'), 'auto plan reality: should flag placeholder credits');
+  assert(result.templateReality.nextActions.some(action => /Replace \d+ placeholder credits/.test(action)), 'auto plan reality: should include replacement action text');
   assert(result.templateGroups.every(group => group.complete), 'auto plan diagnostics: requirement groups should be complete');
   assert(result.templateProgression.realCount === result.templateCoverage.total, 'auto plan diagnostics: level progression should count real template requirements');
   assert(result.templateProgression.hasEarlyIntro, 'auto plan diagnostics: level progression should include early lower-level requirements');
@@ -496,6 +504,8 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Template fallback/.test(result.templateHtml), 'auto plan diagnostics: source samples should include template fallback row');
   assert(/Intro-to-400 path/.test(result.templateHtml) && /100\/200-level/.test(result.templateHtml) && /400-level/.test(result.templateHtml), 'auto plan diagnostics: review should render course-level progression');
   assert(/Major Requirement Groups/.test(result.templateHtml) && /Core Requirements/.test(result.templateHtml) && /Upper-Level Choices/.test(result.templateHtml), 'auto plan diagnostics: review should render requirement groups');
+  assert(/Plan Reality/.test(result.templateHtml) && /Live-backed requirements/.test(result.templateHtml) && /Placeholder credits/.test(result.templateHtml), 'auto plan reality: review should render reality metrics');
+  assert(/Next replacement actions/.test(result.templateHtml) && /data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan reality: review should render actionable replacement buttons');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
@@ -527,6 +537,8 @@ async function testAutoPlanDiagnostics(context) {
   assert(result.mixedCoverage.coveragePct > 0 && result.mixedCoverage.coveragePct < 100, 'auto plan diagnostics: mixed preview should show partial coverage percent');
   assert(result.mixedCoverage.liveCodes.length === 3, 'auto plan diagnostics: mixed preview should include live code samples');
   assert(result.mixedTitles.includes('Mixed metadata sources'), 'auto plan diagnostics: should flag mixed metadata sources');
+  assert(result.mixedReality.metrics.some(metric => metric.label === 'Live-backed requirements' && metric.value === `${result.mixedCoverage.found}/${result.mixedCoverage.total}`), 'auto plan reality: mixed preview should carry partial live coverage');
+  assert(result.mixedReality.nextActions.some(action => /template fallback/.test(action)), 'auto plan reality: mixed preview should ask for fallback review');
   assert(result.mixedProgression.hasLateAdvanced && result.mixedProgression.hasUpper400, 'auto plan diagnostics: mixed preview should preserve later upper-level progression');
   assert(result.mixedGroups.every(group => group.complete), 'auto plan diagnostics: mixed preview should preserve complete requirement groups');
   assert(/Live metadata/.test(result.mixedHtml) && /Template fallback/.test(result.mixedHtml), 'auto plan diagnostics: mixed source samples should compare live and fallback rows');

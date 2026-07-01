@@ -632,6 +632,116 @@ function autoPlanDiagnosticsHtml(review) {
   `;
 }
 
+function autoPlanRealitySummary(review) {
+  if (!review) return null;
+  const metadata = review.metadataCoverage || null;
+  const groups = review.requirementGroupSummary || [];
+  const completeGroups = groups.filter(group => group.complete).length;
+  const missingGroups = groups.filter(group => !group.complete);
+  const placeholderCount = (review.genEdPlaceholders || 0) + (review.freeElectives || 0);
+  const placeholderCredits = review.placeholderCredits || 0;
+  const progression = review.levelProgression || {};
+  const hasLevelPath = !!(progression.hasEarlyIntro && progression.hasLateAdvanced && progression.hasUpper400);
+  const genEdComplete = (review.genEdCompleteCount || 0) >= (review.genEdRequirementCount || 0);
+  const metadataReady = !metadata || metadata.missing === 0;
+  const groupReady = !groups.length || completeGroups === groups.length;
+  const level = !groupReady || !genEdComplete
+    ? 'danger'
+    : (!metadataReady || placeholderCredits > 0 || !hasLevelPath) ? 'warn' : 'ok';
+  const title = level === 'ok'
+    ? 'Real-course draft ready'
+    : level === 'danger'
+      ? 'Requirement gaps need fixes'
+      : 'Draft needs live replacements';
+  const detail = level === 'ok'
+    ? 'Requirements are live-backed with no tracked replacement blockers.'
+    : 'Use this as a complete draft, then replace placeholders and review any fallback metadata before registration.';
+  const metrics = [
+    {
+      label: 'Live-backed requirements',
+      value: metadata ? `${metadata.found}/${metadata.total}` : 'Curated',
+      detail: metadata ? `${metadata.coveragePct}% live PlanetTerp/UMD metadata` : 'Hand-built local schedule',
+      level: metadataReady ? 'ok' : 'warn',
+    },
+    {
+      label: 'Requirement groups',
+      value: groups.length ? `${completeGroups}/${groups.length}` : 'Curated',
+      detail: missingGroups.length ? `Missing ${missingGroups.map(group => group.label).join(', ')}` : 'Core, support, and upper groups scheduled',
+      level: groupReady ? 'ok' : 'danger',
+    },
+    {
+      label: 'Placeholder credits',
+      value: `${placeholderCredits}`,
+      detail: placeholderCount ? `${placeholderCount} GenEd/elective slot${placeholderCount === 1 ? '' : 's'} to replace` : 'No tracked placeholders',
+      level: placeholderCredits > 0 ? 'warn' : 'ok',
+    },
+    {
+      label: 'Freshman-to-senior path',
+      value: hasLevelPath ? 'Ready' : 'Review',
+      detail: `${progression.earlyIntroCount || 0} early lower, ${progression.lateAdvancedCount || 0} later upper, ${progression.upper400Count || 0} 400-level`,
+      level: hasLevelPath ? 'ok' : 'warn',
+    },
+  ];
+  const nextActions = [];
+  if (placeholderCredits > 0) {
+    nextActions.push(`Replace ${placeholderCredits} placeholder credit${placeholderCredits === 1 ? '' : 's'} with real UMD courses in Browse.`);
+  }
+  if (metadata && metadata.missing) {
+    nextActions.push(`Review ${metadata.missing} template fallback course${metadata.missing === 1 ? '' : 's'} against PlanetTerp/catalog before registration.`);
+  }
+  if (missingGroups.length) {
+    nextActions.push(`Fix missing requirement groups: ${missingGroups.map(group => group.label).join(', ')}.`);
+  }
+  if (!hasLevelPath && progression.realCount) {
+    nextActions.push('Confirm the sequence has early intro work and later 300/400-level senior work.');
+  }
+  if (!nextActions.length) nextActions.push('Confirm sections and seats in the Schedule tab before registration.');
+  return {
+    level,
+    title,
+    detail,
+    metrics,
+    nextActions,
+    replacementSamples: (review.placeholderSamples || []).slice(0, 3),
+  };
+}
+
+function autoPlanRealityHtml(review, opts = {}) {
+  const summary = autoPlanRealitySummary(review);
+  if (!summary) return '';
+  const actions = opts.actions !== false;
+  return `
+    <div class="auto-plan-reality ${settingsHtml(summary.level)}">
+      <div class="auto-plan-reality-head">
+        <div>
+          <span class="auto-plan-review-label">Plan Reality</span>
+          <strong>${settingsHtml(summary.title)}</strong>
+          <p>${settingsHtml(summary.detail)}</p>
+        </div>
+        <b>${settingsHtml(summary.level === 'ok' ? 'Ready' : summary.level === 'danger' ? 'Fix gaps' : 'Replace next')}</b>
+      </div>
+      <div class="auto-plan-reality-grid">
+        ${summary.metrics.map(metric => `
+          <div class="auto-plan-reality-metric ${settingsHtml(metric.level)}">
+            <span>${settingsHtml(metric.label)}</span>
+            <strong>${settingsHtml(metric.value)}</strong>
+            <small>${settingsHtml(metric.detail)}</small>
+          </div>
+        `).join('')}
+      </div>
+      <div class="auto-plan-reality-next">
+        <strong>Next replacement actions</strong>
+        ${summary.nextActions.map(action => `<span>${settingsHtml(action)}</span>`).join('')}
+        ${actions && summary.replacementSamples.length ? `
+          <div class="auto-plan-reality-actions">
+            ${summary.replacementSamples.map(course => autoPlanPlaceholderBrowseActionHtml(course, review)).join('')}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
 function autoPlanPlaceholderTagsForBrowse(course) {
   if (typeof inferPlaceholderTags === 'function') return inferPlaceholderTags(course);
   const hay = [course?.code, course?.title, course?.note, course?.category].join(' ').toUpperCase();
@@ -788,6 +898,7 @@ function autoPlanReviewHtml(review, opts = {}) {
         ${autoPlanReviewStat('courses', review.courseCount || 'ready', 'progress is preserved')}
       </div>
       ${review.termLoads ? `<div class="auto-plan-loads">${autoPlanTermList(review.termLoads)}</div>` : ''}
+      ${autoPlanRealityHtml(review, opts)}
       ${autoPlanDiagnosticsHtml(review)}
       ${generatedTemplateFreshnessHtml(review)}
     `;
@@ -829,6 +940,7 @@ function autoPlanReviewHtml(review, opts = {}) {
       <span class="auto-plan-review-label">GenEd / I-Series Coverage</span>
       <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>
     </div>
+    ${autoPlanRealityHtml(review, opts)}
     ${autoPlanDiagnosticsHtml(review)}
     ${generatedTemplateFreshnessHtml(review)}
     ${autoPlanSourceSamplesHtml(review, opts)}

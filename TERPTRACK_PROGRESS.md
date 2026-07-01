@@ -6856,3 +6856,61 @@ Verification:
   - It randomly verified `SOCY`, `PHSC`, `ACCOUNTING`, `AAST`, `HESP`, and `EDUC` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 126
+
+Focus: make auto-generated four-year plans explicitly show whether they are real-course ready or still need replacement work.
+
+Planned changes:
+- Add a first-class Plan Reality gate to Settings auto-plan previews.
+- Summarize live-backed requirement coverage, requirement-group completion, placeholder credits, and freshman-to-senior course-level progression.
+- Surface the next replacement actions directly beside the generated plan evidence.
+- Verify the new gate in fixture and rendered browser workflows.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `autoPlanRealitySummary()` in `js/settings.js`.
+  - It classifies generated previews as `ok`, `warn`, or `danger` from existing evidence.
+  - It reports live-backed requirement counts, complete requirement groups, placeholder credits, and freshman-to-senior path status.
+  - It produces concrete next actions for placeholder replacement, template fallback review, missing groups, and course-level sequence review.
+- Added `autoPlanRealityHtml()` to rendered Settings previews.
+  - It appears for generated and curated auto-plan previews.
+  - It includes replacement buttons wired through the existing Browse handoff path.
+  - It keeps the plan honest by showing placeholder credits before a student applies the draft.
+- Added production CSS for the Plan Reality panel.
+  - It uses compact operational styling, status colors, four metric tiles, and mobile stacking.
+- Bumped cache tags:
+  - `styles.css?v=96`.
+  - `js/settings.js?v=27`.
+- Extended tests:
+  - `AUTO-PLAN-DIAGNOSTICS` now asserts Plan Reality warning state, live-backed requirement counts, placeholder-credit warnings, replacement-action text, rendered metrics, and mixed live/fallback coverage.
+  - Rendered generated-plan verifier now requires `Plan Reality`, `Live-backed requirements`, and `Next replacement actions` in each sampled browser preview.
+  - Rendered verifiers now assert the updated style/settings cache tags.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `AUTO-PLAN-DIAGNOSTICS` fixture with Plan Reality assertions.
+  - It continued to pass generated-plan fixtures, all generated requirement groups, account/share, account setup, recommendations, Browse, audit, onboarding, prior-credit, schedule timing, registration readiness, and seat-risk tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile Settings preview, Plan Reality block, and full `12/12 live course records` ARTT metadata path.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including Plan Reality coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts, Plan Reality assertions, and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass126-plan-reality-live`.
+  - It randomly verified `MATH`, `ARCH`, `ACCOUNTING`, `THET`, `HLTH`, and `IS` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

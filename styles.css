@@ -3176,6 +3176,134 @@ h1.hero-title em {
   min-height: 28px;
   white-space: nowrap;
 }
+.auto-plan-reality {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--amber);
+  border-radius: 8px;
+  background: var(--paper);
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 10px;
+}
+.auto-plan-reality.ok {
+  border-left-color: var(--green);
+}
+.auto-plan-reality.danger {
+  border-left-color: var(--red);
+}
+.auto-plan-reality-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+.auto-plan-reality-head strong,
+.auto-plan-reality-head p {
+  display: block;
+}
+.auto-plan-reality-head strong {
+  color: var(--ink);
+  font-size: .86rem;
+  line-height: 1.2;
+}
+.auto-plan-reality-head p {
+  color: var(--slate);
+  font-size: .72rem;
+  line-height: 1.35;
+  margin: 3px 0 0;
+}
+.auto-plan-reality-head b {
+  border: 1px solid rgba(245,158,11,.35);
+  border-radius: 999px;
+  background: rgba(245,158,11,.10);
+  color: var(--amber);
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  letter-spacing: .04em;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+.auto-plan-reality.ok .auto-plan-reality-head b {
+  border-color: rgba(47,125,75,.32);
+  background: rgba(47,125,75,.10);
+  color: var(--green);
+}
+.auto-plan-reality.danger .auto-plan-reality-head b {
+  border-color: rgba(175,35,35,.32);
+  background: rgba(175,35,35,.10);
+  color: var(--red);
+}
+.auto-plan-reality-grid {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.auto-plan-reality-metric {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+  min-width: 0;
+  padding: 8px;
+}
+.auto-plan-reality-metric span,
+.auto-plan-reality-metric strong,
+.auto-plan-reality-metric small {
+  display: block;
+}
+.auto-plan-reality-metric span {
+  color: var(--slate);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.auto-plan-reality-metric strong {
+  color: var(--ink);
+  font-size: .88rem;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+.auto-plan-reality-metric small {
+  color: var(--slate);
+  font-size: .65rem;
+  line-height: 1.3;
+  margin-top: 3px;
+}
+.auto-plan-reality-metric.ok strong {
+  color: var(--green);
+}
+.auto-plan-reality-metric.warn strong {
+  color: var(--amber);
+}
+.auto-plan-reality-metric.danger strong {
+  color: var(--red);
+}
+.auto-plan-reality-next {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+}
+.auto-plan-reality-next > strong {
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.auto-plan-reality-next > span {
+  color: var(--slate);
+  font-size: .7rem;
+  line-height: 1.35;
+}
+.auto-plan-reality-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
 .auto-plan-profile {
   margin-top: 10px;
   padding-top: 9px;
@@ -7482,6 +7610,13 @@ h1.hero-title em {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .auto-plan-diagnostic-grid {
+    grid-template-columns: 1fr;
+  }
+  .auto-plan-reality-head {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .auto-plan-reality-grid {
     grid-template-columns: 1fr;
   }
   .auto-plan-freshness-head {

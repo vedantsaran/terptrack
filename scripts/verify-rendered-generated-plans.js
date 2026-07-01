@@ -357,6 +357,9 @@ async function applyMajor(page, target, timeoutMs) {
   assert(!reviewText.includes('Template fallback'), `${target.major}: rendered preview still shows template fallback`);
   assert(reviewText.includes('13/13'), `${target.major}: rendered preview missing full GenEd coverage`);
   assert(reviewText.includes('Major Requirement Groups'), `${target.major}: rendered preview missing requirement group block`);
+  assert(reviewText.includes('Plan Reality'), `${target.major}: rendered preview missing plan reality block`);
+  assert(reviewText.includes('Live-backed requirements'), `${target.major}: rendered preview missing live-backed requirement metric`);
+  assert(reviewText.includes('Next replacement actions'), `${target.major}: rendered preview missing next replacement actions`);
   assert(reviewText.includes('Core Requirements'), `${target.major}: rendered preview missing core requirement group`);
   assert(reviewText.includes('Upper-Level Choices'), `${target.major}: rendered preview missing upper requirement group`);
   assert(reviewText.includes('Official sources'), `${target.major}: rendered preview missing official source links`);
@@ -423,11 +426,11 @@ async function runViewport(browser, url, viewport, selected, opts) {
     }, null, { timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.styles.includes('styles.css?v=95'), `${viewport.label}: rendered app did not load styles.css?v=95`);
+    assert(initialSnapshot.styles.includes('styles.css?v=96'), `${viewport.label}: rendered app did not load styles.css?v=96`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=3'), `${viewport.label}: rendered app did not load js/planetterp.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=4'), `${viewport.label}: rendered app did not load js/api.js?v=4`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=26'), `${viewport.label}: rendered app did not load js/settings.js?v=26`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=27'), `${viewport.label}: rendered app did not load js/settings.js?v=27`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=12'), `${viewport.label}: rendered app did not load js/import.js?v=12`);
     assert(initialSnapshot.releaseText.includes('3/4 launch checks ready'), `${viewport.label}: release checklist did not show 3/4 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
