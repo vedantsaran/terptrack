@@ -190,6 +190,32 @@ function umdIoFallbackBody(pathAndQuery) {
   return null;
 }
 
+async function fetchUmdIoText(clean, timeoutMs = 8500) {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timer = null;
+  const request = (async () => {
+    const upstream = await fetch(`https://api.umd.io/v1${clean}`, {
+      headers: { accept: 'application/json', 'user-agent': 'TerpTrack/render-verifier' },
+      ...(controller ? { signal: controller.signal } : {}),
+    });
+    const body = await upstream.text();
+    return { upstream, body };
+  })();
+  try {
+    return await Promise.race([
+      request,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          if (controller) controller.abort();
+          reject(new Error('umd.io verifier proxy timed out'));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function startServer() {
   return new Promise((resolve, reject) => {
     const server = http.createServer(async (req, res) => {
@@ -209,10 +235,7 @@ function startServer() {
             res.end(JSON.stringify({ error: 'Only umd.io course endpoints are proxied.' }));
             return;
           }
-          const upstream = await fetch(`https://api.umd.io/v1${clean}`, {
-            headers: { accept: 'application/json', 'user-agent': 'TerpTrack/render-verifier' },
-          });
-          const body = await upstream.text();
+          const { upstream, body } = await fetchUmdIoText(clean);
           if (!upstream.ok) {
             res.writeHead(200, {
               'content-type': 'application/json; charset=utf-8',
@@ -360,6 +383,9 @@ async function applyMajor(page, target, timeoutMs) {
   assert(reviewText.includes('Plan Reality'), `${target.major}: rendered preview missing plan reality block`);
   assert(reviewText.includes('Live-backed requirements'), `${target.major}: rendered preview missing live-backed requirement metric`);
   assert(reviewText.includes('Elective placement'), `${target.major}: rendered preview missing elective placement metric`);
+  if (!reviewText.includes('No open elective slots needed')) {
+    assert(reviewText.includes('Elective Roadmap'), `${target.major}: rendered preview missing elective roadmap for elective-bearing plan`);
+  }
   assert(reviewText.includes('Next replacement actions'), `${target.major}: rendered preview missing next replacement actions`);
   assert(reviewText.includes('Core Requirements'), `${target.major}: rendered preview missing core requirement group`);
   assert(reviewText.includes('Upper-Level Choices'), `${target.major}: rendered preview missing upper requirement group`);
@@ -427,11 +453,11 @@ async function runViewport(browser, url, viewport, selected, opts) {
     }, null, { timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.styles.includes('styles.css?v=96'), `${viewport.label}: rendered app did not load styles.css?v=96`);
+    assert(initialSnapshot.styles.includes('styles.css?v=97'), `${viewport.label}: rendered app did not load styles.css?v=97`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
-    assert(initialSnapshot.scripts.includes('js/planetterp.js?v=3'), `${viewport.label}: rendered app did not load js/planetterp.js?v=3`);
-    assert(initialSnapshot.scripts.includes('js/api.js?v=4'), `${viewport.label}: rendered app did not load js/api.js?v=4`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=28'), `${viewport.label}: rendered app did not load js/settings.js?v=28`);
+    assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
+    assert(initialSnapshot.scripts.includes('js/api.js?v=5'), `${viewport.label}: rendered app did not load js/api.js?v=5`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=29'), `${viewport.label}: rendered app did not load js/settings.js?v=29`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('3/4 launch checks ready'), `${viewport.label}: release checklist did not show 3/4 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);

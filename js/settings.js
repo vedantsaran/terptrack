@@ -755,6 +755,43 @@ function autoPlanRealityHtml(review, opts = {}) {
   `;
 }
 
+function autoPlanElectiveStageLabel(stage) {
+  if (stage === 'specialize') return 'Senior focus';
+  if (stage === 'build') return 'Build';
+  return 'Explore';
+}
+
+function autoPlanElectiveRoadmapHtml(review, opts = {}) {
+  const placement = review?.electivePlacement || null;
+  const rows = placement?.samples || [];
+  if (!placement || !placement.total || !rows.length) return '';
+  const actions = opts.actions !== false;
+  const shown = rows.length;
+  const total = placement.total || shown;
+  return `
+    <div class="auto-plan-elective-roadmap">
+      <div class="auto-plan-elective-roadmap-head">
+        <span class="auto-plan-review-label">Elective Roadmap</span>
+        <strong>${settingsHtml(shown === total ? `${total} profile/elective slot${total === 1 ? '' : 's'}` : `${shown} of ${total} profile/elective slots`)}</strong>
+        <p>${settingsHtml(`${placement.exploreCount || 0} explore · ${placement.buildCount || 0} build · ${placement.specializeCount || 0} senior`)}</p>
+      </div>
+      <div class="auto-plan-elective-roadmap-list">
+        ${rows.map(row => `
+          <div class="auto-plan-elective-roadmap-row">
+            <span class="auto-plan-elective-stage ${settingsHtml(row.stage)}">${settingsHtml(autoPlanElectiveStageLabel(row.stage))}</span>
+            <div>
+              <strong>${settingsHtml(row.term || 'Term')}</strong>
+              <b>${settingsHtml(row.title || row.code || 'Elective slot')}</b>
+              ${row.note ? `<small>${settingsHtml(row.note)}</small>` : ''}
+            </div>
+            ${actions ? `<div class="auto-plan-elective-roadmap-action">${autoPlanPlaceholderBrowseActionHtml(row, review)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function autoPlanPlaceholderTagsForBrowse(course) {
   if (typeof inferPlaceholderTags === 'function') return inferPlaceholderTags(course);
   const hay = [course?.code, course?.title, course?.note, course?.category].join(' ').toUpperCase();
@@ -954,6 +991,7 @@ function autoPlanReviewHtml(review, opts = {}) {
       <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>
     </div>
     ${autoPlanRealityHtml(review, opts)}
+    ${autoPlanElectiveRoadmapHtml(review, opts)}
     ${autoPlanDiagnosticsHtml(review)}
     ${generatedTemplateFreshnessHtml(review)}
     ${autoPlanSourceSamplesHtml(review, opts)}

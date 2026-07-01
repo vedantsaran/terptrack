@@ -187,6 +187,16 @@ function autoPlanElectivePlacementStage(semIndex, termCount) {
   return 'build';
 }
 
+function autoPlanElectiveRoadmapSamples(rows, limit = 5) {
+  const selected = [];
+  const add = row => {
+    if (row && !selected.some(item => item.code === row.code && item.term === row.term)) selected.push(row);
+  };
+  ['explore', 'build', 'specialize'].forEach(stage => add((rows || []).find(row => row.stage === stage)));
+  (rows || []).forEach(add);
+  return selected.slice(0, limit);
+}
+
 function autoPlanElectivePlacementSummary(semesters) {
   const rows = [];
   const totalTerms = Math.max(1, (semesters || []).length || 8);
@@ -214,7 +224,7 @@ function autoPlanElectivePlacementSummary(semesters) {
     specializeCount: count('specialize'),
     firstTerm: rows[0]?.term || '',
     lastTerm: rows[rows.length - 1]?.term || '',
-    samples: rows.slice(0, 5),
+    samples: autoPlanElectiveRoadmapSamples(rows, 5),
   };
 }
 

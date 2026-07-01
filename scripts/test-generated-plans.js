@@ -517,6 +517,8 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Major Requirement Groups/.test(result.templateHtml) && /Core Requirements/.test(result.templateHtml) && /Upper-Level Choices/.test(result.templateHtml), 'auto plan diagnostics: review should render requirement groups');
   assert(/Plan Reality/.test(result.templateHtml) && /Live-backed requirements/.test(result.templateHtml) && /Placeholder credits/.test(result.templateHtml), 'auto plan reality: review should render reality metrics');
   assert(/Elective placement/.test(result.templateHtml) && /senior/.test(result.templateHtml), 'auto plan reality: review should render elective placement metric');
+  assert(/Elective Roadmap/.test(result.templateHtml) && /profile\/elective slots/.test(result.templateHtml), 'auto plan elective roadmap: review should render roadmap summary');
+  assert(/Senior focus/.test(result.templateHtml) && /Find profile fits/.test(result.templateHtml), 'auto plan elective roadmap: should show senior-stage elective rows with Browse actions');
   assert(/Next replacement actions/.test(result.templateHtml) && /data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan reality: review should render actionable replacement buttons');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');

@@ -8,6 +8,7 @@ This file tracks each implementation pass toward making TerpTrack a polished, in
 
 - Real four-year schedules for every supported UMD major, progressing from freshman intro courses through senior 400-level work.
 - Requirement-group correctness for every generated major, with complete core, supporting, upper-level, GenEd, elective, and credit-target tracking.
+- Niche elective placement that is visible, individualized by interests, spread across exploration/build/senior phases, and backed by direct replacement actions.
 - Live-course grounding: generated required courses must match PlanetTerp title/credit data and rendered previews must recover cleanly when any live source is slow.
 - Posted-section scheduling: real class meetings, seats, waitlists, conflicts, timing preferences, registration readiness, Testudo handoff, calendar export, and advisor packet coverage.
 - Individualization: onboarding, interests, preferred departments, career goals, prior credit, saved searches, recommendations, and smart class replacement should shape plans without hiding requirements.
@@ -6975,5 +6976,76 @@ Verification:
   - It skipped live PlanetTerp verification with the expected opt-in message.
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass127-elective-placement-live`.
   - It randomly verified `AREC`, `STAT`, `PHSC`, `HLTH`, `BCHM`, and `NEUR` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 128
+
+Focus: make elective placement actionable in generated-plan previews and harden live metadata loading so rendered previews recover from slow course sources without console noise.
+
+Planned changes:
+- Add an Elective Roadmap section to Settings auto-plan reviews.
+- Show representative explore, build, and senior-focus elective/profile slots instead of only aggregate counts.
+- Attach replacement actions to roadmap rows so students can immediately find profile-fit courses.
+- Keep roadmap rows compact and non-overflowing on mobile.
+- Harden UMD/PlanetTerp metadata fetches and the local/prod umd.io proxy against slow upstream responses.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `autoPlanElectiveRoadmapHtml()` and stage labels in `js/settings.js`.
+  - Generated previews now show `Elective Roadmap`, profile/elective slot counts, explore/build/senior distribution, term labels, slot notes, and direct replacement buttons.
+- Added `autoPlanElectiveRoadmapSamples()` in `js/import.js`.
+  - The sample chooses representative explore, build, and senior-focus rows first, then fills remaining rows chronologically without duplicates.
+- Added production CSS for the roadmap panel.
+  - Rows use compact stage chips and mobile stacking so action buttons do not collide with labels.
+- Hardened metadata loading.
+  - UMD browser fetches now abort timed-out requests and JSON body reads.
+  - PlanetTerp body reads now have a deadline.
+  - Batch course metadata uses an outer per-course deadline plus a bounded UMD retry when both live sources miss.
+  - The production `/api/umd` proxy now bounds upstream fetch/body work and returns controlled fallbacks.
+  - The rendered generated-plan verifier proxy mirrors that timeout behavior, preventing slow local proxy calls from starving later course requests.
+- Bumped cache tags:
+  - `styles.css?v=97`.
+  - `js/settings.js?v=29`.
+  - `js/planetterp.js?v=4`.
+  - `js/api.js?v=5`.
+- Extended tests:
+  - `AUTO-PLAN-DIAGNOSTICS` now asserts the Elective Roadmap, profile/elective slot wording, senior-focus sampling, and replacement actions.
+  - Rendered generated-plan verifier now requires `Elective Roadmap` for elective-bearing previews.
+  - Rendered verifiers assert the updated style/settings/PlanetTerp/API cache tags.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check js/api.js`.
+- Ran `node --check js/planetterp.js`.
+- Ran `node --check js/import.js`.
+- Ran `node --check api/umd.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-umd-proxy.js`.
+  - It passed the offline umd.io proxy fixture with the bounded upstream helper.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed generated-plan fixtures with Elective Roadmap assertions.
+  - It continued to pass prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, recommendations, Browse, audit, onboarding, prior-credit, schedule timing, registration readiness, and seat-risk tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile Settings preview with the Elective Roadmap and full `12/12 live course records` ARTT metadata.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ENCE --viewport=desktop --timeout-ms=120000`.
+  - It verified the previously slow ENCE path at full `25/25 live course records` with a clean proxy-backed console.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including Elective Roadmap coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts, clean browser console output, Plan Reality, Elective placement, and Elective Roadmap assertions.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass128-elective-roadmap-live`.
+  - It randomly verified `HLTH`, `AOSC`, `MARKETING`, `GEOL`, `ENST`, and `NEUR` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

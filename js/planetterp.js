@@ -49,29 +49,45 @@ async function planetTerpFetchWithTimeout(url, timeoutMs = 6500) {
   }
 }
 
-async function planetTerpFetchCourse(code) {
+async function planetTerpJsonWithTimeout(resp, timeoutMs = 6500) {
+  let timer = null;
+  try {
+    return await Promise.race([
+      resp.json(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('PlanetTerp response timed out')), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function planetTerpFetchCourse(code, options = {}) {
   const key = normalizeCode(code);
   const cached = ptCacheGet(key);
   if (cached) return cached;
   const url = `https://planetterp.com/api/v1/course?name=${encodeURIComponent(key)}`;
+  const attempts = Math.max(1, Math.floor(Number(options.attempts) || 3));
+  const timeoutMs = Number(options.timeoutMs) || 6500;
   let lastError = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      const resp = await planetTerpFetchWithTimeout(url);
+      const resp = await planetTerpFetchWithTimeout(url, timeoutMs);
       if (!resp.ok) {
         let msg = `HTTP ${resp.status}`;
-        try { const body = await resp.json(); if (body && body.error) msg = body.error; } catch {}
+        try { const body = await planetTerpJsonWithTimeout(resp, timeoutMs); if (body && body.error) msg = body.error; } catch {}
         lastError = new Error(msg);
         if (resp.status < 500) break;
-        if (attempt === 3) throw lastError;
+        if (attempt === attempts) throw lastError;
       } else {
-        const data = await resp.json();
+        const data = await planetTerpJsonWithTimeout(resp, timeoutMs);
         ptCachePut(key, data);
         return data;
       }
     } catch (error) {
       lastError = error;
-      if (attempt === 3) break;
+      if (attempt === attempts) break;
     }
     await new Promise(resolve => setTimeout(resolve, 250 * attempt));
   }

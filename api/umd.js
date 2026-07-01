@@ -1,4 +1,5 @@
 const UMDIO_BASE = 'https://api.umd.io/v1';
+const UMDIO_PROXY_TIMEOUT_MS = 8500;
 
 function sendJson(res, status, body) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -19,6 +20,29 @@ function fallbackBody(pathAndQuery) {
   return null;
 }
 
+async function fetchUpstreamText(url, opts = {}, timeoutMs = UMDIO_PROXY_TIMEOUT_MS) {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timer = null;
+  const request = (async () => {
+    const upstream = await fetch(url, controller ? { ...opts, signal: controller.signal } : opts);
+    const body = await upstream.text();
+    return { upstream, body };
+  })();
+  try {
+    return await Promise.race([
+      request,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          if (controller) controller.abort();
+          reject(new Error('umd.io upstream timed out'));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('x-terptrack-proxy', 'umd-io');
   if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -35,13 +59,12 @@ module.exports = async function handler(req, res) {
 
   const upstreamUrl = `${UMDIO_BASE}${pathAndQuery}`;
   try {
-    const upstream = await fetch(upstreamUrl, {
+    const { upstream, body } = await fetchUpstreamText(upstreamUrl, {
       headers: {
         accept: req.headers.accept || 'application/json',
         'user-agent': 'TerpTrack/umd-io-proxy',
       },
     });
-    const body = await upstream.text();
     if (!upstream.ok) {
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('x-terptrack-upstream-status', String(upstream.status));

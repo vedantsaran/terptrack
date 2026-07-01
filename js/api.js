@@ -7,7 +7,7 @@ const UMDIO_BASE = 'https://api.umd.io/v1';
 const UMDIO_CACHE_KEY = 'terp-track-umdio-cache-v2';
 const UMDIO_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 const UMDIO_SECTION_CACHE_TTL_MS = 1000 * 60 * 15; // 15 minutes; seats change quickly
-const UMDIO_FETCH_TIMEOUT_MS = 6500;
+const UMDIO_FETCH_TIMEOUT_MS = 9000;
 const UMDIO_CANONICAL_TITLES = Object.freeze({
   PHYS260: 'General Physics: Electricity, Magnetism and Thermodynamics',
   PHYS261: 'General Physics: Mechanics, Vibrations, Waves, Heat (Laboratory)',
@@ -27,12 +27,40 @@ function umdioProxyUrl(pathAndQuery) {
 }
 
 async function fetchWithTimeout(url, opts = {}, timeoutMs = UMDIO_FETCH_TIMEOUT_MS) {
+  const ms = Number(timeoutMs) || UMDIO_FETCH_TIMEOUT_MS;
+  if (typeof AbortController !== 'undefined' && !(opts && opts.signal)) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+      return await fetch(url, { ...opts, signal: controller.signal });
+    } catch (error) {
+      if (error && error.name === 'AbortError') throw new Error('request timed out');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
   let timer = null;
   try {
     return await Promise.race([
       fetch(url, opts),
       new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error('request timed out')), timeoutMs);
+        timer = setTimeout(() => reject(new Error('request timed out')), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function readJsonWithTimeout(resp, timeoutMs = UMDIO_FETCH_TIMEOUT_MS) {
+  const ms = Number(timeoutMs) || UMDIO_FETCH_TIMEOUT_MS;
+  let timer = null;
+  try {
+    return await Promise.race([
+      resp.json(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('response timed out')), ms);
       }),
     ]);
   } finally {
@@ -87,21 +115,22 @@ function umdioCachePut(key, value) {
 }
 
 const _umdioInflight = {};
-async function umdioFetchCourse(code) {
+async function umdioFetchCourse(code, options = {}) {
   const id = normalizeCode(code);
+  const timeoutMs = Number(options.timeoutMs) || UMDIO_FETCH_TIMEOUT_MS;
   const cacheKey = 'course:' + id;
   const cached = umdioCacheGet(cacheKey);
   if (cached !== undefined) return cached; // cache hit (may be null for 404)
   if (_umdioInflight[id]) return _umdioInflight[id];
   _umdioInflight[id] = (async () => {
     let resp;
-    try { resp = await umdioFetchPath(`/courses/${encodeURIComponent(id)}`); }
+    try { resp = await umdioFetchPath(`/courses/${encodeURIComponent(id)}`, {}, timeoutMs); }
     catch (e) { return null; }
     if (!resp.ok) {
       if (resp.status === 404) { umdioCachePut(cacheKey, null); return null; }
       return null; // transient — don't poison cache
     }
-    const data = await resp.json();
+    const data = await readJsonWithTimeout(resp, timeoutMs);
     const course = Array.isArray(data) ? data[0] : data;
     if (course) umdioCachePut(cacheKey, course);
     return course || null;
@@ -122,7 +151,9 @@ async function umdioFetchPagedCourses(params, cacheKey, maxPages = 12) {
     try { resp = await umdioFetchPath(`/courses?${pageParams}`); }
     catch (e) { return all; }
     if (!resp.ok) return all;
-    const data = await resp.json();
+    let data;
+    try { data = await readJsonWithTimeout(resp); }
+    catch (e) { return all; }
     if (!Array.isArray(data) || !data.length) break;
     all.push(...data);
     if (data.length < 100) break;
@@ -158,7 +189,9 @@ async function umdioFetchSemesters() {
   try { resp = await umdioFetchPath('/courses/semesters'); }
   catch (e) { return []; }
   if (!resp.ok) return [];
-  const data = await resp.json();
+  let data;
+  try { data = await readJsonWithTimeout(resp); }
+  catch (e) { return []; }
   const semesters = Array.isArray(data) ? data.map(String) : [];
   umdioCachePut(key, semesters);
   return semesters;
@@ -181,7 +214,9 @@ async function umdioFetchSections(courseCode, semester) {
     if (resp.status === 404) umdioCachePut(cacheKey, []);
     return [];
   }
-  const data = await resp.json();
+  let data;
+  try { data = await readJsonWithTimeout(resp, 5000); }
+  catch (e) { return []; }
   const sections = Array.isArray(data) ? data : [];
   umdioCachePut(cacheKey, sections);
   return sections;
@@ -290,10 +325,13 @@ function genEdTags(genEdArray) {
 // and GenEd metadata.
 async function fetchCourseFull(code) {
   const id = normalizeCode(code);
-  const [umd, pt] = await Promise.all([
+  let [umd, pt] = await Promise.all([
     umdioFetchCourse(id),
-    planetTerpFetchCourse(id).catch(() => null),
+    planetTerpFetchCourse(id, { attempts: 1, timeoutMs: 6500 }).catch(() => null),
   ]);
+  if (!umd && !pt) {
+    umd = await umdioFetchCourse(id, { timeoutMs: 9000 }).catch(() => null);
+  }
   if (!umd && !pt) return null;
   const display = displayCode(id);
   const credits = parseInt((pt && pt.credits) || (umd && umd.credits) || '3', 10) || 3;
@@ -327,6 +365,21 @@ async function fetchCourseFull(code) {
   };
 }
 
+async function fetchCourseFullForBatch(code, timeoutMs = 20000) {
+  let timer = null;
+  const request = fetchCourseFull(code).catch(() => null);
+  try {
+    return await Promise.race([
+      request,
+      new Promise(resolve => {
+        timer = setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 // Best-effort batch: fetches in parallel but with light throttling to be polite.
 async function fetchCoursesBatch(codes, onProgress) {
   const results = {};
@@ -338,7 +391,7 @@ async function fetchCoursesBatch(codes, onProgress) {
     while (idx < list.length) {
       const i = idx++;
       const code = list[i];
-      try { results[code] = await fetchCourseFull(code); }
+      try { results[code] = await fetchCourseFullForBatch(code); }
       catch { results[code] = null; }
       done++;
       if (onProgress) onProgress(done, list.length);
