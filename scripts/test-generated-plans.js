@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -644,6 +645,42 @@ function testAccountCloudSetup(context) {
     id: 'ACCOUNT-CLOUD-SETUP',
     missing: result.missingStatuses,
     vercel: [result.vercelDeployment, result.vercelCredentials, result.vercelClient].join('/'),
+  };
+}
+
+function testReleaseJsonReport() {
+  const stdout = execFileSync(process.execPath, [
+    'scripts/run-release-checks.js',
+    '--json',
+    '--skip-syntax',
+    '--skip-generated',
+    '--skip-rendered',
+    '--skip-workflows',
+  ], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const report = JSON.parse(stdout);
+  const stageStatus = Object.fromEntries((report.stages || []).map(stage => [stage.id, stage.status]));
+  assert(report.schema === 'terptrack-release-report/v1', 'release report: should include schema version');
+  assert(report.status === 'passed', 'release report: JSON-mode run should pass');
+  assert(report.options?.syntax === false && report.options?.generated === false, 'release report: options should reflect skipped gates');
+  assert(stageStatus.syntax === 'skipped', 'release report: syntax stage should be represented as skipped');
+  assert(stageStatus.proxy === 'passed', 'release report: proxy stage should pass when run under JSON mode');
+  assert(stageStatus.generated === 'skipped', 'release report: generated stage should be represented as skipped');
+  assert(stageStatus.rendered === 'skipped', 'release report: rendered stage should be represented as skipped');
+  assert(stageStatus.workflows === 'skipped', 'release report: workflows stage should be represented as skipped');
+  assert(stageStatus.live === 'skipped', 'release report: live stage should be represented as skipped when not requested');
+  const proxyStage = (report.stages || []).find(stage => stage.id === 'proxy');
+  assert(proxyStage?.commands?.[0]?.status === 'passed', 'release report: proxy command should be represented as passed');
+  assert(/UMD proxy offline fixtures passed/.test(proxyStage?.commands?.[0]?.stdout || ''), 'release report: proxy stdout should be captured in JSON mode');
+  assert(Number.isFinite(report.durationMs), 'release report: duration should be numeric');
+  assert(!stdout.trim().startsWith('[release]'), 'release report: stdout should be clean JSON without console preamble');
+  return {
+    id: 'RELEASE-JSON',
+    status: report.status,
+    stages: Object.keys(stageStatus).join(','),
   };
 }
 
@@ -2491,6 +2528,7 @@ async function main() {
   const catalogYear = await testCatalogYearTargeting(context);
   const account = testAccountAndShareState(context);
   const accountSetup = testAccountCloudSetup(context);
+  const releaseJson = testReleaseJsonReport();
   const timing = testScheduleTimingFit(context);
   const planner = testPlannerRegistrationChecklist(context);
   const questions = testPlannerAdvisorQuestions(context);
@@ -2513,6 +2551,7 @@ async function main() {
   console.log(`Catalog year fixture ${catalogYear.id}: target ${catalogYear.target}; source ${catalogYear.source}.`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
+  console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
@@ -2528,7 +2567,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + catalog-year targeting + account/share state + account setup + release JSON report + schedule timing + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

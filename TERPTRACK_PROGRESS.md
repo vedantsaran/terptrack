@@ -5204,3 +5204,60 @@ Verification:
 - Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass98-rendered-workflows-live`.
   - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
+
+## 2026-07-01 Pass 99
+
+Focus: make release and random-schedule verification easier to archive and automate with a machine-readable release report.
+
+Planned changes:
+- Add a `--json` output mode to `scripts/run-release-checks.js`.
+- Preserve the existing human console output for normal release runs.
+- Capture stage status, command status, durations, options, and bounded command output tails in JSON mode.
+- Represent skipped gates explicitly so CI/report consumers can distinguish skipped checks from missing checks.
+- Add regression coverage proving JSON output is parseable and clean.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `--json` parsing and help text to `scripts/run-release-checks.js`.
+- Added release report schema `terptrack-release-report/v1`.
+- Added structured stage records for:
+  - syntax checks.
+  - offline proxy fixture.
+  - generated-plan fixtures.
+  - rendered generated-plan verifier.
+  - rendered mobile workflow verifier.
+  - live PlanetTerp generated schedule verifier.
+- Added command records with:
+  - command labels.
+  - command strings and args.
+  - start/end timestamps.
+  - durations.
+  - exit codes.
+  - pass/fail status.
+  - bounded stdout/stderr tails when JSON mode captures child processes.
+- Kept default non-JSON behavior streaming child process output to the terminal.
+- Added `RELEASE-JSON` regression coverage to `scripts/test-generated-plans.js`.
+  - It runs the release gate in JSON mode with only the cheap offline proxy fixture enabled.
+  - It parses stdout as JSON.
+  - It verifies the proxy command is represented as passed.
+  - It verifies skipped gates are explicitly represented.
+  - It verifies stdout is clean JSON without the normal `[release]` console preamble.
+
+Verification:
+- Ran `node --check scripts/run-release-checks.js && node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/run-release-checks.js --json --skip-syntax --skip-generated --skip-rendered --skip-workflows`.
+  - It emitted parseable JSON with proxy passed and skipped stage records for syntax/generated/rendered/workflows/live.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `RELEASE-JSON` fixture plus the existing generated-plan regression suite.
+- Ran `node scripts/run-release-checks.js --help`.
+  - It showed the new `--json` option.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including `RELEASE-JSON`.
+  - It passed 12 rendered generated-plan viewport runs.
+  - It passed rendered mobile onboarding, Browse replacement, Account setup, and advisor packet workflows.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass99-release-json-live`.
+  - It verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
