@@ -2494,6 +2494,12 @@ function renderScheduleRegistrationBackupsHtml(rows, heading = 'Backup Plan') {
         </div>
         <strong>${backups.length ? `${readyCount}/${backups.length} ready` : 'No risks'}</strong>
       </div>
+      ${readyCount ? `
+        <div class="schedule-registration-backup-actions">
+          <button class="btn small primary" type="button" data-backup-action="apply-ready">Apply ready backups</button>
+          <span>Switch low-seat picks to the conflict-safe backup sections listed below.</span>
+        </div>
+      ` : ''}
       ${backups.length ? `
         <div class="schedule-registration-backup-list">
           ${backups.slice(0, 6).map(row => `
@@ -4001,6 +4007,9 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-registration-backups-head h4{margin:0}
     .schedule-registration-backups-head span,.schedule-registration-backups p{display:block;color:#5d5962;font-size:12px;line-height:1.35;margin:2px 0 0}
     .schedule-registration-backups-head strong{font-size:12px;text-transform:uppercase;white-space:nowrap}
+    .schedule-registration-backup-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border-top:1px solid #eee4d8;margin-top:8px;padding-top:8px}
+    .schedule-registration-backup-actions span{color:#5d5962;font-size:12px;line-height:1.35}
+    .schedule-registration-backup-actions .btn{border:1px solid #8b0000;border-radius:999px;background:#8b0000;color:#fff;font-size:11px;font-weight:700;padding:5px 8px}
     .schedule-registration-backup-list{display:grid;gap:6px;margin-top:8px}
     .schedule-registration-backup{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-registration-backup:first-child{border-top:none;padding-top:0}
@@ -4535,6 +4544,12 @@ function renderScheduleOutputPanel(semId, term, courses, selectedItems, conflict
       handleScheduleSeatFreshnessAction(btn.dataset.seatFreshnessAction);
     });
   });
+  root.querySelectorAll('[data-backup-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      handleScheduleBackupAction(btn.dataset.backupAction);
+    });
+  });
   root.querySelectorAll('[data-calendar-export-action]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
@@ -4785,6 +4800,73 @@ async function handleScheduleCalendarExportAction(action) {
   toastInfo(rows.length ? 'Review omitted courses before relying on the calendar export.' : 'Calendar export includes every picked timed course.');
 }
 
+async function applyScheduleReadyBackups() {
+  const semId = scheduleCurrentSemId || scheduleDefaultSemesterId();
+  const sem = getAllSemesters().find(s => s.id === semId);
+  if (!sem) return;
+  const term = (state.schedulePrefs && state.schedulePrefs[semId] && state.schedulePrefs[semId].term) || scheduleInferTermCode(sem);
+  const prefs = getSchedulePrefs(semId);
+  const courses = scheduleCoursesForSemester(semId);
+  const sectionsByCode = await scheduleFetchSectionsFor(semId, term, courses);
+  const changes = [];
+  const applied = [];
+  const considered = new Set();
+  for (let i = 0; i < courses.length; i += 1) {
+    const selectedItems = scheduleSelectedItemsFor(semId, term, courses, sectionsByCode);
+    const { conflicts } = detectScheduleConflicts(selectedItems);
+    const plan = scheduleRegistrationBackupPlan(selectedItems, sectionsByCode, prefs, conflicts);
+    const row = plan.find(item => item.status === 'ready' && item.backupId && !considered.has(normalizeCode(item.courseCode)));
+    if (!row) break;
+    const norm = normalizeCode(row.courseCode);
+    considered.add(norm);
+    const course = courses.find(item => normalizeCode(item.code) === norm);
+    const section = (sectionsByCode[norm] || []).find(item => item.section_id === row.backupId);
+    if (!course || !section) continue;
+    const previous = getSelectedSection(semId, course.code);
+    const change = scheduleSectionUndoChange(semId, course.code, previous, section);
+    if (!change) continue;
+    setSelectedSection(semId, course.code, section);
+    changes.push(change);
+    applied.push(`${course.code} ${scheduleSectionShortLabel(section)}`);
+  }
+  if (!changes.length) {
+    if (typeof toastInfo === 'function') toastInfo('No ready backup sections can be applied for this term.');
+    return;
+  }
+  registerScheduleUndo({
+    type: 'ready-backup-apply',
+    semId,
+    changes,
+    termCount: 1,
+    title: `Applied ${changes.length} ready backup${changes.length === 1 ? '' : 's'}`,
+    detail: `Undo restores the previous low-seat section pick${changes.length === 1 ? '' : 's'} for ${sem.name || semId}.`,
+    undoTitle: 'Undid ready backup apply',
+    undoDetail: `Restored previous section choices for ${changes.length} backup-swapped course${changes.length === 1 ? '' : 's'}.`,
+    undoMeta: 'Undo ready backups',
+    undoToast: `Restored ${changes.length} ready backup swap${changes.length === 1 ? '' : 's'}.`,
+  });
+  recordPlanChange({
+    type: 'section-swap',
+    source: 'Schedule',
+    title: `Applied ${changes.length} ready backup section${changes.length === 1 ? '' : 's'}`,
+    detail: applied.join(' · '),
+    meta: scheduleTermLabel(term),
+  }, { save: false });
+  saveState();
+  renderSchedule();
+  renderSemesters();
+  if (typeof toastSuccess === 'function') toastSuccess(`Applied ${changes.length} ready backup section${changes.length === 1 ? '' : 's'}.`);
+}
+
+async function handleScheduleBackupAction(action) {
+  const root = document.getElementById('schedule-output');
+  if (root) root.dataset.lastBackupAction = action || '';
+  if (action !== 'apply-ready') return;
+  await applyScheduleReadyBackups();
+  const nextRoot = document.getElementById('schedule-output');
+  if (nextRoot) nextRoot.dataset.lastBackupAction = action;
+}
+
 async function handleScheduleSeatFreshnessAction(action) {
   const root = document.getElementById('schedule-output');
   if (root) root.dataset.lastSeatFreshnessAction = action || '';
@@ -4806,6 +4888,8 @@ if (typeof window !== 'undefined') {
   window.handleScheduleReadinessAction = handleScheduleReadinessAction;
   window.handleScheduleCalendarExportAction = handleScheduleCalendarExportAction;
   window.autoFillScheduleCalendarOmissions = autoFillScheduleCalendarOmissions;
+  window.handleScheduleBackupAction = handleScheduleBackupAction;
+  window.applyScheduleReadyBackups = applyScheduleReadyBackups;
   window.handleScheduleSeatFreshnessAction = handleScheduleSeatFreshnessAction;
 }
 

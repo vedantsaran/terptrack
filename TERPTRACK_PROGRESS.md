@@ -7620,3 +7620,61 @@ Verification:
   - It randomly verified `GEOG`, `SCM`, `AOSC`, `CHEM`, `THET`, and `EDUC` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 139
+
+Focus: turn backup-section evidence into a one-click registration safety action.
+
+Planned changes:
+- Add an `Apply ready backups` action to the Backup Plan card when safe backup sections exist.
+- Apply all ready low-seat backups for the active term while preserving conflict checks and pinned state.
+- Make the bulk backup action undoable.
+- Verify the action in generated fixtures and rendered mobile workflow coverage.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added an action row to `renderScheduleRegistrationBackupsHtml()`.
+  - The Backup Plan card now shows `Apply ready backups` when at least one safe backup section is ready.
+  - The same action markup is included in advisor packet HTML exports.
+- Added `applyScheduleReadyBackups()` and `handleScheduleBackupAction()` in `js/schedule.js`.
+  - It fetches current-term posted sections through the existing Schedule cache/fetch path.
+  - It recomputes backup candidates after each applied backup so multiple backup swaps remain conflict-safe.
+  - It preserves pinned state through `setSelectedSection()` and restores prior pinned state through batch undo.
+  - It records a Recent changes entry and toast for the bulk backup action.
+- Added app and standalone advisor CSS for the Backup Plan action row.
+- Bumped cache tags:
+  - `styles.css?v=105`.
+  - `js/schedule.js?v=59`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts the Backup Plan card and exported advisor document include `data-backup-action="apply-ready"`.
+  - Added `SCHEDULE-READY-BACKUPS` to generated-plan regression fixtures for applying two ready backups and undoing them back to the original risky picks.
+  - The rendered mobile advisor packet workflow now clicks `Apply ready backups`, verifies `MATH 140` moves to the safer `0301` section, checks the undo banner, and confirms the old low-seat warning clears.
+  - Rendered workflow logs now name `ready backup apply action` coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `SCHEDULE-READY-BACKUPS` fixture.
+  - It continued to pass generated-plan fixtures, prerequisite, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with ready backup apply, calendar omission auto-fill, clear-picks undo, calendar omission review, partial-calendar warning toast, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including ready backup apply coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with ready backup apply coverage.
+  - It skipped live PlanetTerp verification with the expected opt-in message.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass139-ready-backup-apply-live`.
+  - It randomly verified `ENFP`, `WMST`, `NFSC`, `MUSC`, `ENST`, and `ENMA` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

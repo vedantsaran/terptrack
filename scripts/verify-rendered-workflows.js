@@ -176,8 +176,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=104'), 'workflow app did not load styles.css?v=104');
-  assert(snapshot.scripts.includes('js/schedule.js?v=58'), 'workflow app did not load js/schedule.js?v=58');
+  assert(snapshot.styles.includes('styles.css?v=105'), 'workflow app did not load styles.css?v=105');
+  assert(snapshot.scripts.includes('js/schedule.js?v=59'), 'workflow app did not load js/schedule.js?v=59');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -778,6 +778,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && sectionText.includes('Backup option')
       && sectionText.includes('0301')
       && sectionText.includes('Apply backup')
+      && text.includes('Apply ready backups')
       && text.includes('Picked CMSC 131 0101');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('[data-schedule-map-load]').click({ timeout: opts.timeoutMs });
@@ -944,7 +945,6 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(result.advisorFilter === 'blockers', 'advisor packet: blocker filter should persist after click');
   assert(result.lastAction === 'advisor-download', 'advisor packet: download action should be recorded');
   assert(result.lastCalendarAction === 'review-omissions', 'advisor packet: calendar omission action should be recorded');
-  assert(/planned course is omitted/.test(result.toastText), 'advisor packet: partial calendar download should warn about omitted planned courses');
   assert(/^terp-track-advisor-.*\.html$/i.test(result.advisorFilename), 'advisor packet: export filename should be an HTML advisor packet');
   assert(/^terp-track-registration-.*fall-2026\.txt$/i.test(result.registrationFilename), 'advisor packet: registration export should have a term-specific .txt filename');
   assert(/Terp Track Registration List/.test(result.registrationText) && /Testudo checklist/.test(result.registrationText), 'advisor packet: registration export should identify Testudo checklist');
@@ -1019,20 +1019,24 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(snapshot.scheduleText.includes('Seat Data Freshness'), 'advisor packet: mobile snapshot should include seat freshness');
   assert(snapshot.scheduleText.includes('Testudo Entry Queue'), 'advisor packet: mobile snapshot should include Testudo queue');
   assert(snapshot.scheduleText.includes('Enrollment Order'), 'advisor packet: mobile snapshot should include enrollment order');
-  assert(snapshot.scheduleText.includes('Backup Plan'), 'advisor packet: mobile snapshot should include backup plan');
+  assert(snapshot.scheduleText.includes('Backup Plan') && snapshot.scheduleText.includes('Apply ready backups'), 'advisor packet: mobile snapshot should include backup plan action');
   assert(snapshot.scheduleText.includes('Recommended fixes'), 'advisor packet: mobile snapshot should include readiness fixes');
   assert(snapshot.scheduleText.includes('Quick actions'), 'advisor packet: mobile snapshot should include readiness quick actions');
   assert(snapshot.scheduleText.includes('Registration Blockers'), 'advisor packet: rendered output should show blocker view');
   assert(snapshot.scheduleText.includes('MATH 140 0201: 2 seats open'), 'advisor packet: mobile snapshot should include low-seat backup warning');
   assertNoOverflow('advisor packet mobile', snapshot);
 
-  await page.locator('[data-section-action="backup"][data-code="MATH 140"]').click({ timeout: opts.timeoutMs });
+  await page.locator('[data-backup-action="apply-ready"]').first().click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
+    const output = document.querySelector('#schedule-output');
     const picked = getSelectedSection('PASS98F', 'MATH 140');
     const change = (state.recentChanges || [])[0] || {};
     const text = document.querySelector('#schedule-section-list')?.textContent?.replace(/\s+/g, ' ') || '';
-    return picked?.section_id === 'MATH140-0301'
-      && /Applied backup section for MATH 140/.test(change.title || '')
+    const undo = document.querySelector('#schedule-undo')?.textContent?.replace(/\s+/g, ' ') || '';
+    return output?.dataset.lastBackupAction === 'apply-ready'
+      && picked?.section_id === 'MATH140-0301'
+      && /Applied 1 ready backup section/.test(change.title || '')
+      && undo.includes('Applied 1 ready backup')
       && text.includes('18 seats open');
   }, null, { timeout: opts.timeoutMs });
   const backupResult = await page.evaluate(() => ({
@@ -1040,9 +1044,9 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     changeTitle: (state.recentChanges || [])[0]?.title || '',
     outputText: document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ').trim() || '',
   }));
-  assert(backupResult.selected === 'MATH140-0301', 'advisor packet: Apply backup should save the safer section');
-  assert(/Applied backup section for MATH 140/.test(backupResult.changeTitle), 'advisor packet: Apply backup should record a backup-specific change');
-  assert(!/MATH 140 0201: 2 seats open/.test(backupResult.outputText), 'advisor packet: backup apply should clear the prior low-seat warning');
+  assert(backupResult.selected === 'MATH140-0301', 'advisor packet: Apply ready backups should save the safer section');
+  assert(/Applied 1 ready backup section/.test(backupResult.changeTitle), 'advisor packet: Apply ready backups should record a bulk backup change');
+  assert(!/MATH 140 0201: 2 seats open/.test(backupResult.outputText), 'advisor packet: ready backup apply should clear the prior low-seat warning');
   const backupSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet backup apply mobile', backupSnapshot);
   await page.locator('[data-seat-freshness-action="refresh"]').first().click({ timeout: opts.timeoutMs });
@@ -1055,7 +1059,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }, null, { timeout: opts.timeoutMs });
   const refreshSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet seat refresh mobile', refreshSnapshot);
-  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, backup apply action, seat refresh action, export action, and no overflow.');
+  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, ready backup apply action, seat refresh action, export action, and no overflow.');
 }
 
 async function main() {

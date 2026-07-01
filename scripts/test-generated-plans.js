@@ -998,6 +998,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Why: [^\n]*unlocks 1 later course/.test(result.outputText), 'registration order: schedule text should explain prerequisite unlocks');
   assert(result.outputRegistrationBackupPlan[0]?.courseCode === 'MATH 140' && result.outputRegistrationBackupPlan[0]?.backupId === 'MATH140-0301', 'backup plan: should choose conflict-safe higher-seat backup section');
   assert(/Backup Plan/.test(result.outputHtml) && /Backup 0301/.test(result.outputHtml) && /18 seats open/.test(result.outputHtml), 'backup plan: schedule output HTML should include backup section and seats');
+  assert(/data-backup-action="apply-ready"/.test(result.outputHtml) && /Apply ready backups/.test(result.outputHtml), 'backup plan: schedule output HTML should include ready-backup apply action');
   assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301; Section ID MATH140-0301/.test(result.outputText), 'backup plan: schedule text should include backup handoff');
   assert(/^terp-track-registration-.*fall-2026\.txt$/.test(result.outputRegistrationFilename), 'registration list: filename should be a term-specific .txt export');
   assert(/Terp Track Registration List/.test(result.outputRegistrationText) && /Testudo checklist/.test(result.outputRegistrationText), 'registration list: text should identify itself as a Testudo checklist');
@@ -1057,6 +1058,7 @@ function testScheduleRegistrationReadiness(context) {
 	  assert(/schedule-registration-appointment/.test(result.advisorDocument), 'registration appointment: exported advisor document should include appointment markup');
   assert(/schedule-seat-freshness/.test(result.advisorDocument), 'seat freshness: exported advisor document should include freshness markup');
   assert(/schedule-calendar-export/.test(result.advisorDocument) && /Calendar Export/.test(result.advisorDocument) && /data-calendar-export-action="auto-fill-omissions"/.test(result.advisorDocument) && /data-calendar-export-action="review-omissions"/.test(result.advisorDocument), 'calendar export readiness: exported advisor document should include calendar action markup');
+  assert(/schedule-registration-backups/.test(result.advisorDocument) && /data-backup-action="apply-ready"/.test(result.advisorDocument), 'backup plan: exported advisor document should include ready-backup action markup');
   assert(/schedule-registration-handoff/.test(result.advisorDocument), 'testudo queue: exported advisor document should include queue markup');
   assert(/schedule-readiness-actions/.test(result.advisorDocument) && /data-readiness-action="review-sections"/.test(result.advisorDocument), 'registration readiness: exported advisor document should include quick-action markup');
   assert(result.map.count === 2, 'readiness map: should include every plan term');
@@ -1535,6 +1537,130 @@ function testScheduleSeatRiskBackups(context) {
     warnings: result.warnings.length,
     checklist: 'backup prompts',
     questions: 'advisor backups',
+  };
+}
+
+async function testScheduleReadyBackupBulkAction(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const undoRoot = { innerHTML: '' };
+      const originalGetElementById = document.getElementById;
+      const originalRenderSchedule = renderSchedule;
+      const originalRenderSemesters = typeof renderSemesters === 'function' ? renderSemesters : null;
+      const originalFetchSections = scheduleFetchSectionsFor;
+      const originalToastInfo = typeof toastInfo === 'function' ? toastInfo : null;
+      const originalToastSuccess = typeof toastSuccess === 'function' ? toastSuccess : null;
+      document.getElementById = id => {
+        if (id === 'schedule-undo') return undoRoot;
+        if (id === 'save-indicator') return { classList: { add() {}, remove() {} } };
+        return null;
+      };
+      renderSchedule = async () => renderScheduleUndo();
+      renderSemesters = () => {};
+      toastInfo = message => { window.__backupToasts = [...(window.__backupToasts || []), message]; };
+      toastSuccess = message => { window.__backupToasts = [...(window.__backupToasts || []), message]; };
+      try {
+        const cmscPicked = {
+          course: 'CMSC132',
+          section_id: 'CMSC132-0101',
+          semester: '202608',
+          number: '0101',
+          meetings: [{ days: 'MWF', start_time: '9:00am', end_time: '9:50am', building: 'IRB', room: '1100' }],
+          open_seats: '0',
+          waitlist: '8',
+          seats: '30',
+        };
+        const cmscBackup = {
+          course: 'CMSC132',
+          section_id: 'CMSC132-0201',
+          semester: '202608',
+          number: '0201',
+          meetings: [{ days: 'MWF', start_time: '10:00am', end_time: '10:50am', building: 'IRB', room: '1201' }],
+          open_seats: '14',
+          waitlist: '0',
+          seats: '30',
+        };
+        const mathPicked = {
+          course: 'MATH140',
+          section_id: 'MATH140-0101',
+          semester: '202608',
+          number: '0101',
+          meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'MTH', room: '0101' }],
+          open_seats: '2',
+          waitlist: '0',
+          seats: '30',
+        };
+        const mathBackup = {
+          course: 'MATH140',
+          section_id: 'MATH140-0301',
+          semester: '202608',
+          number: '0301',
+          meetings: [{ days: 'TuTh', start_time: '1:00pm', end_time: '2:15pm', building: 'CSI', room: '2110' }],
+          open_seats: '18',
+          waitlist: '0',
+          seats: '30',
+        };
+        state.activeSchedule = [{
+          id: 'BACKF',
+          name: 'Fall 2026',
+          courses: [
+            { code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4 },
+            { code: 'MATH 140', title: 'Calculus I', cr: 4 },
+          ],
+        }];
+        scheduleCurrentSemId = 'BACKF';
+        state.schedulePrefs = { BACKF: { ...DEFAULT_SCHEDULE_PREFS, term: '202608', earliest: '08:00', latest: '17:00' } };
+        state.selectedSections = { BACKF: { CMSC132: cmscPicked, MATH140: { ...mathPicked, pinned: true } } };
+        state.recentChanges = [];
+        scheduleFetchSectionsFor = async () => ({
+          CMSC132: [cmscPicked, cmscBackup],
+          MATH140: [mathPicked, mathBackup],
+        });
+        await applyScheduleReadyBackups();
+        const afterApply = {
+          cmsc: getSelectedSection('BACKF', 'CMSC 132')?.section_id || '',
+          math: getSelectedSection('BACKF', 'MATH 140')?.section_id || '',
+          mathPinned: !!getSelectedSection('BACKF', 'MATH 140')?.pinned,
+          banner: undoRoot.innerHTML,
+          changeTitle: (state.recentChanges || [])[0]?.title || '',
+          toast: (window.__backupToasts || []).join(' | '),
+        };
+        undoScheduleSectionChange();
+        const afterUndo = {
+          cmsc: getSelectedSection('BACKF', 'CMSC 132')?.section_id || '',
+          math: getSelectedSection('BACKF', 'MATH 140')?.section_id || '',
+          mathPinned: !!getSelectedSection('BACKF', 'MATH 140')?.pinned,
+          changeTitle: (state.recentChanges || [])[0]?.title || '',
+        };
+        return { afterApply, afterUndo };
+      } finally {
+        scheduleFetchSectionsFor = originalFetchSections;
+        document.getElementById = originalGetElementById;
+        renderSchedule = originalRenderSchedule;
+        if (originalRenderSemesters) renderSemesters = originalRenderSemesters;
+        else delete globalThis.renderSemesters;
+        if (originalToastInfo) toastInfo = originalToastInfo;
+        else delete globalThis.toastInfo;
+        if (originalToastSuccess) toastSuccess = originalToastSuccess;
+        else delete globalThis.toastSuccess;
+        delete window.__backupToasts;
+      }
+    })()
+  `, context));
+
+  assert(result.afterApply.cmsc === 'CMSC132-0201' && result.afterApply.math === 'MATH140-0301', 'ready backup action: should apply all ready backup sections');
+  assert(result.afterApply.mathPinned, 'ready backup action: should preserve pinned state when swapping to backup');
+  assert(/Applied 2 ready backups/.test(result.afterApply.banner), 'ready backup action: should register a bulk undo banner');
+  assert(/Applied 2 ready backup sections/.test(result.afterApply.changeTitle), 'ready backup action: should record a bulk backup change');
+  assert(/Applied 2 ready backup sections/.test(result.afterApply.toast), 'ready backup action: should announce applied backups');
+  assert(result.afterUndo.cmsc === 'CMSC132-0101' && result.afterUndo.math === 'MATH140-0101', 'ready backup action: undo should restore previous risky picks');
+  assert(result.afterUndo.mathPinned, 'ready backup action: undo should restore previous pinned state');
+  assert(/Undid ready backup apply/.test(result.afterUndo.changeTitle), 'ready backup action: undo should record a restore change');
+
+  return {
+    id: 'SCHEDULE-READY-BACKUPS',
+    applied: `${result.afterApply.cmsc}/${result.afterApply.math}`,
+    restored: `${result.afterUndo.cmsc}/${result.afterUndo.math}`,
   };
 }
 
@@ -3713,6 +3839,7 @@ async function main() {
   const actionUndo = await testScheduleActionUndo(context);
   const chip = testScheduleCourseChip(context);
   const seatRisk = testScheduleSeatRiskBackups(context);
+  const readyBackups = await testScheduleReadyBackupBulkAction(context);
   const recoMove = testRecommendationMoveAction(context);
   const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
@@ -3745,6 +3872,7 @@ async function main() {
   console.log(`Schedule action undo fixture ${actionUndo.id}: clear ${actionUndo.clear}, auto ${actionUndo.auto}, alternate ${actionUndo.alternate}.`);
   console.log(`Schedule chip fixture ${chip.id}: ${chip.risk}, ${chip.closed}, ${chip.ok}.`);
   console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
+  console.log(`Schedule ready backups fixture ${readyBackups.id}: applied ${readyBackups.applied}; restored ${readyBackups.restored}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
@@ -3761,7 +3889,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
