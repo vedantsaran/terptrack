@@ -4981,6 +4981,17 @@ async function testOnboardingPriorCredit(context) {
       const econPreset = onboardPriorPresetById('ib-econ-hl-5');
       const calcDetailHtml = onboardPriorDetailHtml(calcPreset);
       const calcDetailLinks = onboardPriorPresetLinks(calcPreset).map(link => link.label);
+      const recentChangeBeforeUndo = state.recentChanges[0] || null;
+      const undoEntryKeys = (recentChangeBeforeUndo?.undo?.entries || []).map(entry => String(entry.code || '') + ':' + String(entry.stateKey || ''));
+      const mathStateBeforeUndo = getCourseState('MATH140');
+      const englishCreditStateBeforeUndo = state.courses['AP FSAW Credit'];
+      const cmscStateBeforeUndo = getCourseState('CMSC131');
+      const econStateBeforeUndo = state.courses['ECON 200'];
+      const undoApplied = undoPlanChange(recentChangeBeforeUndo?.id || '');
+      const afterUndoMathState = getCourseState('MATH140');
+      const afterUndoCmscState = state.courses.CMSC131 || null;
+      const afterUndoTransferKeys = Object.entries(state.courses || {}).filter(([, value]) => value.status === 'transfer').map(([key]) => key).sort();
+      const customCodesAfterUndo = state.customCourses.map(course => course.code).sort();
       return {
         presetCount: ONBOARD_PRIOR_CREDIT_PRESETS.length,
         sourceNoteCount: ONBOARD_PRIOR_CREDIT_PRESETS.filter(preset => /chart 2023-2026/.test(onboardPriorPresetSourceNote(preset))).length,
@@ -5000,11 +5011,17 @@ async function testOnboardingPriorCredit(context) {
         byCode,
         mathPlanMatch: findCourse('MATH 140')?.code || '',
         cmscPlanMatch: findCourse('CMSC 131')?.code || '',
-        mathState: getCourseState('MATH140'),
-        englishCreditState: state.courses['AP FSAW Credit'],
-        cmscState: getCourseState('CMSC131'),
-        econState: state.courses['ECON 200'],
-        recentChange: state.recentChanges[0],
+        mathState: mathStateBeforeUndo,
+        englishCreditState: englishCreditStateBeforeUndo,
+        cmscState: cmscStateBeforeUndo,
+        econState: econStateBeforeUndo,
+        recentChange: recentChangeBeforeUndo,
+        undoEntryKeys,
+        undoApplied,
+        afterUndoMathState,
+        afterUndoCmscState,
+        afterUndoTransferKeys,
+        customCodesAfterUndo,
         sourceNotice,
       };
     })()
@@ -5044,6 +5061,12 @@ async function testOnboardingPriorCredit(context) {
   assert(result.cmscState.status === 'transfer' && result.econState.status === 'transfer', 'onboarding prior credit: added raw and preset courses should be marked transfer');
   assert(result.applied.applied.length === result.resolvedCodes.length, 'onboarding prior credit: applied count should match resolved deduped courses');
   assert(/prior-credit/.test(result.recentChange.type), 'onboarding prior credit: should record a recent change entry');
+  assert(result.undoEntryKeys.includes('MATH 140:MATH140') && result.undoEntryKeys.includes('CMSC 131:CMSC131'), 'onboarding prior credit: undo entries should store normalized planned-row state keys');
+  assert(result.undoApplied === true, 'onboarding prior credit: no-space planned-row prior credits should be undoable');
+  assert(result.afterUndoMathState.status === 'passed' && result.afterUndoMathState.grade === 'A', 'onboarding prior credit: undo should restore the original no-space planned-row status');
+  assert(!result.afterUndoCmscState, 'onboarding prior credit: undo should remove transfer state from planned CMSC131 when it had no prior status');
+  assert(!result.afterUndoTransferKeys.includes('MATH140') && !result.afterUndoTransferKeys.includes('CMSC131'), 'onboarding prior credit: undo should clear transfer status from no-space planned-row keys');
+  assert(result.customCodesAfterUndo.length === 0, 'onboarding prior credit: undo should remove all outside-plan prior-credit custom rows');
   assert(/Official source check/.test(result.sourceNotice) && /June 30, 2026/.test(result.sourceNotice), 'onboarding prior credit: source notice should include checked date');
   assert(/AP Chart 2023-2026/.test(result.sourceNotice) && /IB Chart 2023-2026/.test(result.sourceNotice), 'onboarding prior credit: source notice should link AP and IB chart sources');
   assert(result.sourceNotice.includes('registrar.umd.edu/transfer-credit/prior-learning-credit'), 'onboarding prior credit: source notice should link UMD prior learning credit');

@@ -9512,3 +9512,62 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 171
+
+Focus: make prior-credit Timeline undo restore the same normalized planned-row course-state keys that prior-credit apply uses, so no-space planned rows do not stay stuck as transfer after undo.
+
+Planned changes:
+- Inspect the prior-credit undo path after Pass 170 normalized course-state writes.
+- Persist the resolved course-state key in each prior-credit undo entry.
+- Use the persisted key for Timeline prior-credit stale-change checks and restore operations.
+- Strengthen no-space planned-row prior-credit coverage by actually applying Timeline undo.
+- Bump changed timeline/onboarding asset cache tags and rendered workflow assertions.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/onboarding.js`.
+  - Prior-credit undo entries now include `stateKey`, the resolved storage key used for the applied transfer status.
+- Updated `js/timeline.js`.
+  - `plannerCourseStateSnapshot()` accepts a preferred state key and uses `courseStateKey()` as a fallback.
+  - `plannerRestoreCourseStatus()` accepts a preferred state key and restores/deletes that exact key.
+  - Prior-credit stale-change detection now checks `entry.stateKey`.
+  - Prior-credit Timeline undo now restores `entry.stateKey`, keeping apply and undo symmetric.
+- Strengthened `ONBOARDING-PRIOR-CREDIT` in `scripts/test-generated-plans.js`.
+  - The fixture verifies undo entries include `MATH 140:MATH140` and `CMSC 131:CMSC131`.
+  - It invokes `undoPlanChange()` and verifies `MATH140` returns to the original passed grade.
+  - It verifies `CMSC131` transfer state is removed when the planned row had no prior status.
+  - It verifies no-space transfer keys are gone after undo and all outside-plan prior-credit custom rows are removed.
+- Bumped cache tags:
+  - `js/timeline.js?v=27`.
+  - `js/onboarding.js?v=18`.
+  - Updated rendered workflow cache assertions for both assets.
+
+Verification:
+- Ran `node --check js/onboarding.js`.
+- Ran `node --check js/timeline.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the strengthened no-space planned-row prior-credit undo coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, drag/drop section cleanup, custom delete cleanup, course edit cleanup, course code collision guard, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the strengthened no-space planned-row prior-credit undo coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass171-prior-credit-undo-state`.
+  - It randomly verified `PHIL`, `PHYS`, `ENCH`, `ASTR`, `GEOG`, and `ARTT` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

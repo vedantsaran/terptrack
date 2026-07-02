@@ -841,6 +841,7 @@ async function onboardApplyPriorCredits(setup) {
     applied.push(code);
     undoEntries.push({
       code,
+      stateKey,
       hadCourseState: previousState.had,
       courseState: previousState.value,
       appliedCourseState: appliedState.value,

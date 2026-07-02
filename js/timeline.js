@@ -1225,8 +1225,8 @@ function plannerFormatCodes(codes) {
   return clean.slice(0, 3).join(', ') + (clean.length > 3 ? ` +${clean.length - 3} more` : '');
 }
 
-function plannerCourseStateSnapshot(code) {
-  const key = String(code || '');
+function plannerCourseStateSnapshot(code, preferredKey = '') {
+  const key = String(preferredKey || (typeof courseStateKey === 'function' ? courseStateKey(code) : code) || '');
   const courses = state.courses || {};
   const had = !!key && plannerHasOwn(courses, key);
   return { had, value: had ? plannerClonePlain(courses[key]) : null };
@@ -1275,8 +1275,8 @@ function plannerUndoCourseSlot(undo) {
   return index >= 0 ? { list, index, sem } : null;
 }
 
-function plannerRestoreCourseStatus(code, hadValue, value) {
-  const key = String(code || '');
+function plannerRestoreCourseStatus(code, hadValue, value, preferredKey = '') {
+  const key = String(preferredKey || (typeof courseStateKey === 'function' ? courseStateKey(code) : code) || '');
   if (!key) return;
   state.courses = state.courses || {};
   if (hadValue) state.courses[key] = plannerClonePlain(value);
@@ -1512,7 +1512,7 @@ function plannerPriorCreditChangedCodes(change) {
     const expected = plannerHasOwn(entry, 'appliedCourseState')
       ? entry.appliedCourseState
       : { status: 'transfer', grade: '' };
-    const current = plannerCourseStateSnapshot(entry.code);
+    const current = plannerCourseStateSnapshot(entry.code, entry.stateKey);
     if (!current.had || !plannerValuesEqual(current.value, expected)) changed.push(entry.code);
   });
   return changed;
@@ -1902,7 +1902,7 @@ function plannerApplyPriorCreditUndo(change) {
   const restored = [];
   const removed = [];
   undo.entries.forEach(entry => {
-    plannerRestoreCourseStatus(entry.code, entry.hadCourseState, entry.courseState);
+    plannerRestoreCourseStatus(entry.code, entry.hadCourseState, entry.courseState, entry.stateKey);
     if (plannerRemovePriorCustomCourse(entry)) removed.push(entry.code);
     restored.push(entry.code);
   });
