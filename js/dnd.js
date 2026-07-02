@@ -72,15 +72,31 @@ function attachDndHandlers() {
   });
 }
 
+function dndClearSelectedSection(semId, code) {
+  const key = normalizeCode(code);
+  const bucket = state.selectedSections && state.selectedSections[semId];
+  if (!key || !bucket || !bucket[key]) return false;
+  delete bucket[key];
+  if (!Object.keys(bucket).length) delete state.selectedSections[semId];
+  return true;
+}
+
+function dndClearMovedSelections(code, semIds = []) {
+  const uniqueSemIds = Array.from(new Set(semIds.filter(Boolean)));
+  return uniqueSemIds.reduce((count, semId) => count + (dndClearSelectedSection(semId, code) ? 1 : 0), 0);
+}
+
 function moveCourseToSemester(code, fromSemId, toSemId, isCustom, insertAt) {
   const sched = mutableSchedule();
   const allSems = [...sched, ...(state.customSemesters || [])];
   const targetSem = allSems.find(s => s.id === toSemId);
   if (!targetSem) return;
 
+  let sourceSemId = fromSemId || '';
   if (isCustom) {
     const c = (state.customCourses || []).find(x => x.code === code);
     if (!c) return;
+    sourceSemId = c.semId || sourceSemId;
     // Reorder inside customCourses pool — no inherent position; just move semId
     if (c.semId !== toSemId) c.semId = toSemId;
   } else {
@@ -90,6 +106,7 @@ function moveCourseToSemester(code, fromSemId, toSemId, isCustom, insertAt) {
       const idx = (sem.courses || []).findIndex(c => c.code === code);
       if (idx >= 0) {
         sourceSem = sem;
+        sourceSemId = sem.id || sourceSemId;
         courseObj = sem.courses.splice(idx, 1)[0];
         break;
       }
@@ -101,6 +118,9 @@ function moveCourseToSemester(code, fromSemId, toSemId, isCustom, insertAt) {
     } else {
       targetSem.courses.push(courseObj);
     }
+  }
+  if (sourceSemId && sourceSemId !== toSemId) {
+    dndClearMovedSelections(code, [sourceSemId, toSemId]);
   }
   saveState();
   render();

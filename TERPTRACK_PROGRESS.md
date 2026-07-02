@@ -9165,3 +9165,58 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 165
+
+Focus: keep manual drag/drop planning from leaving stale posted-section picks behind when a student moves a course to another semester.
+
+Planned changes:
+- Inspect drag/drop course movement after the selected-section restore/normalization passes.
+- Clear moved-course selected sections from both source and destination terms when a drag/drop crosses semesters.
+- Preserve unrelated picked sections in the same semesters.
+- Cover both regular schedule courses and custom courses.
+- Bump the drag/drop asset cache tag and rendered workflow assertion.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/dnd.js`.
+  - Added `dndClearSelectedSection()` and `dndClearMovedSelections()`.
+  - `moveCourseToSemester()` now tracks the actual source semester for regular and custom courses.
+  - When the source and destination differ, it clears the moved course's selected section from both terms and removes empty selection buckets.
+  - Same-semester reordering keeps existing section picks intact.
+  - Other courses' section picks in the affected semesters are preserved.
+- Strengthened generated-plan regression coverage in `scripts/test-generated-plans.js`.
+  - The VM harness now loads `js/dnd.js`.
+  - Added `DND-SELECTION-CLEANUP`, which moves `CMSC 132` from Spring 2027 to Fall 2026 and verifies stale source/target section picks are cleared while `ENGL 101` remains picked.
+  - The same fixture moves custom course `INST 201` across semesters and verifies its stale source/target picks are cleared and empty buckets are removed.
+- Bumped cache tags:
+  - `js/dnd.js?v=1`.
+  - Added a rendered workflow cache assertion for the drag/drop asset.
+
+Verification:
+- Ran `node --check js/dnd.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `DND-SELECTION-CLEANUP` drag/drop selected-section cleanup coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the new drag/drop section cleanup coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass165-dnd-section-cleanup`.
+  - It randomly verified `AOSC`, `PHIL`, `ENST`, `BIOE`, `NFSC`, and `PHSC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

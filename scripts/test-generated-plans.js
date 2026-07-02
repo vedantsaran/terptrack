@@ -66,6 +66,7 @@ function buildContext() {
     'js/placeholder-search.js',
     'js/audit.js',
     'js/onboarding.js',
+    'js/dnd.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
   vm.runInContext(`
     state = loadState();
@@ -2224,6 +2225,73 @@ async function testScheduleReadyBackupBulkAction(context) {
     id: 'SCHEDULE-READY-BACKUPS',
     applied: `${result.afterApply.cmsc}/${result.afterApply.math}`,
     restored: `${result.afterUndo.cmsc}/${result.afterUndo.math}`,
+  };
+}
+
+function testDragDropSelectionCleanup(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      state.activeSchedule = [{
+        id: 'DND-F',
+        name: 'Fall 2026',
+        courses: [
+          { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4 },
+          { code: 'ENGL 101', title: 'Academic Writing', cr: 3 }
+        ]
+      }, {
+        id: 'DND-S',
+        name: 'Spring 2027',
+        courses: [{ code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4 }]
+      }];
+      state.customSemesters = [];
+      state.customCourses = [{ code: 'INST 201', title: 'Introduction to Information Science', cr: 3, semId: 'DND-F' }];
+      state.schedulePrefs = {
+        'DND-F': { term: '202608' },
+        'DND-S': { term: '202701' }
+      };
+      state.selectedSections = {
+        'DND-F': {
+          CMSC132: { course: 'CMSC 132', section_id: 'CMSC132-OLD-FALL', number: 'OLD-FALL', semester: '202608', meetings: [] },
+          INST201: { course: 'INST 201', section_id: 'INST201-0101', number: '0101', semester: '202608', meetings: [] },
+          ENGL101: { course: 'ENGL 101', section_id: 'ENGL101-0101', number: '0101', semester: '202608', meetings: [] }
+        },
+        'DND-S': {
+          CMSC132: { course: 'CMSC 132', section_id: 'CMSC132-0201', number: '0201', semester: '202701', meetings: [] },
+          INST201: { course: 'INST 201', section_id: 'INST201-0201', number: '0201', semester: '202701', meetings: [] }
+        }
+      };
+
+      moveCourseToSemester('CMSC 132', 'DND-S', 'DND-F', false, 1);
+      const afterRequiredMove = JSON.parse(JSON.stringify(state.selectedSections || {}));
+      moveCourseToSemester('INST 201', 'DND-F', 'DND-S', true, 0);
+
+      return {
+        fallCodes: state.activeSchedule[0].courses.map(course => course.code),
+        springCodes: state.activeSchedule[1].courses.map(course => course.code),
+        requiredSourcePick: afterRequiredMove['DND-S']?.CMSC132 || null,
+        requiredTargetPick: afterRequiredMove['DND-F']?.CMSC132 || null,
+        preservedFallPick: afterRequiredMove['DND-F']?.ENGL101?.section_id || '',
+        customSemId: state.customCourses.find(course => course.code === 'INST 201')?.semId || '',
+        customSourcePick: state.selectedSections['DND-F']?.INST201 || null,
+        customTargetPick: state.selectedSections['DND-S']?.INST201 || null,
+        preservedAfterCustom: state.selectedSections['DND-F']?.ENGL101?.section_id || '',
+        buckets: Object.keys(state.selectedSections || {}).sort(),
+      };
+    })()
+  `, context));
+
+  assert(result.fallCodes.join(',') === 'CMSC 131,CMSC 132,ENGL 101', 'drag/drop cleanup: moved required course should land in the requested target order');
+  assert(!result.springCodes.includes('CMSC 132'), 'drag/drop cleanup: moved required course should leave the source semester');
+  assert(!result.requiredSourcePick && !result.requiredTargetPick, 'drag/drop cleanup: moving a required course across semesters should clear stale source and target section picks');
+  assert(result.preservedFallPick === 'ENGL101-0101', 'drag/drop cleanup: unrelated section picks in the target semester should remain');
+  assert(result.customSemId === 'DND-S', 'drag/drop cleanup: custom course should move to the target semester');
+  assert(!result.customSourcePick && !result.customTargetPick, 'drag/drop cleanup: moving a custom course across semesters should clear stale source and target section picks');
+  assert(result.preservedAfterCustom === 'ENGL101-0101' && result.buckets.length === 1 && result.buckets[0] === 'DND-F', 'drag/drop cleanup: empty selection buckets should be removed while unrelated picks remain');
+
+  return {
+    id: 'DND-SELECTION-CLEANUP',
+    required: result.fallCodes.join(' > '),
+    custom: result.customSemId,
   };
 }
 
@@ -4929,6 +4997,7 @@ async function main() {
   const termGuards = await testScheduleTermMismatchGuards(context);
   const seatRisk = testScheduleSeatRiskBackups(context);
   const readyBackups = await testScheduleReadyBackupBulkAction(context);
+  const dndCleanup = testDragDropSelectionCleanup(context);
   const recoMove = testRecommendationMoveAction(context);
   const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
@@ -4966,6 +5035,7 @@ async function main() {
   console.log(`Schedule term guards fixture ${termGuards.id}: replaced ${termGuards.replaced}; ${termGuards.stale}.`);
   console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
   console.log(`Schedule ready backups fixture ${readyBackups.id}: applied ${readyBackups.applied}; restored ${readyBackups.restored}.`);
+  console.log(`Drag/drop cleanup fixture ${dndCleanup.id}: required ${dndCleanup.required}; custom ${dndCleanup.custom}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
@@ -4985,7 +5055,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
