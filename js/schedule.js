@@ -1515,6 +1515,132 @@ function scheduleCourseCredits(course) {
   return Number(course && course.cr) || 0;
 }
 
+function scheduleTermCreditPolicy(prefs = DEFAULT_SCHEDULE_PREFS) {
+  const term = String(prefs?.term || '');
+  const suffix = term.slice(4);
+  const termLabel = scheduleTermLabel(term);
+  if (suffix === '12') {
+    return {
+      kind: 'winter',
+      termLabel,
+      fullTimeMin: null,
+      preClassMax: 4,
+      maxCredits: 4,
+      source: 'UMD winter-session max is 4 credits without Advising College approval.',
+    };
+  }
+  if (suffix === '05') {
+    return {
+      kind: 'summer',
+      termLabel,
+      fullTimeMin: null,
+      preClassMax: 8,
+      maxCredits: 8,
+      source: 'UMD summer sessions are capped at 8 credits per session without Advising College approval.',
+    };
+  }
+  return {
+    kind: suffix === '08' ? 'fall' : 'spring',
+    termLabel,
+    fullTimeMin: 12,
+    preClassMax: 16,
+    maxCredits: 20,
+    source: 'UMD fall/spring undergraduate full-time is 12+ credits; 17+ before classes and 21+ overall need Advising College approval.',
+  };
+}
+
+function scheduleCreditLoadStatus(courses = [], selectedItems = [], prefs = DEFAULT_SCHEDULE_PREFS) {
+  const courseList = Array.isArray(courses) ? courses : [];
+  const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
+  const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course?.code || item.section?.course || '')));
+  const totalCredits = courseList.reduce((sum, course) => sum + scheduleCourseCredits(course), 0);
+  const pickedCredits = selectedList.reduce((sum, item) => sum + scheduleCourseCredits(item.course), 0);
+  const missingCredits = courseList
+    .filter(course => !selectedCodes.has(normalizeCode(course.code || '')))
+    .reduce((sum, course) => sum + scheduleCourseCredits(course), 0);
+  const policy = scheduleTermCreditPolicy(prefs);
+  const window = scheduleCalendarTermWindow(prefs?.term || '', prefs);
+  const registrationDate = scheduleDateInputToUtc(prefs?.registrationDate);
+  const beforeFirstDay = registrationDate && window?.start ? registrationDate < window.start : null;
+  const value = courseList.length ? `${pickedCredits}/${totalCredits} cr` : 'n/a';
+  const notes = [];
+  const fixes = [];
+  let level = 'ok';
+  let label = 'Credit load ready';
+
+  const raise = next => {
+    if (next === 'danger' || (next === 'warn' && level !== 'danger')) level = next;
+  };
+
+  if (!courseList.length) {
+    return {
+      level: 'ok',
+      label: 'No credit load',
+      value,
+      detail: 'No current-term registration credits need review.',
+      fix: 'No credit-load fix is needed for this term.',
+      totalCredits,
+      pickedCredits,
+      missingCredits,
+      policy,
+    };
+  }
+
+  if (missingCredits) notes.push(`${missingCredits} planned credit${missingCredits === 1 ? '' : 's'} still need exact section picks.`);
+
+  if (policy.fullTimeMin && totalCredits < policy.fullTimeMin) {
+    raise('warn');
+    label = 'Below full time';
+    notes.push(`${totalCredits} planned credits is below UMD's ${policy.fullTimeMin}-credit fall/spring full-time threshold.`);
+    fixes.push('Add enough credits for full-time status or confirm reduced-load, financial-aid, housing, athletics, and visa implications with the right office.');
+  }
+
+  if (policy.kind === 'fall' || policy.kind === 'spring') {
+    if (totalCredits > policy.maxCredits) {
+      raise('danger');
+      label = 'Credit overload';
+      notes.push(`${totalCredits} credits exceeds UMD's ${policy.maxCredits}-credit fall/spring cap without Advising College approval.`);
+      fixes.push('Reduce the term below the credit cap or get Advising College approval before registration.');
+    } else if (totalCredits > policy.preClassMax) {
+      if (beforeFirstDay === true) {
+        raise('danger');
+        label = 'Approval needed';
+        notes.push(`${totalCredits} credits exceeds the ${policy.preClassMax}-credit pre-class registration limit for ${policy.termLabel}.`);
+        fixes.push('Move a course, wait until schedule adjustment if appropriate, or request Advising College approval for the overload.');
+      } else {
+        raise('warn');
+        label = 'Overload review';
+        notes.push(`${totalCredits} credits is above the ${policy.preClassMax}-credit pre-class registration threshold; confirm whether approval is needed for this timing.`);
+        fixes.push('Confirm credit-overload approval rules with your Advising College before submitting in Testudo.');
+      }
+    }
+  } else if (totalCredits > policy.maxCredits) {
+    raise(policy.kind === 'summer' && totalCredits <= policy.maxCredits * 2 ? 'warn' : 'danger');
+    label = policy.kind === 'summer' ? 'Session review' : 'Credit overload';
+    notes.push(`${totalCredits} credits exceeds the posted ${policy.termLabel} per-session credit limit of ${policy.maxCredits}.`);
+    fixes.push('Split summer credits by session or request Advising College approval before registration.');
+  }
+
+  if (level === 'ok') {
+    label = 'Credit load ready';
+    notes.push(`${totalCredits} planned credits fit the current UMD ${policy.termLabel} credit-load checks.`);
+  }
+
+  const detail = `${pickedCredits}/${totalCredits} credits have exact section picks. ${notes.slice(0, 3).join(' ')} ${policy.source}`.trim();
+  return {
+    level,
+    label,
+    value,
+    detail,
+    fix: fixes[0] || 'No credit-load fix is needed after normal advisor review.',
+    totalCredits,
+    pickedCredits,
+    missingCredits,
+    policy,
+    beforeFirstDay,
+  };
+}
+
 function scheduleWorkloadBalance(courses = [], selectedItems = [], prefs = DEFAULT_SCHEDULE_PREFS, timing = null) {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
@@ -2437,13 +2563,16 @@ function scheduleCoreqRows(courses = [], selectedItems = [], semId = '') {
     .filter(Boolean);
 }
 
-function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = [], prereqRows = [], coreqRows = []) {
+function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = [], prereqRows = [], coreqRows = [], creditLoad = null) {
   if (!courseList.length) return ['No registration fixes are needed for this semester.'];
   const fixes = [];
   const gateById = Object.fromEntries((gates || []).map(gate => [gate.id, gate]));
   if (gateById.sections?.level === 'danger') {
     const names = (unscheduled || []).slice(0, 4).map(course => course.code).join(', ');
     fixes.push(`Pick sections for ${names || 'all remaining courses'}; use Auto-pick first, then choose manually for courses without posted sections.`);
+  }
+  if (gateById.credits?.level === 'danger' || gateById.credits?.level === 'warn') {
+    fixes.push(creditLoad?.fix || 'Review current-term credits against UMD full-time and overload rules before submitting in Testudo.');
   }
   if (gateById.prereqs?.level === 'danger') {
     const names = (prereqRows || []).filter(row => row.level === 'danger').slice(0, 3).map(row => row.label).join(', ');
@@ -2491,7 +2620,7 @@ function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats
   return Array.from(new Set(fixes)).slice(0, 7);
 }
 
-function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = [], prereqRows = [], coreqRows = []) {
+function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = [], prereqRows = [], coreqRows = [], creditLoad = null) {
   if (!courseList.length) return [];
   const gateById = Object.fromEntries((gates || []).map(gate => [gate.id, gate]));
   const actions = [];
@@ -2515,6 +2644,17 @@ function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSe
       label: 'Review section picks',
       detail: 'Open the section list to choose missing sections or apply backups.',
       kind: 'secondary',
+    });
+  }
+
+  if (gateById.credits?.level === 'danger' || gateById.credits?.level === 'warn') {
+    addAction({
+      id: 'review-sections',
+      label: 'Review section picks',
+      detail: creditLoad?.level === 'danger'
+        ? 'Adjust the term load or confirm credit-overload approval before registration.'
+        : 'Review this term load and add or move courses if full-time status matters.',
+      kind: actions.length ? 'secondary' : 'primary',
     });
   }
 
@@ -2613,6 +2753,7 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
   const eligibilityWarningSet = new Set(selectedSectionEligibilityWarnings(selectedList));
   const nonSeatWarnings = warningList.filter(warning => !seatWarningSet.has(warning) && !eligibilityWarningSet.has(warning));
   const timing = scheduleTimingFit(selectedList, prefs, conflictList);
+  const creditLoad = scheduleCreditLoadStatus(courseList, selectedList, prefs);
   const seatRows = selectedList.map(item => ({
     item,
     risk: sectionSeatRisk(item.section),
@@ -2641,6 +2782,14 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
       : unscheduled.length
         ? `Pick sections for ${unscheduled.slice(0, 4).map(course => course.code).join(', ')}${unscheduled.length > 4 ? ` and ${unscheduled.length - 4} more` : ''}.`
         : 'Every current-term course has a picked section.'
+  ));
+
+  gates.push(scheduleRegistrationGate(
+    'credits',
+    'Credits',
+    creditLoad.level,
+    creditLoad.value,
+    creditLoad.detail
   ));
 
   gates.push(scheduleRegistrationGate(
@@ -2748,8 +2897,8 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
     : dangerCount ? `${dangerCount} blocker${dangerCount === 1 ? '' : 's'} need action before registration.`
       : warnCount ? `${warnCount} item${warnCount === 1 ? '' : 's'} should be reviewed before registering.`
         : 'All picked sections clear core registration checks.';
-  const fixes = scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows, prereqRows, coreqRows);
-  const actions = scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows, prereqRows, coreqRows);
+  const fixes = scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows, prereqRows, coreqRows, creditLoad);
+  const actions = scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows, prereqRows, coreqRows, creditLoad);
 
   return {
     level,
@@ -2760,6 +2909,7 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
     actions,
     unscheduled,
     timing,
+    creditLoad,
     prereqRows,
     coreqRows,
     eligibilityRows,
@@ -3302,12 +3452,21 @@ function scheduleFinalRegistrationChecklist(readiness, appointment, freshness, b
   const handoffReview = handoff.filter(row => row.status === 'review').length;
   const handoffReady = handoff.filter(row => row.status === 'ready' || row.status === 'review').length;
   const noRegistrationCourses = readiness?.label === 'No registration courses' || /no schedule-ready/i.test(readiness?.detail || '');
+  const creditLoad = readiness?.creditLoad || null;
   const items = [
     {
       id: 'readiness',
       label: 'Registration readiness',
       level: readiness?.level || 'warn',
       detail: readiness?.detail || 'Run Schedule readiness checks before registration.',
+    },
+    {
+      id: 'credits',
+      label: 'Credit load',
+      level: noRegistrationCourses ? 'ok' : creditLoad?.level || 'warn',
+      detail: noRegistrationCourses
+        ? 'No registration credits need review for this term.'
+        : creditLoad?.detail || 'Review current-term credits against UMD full-time and overload rules.',
     },
     {
       id: 'testudo',
@@ -5108,7 +5267,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
   (readiness.fixes || []).forEach(fix => lines.push(`- ${fix}`));
   lines.push('', 'Before submitting in Testudo:');
   lines.push('- Confirm the posted term and every section number still match.');
-  lines.push('- Confirm open seats, waitlist status, permissions, prerequisites, corequisites, and restrictions.');
+  lines.push('- Confirm credit load, open seats, waitlist status, permissions, prerequisites, corequisites, and restrictions.');
   lines.push('- Resolve every conflict and missing section pick flagged above.');
 
   return lines.join('\n');

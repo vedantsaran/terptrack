@@ -7992,3 +7992,72 @@ Verification:
   - `node --check js/schedule.js`.
   - `node scripts/test-generated-plans.js`.
   - `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+
+## 2026-07-01 Pass 145
+
+Focus: add UMD credit-load readiness so registration exports warn when a term is below full-time, above pre-class credit limits, or above posted fall/spring, summer, or winter maximums.
+
+Official policy references checked:
+- UMD Registrar Enrollment Status: fall/spring undergraduate full-time status is 12+ credits; falling below 12 can affect aid, scholarships, and other services.
+- UMD Undergraduate Catalog Registration: undergraduates need Advising College approval to exceed fall/spring 20 credits, fall/spring 16 credits before the first day of classes, 8 credits per summer session, or 4 credits in winter.
+
+Planned changes:
+- Add credit-load policy helpers tied to the active posted UMD term.
+- Add a first-class `Credits` gate to registration readiness.
+- Feed credit-load status into recommended fixes, quick actions, final checklist, registration-list text, schedule output, advisor text, and advisor packet exports.
+- Keep Smart next picks actionable when a single safe recommended section is below full-time by itself, while still surfacing overload and other real readiness blockers.
+- Verify focused fixtures, rendered browser workflows, release checks, and deterministic plus random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleTermCreditPolicy()` and `scheduleCreditLoadStatus()` in `js/schedule.js`.
+  - Fall/spring terms check 12-credit full-time status, 16-credit pre-class overload review, and 20-credit maximums.
+  - Summer and winter terms check posted per-session/session caps.
+  - The status records picked credits versus planned credits, missing-section credits, UMD policy detail, and a concrete fix.
+- Added a first-class `Credits` registration readiness gate.
+  - The gate appears next to sections, prerequisites, corequisites, conflicts, seats, eligibility, timing, and preferences.
+  - Recommended fixes include credit-load guidance for below-full-time or overload terms.
+  - Quick actions route students into section review when credits need adjustment.
+- Added credit load to final Testudo launch checks.
+  - The final checklist now has 7 launch checks and includes a `Credit load` row.
+  - Registration-list final instructions now explicitly tell students to confirm credit load before Testudo submission.
+- Adjusted Smart next-pick readiness impact in `js/recommendations.js`.
+  - A single safe section pick can still show `Registration ready` when the only warning is that the whole term remains below full-time until more courses are added.
+  - Other credit warnings, overloads, section blockers, conflicts, seats, prerequisites, corequisites, and eligibility still affect the recommendation impact normally.
+- Bumped cache tags:
+  - `styles.css?v=111`.
+  - `js/schedule.js?v=65`.
+  - `js/recommendations.js?v=15`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now asserts `credits:warn`, `8/11 cr`, 12-credit full-time copy, credit-load fixes, the 7-item final checklist, and credit-load rows in schedule/advisor/registration text.
+  - Rendered mobile workflow coverage now waits for the credit-load gate and asserts the final checklist cache includes a credit-load warning.
+  - Recommendation fixture continues to assert that a complete safe Smart next pick is actionable even when full-term load is not yet complete.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check js/recommendations.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with `credits:warn` coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with credit-load gate, prerequisite gate, corequisite gate, eligibility gate, workload balance, final registration checklist, ready backup apply, calendar omission auto-fill, clear-picks undo, calendar omission review, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js --live --live-seed=pass145-credit-load-readiness-live`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including credit-load gate coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with credit-load gate coverage.
+  - It live-verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp with every generated required course reporting a matching live title/credit pair.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass145-credit-load-readiness-random-live`.
+  - It randomly verified `AAST`, `WMST`, `ARTH`, `ARCH`, `AOSC`, and `GEOG` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

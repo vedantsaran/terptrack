@@ -200,14 +200,28 @@ function recoCandidateReadinessImpact(item, ctx, currentItems, prefs) {
     ? selectedScheduleWarnings(selectedItems, prefs || {})
     : [];
   const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs || {});
-  const issue = (readiness.gates || []).find(gate => gate.level === 'danger')
-    || (readiness.gates || []).find(gate => gate.level === 'warn')
+  const creditGate = (readiness.gates || []).find(gate => gate.id === 'credits') || null;
+  const ignoreUnderload = creditGate?.level === 'warn' && /below UMD/i.test(creditGate.detail || '');
+  const impactGates = ignoreUnderload
+    ? (readiness.gates || []).filter(gate => gate.id !== 'credits')
+    : (readiness.gates || []);
+  const dangerIssue = impactGates.find(gate => gate.level === 'danger') || null;
+  const warnIssue = impactGates.find(gate => gate.level === 'warn') || null;
+  const level = dangerIssue ? 'danger' : warnIssue ? 'warn' : 'ok';
+  const label = level === 'danger' ? 'Fix before registration'
+    : level === 'warn' ? 'Review before registration'
+      : 'Registration ready';
+  const issue = dangerIssue
+    || warnIssue
+    || (ignoreUnderload ? creditGate : null)
     || (readiness.gates || [])[0]
     || null;
   return {
-    level: readiness.level,
-    label: readiness.label,
-    detail: issue ? `${issue.label}: ${issue.detail}` : readiness.detail,
+    level,
+    label,
+    detail: issue
+      ? `${issue.label}: ${ignoreUnderload ? 'this pick is section-ready; add more courses if full-time status matters.' : issue.detail}`
+      : readiness.detail,
     readiness,
   };
 }

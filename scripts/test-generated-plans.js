@@ -919,6 +919,7 @@ function testScheduleRegistrationReadiness(context) {
         actions: readiness.actions.map(action => action.id),
         gateLevels: Object.fromEntries(readiness.gates.map(gate => [gate.id, gate.level])),
         sectionsDetail: gateMap.sections.detail,
+        creditsDetail: gateMap.credits.detail,
         prereqsDetail: gateMap.prereqs.detail,
         coreqsDetail: gateMap.coreqs.detail,
         conflictsDetail: gateMap.conflicts.detail,
@@ -966,12 +967,14 @@ function testScheduleRegistrationReadiness(context) {
 
   assert(result.level === 'danger' && result.label === 'Fix before registration', 'registration readiness: blocker scenario should require fixes');
   assert(result.gateLevels.sections === 'danger', 'registration readiness: unpicked current-term course should block registration');
+  assert(result.gateLevels.credits === 'warn', 'registration readiness: below-full-time load should warn on credit gate');
   assert(result.gateLevels.prereqs === 'danger', 'registration readiness: missing prerequisite should block registration');
   assert(result.gateLevels.coreqs === 'danger', 'registration readiness: missing corequisite should block registration');
   assert(result.gateLevels.conflicts === 'danger', 'registration readiness: picked-section conflict should block registration');
   assert(result.gateLevels.seats === 'danger', 'registration readiness: low-seat section should block registration');
   assert(result.gateLevels.eligibility === 'danger', 'registration readiness: restricted picked section should block eligibility gate');
   assert(/ENGL 101/.test(result.sectionsDetail), 'registration readiness: sections gate should name the unpicked course');
+  assert(/8\/11 credits/.test(result.creditsDetail) && /12-credit/.test(result.creditsDetail), 'registration readiness: credit gate should explain below-full-time load');
   assert(/MATH 140/.test(result.prereqsDetail) && /MATH 115/.test(result.prereqsDetail), 'registration readiness: prereq gate should name the missing prerequisite');
   assert(/CMSC 131/.test(result.coreqsDetail) && /CMSC 100/.test(result.coreqsDetail), 'registration readiness: coreq gate should name the missing corequisite');
   assert(/1 overlap/.test(result.conflictsDetail), 'registration readiness: conflicts gate should summarize overlap count');
@@ -979,6 +982,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/CMSC 131 0101/.test(result.eligibilityDetail) && /Computer Science majors/.test(result.eligibilityDetail), 'registration readiness: eligibility gate should name the restricted section');
   assert(result.fixes.length >= 3, 'registration readiness: blocker scenario should produce multiple recommended fixes');
   assert(result.fixes.some(fix => /Pick sections for ENGL 101/.test(fix)), 'registration readiness: fixes should include missing section action');
+  assert(result.fixes.some(fix => /full-time status|reduced-load/.test(fix)), 'registration readiness: fixes should include credit-load review action');
   assert(result.fixes.some(fix => /missing prerequisites/.test(fix)), 'registration readiness: fixes should include prerequisite action');
   assert(result.fixes.some(fix => /required corequisites/.test(fix)), 'registration readiness: fixes should include corequisite action');
   assert(result.fixes.some(fix => /overlapping section|0 conflicts/.test(fix)), 'registration readiness: fixes should include conflict action');
@@ -991,6 +995,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Recommended fixes/.test(result.html) && /Pick sections for ENGL 101/.test(result.html), 'registration readiness: HTML should render recommended fixes');
   assert(/Quick actions/.test(result.html) && /data-readiness-action="auto-pick"/.test(result.html), 'registration readiness: HTML should render quick actions');
   assert(/Registration readiness/.test(result.text) && result.text.includes('Sections: 2/3'), 'registration readiness: text should include gate lines');
+  assert(/Credits: 8\/11 cr/.test(result.text) && /12-credit/.test(result.text), 'registration readiness: text should include credit-load gate line');
   assert(/Prereqs: 2\/3/.test(result.text) && /MATH 115/.test(result.text), 'registration readiness: text should include prereq gate line');
   assert(/Coreqs: 2\/3/.test(result.text) && /CMSC 100/.test(result.text), 'registration readiness: text should include coreq gate line');
   assert(/Eligibility: 1\/2/.test(result.text) && /Computer Science majors/.test(result.text), 'registration readiness: text should include eligibility gate line');
@@ -998,10 +1003,11 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
   assert(/Recommended fixes/.test(result.outputHtml) && /Generate alternatives/.test(result.outputHtml), 'registration readiness: schedule output HTML should include fix guidance');
   assert(/Quick actions/.test(result.outputHtml) && /data-readiness-action="alternatives"/.test(result.outputHtml), 'registration readiness: schedule output HTML should include action buttons');
-  assert(result.outputFinalChecklist?.label === 'Fix before Testudo' && result.outputFinalChecklist?.readyCount === 1 && result.outputFinalChecklist?.total === 6, 'final checklist: should summarize launch checks and blocker status');
+  assert(result.outputFinalChecklist?.label === 'Fix before Testudo' && result.outputFinalChecklist?.readyCount === 1 && result.outputFinalChecklist?.total === 7, 'final checklist: should summarize launch checks and blocker status');
+  assert(result.outputFinalChecklist.items.some(item => item.id === 'credits' && item.level === 'warn' && /12-credit/.test(item.detail)), 'final checklist: should include credit-load warning');
   assert(result.outputFinalChecklist.items.some(item => item.id === 'backups' && item.level === 'warn' && /ready backup/.test(item.detail)), 'final checklist: should include ready backup warning');
-  assert(/Final Registration Checklist/.test(result.outputHtml) && /1\/6/.test(result.outputHtml) && /launch checks ready/.test(result.outputHtml), 'final checklist: schedule output HTML should include launch readiness score');
-  assert(/Final registration checklist:[\s\S]*Overall: Fix before Testudo[\s\S]*Seat freshness: DANGER/.test(result.outputText), 'final checklist: schedule text should include final checklist rows');
+  assert(/Final Registration Checklist/.test(result.outputHtml) && /1\/7/.test(result.outputHtml) && /launch checks ready/.test(result.outputHtml), 'final checklist: schedule output HTML should include launch readiness score');
+  assert(/Final registration checklist:[\s\S]*Overall: Fix before Testudo[\s\S]*Credit load: WARN[\s\S]*Seat freshness: DANGER/.test(result.outputText), 'final checklist: schedule text should include final checklist rows');
   assert(result.outputWorkloadBalance?.label === 'Review workload' && result.outputWorkloadBalance?.pickedCredits === 8 && result.outputWorkloadBalance?.totalCredits === 11 && result.outputWorkloadBalance?.weeklyMinutes === 225 && result.outputWorkloadBalance?.missingCount === 1, 'workload balance: should summarize picked credits, weekly class time, and missing section evidence');
   assert(/Workload Balance/.test(result.outputHtml) && /8\/11/.test(result.outputHtml) && /3 hr 45 min/.test(result.outputHtml), 'workload balance: schedule output HTML should include workload card metrics');
   assert(/Workload balance:[\s\S]*Overall: Review workload[\s\S]*8\/11 credits[\s\S]*Mon: 2 hr 30 min/.test(result.outputText), 'workload balance: schedule text should include workload rows');
@@ -1050,12 +1056,12 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Conflicts to resolve before registration:[\s\S]*CMSC 131 overlaps MATH 140/.test(result.outputRegistrationText), 'registration list: text should include conflict handoff');
   assert(/MATH 140 0201: 2 seats open/.test(result.outputRegistrationText), 'registration list: text should include low-seat warning');
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.outputRegistrationText), 'registration list: text should include the enrollment order');
-  assert(/Final registration checklist:[\s\S]*1\/6 launch checks ready[\s\S]*Testudo entry queue: DANGER/.test(result.outputRegistrationText), 'registration list: text should include final launch checklist');
+  assert(/Final registration checklist:[\s\S]*1\/7 launch checks ready[\s\S]*Credit load: WARN[\s\S]*Testudo entry queue: DANGER/.test(result.outputRegistrationText), 'registration list: text should include final launch checklist');
   assert(/Workload balance:[\s\S]*3 hr 45 min weekly class time[\s\S]*1 course still needs picked sections/.test(result.outputRegistrationText), 'registration list: text should include workload balance evidence');
   assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301; Section ID MATH140-0301/.test(result.outputRegistrationText), 'registration list: text should include backup section handoff');
   assert(/Have 1 backup section ready in Testudo/.test(result.outputRegistrationText), 'registration appointment: should reference backup readiness');
   assert(/Backup ID: MATH140-0301/.test(result.outputRegistrationText), 'testudo queue: registration list should include backup ID');
-  assert(/Before submitting in Testudo:[\s\S]*Confirm open seats/.test(result.outputRegistrationText), 'registration list: text should include final Testudo checks');
+  assert(/Before submitting in Testudo:[\s\S]*Confirm credit load, open seats/.test(result.outputRegistrationText), 'registration list: text should include final Testudo checks');
   assert(/^terp-track-calendar-.*fall-2026\.ics$/.test(result.outputCalendarFilename), 'schedule calendar: filename should be an .ics calendar export');
   assert(result.outputCalendarEventCount === 3, 'schedule calendar: two CMSC meetings and one MATH meeting should produce three VEVENTs');
   assert(result.outputCalendarSummary?.label === 'Calendar incomplete' && result.outputCalendarSummary.eventCount === 3, 'calendar export readiness: summary should report incomplete calendar event count');
@@ -1097,7 +1103,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.advisorText), 'seat freshness: advisor text should include stale course refresh status');
   assert(/Calendar export:[\s\S]*CMSC 131 0101: 2 calendar events/.test(result.advisorText), 'calendar export readiness: advisor text should include course event rows');
   assert(/Calendar export:[\s\S]*ENGL 101 Missing section: omitted from calendar until a section is picked/.test(result.advisorText), 'calendar export readiness: advisor text should include missing-section omission');
-  assert(/Final registration checklist:[\s\S]*Calendar export: WARN/.test(result.advisorText), 'final checklist: advisor text should include calendar launch warning');
+  assert(/Final registration checklist:[\s\S]*Credit load: WARN[\s\S]*Calendar export: WARN/.test(result.advisorText), 'final checklist: advisor text should include calendar launch warning');
   assert(/Workload balance:[\s\S]*Metrics: 8\/11 credits; 3 hr 45 min weekly class time/.test(result.advisorText), 'workload balance: advisor text should include workload metrics');
   assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.advisorText), 'seat freshness: advisor text should include refresh action guidance');
   assert(/Testudo entry queue:[\s\S]*Section ID: MATH140-0201/.test(result.advisorText), 'testudo queue: advisor text should include exact section IDs');

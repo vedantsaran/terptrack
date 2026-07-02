@@ -176,9 +176,9 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=110'), 'workflow app did not load styles.css?v=110');
-  assert(snapshot.scripts.includes('js/schedule.js?v=64'), 'workflow app did not load js/schedule.js?v=64');
-  assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
+  assert(snapshot.styles.includes('styles.css?v=111'), 'workflow app did not load styles.css?v=111');
+  assert(snapshot.scripts.includes('js/schedule.js?v=65'), 'workflow app did not load js/schedule.js?v=65');
+  assert(snapshot.scripts.includes('js/recommendations.js?v=15'), 'workflow app did not load js/recommendations.js?v=15');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
   assert(snapshot.scripts.includes('js/account.js?v=13'), 'workflow app did not load js/account.js?v=13');
@@ -745,6 +745,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Download calendar')
       && text.includes('Download advisor packet')
 	      && text.includes('Registration Readiness')
+	      && text.includes('Credits')
+	      && text.includes('12-credit')
 	      && text.includes('Prereqs')
 	      && text.includes('MATH 115')
 	      && text.includes('Coreqs')
@@ -968,7 +970,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.registrationText), 'advisor packet: registration export should include ranked enrollment order');
 	  assert(result.registrationAppointment?.label === 'Scheduled' && /Aug 25, 2099 at 9:30am/.test(result.registrationAppointment.when), 'advisor packet: output cache should include registration appointment');
 	  assert(result.seatFreshness?.level === 'danger' && result.seatFreshness.rows.some(row => row.code === 'MATH 140' && row.level === 'danger'), 'advisor packet: output cache should include stale seat freshness');
-	  assert(result.finalChecklist?.label === 'Fix before Testudo' && result.finalChecklist?.readyCount === 1 && result.finalChecklist?.total === 6, 'advisor packet: output cache should include final checklist status');
+		  assert(result.finalChecklist?.label === 'Fix before Testudo' && result.finalChecklist?.readyCount === 1 && result.finalChecklist?.total === 7, 'advisor packet: output cache should include final checklist status');
+		  assert(result.finalChecklist?.items?.some(item => item.id === 'credits' && item.level === 'warn' && /12-credit/.test(item.detail)), 'advisor packet: output cache should include credit-load warning');
 	  assert(result.workloadBalance?.label === 'Review workload' && result.workloadBalance?.pickedCredits === 8 && result.workloadBalance?.totalCredits === 11 && result.workloadBalance?.missingCount === 1, 'advisor packet: output cache should include workload balance');
 	  assert(result.registrationHandoff[0]?.courseCode === 'MATH 140' && result.registrationHandoff[0]?.sectionId === 'MATH140-0201', 'advisor packet: output cache should include ordered Testudo queue section ID');
   assert(result.registrationDateInput === '2099-08-25' && result.registrationTimeInput === '09:30', 'advisor packet: registration appointment inputs should render saved values');
@@ -1021,7 +1024,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
 	  assert(/Prereqs: 2\/3[\s\S]*MATH 115/.test(result.advisorText), 'advisor packet: exported text should include prerequisite gate');
 	  assert(/Coreqs: 2\/3[\s\S]*CMSC 100/.test(result.advisorText), 'advisor packet: exported text should include corequisite gate');
 	  assert(/Eligibility: 1\/2[\s\S]*Computer Science majors/.test(result.advisorText), 'advisor packet: exported text should include section eligibility gate');
-	  assert(/Final registration checklist:[\s\S]*Seat freshness: DANGER/.test(result.advisorText), 'advisor packet: exported text should include final checklist');
+		  assert(/Final registration checklist:[\s\S]*Credit load: WARN[\s\S]*Seat freshness: DANGER/.test(result.advisorText), 'advisor packet: exported text should include final checklist');
 	  assert(/Workload balance:[\s\S]*8\/11 credits/.test(result.advisorText), 'advisor packet: exported text should include workload balance');
 	  assert(/Registration appointment:[\s\S]*Use the registration list to submit exact section IDs/.test(result.advisorText), 'advisor packet: exported text should include appointment checklist');
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.advisorText), 'advisor packet: exported text should include seat freshness');
@@ -1037,7 +1040,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
 	  assert(/Prereqs[\s\S]*MATH 115/.test(result.outputText), 'advisor packet: rendered packet should include prerequisite gate');
 	  assert(/Coreqs[\s\S]*CMSC 100/.test(result.outputText), 'advisor packet: rendered packet should include corequisite gate');
 	  assert(/Eligibility[\s\S]*Computer Science majors/.test(result.outputText), 'advisor packet: rendered packet should include section eligibility notes');
-	  assert(/Final Registration Checklist/.test(result.outputText) && /launch checks ready/.test(result.outputText), 'advisor packet: rendered packet should include final checklist');
+	  assert(/Final Registration Checklist/.test(result.outputText) && /Credit load/.test(result.outputText) && /launch checks ready/.test(result.outputText), 'advisor packet: rendered packet should include final checklist');
 	  assert(/Workload Balance/.test(result.outputText) && /weekly in-class time/.test(result.outputText), 'advisor packet: rendered packet should include workload balance');
 	  assert(/Registration Appointment/.test(result.outputText) && /Aug 25, 2099 at 9:30am/.test(result.outputText), 'advisor packet: rendered packet should include appointment');
   assert(/Seat Data Freshness/.test(result.outputText) && /Refresh seats/.test(result.outputText), 'advisor packet: rendered packet should include seat freshness');
@@ -1101,7 +1104,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }, null, { timeout: opts.timeoutMs });
   const refreshSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet seat refresh mobile', refreshSnapshot);
-	  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, ready backup apply action, seat refresh action, export action, and no overflow.');
+	  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, ready backup apply action, seat refresh action, export action, and no overflow.');
 }
 
 async function main() {
