@@ -8061,3 +8061,62 @@ Verification:
   - It randomly verified `AAST`, `WMST`, `ARTH`, `ARCH`, `AOSC`, and `GEOG` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 146
+
+Focus: add explicit waitlist strategy to registration handoff so a picked closed or waitlisted section produces a concrete backup/alternate plan instead of being buried inside generic seat-risk wording.
+
+Planned changes:
+- Reuse posted section `open_seats`, `waitlist`, and existing backup-section evidence.
+- Add a structured waitlist strategy model that distinguishes waitlisted-with-backup, waitlisted-without-backup, and open-but-waitlist-pressure cases.
+- Surface the strategy in the on-screen schedule packet, final registration checklist, registration-list export, advisor text, exported advisor HTML, and output cache.
+- Keep the existing ready-backup apply flow as the actionable fix for waitlisted sections with safer backups.
+- Verify focused fixtures, rendered browser workflows, release checks, and deterministic plus random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `scheduleWaitlistStrategy()`, `renderScheduleWaitlistStrategyHtml()`, and `scheduleWaitlistStrategyText()` in `js/schedule.js`.
+  - Closed picked sections with posted waitlists now show the waitlisted count, selected section, backup section ID/label, backup seat detail, and a specific action.
+  - Waitlisted sections without a ready backup escalate to danger-level alternate-course guidance.
+  - Open sections with waitlist pressure remain review-level and still recommend early entry plus backup monitoring.
+- Added waitlist strategy to final Testudo launch checks.
+  - The final checklist now has 8 launch checks and includes a `Waitlist strategy` row.
+  - Waitlist strategy is also included in schedule text, registration-list text, advisor text, and exported advisor HTML.
+- Added a visible `Waitlist Strategy` card to the schedule/advisor output.
+  - The card renders in the live app and standalone advisor-packet document.
+  - Added responsive styling in `styles.css` and standalone packet CSS.
+- Bumped cache tags:
+  - `styles.css?v=112`.
+  - `js/schedule.js?v=66`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now fixtures `MATH 140` as `0 open · 4 waitlisted` with a ready `MATH140-0301` backup.
+  - The fixture asserts waitlist strategy cache data, waitlist backup handoff text, the 8-item final checklist, schedule/advisor/registration text, and exported advisor markup.
+  - Rendered mobile workflow coverage now waits for the `Waitlist Strategy` card, checks `4 waitlisted`, verifies the strategy in the output cache, registration export, advisor text, advisor HTML, mobile snapshot, and confirms ready-backup apply clears the prior waitlist warning.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with waitlist strategy coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with waitlist strategy, waitlist backup warning, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, workload balance, final registration checklist, ready backup apply, calendar omission auto-fill, clear-picks undo, calendar omission review, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js --live --live-seed=pass146-waitlist-strategy-live`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including waitlist strategy coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with waitlist strategy coverage.
+  - It live-verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp with every generated required course reporting a matching live title/credit pair.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass146-waitlist-strategy-random-live`.
+  - It randomly verified `EDUC`, `SPAN`, `CHEM`, `ENFP`, `SOCY`, and `SCM` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

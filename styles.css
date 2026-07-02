@@ -4597,6 +4597,83 @@ h1.hero-title em {
   min-height: 30px;
   white-space: normal;
 }
+.schedule-waitlist-strategy {
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 10px;
+}
+.schedule-waitlist-strategy.warn {
+  border-left-color: var(--amber);
+  background: color-mix(in srgb, var(--paper) 80%, var(--amber-soft));
+}
+.schedule-waitlist-strategy.danger {
+  border-left-color: var(--red);
+  background: color-mix(in srgb, var(--paper) 82%, var(--red-soft));
+}
+.schedule-waitlist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.schedule-waitlist-head h4 {
+  margin: 0;
+  font-family: 'Fraunces', serif;
+}
+.schedule-waitlist-head span,
+.schedule-waitlist-strategy p {
+  display: block;
+  margin: 2px 0 0;
+  color: var(--slate);
+  font-size: .74rem;
+  line-height: 1.35;
+}
+.schedule-waitlist-head strong {
+  color: var(--maroon);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-waitlist-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.schedule-waitlist-row {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--cream) 66%, var(--paper));
+  min-width: 0;
+  padding: 7px;
+}
+.schedule-waitlist-row.danger {
+  border-color: color-mix(in srgb, var(--red) 36%, var(--line));
+  background: color-mix(in srgb, var(--paper) 82%, var(--red-soft));
+}
+.schedule-waitlist-row.warn {
+  border-color: color-mix(in srgb, var(--amber) 40%, var(--line));
+  background: color-mix(in srgb, var(--paper) 80%, var(--amber-soft));
+}
+.schedule-waitlist-row strong,
+.schedule-waitlist-row span,
+.schedule-waitlist-row em {
+  display: block;
+}
+.schedule-waitlist-row span,
+.schedule-waitlist-row em {
+  color: var(--slate);
+  font-size: .72rem;
+  font-style: normal;
+  line-height: 1.35;
+}
 .schedule-calendar-export {
   margin: 10px 0;
   border: 1px solid var(--line);
@@ -8440,6 +8517,13 @@ h1.hero-title em {
     align-items: flex-start;
     flex-direction: column;
     gap: 7px;
+  }
+  .schedule-waitlist-head {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .schedule-waitlist-list {
+    grid-template-columns: 1fr;
   }
   .schedule-calendar-export-head {
     flex-direction: column;

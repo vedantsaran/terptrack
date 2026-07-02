@@ -176,8 +176,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=111'), 'workflow app did not load styles.css?v=111');
-  assert(snapshot.scripts.includes('js/schedule.js?v=65'), 'workflow app did not load js/schedule.js?v=65');
+  assert(snapshot.styles.includes('styles.css?v=112'), 'workflow app did not load styles.css?v=112');
+  assert(snapshot.scripts.includes('js/schedule.js?v=66'), 'workflow app did not load js/schedule.js?v=66');
   assert(snapshot.scripts.includes('js/recommendations.js?v=15'), 'workflow app did not load js/recommendations.js?v=15');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -593,14 +593,14 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       restrictions: ['Restricted to Computer Science majors or permission of department.'],
     };
     const mathSection = {
-      section_id: 'MATH140-0201',
-      semester: '202608',
-      number: '0201',
-      instructors: ['Katherine Johnson'],
-      meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'CSI', room: '2110' }],
-      open_seats: '2',
-      seats: '30',
-      waitlist: '0',
+	      section_id: 'MATH140-0201',
+	      semester: '202608',
+	      number: '0201',
+	      instructors: ['Katherine Johnson'],
+	      meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'CSI', room: '2110' }],
+	      open_seats: '0',
+	      seats: '30',
+	      waitlist: '4',
     };
     const mathBackup = {
       section_id: 'MATH140-0301',
@@ -757,9 +757,11 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('0/2 terms registration-ready')
       && text.includes('Registration Appointment')
       && text.includes('Aug 25, 2099 at 9:30am')
-      && text.includes('Seat Data Freshness')
-      && text.includes('Refresh seats')
-      && text.includes('Refresh sections now')
+	      && text.includes('Seat Data Freshness')
+	      && text.includes('Refresh seats')
+	      && text.includes('Refresh sections now')
+	      && text.includes('Waitlist Strategy')
+	      && text.includes('4 waitlisted')
 	      && text.includes('Calendar Export')
 	      && text.includes('Calendar incomplete')
 	      && text.includes('calendar events')
@@ -776,7 +778,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
 	      && text.includes('Testudo Entry Queue')
       && text.includes('Section ID MATH140-0201')
       && text.includes('Enrollment Order')
-      && text.includes('Resolve prerequisites before entering')
+	      && text.includes('Use backup, waitlist, or alternate')
       && text.includes('Backup Plan')
       && text.includes('Backup 0301')
       && text.includes('Fix before registration')
@@ -788,8 +790,9 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Review section picks')
       && text.includes('Confirm 2024-2025 catalog requirements')
       && text.includes('ENGL 101 needs a section choice')
-      && text.includes('MATH 140 0201: 2 seats open')
-      && text.includes('Pick a backup section now before it fills')
+	      && text.includes('MATH 140 0201: 0 open')
+	      && text.includes('4 waitlisted')
+	      && text.includes('Pick a backup section or alternate course before registration')
       && sectionText.includes('Backup option')
       && sectionText.includes('Check eligibility')
       && sectionText.includes('0301')
@@ -941,8 +944,9 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     advisorDocument: scheduleOutputCache?.advisorDocument || '',
     advisorText: scheduleOutputCache?.advisorText || '',
 	    registrationAppointment: scheduleOutputCache?.registrationAppointment || null,
-	    seatFreshness: scheduleOutputCache?.seatFreshness || null,
-	    registrationHandoff: scheduleOutputCache?.registrationHandoff || [],
+		    seatFreshness: scheduleOutputCache?.seatFreshness || null,
+		    waitlistStrategy: scheduleOutputCache?.waitlistStrategy || null,
+		    registrationHandoff: scheduleOutputCache?.registrationHandoff || [],
 	    registrationBackupPlan: scheduleOutputCache?.registrationBackupPlan || [],
 	    finalChecklist: scheduleOutputCache?.finalChecklist || null,
 	    workloadBalance: scheduleOutputCache?.workloadBalance || null,
@@ -970,13 +974,16 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.registrationText), 'advisor packet: registration export should include ranked enrollment order');
 	  assert(result.registrationAppointment?.label === 'Scheduled' && /Aug 25, 2099 at 9:30am/.test(result.registrationAppointment.when), 'advisor packet: output cache should include registration appointment');
 	  assert(result.seatFreshness?.level === 'danger' && result.seatFreshness.rows.some(row => row.code === 'MATH 140' && row.level === 'danger'), 'advisor packet: output cache should include stale seat freshness');
-		  assert(result.finalChecklist?.label === 'Fix before Testudo' && result.finalChecklist?.readyCount === 1 && result.finalChecklist?.total === 7, 'advisor packet: output cache should include final checklist status');
-		  assert(result.finalChecklist?.items?.some(item => item.id === 'credits' && item.level === 'warn' && /12-credit/.test(item.detail)), 'advisor packet: output cache should include credit-load warning');
-	  assert(result.workloadBalance?.label === 'Review workload' && result.workloadBalance?.pickedCredits === 8 && result.workloadBalance?.totalCredits === 11 && result.workloadBalance?.missingCount === 1, 'advisor packet: output cache should include workload balance');
+		  assert(result.finalChecklist?.label === 'Fix before Testudo' && result.finalChecklist?.readyCount === 1 && result.finalChecklist?.total === 8, 'advisor packet: output cache should include final checklist status');
+			  assert(result.finalChecklist?.items?.some(item => item.id === 'credits' && item.level === 'warn' && /12-credit/.test(item.detail)), 'advisor packet: output cache should include credit-load warning');
+		  assert(result.finalChecklist?.items?.some(item => item.id === 'waitlist' && item.level === 'warn' && /waitlist strategy/i.test(item.detail)), 'advisor packet: output cache should include waitlist strategy warning');
+		  assert(result.workloadBalance?.label === 'Review workload' && result.workloadBalance?.pickedCredits === 8 && result.workloadBalance?.totalCredits === 11 && result.workloadBalance?.missingCount === 1, 'advisor packet: output cache should include workload balance');
+		  assert(result.waitlistStrategy?.level === 'warn' && result.waitlistStrategy.rows.some(row => row.courseCode === 'MATH 140' && row.waitlistCount === 4 && row.backupId === 'MATH140-0301'), 'advisor packet: output cache should include waitlist backup strategy');
 	  assert(result.registrationHandoff[0]?.courseCode === 'MATH 140' && result.registrationHandoff[0]?.sectionId === 'MATH140-0201', 'advisor packet: output cache should include ordered Testudo queue section ID');
   assert(result.registrationDateInput === '2099-08-25' && result.registrationTimeInput === '09:30', 'advisor packet: registration appointment inputs should render saved values');
   assert(/Registration appointment: Scheduled - Aug 25, 2099 at 9:30am/.test(result.registrationText), 'advisor packet: registration export should include appointment summary');
-  assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.registrationText), 'advisor packet: registration export should include seat freshness');
+	  assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.registrationText), 'advisor packet: registration export should include seat freshness');
+	  assert(/Waitlist strategy:[\s\S]*MATH 140 0201: 0 open.*4 waitlisted[\s\S]*Backup ID MATH140-0301/.test(result.registrationText), 'advisor packet: registration export should include waitlist strategy');
 	  assert(/Workload balance:[\s\S]*8\/11 credits/.test(result.registrationText), 'advisor packet: registration export should include workload balance');
 	  assert(/Prereqs: MATH 140: missing MATH 115/.test(result.registrationText), 'advisor packet: registration export should include missing prerequisite notes');
 	  assert(/Coreqs: CMSC 131:[^\n]*CMSC 100/.test(result.registrationText), 'advisor packet: registration export should include missing corequisite notes');
@@ -1009,7 +1016,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
 	  assert(/Final Registration Checklist/.test(result.advisorDocument) && /schedule-final-checklist/.test(result.advisorDocument), 'advisor packet: exported HTML should include final checklist');
 	  assert(/Workload Balance/.test(result.advisorDocument) && /schedule-workload-card/.test(result.advisorDocument), 'advisor packet: exported HTML should include workload balance');
 	  assert(/Registration Appointment/.test(result.advisorDocument) && /Aug 25, 2099 at 9:30am/.test(result.advisorDocument), 'advisor packet: exported HTML should include appointment');
-  assert(/Seat Data Freshness/.test(result.advisorDocument) && /Refresh seats/.test(result.advisorDocument), 'advisor packet: exported HTML should include seat freshness');
+	  assert(/Seat Data Freshness/.test(result.advisorDocument) && /Refresh seats/.test(result.advisorDocument), 'advisor packet: exported HTML should include seat freshness');
+	  assert(/Waitlist Strategy/.test(result.advisorDocument) && /schedule-waitlist-strategy/.test(result.advisorDocument) && /4 waitlisted/.test(result.advisorDocument), 'advisor packet: exported HTML should include waitlist strategy');
   assert(/schedule-calendar-export/.test(result.advisorDocument) && /Calendar Export/.test(result.advisorDocument) && /calendar events/.test(result.advisorDocument) && /data-calendar-export-action="auto-fill-omissions"/.test(result.advisorDocument) && /data-calendar-export-action="review-omissions"/.test(result.advisorDocument), 'advisor packet: exported HTML should include calendar omission actions');
   assert(/data-seat-freshness-action="refresh"/.test(result.advisorDocument), 'advisor packet: exported HTML should include seat refresh action');
   assert(/Testudo Entry Queue/.test(result.advisorDocument) && /Section ID MATH140-0201/.test(result.advisorDocument), 'advisor packet: exported HTML should include Testudo queue');
@@ -1017,17 +1025,18 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Backup Plan/.test(result.advisorDocument) && /Backup 0301/.test(result.advisorDocument), 'advisor packet: exported HTML should include backup plan');
   assert(/Recommended fixes/.test(result.advisorDocument) && /Pick sections for ENGL 101/.test(result.advisorDocument), 'advisor packet: exported HTML should include readiness fix guidance');
   assert(/Quick actions/.test(result.advisorDocument) && /data-readiness-action="auto-pick"/.test(result.advisorDocument), 'advisor packet: exported HTML should include readiness quick actions');
-  assert(/MATH 140 0201: 2 seats open/.test(result.advisorDocument) && /backup section/.test(result.advisorDocument), 'advisor packet: exported HTML should include low-seat backup warning');
+	  assert(/MATH 140 0201: 0 open[\s\S]*4 waitlisted/.test(result.advisorDocument) && /backup section|backup 0301/i.test(result.advisorDocument), 'advisor packet: exported HTML should include waitlist backup warning');
   assert(/Catalog-year verification/.test(result.advisorText), 'advisor packet: exported text should include catalog-year verification');
   assert(/Plan readiness map:[\s\S]*Summary: 0\/2 terms registration-ready/.test(result.advisorText), 'advisor packet: exported text should include plan-wide readiness summary');
 	  assert(/Registration readiness/.test(result.advisorText) && /Sections: 2\/3/.test(result.advisorText), 'advisor packet: exported text should include registration readiness gates');
 	  assert(/Prereqs: 2\/3[\s\S]*MATH 115/.test(result.advisorText), 'advisor packet: exported text should include prerequisite gate');
 	  assert(/Coreqs: 2\/3[\s\S]*CMSC 100/.test(result.advisorText), 'advisor packet: exported text should include corequisite gate');
 	  assert(/Eligibility: 1\/2[\s\S]*Computer Science majors/.test(result.advisorText), 'advisor packet: exported text should include section eligibility gate');
-		  assert(/Final registration checklist:[\s\S]*Credit load: WARN[\s\S]*Seat freshness: DANGER/.test(result.advisorText), 'advisor packet: exported text should include final checklist');
+			  assert(/Final registration checklist:[\s\S]*Credit load: WARN[\s\S]*Seat freshness: DANGER[\s\S]*Waitlist strategy: WARN/.test(result.advisorText), 'advisor packet: exported text should include final checklist');
 	  assert(/Workload balance:[\s\S]*8\/11 credits/.test(result.advisorText), 'advisor packet: exported text should include workload balance');
 	  assert(/Registration appointment:[\s\S]*Use the registration list to submit exact section IDs/.test(result.advisorText), 'advisor packet: exported text should include appointment checklist');
-  assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.advisorText), 'advisor packet: exported text should include seat freshness');
+	  assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.advisorText), 'advisor packet: exported text should include seat freshness');
+	  assert(/Waitlist strategy:[\s\S]*MATH 140 0201: 0 open.*4 waitlisted[\s\S]*Backup ID MATH140-0301/.test(result.advisorText), 'advisor packet: exported text should include waitlist strategy');
   assert(/Calendar export:[\s\S]*Calendar incomplete: 4 weekly events across 2\/3 planned courses; 1 course still needs a section/.test(result.advisorText), 'advisor packet: exported text should include calendar omission summary');
   assert(/Calendar export:[\s\S]*ENGL 101 Missing section: omitted from calendar until a section is picked/.test(result.advisorText), 'advisor packet: exported text should include omitted missing-section course');
   assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.advisorText), 'advisor packet: exported text should include seat-refresh action guidance');
@@ -1035,7 +1044,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Suggested enrollment order:[\s\S]*1\. MATH 140 0201/.test(result.advisorText), 'advisor packet: exported text should include enrollment order');
   assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301/.test(result.advisorText), 'advisor packet: exported text should include backup plan');
   assert(/Fix: Pick sections for ENGL 101/.test(result.advisorText), 'advisor packet: exported text should include readiness fix guidance');
-  assert(/MATH 140 0201: 2 seats open/.test(result.advisorText) && /backup section/.test(result.advisorText), 'advisor packet: exported text should include low-seat backup warning');
+	  assert(/MATH 140 0201: 0 open.*4 waitlisted/.test(result.advisorText) && /backup section|Backup ID MATH140-0301/i.test(result.advisorText), 'advisor packet: exported text should include waitlist backup warning');
 	  assert(/Registration Readiness/.test(result.outputText) && /Fix before registration/.test(result.outputText), 'advisor packet: rendered packet should include registration readiness gates');
 	  assert(/Prereqs[\s\S]*MATH 115/.test(result.outputText), 'advisor packet: rendered packet should include prerequisite gate');
 	  assert(/Coreqs[\s\S]*CMSC 100/.test(result.outputText), 'advisor packet: rendered packet should include corequisite gate');
@@ -1043,7 +1052,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
 	  assert(/Final Registration Checklist/.test(result.outputText) && /Credit load/.test(result.outputText) && /launch checks ready/.test(result.outputText), 'advisor packet: rendered packet should include final checklist');
 	  assert(/Workload Balance/.test(result.outputText) && /weekly in-class time/.test(result.outputText), 'advisor packet: rendered packet should include workload balance');
 	  assert(/Registration Appointment/.test(result.outputText) && /Aug 25, 2099 at 9:30am/.test(result.outputText), 'advisor packet: rendered packet should include appointment');
-  assert(/Seat Data Freshness/.test(result.outputText) && /Refresh seats/.test(result.outputText), 'advisor packet: rendered packet should include seat freshness');
+	  assert(/Seat Data Freshness/.test(result.outputText) && /Refresh seats/.test(result.outputText), 'advisor packet: rendered packet should include seat freshness');
+	  assert(/Waitlist Strategy/.test(result.outputText) && /4 waitlisted/.test(result.outputText), 'advisor packet: rendered packet should include waitlist strategy');
   assert(/Calendar Export/.test(result.outputText) && /Calendar incomplete/.test(result.outputText), 'advisor packet: rendered packet should include calendar omission readiness');
   assert(/Testudo Entry Queue/.test(result.outputText) && /Section ID MATH140-0201/.test(result.outputText), 'advisor packet: rendered packet should include Testudo queue');
   assert(/Enrollment Order/.test(result.outputText) && /MATH 140 0201/.test(result.outputText), 'advisor packet: rendered packet should include enrollment order');
@@ -1051,7 +1061,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Recommended fixes/.test(result.outputText) && /Pick sections for ENGL 101/.test(result.outputText), 'advisor packet: rendered packet should include readiness fix guidance');
   assert(/Quick actions/.test(result.outputText) && /Review section picks/.test(result.outputText), 'advisor packet: rendered packet should include readiness quick actions');
   assert(/ENGL 101 needs a section choice/.test(result.outputText), 'advisor packet: rendered packet should include unscheduled follow-up');
-  assert(/MATH 140 0201: 2 seats open/.test(result.outputText) && /backup section/.test(result.outputText), 'advisor packet: rendered packet should include low-seat backup warning');
+	  assert(/MATH 140 0201: 0 open[\s\S]*4 waitlisted/.test(result.outputText) && /backup section|Backup 0301/i.test(result.outputText), 'advisor packet: rendered packet should include waitlist backup warning');
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.scheduleMapText.includes('Readiness Map'), 'advisor packet: mobile snapshot should include readiness map');
   assert(snapshot.scheduleMapText.includes('Fall 2026') && snapshot.scheduleMapText.includes('Spring 2027'), 'advisor packet: readiness map should include all plan terms');
@@ -1061,14 +1071,15 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
 	  assert(snapshot.scheduleText.includes('Final Registration Checklist'), 'advisor packet: mobile snapshot should include final checklist');
 	  assert(snapshot.scheduleText.includes('Workload Balance'), 'advisor packet: mobile snapshot should include workload balance');
 	  assert(snapshot.scheduleText.includes('Registration Appointment'), 'advisor packet: mobile snapshot should include registration appointment');
-  assert(snapshot.scheduleText.includes('Seat Data Freshness'), 'advisor packet: mobile snapshot should include seat freshness');
+	  assert(snapshot.scheduleText.includes('Seat Data Freshness'), 'advisor packet: mobile snapshot should include seat freshness');
+	  assert(snapshot.scheduleText.includes('Waitlist Strategy'), 'advisor packet: mobile snapshot should include waitlist strategy');
   assert(snapshot.scheduleText.includes('Testudo Entry Queue'), 'advisor packet: mobile snapshot should include Testudo queue');
   assert(snapshot.scheduleText.includes('Enrollment Order'), 'advisor packet: mobile snapshot should include enrollment order');
   assert(snapshot.scheduleText.includes('Backup Plan') && snapshot.scheduleText.includes('Apply ready backups'), 'advisor packet: mobile snapshot should include backup plan action');
   assert(snapshot.scheduleText.includes('Recommended fixes'), 'advisor packet: mobile snapshot should include readiness fixes');
   assert(snapshot.scheduleText.includes('Quick actions'), 'advisor packet: mobile snapshot should include readiness quick actions');
   assert(snapshot.scheduleText.includes('Registration Blockers'), 'advisor packet: rendered output should show blocker view');
-  assert(snapshot.scheduleText.includes('MATH 140 0201: 2 seats open'), 'advisor packet: mobile snapshot should include low-seat backup warning');
+	  assert(snapshot.scheduleText.includes('MATH 140 0201') && snapshot.scheduleText.includes('4 waitlisted'), 'advisor packet: mobile snapshot should include waitlist backup warning');
   assertNoOverflow('advisor packet mobile', snapshot);
 
   await page.locator('[data-backup-action="apply-ready"]').first().click({ timeout: opts.timeoutMs });
@@ -1091,7 +1102,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }));
   assert(backupResult.selected === 'MATH140-0301', 'advisor packet: Apply ready backups should save the safer section');
   assert(/Applied 1 ready backup section/.test(backupResult.changeTitle), 'advisor packet: Apply ready backups should record a bulk backup change');
-  assert(!/MATH 140 0201: 2 seats open/.test(backupResult.outputText), 'advisor packet: ready backup apply should clear the prior low-seat warning');
+  assert(!/MATH 140 0201: 0 open[\s\S]*4 waitlisted/.test(backupResult.outputText), 'advisor packet: ready backup apply should clear the prior waitlist warning');
   const backupSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet backup apply mobile', backupSnapshot);
   await page.locator('[data-seat-freshness-action="refresh"]').first().click({ timeout: opts.timeoutMs });
@@ -1104,7 +1115,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }, null, { timeout: opts.timeoutMs });
   const refreshSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet seat refresh mobile', refreshSnapshot);
-	  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, ready backup apply action, seat refresh action, export action, and no overflow.');
+	  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.');
 }
 
 async function main() {
