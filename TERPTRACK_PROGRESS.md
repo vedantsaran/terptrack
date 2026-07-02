@@ -9451,3 +9451,64 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 170
+
+Focus: make planned-course lookup and progress/prior-credit state use normalized course identity, so `MATH140` and `MATH 140` resolve to the same planned row without duplicate custom courses or hidden transfer statuses.
+
+Planned changes:
+- Inspect normalized duplicate-code work from Pass 169 for adjacent exact-code lookup gaps.
+- Normalize `findCourse()` fallback lookup while preserving exact-match preference.
+- Add a normalized course-state key helper so status/progress writes attach to the visible planned row.
+- Update prior-credit application to use the normalized course-state key and keep review text user-friendly.
+- Strengthen prior-credit coverage with no-space planned `MATH140` and `CMSC131` rows.
+- Bump changed state/onboarding asset cache tags and rendered workflow assertions.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/state.js`.
+  - Added `courseStateKey()`, which prefers exact state keys, then normalized existing state keys, then normalized planned-course codes.
+  - `getCourseState()` and `setCourseState()` now use that normalized key resolution.
+  - `findCourse()` still prefers exact matches but falls back to normalized planned-course matching.
+- Updated `js/onboarding.js`.
+  - Prior-credit state snapshots now remember the resolved storage key.
+  - Prior-credit application writes transfer status to the resolved planned row key, such as `MATH140` or `CMSC131`, instead of a display-code duplicate key.
+  - Existing-attempt review summaries now display normalized no-space planned codes as readable course codes.
+- Strengthened `ONBOARDING-PRIOR-CREDIT` in `scripts/test-generated-plans.js`.
+  - The fixture now seeds planned no-space `MATH140` and `CMSC131` rows.
+  - It verifies `findCourse('MATH 140')` and `findCourse('CMSC 131')` resolve to those no-space planned rows.
+  - It verifies prior-credit application marks the planned no-space rows transfer and does not add duplicate custom `MATH 140` or `CMSC 131` courses.
+  - It resets custom semesters to avoid cross-fixture leakage.
+- Bumped cache tags:
+  - `js/state.js?v=21`.
+  - `js/onboarding.js?v=17`.
+  - Updated rendered workflow cache assertions for both assets.
+
+Verification:
+- Ran `node --check js/state.js`.
+- Ran `node --check js/onboarding.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the strengthened no-space planned-row prior-credit coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, drag/drop section cleanup, custom delete cleanup, course edit cleanup, course code collision guard, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the strengthened no-space planned-row prior-credit coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass170-normalized-course-state`.
+  - It randomly verified `MGMT`, `AMST`, `ENEE`, `WMST`, `THET`, and `HESP` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

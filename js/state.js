@@ -676,11 +676,25 @@ function clearPlanChanges() {
   if (currentTab === 'timeline' && typeof renderPlanChangeHistory === 'function') renderPlanChangeHistory();
 }
 
+function courseStateKey(code) {
+  const raw = String(code || '').trim();
+  if (!raw) return '';
+  state.courses = state.courses || {};
+  if (Object.prototype.hasOwnProperty.call(state.courses, raw)) return raw;
+  const norm = normalizeCode(raw);
+  const existing = Object.keys(state.courses).find(key => normalizeCode(key) === norm);
+  if (existing) return existing;
+  const planned = flatCourses().find(course => normalizeCode(course.code) === norm);
+  return planned?.code || raw;
+}
 function getCourseState(code) {
-  return state.courses[code] || { status: "not-started", grade: "" };
+  const key = courseStateKey(code);
+  return key && state.courses[key] || { status: "not-started", grade: "" };
 }
 function setCourseState(code, patch) {
-  state.courses[code] = { ...getCourseState(code), ...patch };
+  const key = courseStateKey(code);
+  if (!key) return;
+  state.courses[key] = { ...getCourseState(key), ...patch };
   saveState();
   render();
 }
@@ -695,7 +709,11 @@ function normalizeCode(code) {
   return (code || '').toUpperCase().replace(/\s+/g, '');
 }
 function findCourse(code) {
-  return flatCourses().find(c => c.code === code);
+  const courses = flatCourses();
+  const exact = courses.find(c => c.code === code);
+  if (exact) return exact;
+  const norm = normalizeCode(code);
+  return norm ? courses.find(c => normalizeCode(c.code) === norm) : null;
 }
 
 function _isPassed(code) {

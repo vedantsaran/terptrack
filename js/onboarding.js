@@ -670,7 +670,7 @@ function onboardPriorReviewItems(resolved, opts = {}) {
   }
 
   if (existingAttempts.length) {
-    const summaries = existingAttempts.map(item => `${item.code} is already marked ${item.status}${item.grade ? ` (${item.grade})` : ''}`);
+    const summaries = existingAttempts.map(item => `${onboardPriorDisplayCode(item.code)} is already marked ${item.status}${item.grade ? ` (${item.grade})` : ''}`);
     items.push({
       level: 'warn',
       title: 'Existing attempt conflict',
@@ -749,10 +749,10 @@ function onboardClonePlain(value) {
 }
 
 function onboardCourseStateSnapshot(code) {
-  const key = String(code || '');
+  const key = typeof courseStateKey === 'function' ? courseStateKey(code) : String(code || '');
   const courses = state.courses || {};
   const had = Object.prototype.hasOwnProperty.call(courses, key);
-  return { had, value: had ? onboardClonePlain(courses[key]) : null };
+  return { key, had, value: had ? onboardClonePlain(courses[key]) : null };
 }
 
 function onboardRefreshPriorCreditSummary() {
@@ -835,7 +835,8 @@ async function onboardApplyPriorCredits(setup) {
       added.push(code);
       addedCourse = onboardClonePlain(finalCourse);
     }
-    state.courses[code] = { status: 'transfer', grade: '' };
+    const stateKey = previousState.key || code;
+    state.courses[stateKey] = { status: 'transfer', grade: '' };
     const appliedState = onboardCourseStateSnapshot(code);
     applied.push(code);
     undoEntries.push({

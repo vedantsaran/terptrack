@@ -4924,7 +4924,7 @@ async function testOnboardingPriorCredit(context) {
         name: 'Fall 2026',
         year: 'Year 1',
         courses: [{
-          code: 'MATH 140',
+          code: 'MATH140',
           title: 'Calculus I',
           cr: 4,
           category: 'gened-fsma',
@@ -4935,10 +4935,17 @@ async function testOnboardingPriorCredit(context) {
           cr: 3,
           category: 'gened-fsaw',
           kind: 'gened'
+        }, {
+          code: 'CMSC131',
+          title: 'Object-Oriented Programming I',
+          cr: 4,
+          category: 'major-support',
+          kind: 'core'
         }]
       }];
+      state.customSemesters = [];
       state.customCourses = [];
-      state.courses = { 'MATH 140': { status: 'passed', grade: 'A' } };
+      state.courses = { MATH140: { status: 'passed', grade: 'A' } };
       state.recentChanges = [];
       fetchCourseFull = async code => {
         const id = normalizeCode(code);
@@ -4991,9 +4998,11 @@ async function testOnboardingPriorCredit(context) {
         applied,
         customCodes,
         byCode,
-        mathState: state.courses['MATH 140'],
+        mathPlanMatch: findCourse('MATH 140')?.code || '',
+        cmscPlanMatch: findCourse('CMSC 131')?.code || '',
+        mathState: getCourseState('MATH140'),
         englishCreditState: state.courses['AP FSAW Credit'],
-        cmscState: state.courses['CMSC 131'],
+        cmscState: getCourseState('CMSC131'),
         econState: state.courses['ECON 200'],
         recentChange: state.recentChanges[0],
         sourceNotice,
@@ -5015,7 +5024,7 @@ async function testOnboardingPriorCredit(context) {
   assert(/Manual course lookup/.test(result.reviewHtml) && /Transfer Course Database/.test(result.reviewHtml), 'onboarding prior credit: review checklist should flag typed course lookup');
   assert(result.overlaps.some(overlap => overlap.code === 'MATH 140' && overlap.sources.includes('AP Calc BC 4+') && overlap.sources.includes('Manual entry')), 'onboarding prior credit: resolver should expose duplicate source overlaps');
   assert(/Selected-credit overlap/.test(result.reviewHtml) && /MATH 140 via AP Calc BC 4\+/.test(result.reviewHtml) && /Manual entry/.test(result.reviewHtml), 'onboarding prior credit: review checklist should flag overlapping AP/manual credit sources');
-  assert(/Existing attempt conflict/.test(result.reviewHtml) && /MATH 140 is already marked passed/.test(result.reviewHtml), 'onboarding prior credit: review checklist should flag prior credits that overwrite existing UMD attempt states');
+  assert(/Existing attempt conflict/.test(result.reviewHtml) && /MATH 140 is already marked passed/.test(result.reviewHtml), 'onboarding prior credit: review checklist should flag prior credits that overwrite existing UMD attempt states on no-space planned rows');
   assert(/Plan placement/.test(result.reviewHtml) && /outside-plan/.test(result.reviewHtml), 'onboarding prior credit: review checklist should distinguish plan matches from outside-plan credits');
   assert(/Duplicate-credit review/.test(result.reviewHtml), 'onboarding prior credit: review checklist should include duplicate-credit review');
   assert(/Fall 2028/.test(result.futureReviewHtml) && /current Registrar chart/.test(result.futureReviewHtml), 'onboarding prior credit: review checklist should warn when start year is outside checked chart window');
@@ -5025,12 +5034,13 @@ async function testOnboardingPriorCredit(context) {
   assert(result.resolvedCodes.includes('ECON 200') && result.resolvedCodes.includes('ECON 201'), 'onboarding prior credit: IB economics should map both ECON courses');
   assert(result.resolvedCodes.includes('CMSC 131'), 'onboarding prior credit: raw codes should normalize display codes');
   assert(/course/.test(result.summary) && /credit/.test(result.summary), 'onboarding prior credit: summary should include course and credit counts');
-  assert(result.mathState.status === 'transfer', 'onboarding prior credit: existing planned MATH 140 should be marked transfer');
-  assert(!result.customCodes.includes('MATH 140'), 'onboarding prior credit: planned MATH 140 should not be duplicated as custom');
+  assert(result.mathPlanMatch === 'MATH140' && result.cmscPlanMatch === 'CMSC131', `onboarding prior credit: normalized course lookup should match planned no-space course rows (got ${result.mathPlanMatch || 'none'} / ${result.cmscPlanMatch || 'none'})`);
+  assert(result.mathState.status === 'transfer', 'onboarding prior credit: existing planned MATH140 should be marked transfer through normalized prior-credit input');
+  assert(!result.customCodes.includes('MATH 140'), 'onboarding prior credit: planned MATH140 should not be duplicated as custom MATH 140');
   assert(result.customCodes.includes('MATH 141'), 'onboarding prior credit: unplanned MATH 141 should be added outside the plan');
   assert(result.byCode['AP FSAW Credit'].category === 'gened-fsaw', 'onboarding prior credit: AP FSAW pseudo-course should satisfy FSAW category');
   assert(result.englishCreditState.status === 'transfer', 'onboarding prior credit: AP FSAW pseudo-course should be marked transfer');
-  assert(result.byCode['CMSC 131'].title === 'Object-Oriented Programming I', 'onboarding prior credit: raw code should use fetched metadata when available');
+  assert(!result.customCodes.includes('CMSC 131'), 'onboarding prior credit: planned CMSC131 should not be duplicated as custom CMSC 131');
   assert(result.cmscState.status === 'transfer' && result.econState.status === 'transfer', 'onboarding prior credit: added raw and preset courses should be marked transfer');
   assert(result.applied.applied.length === result.resolvedCodes.length, 'onboarding prior credit: applied count should match resolved deduped courses');
   assert(/prior-credit/.test(result.recentChange.type), 'onboarding prior credit: should record a recent change entry');
