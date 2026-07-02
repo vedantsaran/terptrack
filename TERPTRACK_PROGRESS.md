@@ -9984,3 +9984,78 @@ Next pass candidates:
 - Build the automatic placeholder resolver that can convert the replacement queue into a guided or bulk "fill my remaining slots" flow with live catalog evidence.
 - Replace greedy schedule auto-pick with a bounded solver for multi-course section combinations, conflicts, breaks, and preference tradeoffs.
 - Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
+
+## 2026-07-02 Pass 179
+
+Focus: turn the Browse replacement queue into a real one-click placeholder resolver for the current live-backed search, so students can bulk-fill matched GenEd, major-elective, support, language, and free-elective slots without duplicate course assignments.
+
+Planned changes:
+- Keep working from the Pass 178 gap: generated plans still carry too many placeholder credits, and Browse already has live catalog evidence for replacements.
+- Add a unique assignment layer that prioritizes constrained slots before broad free-elective slots.
+- Add a queue-level fill action that applies the best unique matches through the existing placeholder replacement path.
+- Preserve existing per-course undo, progress migration, selected-section cleanup, and recent-change history.
+- Verify the bulk resolver in generated fixtures, rendered mobile workflow, release checks, and random live PlanetTerp schedules.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/browse.js`.
+  - Added `browseReplacementQueuePlan()` and slot assignment priority scoring.
+  - The planner starts from already-planned catalog courses, assigns each live result to at most one slot, and handles constrained slots before broad free electives.
+  - Added `browseApplyReplacementQueue()`, which bulk-fills the queue's unique assignments through `replacePlaceholderWithCourse()`.
+  - The queue header now shows a `Fill N slots` action when unique replacements are available.
+  - Browse stores the last decorated result set so the rendered button applies the same scored live-backed rows the student is looking at.
+- Updated `js/placeholder-search.js`.
+  - `replacePlaceholderWithCourse()` now supports quiet batch options, queue-specific recent-change source labels, skip-save/skip-render mode, and returns a replacement result.
+  - Existing single-course placeholder replacement behavior remains unchanged for normal users.
+- Updated responsive UI styling in `styles.css`.
+  - Added a compact action cluster for the queue summary and mobile full-width action handling.
+- Bumped and asserted cache tags:
+  - `index.html` now loads `styles.css?v=115`.
+  - `index.html` now loads `js/browse.js?v=16`.
+  - Rendered workflow and generated-plan verifiers assert the new versions.
+- Strengthened `BROWSE-REPLACEMENT-QUEUE` in `scripts/test-generated-plans.js`.
+  - Added a fourth unique elective candidate.
+  - Verified the queue plan assigns four unique replacements.
+  - Verified bulk apply replaces `GenEd DSHS`, `GenEd DSHU`, `GVPT 3xx Elective A`, and `Free Elective #1` with display-formatted catalog courses.
+  - Verified no duplicate catalog course is assigned and recent changes are sourced from `Browse replacement queue`.
+- Strengthened mobile Browse workflow coverage in `scripts/verify-rendered-workflows.js`.
+  - The verifier now waits for `Fill 1 slot`, clicks it, and confirms `GVPT 200` replaces `GenEd HS-1`.
+  - It verifies the unmatched free elective remains unresolved and the recent change is queue-sourced before continuing to all-department Browse checks.
+
+Major-gap notes:
+- This pass converts the current-search replacement queue into a usable bulk resolver, but it does not yet crawl multiple departments/GenEd categories to automatically fill every remaining slot across the whole plan.
+- The next large scheduling gap is still the bounded multi-course section solver to replace greedy auto-pick in hard conflict/preference cases.
+
+Verification:
+- Ran `node --check js/browse.js`.
+- Ran `node --check js/placeholder-search.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed `BROWSE-REPLACEMENT-QUEUE` with 4/4 matched and 4 bulk-applied unique replacements.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with queue rendering and the queue fill click.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the bulk Browse replacement queue coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass179-browse-bulk-placeholder-resolver`.
+  - It randomly verified `AAST`, `BCHM`, `ENGL`, `ARTT`, `SOCY`, `HIST`, `ENST`, `CHEM`, `HLTH`, `GEOG`, `MARKETING`, and `ENFP` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Build the broader automatic placeholder resolver that searches the needed categories/departments itself instead of relying only on the currently visible Browse result set.
+- Replace greedy schedule auto-pick with a bounded solver for multi-course section combinations, conflicts, breaks, and preference tradeoffs.
+- Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.

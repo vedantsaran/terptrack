@@ -176,14 +176,14 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=114'), 'workflow app did not load styles.css?v=114');
+  assert(snapshot.styles.includes('styles.css?v=115'), 'workflow app did not load styles.css?v=115');
   assert(snapshot.scripts.includes('js/schedule.js?v=70'), 'workflow app did not load js/schedule.js?v=70');
   assert(snapshot.scripts.includes('js/timeline.js?v=27'), 'workflow app did not load js/timeline.js?v=27');
   assert(snapshot.scripts.includes('js/io.js?v=13'), 'workflow app did not load js/io.js?v=13');
   assert(snapshot.scripts.includes('js/recommendations.js?v=18'), 'workflow app did not load js/recommendations.js?v=18');
   assert(snapshot.scripts.includes('js/courses.js?v=5'), 'workflow app did not load js/courses.js?v=5');
   assert(snapshot.scripts.includes('js/onboarding.js?v=19'), 'workflow app did not load js/onboarding.js?v=19');
-  assert(snapshot.scripts.includes('js/browse.js?v=15'), 'workflow app did not load js/browse.js?v=15');
+  assert(snapshot.scripts.includes('js/browse.js?v=16'), 'workflow app did not load js/browse.js?v=16');
   assert(snapshot.scripts.includes('js/dnd.js?v=2'), 'workflow app did not load js/dnd.js?v=2');
   assert(snapshot.scripts.includes('js/state.js?v=23'), 'workflow app did not load js/state.js?v=23');
   assert(snapshot.scripts.includes('js/render.js?v=3'), 'workflow app did not load js/render.js?v=3');
@@ -309,6 +309,7 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
       && text.includes('Replacement queue')
       && text.includes('GVPT 200')
       && text.includes('GenEd HS-1')
+      && text.includes('Fill 1 slot')
       && text.includes('Replace GenEd HS-1')
       && text.includes('Preview')
       && text.includes('Why');
@@ -318,6 +319,20 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   assert(snapshot.browseText.includes('Fills gap'), 'browse: missing GenEd gap evidence');
   assert(snapshot.browseText.includes('Replacement queue'), 'browse: missing replacement queue');
   assertNoOverflow('browse replacement mobile', snapshot);
+  await page.locator('button:has-text("Fill 1 slot")').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const codes = state.activeSchedule?.[0]?.courses?.map(course => course.code) || [];
+    const change = state.recentChanges?.[0] || {};
+    return codes.includes('GVPT 200')
+      && !codes.includes('GenEd HS-1')
+      && change.source === 'Browse replacement queue';
+  }, null, { timeout: opts.timeoutMs });
+  const fillResult = await page.evaluate(() => ({
+    codes: state.activeSchedule[0].courses.map(course => course.code),
+    change: state.recentChanges[0] || null,
+  }));
+  assert(fillResult.codes.includes('GVPT 200') && fillResult.codes.includes('Free Elective #1'), 'browse queue fill: should replace the matched GenEd slot and leave unmatched free elective unresolved');
+  assert(fillResult.change?.type === 'placeholder-replacement' && fillResult.change?.source === 'Browse replacement queue', 'browse queue fill: should record a queue-sourced placeholder replacement');
 
   await page.evaluate(async () => {
     window.__browseAllDeptCalls = [];

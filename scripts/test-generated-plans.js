@@ -4706,9 +4706,9 @@ async function testBrowseSlotSelection(context) {
   };
 }
 
-function testBrowseReplacementQueue(context) {
-  const result = clone(vm.runInContext(`
-    (() => {
+async function testBrowseReplacementQueue(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
       state.activeSchedule = [{
         id: 'PASS178F',
         name: 'Pass 178 Fall',
@@ -4773,6 +4773,12 @@ function testBrowseReplacementQueue(context) {
         description: 'Comparative politics and policy.',
         gen_ed: []
       }, {
+        course_id: 'BMGT110',
+        name: 'Business Value Chain',
+        credits: '3',
+        description: 'Open elective option for a non-major slot.',
+        gen_ed: []
+      }, {
         course_id: 'ENGL101',
         name: 'Academic Writing',
         credits: '3',
@@ -4785,19 +4791,27 @@ function testBrowseReplacementQueue(context) {
         availability: {
           '202608:GVPT200': { term: '202608', termLabel: 'Fall 2026', sectionCount: 2, openSeats: 18 },
           '202608:HIST210': { term: '202608', termLabel: 'Fall 2026', sectionCount: 1, openSeats: 9 },
-          '202608:GVPT356': { term: '202608', termLabel: 'Fall 2026', sectionCount: 1, openSeats: 4 }
+          '202608:GVPT356': { term: '202608', termLabel: 'Fall 2026', sectionCount: 1, openSeats: 4 },
+          '202608:BMGT110': { term: '202608', termLabel: 'Fall 2026', sectionCount: 3, openSeats: 22 }
         }
       }).sort(browseCompareRows);
       const queue = browseReplacementQueue(decorated, { candidateLimit: 2, limit: 8 });
+      const plan = browseReplacementQueuePlan(decorated, { candidateLimit: 5 });
       const html = browseReplacementQueueHtml(decorated, { term: '202608', termLabel: 'Fall 2026' });
       const dshs = queue.rows.find(row => row.slot.course.code === 'GenEd DSHS');
       const dshu = queue.rows.find(row => row.slot.course.code === 'GenEd DSHU');
       const upper = queue.rows.find(row => row.slot.course.code === 'GVPT 3xx Elective A');
       const free = queue.rows.find(row => row.slot.course.code === 'Free Elective #1');
       browseOpenSlotSearch(dshu.slot.key);
+      const savedSearch = state.browseSavedSearches[0]?.label || '';
+      const applyResult = await browseApplyReplacementQueue(decorated);
+      const finalCodes = state.activeSchedule[0].courses.map(course => course.code);
+      const changeSources = (state.recentChanges || []).map(change => change.source);
       return {
         total: queue.total,
         matched: queue.matched,
+        planApplied: plan.applied,
+        planCodes: plan.assignments.map(item => item.code).join(','),
         dshsFirst: dshs?.candidates[0]?.item?.code || '',
         dshsLabel: dshs?.candidates[0]?.label || '',
         dshuFirst: dshu?.candidates[0]?.item?.code || '',
@@ -4806,7 +4820,11 @@ function testBrowseReplacementQueue(context) {
         html,
         openedDept: browseDept,
         openedGenEd: browseGenEd,
-        savedSearch: state.browseSavedSearches[0]?.label || ''
+        savedSearch,
+        applyResult,
+        finalCodes,
+        uniqueFinalCodes: Array.from(new Set(finalCodes)).length,
+        changeSources
       };
     })()
   `, context));
@@ -4817,14 +4835,20 @@ function testBrowseReplacementQueue(context) {
   assert(result.dshuFirst === 'HIST210', 'browse replacement queue: DSHU slot should use matching humanities course');
   assert(result.upperFirst === 'GVPT356', 'browse replacement queue: GVPT 300-level course should match the upper elective slot');
   assert(!result.freeCodes.includes('ENGL101'), 'browse replacement queue: candidates already in the plan should be excluded');
-  assert(/Replacement queue/.test(result.html) && /GenEd DSHS/.test(result.html) && /GVPT 200/.test(result.html) && /Use here|Search slot/.test(result.html), 'browse replacement queue: html should render slot rows and candidate actions');
+  assert(result.planApplied === 4 && result.planCodes.includes('BMGT110'), 'browse replacement queue: bulk plan should assign unique courses to every matched slot');
+  assert(/Replacement queue/.test(result.html) && /GenEd DSHS/.test(result.html) && /GVPT 200/.test(result.html) && /Fill 4 slots/.test(result.html) && /Use here|Search slot/.test(result.html), 'browse replacement queue: html should render slot rows and bulk/candidate actions');
   assert(result.openedDept === '__PROFILE_DEPTS__' && result.openedGenEd === 'DSHU', 'browse replacement queue: search action should open a targeted saved search for the slot');
   assert(/Replace GenEd DSHU/.test(result.savedSearch), 'browse replacement queue: slot search should save a useful replacement label');
+  assert(result.applyResult?.applied === 4 && result.applyResult?.skipped === 0, 'browse replacement queue: bulk resolver should apply every unique assignment');
+  assert(['GVPT 200', 'HIST 210', 'GVPT 356', 'BMGT 110'].every(code => result.finalCodes.includes(code)), 'browse replacement queue: bulk resolver should replace every placeholder with display-formatted catalog courses');
+  assert(!result.finalCodes.some(code => /GenEd|Elective #|3xx/.test(code)) && result.uniqueFinalCodes === result.finalCodes.length, 'browse replacement queue: bulk resolver should leave no duplicate or unresolved fixture placeholders');
+  assert(result.changeSources.slice(0, 4).every(source => source === 'Browse replacement queue'), 'browse replacement queue: bulk resolver should record queue-sourced changes');
 
   return {
     id: 'BROWSE-REPLACEMENT-QUEUE',
     matched: `${result.matched}/${result.total}`,
     first: `${result.dshsFirst}/${result.upperFirst}`,
+    applied: result.applyResult?.applied || 0,
   };
 }
 
@@ -5787,7 +5811,7 @@ async function main() {
   const placeholderSections = await testPlaceholderSectionPreview(context);
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
-  const browseQueue = testBrowseReplacementQueue(context);
+  const browseQueue = await testBrowseReplacementQueue(context);
   const browseTypedSlots = await testBrowseTypedSlotMatching(context);
   const auditIssues = testAuditIssueDrawer(context);
   const priorCredit = await testOnboardingPriorCredit(context);
@@ -5831,7 +5855,7 @@ async function main() {
   console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; pinned ${placeholderSections.pinned}; undo ${placeholderSections.undo}; load ${placeholderSections.load}; progress ${placeholderSections.progress}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
-  console.log(`Browse replacement queue fixture ${browseQueue.id}: matched ${browseQueue.matched}; first ${browseQueue.first}.`);
+  console.log(`Browse replacement queue fixture ${browseQueue.id}: matched ${browseQueue.matched}; first ${browseQueue.first}; bulk applied ${browseQueue.applied}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
   console.log(`Audit issue fixture ${auditIssues.id}: ${auditIssues.count} issues; opened ${auditIssues.opened}; browse ${auditIssues.browse}.`);
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);

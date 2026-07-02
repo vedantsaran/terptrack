@@ -899,18 +899,22 @@ function renderPlaceholderVerification(candidate) {
 async function replacePlaceholderWithCourse(courseId, prefetched = null, options = {}) {
   if (!placeholderSearchTarget) return;
   const selectionOptions = typeof options === 'string' ? { sectionId: options } : (options || {});
+  const quiet = !!selectionOptions.quiet;
+  const fail = message => {
+    if (!quiet) toastError(message);
+    return null;
+  };
   const row = placeholderSearchResults.find(item => placeholderPreviewNorm(item.course_id || item.code) === placeholderPreviewNorm(courseId))
     || (prefetched ? { ...prefetched, course_id: prefetched.course_id || prefetched.code } : { course_id: courseId });
   const replacementContext = placeholderScheduleContext(row);
   const selectedPreviewSection = placeholderPreviewSectionById(courseId, selectionOptions.sectionId, replacementContext);
   if (selectionOptions.sectionId && !selectedPreviewSection) {
-    toastError('Could not find that previewed section. Reopen the meeting preview and try again.');
-    return;
+    return fail('Could not find that previewed section. Reopen the meeting preview and try again.');
   }
   const status = document.getElementById('ps-status');
   if (status) status.textContent = `Fetching ${displayCode(courseId)} details…`;
   const full = prefetched || await fetchCourseFull(courseId);
-  if (!full) { toastError(`Could not fetch ${courseId}.`); return; }
+  if (!full) return fail(`Could not fetch ${courseId}.`);
   const tags = courseGenEdTags(full);
   const matchingTag = placeholderSearchSelectedTags.find(t => tags.includes(t));
   const category = matchingTag
@@ -921,8 +925,7 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
     !(c.code === placeholderSearchTarget.code && c.semId === placeholderSearchTarget.semId)
   );
   if (duplicate) {
-    toastError(`${full.code} is already in your plan.`);
-    return;
+    return fail(`${full.code} is already in your plan.`);
   }
 
   const { _browseSlotIndex, _browseCustomSlotIndex, ...targetForUpdate } = placeholderSearchTarget;
@@ -984,7 +987,7 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
       replaced = true;
     }
   }
-  if (!replaced) { toastError('Could not locate placeholder to replace.'); return; }
+  if (!replaced) return fail('Could not locate placeholder to replace.');
   if (typeof moveCourseState === 'function') moveCourseState(oldCode, updated.code);
   else if (state.courses[placeholderSearchTarget.code]) {
     state.courses[updated.code] = state.courses[placeholderSearchTarget.code];
@@ -1016,7 +1019,7 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
   if (typeof recordPlanChange === 'function') {
     recordPlanChange({
       type: selectedPreviewSection ? 'placeholder-section-replacement' : 'placeholder-replacement',
-      source: 'Placeholder Search',
+      source: selectionOptions.source || 'Placeholder Search',
       title: `Replaced ${oldCode} with ${updated.code}`,
       detail: selectedPreviewSection
         ? `${oldCode} changed to ${updated.code}; ${pinnedSectionLabel} was picked and pinned for ${replacementContext.semName}.`
@@ -1043,11 +1046,17 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
       },
     }, { save: false });
   }
-  saveState();
+  if (!selectionOptions.skipSave) saveState();
   const verification = getGenEdRequirementStatus(updated);
   closePlaceholderSearch();
-  render();
-  toastSuccess(`${oldCode} → ${updated.code}.${pinnedSectionLabel ? ` Picked and pinned ${pinnedSectionLabel}.` : ''} ${verification.complete ? 'Gen-Ed plan is complete.' : `${verification.missing.length} Gen-Ed requirement gap(s) still need courses.`}`);
+  if (!selectionOptions.skipRender) render();
+  if (!quiet) toastSuccess(`${oldCode} → ${updated.code}.${pinnedSectionLabel ? ` Picked and pinned ${pinnedSectionLabel}.` : ''} ${verification.complete ? 'Gen-Ed plan is complete.' : `${verification.missing.length} Gen-Ed requirement gap(s) still need courses.`}`);
+  return {
+    replaced: true,
+    oldCode,
+    newCode: updated.code,
+    semId: replacementContext.semId,
+  };
 }
 
 function initPlaceholderSearch() {

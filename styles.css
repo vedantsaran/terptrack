@@ -7660,6 +7660,12 @@ h1.hero-title em {
   padding: 3px 8px;
   white-space: nowrap;
 }
+.browse-replacement-actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
 .browse-replacement-queue-list {
   display: grid;
   gap: 8px;
@@ -8542,6 +8548,13 @@ h1.hero-title em {
   .browse-replacement-queue-head {
     flex-direction: column;
     gap: 6px;
+  }
+  .browse-replacement-actions {
+    align-items: stretch;
+    width: 100%;
+  }
+  .browse-replacement-actions .btn {
+    flex: 1;
   }
   .browse-replacement-row {
     align-items: stretch;

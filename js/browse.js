@@ -38,6 +38,8 @@ let browseWhyCode = '';
 let browseWhyKey = '';
 let browseSlotKey = '';
 let browseImpactKey = '';
+let browseLastDecoratedRows = [];
+let browseQueueApplying = false;
 
 function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
@@ -990,6 +992,51 @@ function browseReplacementQueue(items, opts = {}) {
   };
 }
 
+function browseSlotAssignmentPriority(slot) {
+  const tagScore = (slot.tags || []).length * 100;
+  const deptScore = slot.requiredDept ? 70 : 0;
+  const levelScore = slot.requiredLevel ? 35 : 0;
+  const kindScore = slot.kind === 'free-elective' ? 0 : slot.kind === 'major-elective' ? 45 : 25;
+  return tagScore + deptScore + levelScore + kindScore;
+}
+
+function browseReplacementQueuePlan(items, opts = {}) {
+  const slots = browsePlaceholderSlots();
+  const candidateLimit = Number(opts.candidateLimit) || 5;
+  const used = new Set((typeof flatCourses === 'function' ? flatCourses() : [])
+    .filter(course => browseIsCatalogCourseCode(course.code))
+    .map(course => normalizeCode(course.code)));
+  const rows = slots
+    .map(slot => ({
+      slot,
+      candidates: browseReplacementQueueCandidates(items, slot, candidateLimit),
+    }))
+    .filter(row => row.candidates.length)
+    .sort((a, b) =>
+      a.candidates.length - b.candidates.length
+      || browseSlotAssignmentPriority(b.slot) - browseSlotAssignmentPriority(a.slot)
+      || String(a.slot.semName || '').localeCompare(String(b.slot.semName || ''))
+      || a.slot.index - b.slot.index
+    );
+  const assignments = [];
+  rows.forEach(row => {
+    const candidate = row.candidates.find(item => {
+      const code = normalizeCode(item.item?.code || item.item?.row?.course_id || '');
+      return code && !used.has(code);
+    });
+    if (!candidate) return;
+    const code = normalizeCode(candidate.item?.code || candidate.item?.row?.course_id || '');
+    used.add(code);
+    assignments.push({ slot: row.slot, candidate, code });
+  });
+  return {
+    total: slots.length,
+    assignments,
+    applied: assignments.length,
+    left: Math.max(0, slots.length - assignments.length),
+  };
+}
+
 function browseSlotRequirementText(slot) {
   const parts = [
     browseSlotKindLabel(slot.kind),
@@ -1037,11 +1084,70 @@ function browseOpenSlotSearch(slotKey) {
   browseOpenSearch({ ...browseSlotSearchConfig(slot), save: true });
 }
 
+async function browseApplyReplacementQueue(items = browseLastDecoratedRows) {
+  if (browseQueueApplying) return { applied: 0, skipped: 0 };
+  if (typeof replacePlaceholderWithCourse !== 'function' || typeof placeholderSearchTarget === 'undefined') {
+    toastError('Placeholder replacement is still loading.');
+    return { applied: 0, skipped: 0 };
+  }
+  const plan = browseReplacementQueuePlan(items, { candidateLimit: 5 });
+  if (!plan.assignments.length) {
+    if (typeof toastInfo === 'function') toastInfo('No unique replacement matches are ready in this search.');
+    return { applied: 0, skipped: 0 };
+  }
+  browseQueueApplying = true;
+  const applied = [];
+  let skipped = 0;
+  try {
+    for (const assignment of plan.assignments) {
+      const slot = browsePlaceholderSlots().find(item => item.key === assignment.slot.key);
+      const candidate = assignment.candidate?.item || null;
+      const code = normalizeCode(candidate?.code || candidate?.row?.course_id || '');
+      if (!slot || !code) {
+        skipped += 1;
+        continue;
+      }
+      placeholderSearchTarget = { ...slot.course, semId: slot.semId };
+      placeholderSearchSelectedTags = slot.tags.slice();
+      placeholderSearchMode = slot.tags.length ? 'all' : 'any';
+      const prefetched = browseCourseFromItem(candidate);
+      const result = await replacePlaceholderWithCourse(code, prefetched, {
+        quiet: true,
+        skipRender: true,
+        skipSave: true,
+        source: 'Browse replacement queue',
+      });
+      if (result?.replaced) applied.push(result);
+      else skipped += 1;
+    }
+    placeholderSearchTarget = null;
+    placeholderSearchResults = [];
+    placeholderSectionPreviewKey = '';
+    browseSlotKey = '';
+    browseImpactKey = '';
+    browseWhyCode = '';
+    browseWhyKey = '';
+    if (applied.length) {
+      saveState();
+      browseQueueApplying = false;
+      if (typeof render === 'function') render();
+      toastSuccess(`Filled ${applied.length} unresolved slot${applied.length === 1 ? '' : 's'} from this search.`);
+    } else if (typeof toastInfo === 'function') {
+      browseQueueApplying = false;
+      toastInfo('No replacement slots changed. Refresh the search and try again.');
+    }
+    return { applied: applied.length, skipped, total: plan.total };
+  } finally {
+    browseQueueApplying = false;
+  }
+}
+
 function browseReplacementQueueHtml(items, nextTerm = browseNextTermContext()) {
   const queue = browseReplacementQueue(items);
   if (!queue.total) return '';
   const rows = queue.rows || [];
   if (!rows.length) return '';
+  const plan = browseReplacementQueuePlan(items, { candidateLimit: 5 });
   return `
     <section class="browse-replacement-queue">
       <div class="browse-replacement-queue-head">
@@ -1049,7 +1155,10 @@ function browseReplacementQueueHtml(items, nextTerm = browseNextTermContext()) {
           <strong>Replacement queue</strong>
           <span>${browseEscape(queue.matched)} of ${browseEscape(queue.total)} unresolved slot${queue.total === 1 ? '' : 's'} matched by this search${nextTerm.termLabel ? ` · ${browseEscape(nextTerm.termLabel)}` : ''}</span>
         </div>
-        <b>${browseEscape(queue.total - queue.matched)} left</b>
+        <div class="browse-replacement-actions">
+          <b>${browseEscape(queue.total - queue.matched)} left</b>
+          <button class="btn small primary" type="button" onclick="browseApplyReplacementQueue()" ${plan.applied ? '' : 'disabled'}>${browseQueueApplying ? 'Filling...' : `Fill ${browseEscape(plan.applied)} slot${plan.applied === 1 ? '' : 's'}`}</button>
+        </div>
       </div>
       <div class="browse-replacement-queue-list">
         ${rows.map(row => {
@@ -1545,15 +1654,18 @@ async function renderBrowse() {
 
   const grid = document.getElementById('br-grid');
   if (!browseDept && !browseGenEd) {
+    browseLastDecoratedRows = [];
     grid.innerHTML = '<p class="reco-empty">Pick a department, choose a Gen-Ed tag, or set interests in Settings so TerpTrack can start with your profile departments.</p>';
     return;
   }
   const scope = browseDepartmentScope();
   if (browseIsProfileDeptMode() && !scope.depts.length) {
+    browseLastDecoratedRows = [];
     grid.innerHTML = '<p class="reco-empty">Set interests or preferred Gen-Ed departments in Settings to use profile department search.</p>';
     return;
   }
   if (browseIsAllDeptMode() && !browseGenEd) {
+    browseLastDecoratedRows = [];
     grid.innerHTML = '<p class="reco-empty">Choose a Gen-Ed tag or All Gen-Ed categories to search across every department.</p>';
     return;
   }
@@ -1595,8 +1707,10 @@ async function renderBrowse() {
     profileActive,
     nextTerm,
   }).sort(browseCompareRows);
+  browseLastDecoratedRows = decoratedRows;
 
   if (!decoratedRows.length) {
+    browseLastDecoratedRows = [];
     grid.innerHTML = '<p class="reco-empty">No courses found. Try a different filter.</p>';
     return;
   }
