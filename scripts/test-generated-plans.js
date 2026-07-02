@@ -2124,18 +2124,46 @@ function testScheduleBoundedSectionSolver(context) {
         CMSC131: [cmscHigh, cmscFit],
         MATH140: [mathHigh, mathFallback],
       };
-      const first = buildScheduleCandidate(courses, sectionsByCode, prefs, 0, []);
-      const second = buildScheduleCandidate(courses, sectionsByCode, prefs, 1, []);
+      state.activeSchedule = [{ id: 'SOLVERF', name: 'Fall 2026', courses }];
+      state.schedulePrefs = { SOLVERF: prefs };
+      const previousSemId = scheduleCurrentSemId;
+      scheduleCurrentSemId = 'SOLVERF';
+      const ranked = solveScheduleCandidates(courses, sectionsByCode, prefs, [], { limit: 2 });
+      const first = ranked[0];
+      const second = ranked[1];
+      const variantSecond = buildScheduleCandidate(courses, sectionsByCode, prefs, 1, []);
       const firstIds = Object.fromEntries(first.items.map(item => [normalizeCode(item.course.code), item.section.section_id]));
       const secondIds = Object.fromEntries(second.items.map(item => [normalizeCode(item.course.code), item.section.section_id]));
+      const variantSecondIds = Object.fromEntries(variantSecond.items.map(item => [normalizeCode(item.course.code), item.section.section_id]));
+      const solverLines = scheduleCandidateRationale(first, ranked.length, 1);
+      const traceSummary = scheduleCandidateTraceSummary(first);
+      const altRoot = { innerHTML: '' };
+      const originalGetElementById = document.getElementById;
+      const originalAlternatives = scheduleAlternatives;
+      document.getElementById = id => id === 'schedule-alternatives' ? altRoot : originalGetElementById(id);
+      try {
+        renderScheduleAlternatives([
+          { ...first, compareTo: second },
+          { ...second, compareTo: first },
+        ]);
+      } finally {
+        document.getElementById = originalGetElementById;
+        scheduleAlternatives = originalAlternatives;
+        scheduleCurrentSemId = previousSemId;
+      }
       return {
         firstIds,
         secondIds,
+        variantSecondIds,
         firstConflicts: first.conflicts.length,
         firstWarnings: first.warnings.length,
         firstScore: first.score,
         secondConflicts: second.conflicts.length,
         secondScore: second.score,
+        solverMeta: first.solverMeta,
+        solverLines: solverLines.join(' | '),
+        traceSummary,
+        altHtml: altRoot.innerHTML,
       };
     })()
   `, context));
@@ -2143,7 +2171,13 @@ function testScheduleBoundedSectionSolver(context) {
   assert(result.firstIds.CMSC131 === 'CMSC131-0201' && result.firstIds.MATH140 === 'MATH140-0101', 'schedule bounded solver: should prefer the best global conflict-free section combination');
   assert(result.firstConflicts === 0, 'schedule bounded solver: first candidate should be conflict-free');
   assert(result.secondIds.CMSC131 === 'CMSC131-0101' && result.secondIds.MATH140 === 'MATH140-0201', 'schedule bounded solver: second candidate should preserve useful alternate combinations');
+  assert(result.variantSecondIds.CMSC131 === result.secondIds.CMSC131 && result.variantSecondIds.MATH140 === result.secondIds.MATH140, 'schedule bounded solver: variant lookup should match ranked solver output');
   assert(result.firstScore > result.secondScore && result.secondConflicts === 0, 'schedule bounded solver: first candidate should outrank the fallback no-conflict combination');
+  assert(result.solverMeta.rank === 1 && result.solverMeta.returnedCandidateCount === 2, 'schedule solver rationale: metadata should include candidate rank');
+  assert(result.solverMeta.consideredSectionTotal === 4 && result.solverMeta.generatedCount === 6, 'schedule solver rationale: metadata should count considered sections and placements');
+  assert(/Ranked #1 of 2/.test(result.solverLines) && /Searched 2 courses across 4 section options/.test(result.solverLines), 'schedule solver rationale: text should explain rank and search breadth');
+  assert(/96-schedule beam cap/.test(result.solverLines) && /4 section options checked/.test(result.traceSummary), 'schedule solver rationale: text should expose beam cap and trace summary');
+  assert(/Option 1 · Rank #1/.test(result.altHtml) && /Solver trace/.test(result.altHtml), 'schedule solver rationale: alternate cards should render rank and trace');
 
   return {
     id: 'SCHEDULE-BOUNDED-SOLVER',

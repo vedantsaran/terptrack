@@ -10290,3 +10290,68 @@ Next pass candidates:
 - Surface schedule solver rationale and ranked alternatives in the UI so students can understand why a section set was chosen.
 - Add bounded-search breadth controls or diagnostics for very large section sets.
 - Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
+
+## 2026-07-02 Pass 183
+
+Focus: surface bounded schedule-solver rationale and ranked alternatives directly in the Schedule UI so students can see why a generated section set was chosen.
+
+Planned changes:
+- Attach explainable metadata to every bounded solver candidate.
+- Render each alternate schedule with its solver rank and a concise trace of the search breadth.
+- Reuse one ranked solver run when generating alternates instead of rebuilding each variant separately.
+- Carry solver trace details into the auto-pick recent-change metadata.
+- Bump the changed schedule asset version and rendered verifier assertion.
+- Verify with focused generated fixtures, rendered workflows, release checks, and a fresh random live PlanetTerp schedule sweep.
+
+Completed:
+- Updated `js/schedule.js`.
+  - `solveScheduleCandidates()` now records course count, pinned count, skipped course count/codes, raw and considered section totals, section cap, beam cap, generated placements, peak beam size, final kept candidates, returned candidate count, candidate rank, and per-course solver steps.
+  - Added `scheduleCandidateTraceSummary()` and `scheduleCandidateRationale()` for consistent human-readable solver explanations.
+  - Alternate schedule cards now show `Option N · Rank #R` and a `Solver trace` section below the existing comparison rationale.
+  - Alternate generation now calls `solveScheduleCandidates(..., { limit: 12 })` once, deduplicates, sorts with the shared schedule comparator, and renders the top four.
+  - The schedule status line can now include a concise trace summary such as checked section options and beam cap.
+  - Auto-pick recent-change metadata now includes solver trace details and keeps skipped-course handling defensive.
+- Updated `index.html`.
+  - Bumped `js/schedule.js` to `v=72`.
+- Updated `scripts/test-generated-plans.js`.
+  - Extended `SCHEDULE-BOUNDED-SOLVER` to use the ranked solver output directly.
+  - Asserted candidate rank metadata, considered section option count, generated placement count, beam-cap explanation, trace summary, variant lookup consistency, and rendered alternate-card trace markup.
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Updated the schedule script asset assertion to `js/schedule.js?v=72`.
+
+Major-gap notes:
+- The Schedule tab now explains both qualitative differences versus current picks and the solver search/rank provenance for each displayed alternate.
+- The solver still uses fixed conservative breadth defaults (`7` sections per course and a `96` partial-schedule beam cap); a future pass can expose advanced controls or diagnostics for unusually large section sets.
+- Remaining improvements include adding bounded-search breadth controls/diagnostics and adding a Supabase migration/version note for deployed users.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the extended `SCHEDULE-BOUNDED-SOLVER` fixture with rank metadata, solver trace text, rendered alternate trace markup, and variant consistency.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with replacement queue, queue fill, and auto-resolver fill.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the extended schedule solver rationale coverage.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass183-schedule-solver-rationale`.
+  - It randomly verified `SOCY`, `ENFP`, `NEUR`, `AOSC`, `PHYS`, `NFSC`, `CHEM`, `ENAE`, `BCHM`, `ARTT`, `JOUR`, and `HIST` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add bounded-search breadth controls or diagnostics for very large section sets.
+- Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
+- Add a rendered workflow assertion that opens Schedule alternatives specifically and checks the visible solver trace in a browser viewport.

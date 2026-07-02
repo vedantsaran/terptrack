@@ -1912,6 +1912,11 @@ function evaluateScheduleCandidate(items, prefs) {
 const SCHEDULE_SOLVER_SECTION_LIMIT = 7;
 const SCHEDULE_SOLVER_BEAM_WIDTH = 96;
 
+function scheduleCountLabel(count, singular, plural = `${singular}s`) {
+  const n = Math.max(0, Number(count) || 0);
+  return `${n} ${n === 1 ? singular : plural}`;
+}
+
 function scheduleCandidateSortValue(candidate) {
   return [
     -(candidate.conflicts?.length || 0),
@@ -1942,13 +1947,14 @@ function solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems = 
   const limit = Math.max(1, Number(opts.limit) || 1);
   const sectionLimit = Math.max(1, Number(opts.sectionLimit) || SCHEDULE_SOLVER_SECTION_LIMIT);
   const beamWidth = Math.max(8, Number(opts.beamWidth) || SCHEDULE_SOLVER_BEAM_WIDTH);
+  const courseList = courses || [];
   const pinned = (currentItems || [])
     .filter(item => item.section && item.section.pinned)
     .map(item => ({ course: item.course, section: item.section }));
   const pinnedCodes = new Set(pinned.map(item => normalizeCode(item.course.code)));
   const skipped = [];
   const solvable = [];
-  (courses || [])
+  courseList
     .filter(course => !pinnedCodes.has(normalizeCode(course.code)))
     .forEach(course => {
       const count = (sectionsByCode[normalizeCode(course.code)] || []).length;
@@ -1956,6 +1962,21 @@ function solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems = 
       else solvable.push({ course, count });
     });
   solvable.sort((a, b) => a.count - b.count || a.course.code.localeCompare(b.course.code));
+  const solverBaseMeta = {
+    courseCount: courseList.length,
+    pinnedCount: pinned.length,
+    solvableCount: solvable.length,
+    skippedCount: skipped.length,
+    skippedCodes: skipped.slice(),
+    sectionLimit,
+    beamWidth,
+    rawSectionTotal: solvable.reduce((sum, row) => sum + row.count, 0),
+    consideredSectionTotal: solvable.reduce((sum, row) => sum + Math.min(row.count, sectionLimit), 0),
+    trimmedCourseCount: solvable.filter(row => row.count > sectionLimit).length,
+  };
+  const solverSteps = [];
+  let generatedCount = 0;
+  let peakBeamSize = 1;
 
   let beam = [{
     items: pinned,
@@ -1964,11 +1985,17 @@ function solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems = 
     ...evaluateScheduleCandidate(pinned, prefs),
   }];
 
-  solvable.forEach(({ course }) => {
+  solvable.forEach(({ course, count }) => {
     const next = new Map();
+    const beforeBeamSize = beam.length;
+    let generatedForCourse = 0;
+    let maxOptionsForCourse = 0;
     beam.forEach(partial => {
       const options = scheduleSectionOptionsForSolver(course, sectionsByCode, prefs, partial.items, sectionLimit);
+      maxOptionsForCourse = Math.max(maxOptionsForCourse, options.length);
       options.forEach(section => {
+        generatedForCourse += 1;
+        generatedCount += 1;
         const items = [...partial.items, { course, section }];
         const signature = scheduleCandidateSignature(items);
         const candidate = {
@@ -1984,11 +2011,35 @@ function solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems = 
     beam = Array.from(next.values())
       .sort(scheduleCompareCandidates)
       .slice(0, beamWidth);
+    peakBeamSize = Math.max(peakBeamSize, beam.length);
+    solverSteps.push({
+      code: course.code,
+      availableCount: count,
+      consideredCount: maxOptionsForCourse,
+      beforeBeamSize,
+      generatedCount: generatedForCourse,
+      uniqueCount: next.size,
+      keptCount: beam.length,
+    });
   });
 
-  return beam
-    .sort(scheduleCompareCandidates)
-    .slice(0, limit);
+  const ranked = beam.sort(scheduleCompareCandidates);
+  const keptCount = ranked.length;
+  const returned = ranked.slice(0, limit);
+  return returned.map((candidate, idx) => ({
+    ...candidate,
+    skipped: (candidate.skipped || []).slice(),
+    solverMeta: {
+      ...solverBaseMeta,
+      rank: idx + 1,
+      requestedLimit: limit,
+      returnedCandidateCount: returned.length,
+      finalCandidateCount: keptCount,
+      generatedCount,
+      peakBeamSize,
+      steps: solverSteps.map(step => ({ ...step })),
+    },
+  }));
 }
 
 function buildScheduleCandidate(courses, sectionsByCode, prefs, variant = 0, currentItems = []) {
@@ -6221,6 +6272,15 @@ function scheduleDeltaLabel(value, unit = '') {
   return `${n > 0 ? '+' : ''}${n}${unit}`;
 }
 
+function scheduleCandidateTraceSummary(candidate) {
+  const meta = candidate?.solverMeta || {};
+  const parts = [];
+  if (Number(meta.consideredSectionTotal)) parts.push(`${meta.consideredSectionTotal} section options checked`);
+  if (Number(meta.beamWidth)) parts.push(`${meta.beamWidth}-schedule beam cap`);
+  if (Number(meta.skippedCount)) parts.push(`${meta.skippedCount} unscheduled`);
+  return parts.join(' · ');
+}
+
 function scheduleAlternativeComparison(alt, current, prefs) {
   const baseline = current || { items: [], conflicts: [], warnings: [], openSeats: 0, timing: null, locationIssues: 0 };
   const altTiming = alt.timing || scheduleTimingFit(alt.items, prefs, alt.conflicts);
@@ -6269,6 +6329,41 @@ function scheduleAlternativeComparison(alt, current, prefs) {
   };
 }
 
+function scheduleCandidateRationale(candidate, visibleCount = 0, fallbackRank = 1) {
+  const meta = candidate?.solverMeta || {};
+  const lines = [];
+  const rank = Math.max(1, Number(meta.rank) || fallbackRank || 1);
+  const shownCount = Math.max(1, Number(visibleCount) || Number(meta.returnedCandidateCount) || 1);
+  const considered = Number(meta.consideredSectionTotal) || 0;
+  const raw = Number(meta.rawSectionTotal) || considered;
+  const solvable = Number(meta.solvableCount) || 0;
+  const skipped = Array.isArray(meta.skippedCodes) && meta.skippedCodes.length
+    ? meta.skippedCodes
+    : (candidate?.skipped || []);
+  const pinned = Number(meta.pinnedCount) || (candidate?.items || []).filter(item => item.section?.pinned).length;
+  const generated = Number(meta.generatedCount) || 0;
+  const beamWidth = Number(meta.beamWidth) || 0;
+  const peakBeam = Number(meta.peakBeamSize) || 0;
+
+  lines.push(`Ranked #${rank}${shownCount > 1 ? ` of ${shownCount}` : ''} by conflict, warning, timing, and seat score.`);
+  if (solvable && considered) {
+    const postedText = raw > considered ? ` from ${raw} posted` : '';
+    const capText = Number(meta.trimmedCourseCount) ? `, capped at ${meta.sectionLimit} per course` : '';
+    lines.push(`Searched ${scheduleCountLabel(solvable, 'course')} across ${scheduleCountLabel(considered, 'section option')}${postedText}${capText}.`);
+  }
+  if (skipped.length) {
+    lines.push(`Skipped ${skipped.join(', ')} because no posted sections were loaded.`);
+  }
+  if (pinned) {
+    lines.push(`Preserved ${scheduleCountLabel(pinned, 'pinned section')}.`);
+  }
+  if (generated && beamWidth) {
+    const peakText = peakBeam ? `; peak kept ${peakBeam}` : '';
+    lines.push(`Examined ${scheduleCountLabel(generated, 'placement')} with a ${beamWidth}-schedule beam cap${peakText}.`);
+  }
+  return lines.slice(0, 4);
+}
+
 function renderScheduleAlternatives(alternatives) {
   const root = document.getElementById('schedule-alternatives');
   if (!root) return;
@@ -6296,13 +6391,15 @@ function renderScheduleAlternatives(alternatives) {
           : scheduleCandidateLocationReport(alt.items, currentPrefs).alertCount;
         const timing = alt.timing || scheduleTimingFit(alt.items, currentPrefs, alt.conflicts);
         const comparison = scheduleAlternativeComparison(alt, alt.compareTo, currentPrefs);
+        const solverRank = Math.max(1, Number(alt.solverMeta?.rank) || idx + 1);
+        const solverLines = scheduleCandidateRationale(alt, scheduleAlternatives.length, idx + 1);
         const courseLine = alt.items
           .map(item => `${item.course.code} ${item.section.number || ''}`.trim())
           .join(' · ');
         return `
           <div class="alt-card">
             <div class="alt-title">
-              <strong>Option ${idx + 1}</strong>
+              <strong>${scheduleEscape(`Option ${idx + 1} · Rank #${solverRank}`)}</strong>
               <button class="btn small alt-apply" type="button" data-alt-index="${idx}">Apply</button>
             </div>
             <div class="alt-metrics">
@@ -6319,6 +6416,8 @@ function renderScheduleAlternatives(alternatives) {
             <div class="alt-why">
               <strong>Why this option</strong>
               ${comparison.lines.map(line => `<span>${scheduleEscape(line)}</span>`).join('')}
+              <strong>Solver trace</strong>
+              ${solverLines.map(line => `<span>${scheduleEscape(line)}</span>`).join('')}
             </div>
             ${renderMiniSchedulePreview(alt.items, blocked)}
             <p>${scheduleEscape(courseLine)}</p>
@@ -6351,21 +6450,19 @@ async function generateScheduleAlternatives() {
   };
   const seen = new Set();
   const alternatives = [];
-  for (let variant = 0; variant < 12; variant++) {
-    const candidate = buildScheduleCandidate(courses, sectionsByCode, prefs, variant, currentItems);
-    if (!candidate.items.length || seen.has(candidate.signature)) continue;
+  const rankedCandidates = solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems, { limit: 12 });
+  rankedCandidates.forEach(candidate => {
+    if (!candidate.items.length || seen.has(candidate.signature)) return;
     seen.add(candidate.signature);
     candidate.compareTo = currentBaseline;
     alternatives.push(candidate);
-  }
-  alternatives.sort((a, b) => {
-    if (a.conflicts.length !== b.conflicts.length) return a.conflicts.length - b.conflicts.length;
-    if (a.warnings.length !== b.warnings.length) return a.warnings.length - b.warnings.length;
-    if (b.score !== a.score) return b.score - a.score;
-    return b.openSeats - a.openSeats;
   });
+  alternatives.sort(scheduleCompareCandidates);
   renderScheduleAlternatives(alternatives.slice(0, 4));
-  if (status) status.textContent = `${Object.values(sectionsByCode).reduce((sum, list) => sum + (list || []).length, 0)} sections loaded.`;
+  const traceSummary = scheduleCandidateTraceSummary(alternatives[0]);
+  if (status) {
+    status.textContent = `${Object.values(sectionsByCode).reduce((sum, list) => sum + (list || []).length, 0)} sections loaded${traceSummary ? ` · ${traceSummary}` : ''}.`;
+  }
   if (alternatives.length) toastSuccess(`Generated ${Math.min(4, alternatives.length)} alternate schedule${alternatives.length === 1 ? '' : 's'}.`);
   else toastInfo('No alternate schedules could be generated from the posted sections.');
 }
@@ -6622,19 +6719,25 @@ async function autoPickScheduleSections() {
     });
   }
   if (candidate.items.length) {
+    const traceSummary = scheduleCandidateTraceSummary(candidate);
+    const metaParts = [
+      scheduleTermLabel(term),
+      (candidate.skipped || []).length ? `${candidate.skipped.length} unscheduled` : '',
+      traceSummary,
+    ].filter(Boolean);
     recordPlanChange({
       type: 'auto-pick',
       source: 'Schedule',
       title: `Auto-picked ${candidate.items.length} sections`,
       detail: candidate.items.map(item => `${item.course.code} ${scheduleSectionShortLabel(item.section)}`).slice(0, 6).join(' · '),
-      meta: `${scheduleTermLabel(term)}${candidate.skipped.length ? ` · ${candidate.skipped.length} unscheduled` : ''}`,
+      meta: metaParts.join(' · '),
     }, { save: false });
   }
   saveState();
   renderSchedule();
   renderSemesters();
   const pinnedCount = candidate.items.filter(item => item.section.pinned).length;
-  if (candidate.skipped.length) toastInfo(`Auto-picked ${candidate.items.length}; no posted sections yet for ${candidate.skipped.join(', ')}.`);
+  if ((candidate.skipped || []).length) toastInfo(`Auto-picked ${candidate.items.length}; no posted sections yet for ${candidate.skipped.join(', ')}.`);
   else toastSuccess(`Auto-picked ${candidate.items.length} section${candidate.items.length === 1 ? '' : 's'}${pinnedCount ? ` while preserving ${pinnedCount} pinned` : ''}.`);
 }
 
