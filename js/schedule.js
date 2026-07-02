@@ -4176,6 +4176,7 @@ function scheduleRecentChanges(limit = 5) {
 
 function scheduleChangeIcon(type) {
   if (type === 'term-move') return 'Move';
+  if (type === 'term-move-undo') return 'Undo';
   if (type === 'section-swap') return 'Swap';
   if (type === 'auto-pick') return 'Auto';
   if (type === 'section-pick') return 'Pick';

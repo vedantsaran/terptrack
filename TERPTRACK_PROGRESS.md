@@ -8233,3 +8233,64 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 149
+
+Focus: make Timeline recommended moves reversible so planner and availability suggestions stay safe to try instead of being one-way structural edits.
+
+Planned changes:
+- Add undo payloads to Timeline term moves for both built-in plan courses and custom courses.
+- Restore moved courses to the original term and original index when undo is still safe.
+- Disable undo with clear stale-state messaging if the moved course was later removed, moved again, or duplicated back into the original term.
+- Keep stale section picks cleared when courses move between terms.
+- Expose recovery jumps from stale move rows so students can inspect the affected term.
+- Bump cache tags and extend generated-plan fixtures.
+- Verify focused fixtures, rendered browser workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `plannerTermMoveUndoAvailability()` and `plannerApplyTermMoveUndo()` in `js/timeline.js`.
+  - Built-in course moves now record source/target term ids, names, and the original source index.
+  - Custom course moves now record source and target term ids and restore `semId` on undo.
+  - Undo restores the course to the original term only when the moved course still exists in the move target and the original term does not already contain it.
+- Added term-move undo rendering in recent changes.
+  - Safe term moves now show an `Undo` action.
+  - Stale term moves show an `Undo unavailable` explanation and a `Show move term` recovery action.
+  - Term-move undo rows use a restore icon in Timeline and export as `Undo` in Schedule recent-change text.
+- Tightened move cleanup.
+  - `plannerClearMovedSelections()` now removes empty selected-section buckets after clearing stale picks in source and target terms.
+- Bumped cache tags:
+  - `js/timeline.js?v=22`.
+  - `js/schedule.js?v=67`.
+- Extended tests:
+  - Added `PLANNER-TERM-MOVE-UNDO`.
+  - The fixture verifies course move, selected-section cleanup, undo payloads, recent-history undo rendering, stale-target disablement, recovery term jumps, original index restoration, undo change recording, applied undo markers, and custom-course term-move undo.
+  - Updated rendered workflow cache assertions for `js/schedule.js?v=67`.
+
+Verification:
+- Ran `node --check js/timeline.js`.
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `PLANNER-TERM-MOVE-UNDO` fixture.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendations, planner checklist, planner questions, planner availability seat pressure, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the planner term-move undo fixture.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass149-term-move-undo`.
+  - It randomly verified `ASTR`, `MARKETING`, `LING`, `GEOG`, `AMST`, and `ENEE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

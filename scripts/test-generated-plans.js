@@ -2268,6 +2268,125 @@ async function testPlannerAvailabilitySeatPressure(context) {
   };
 }
 
+function testPlannerTermMoveUndo(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      state.activeSchedule = [
+        {
+          id: 'pass149-fall',
+          name: 'Pass 149 Fall',
+          courses: [
+            { code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4, prereqs: [], kind: 'core', category: 'major-core' },
+            { code: 'ENGL 101', title: 'Academic Writing', cr: 3, prereqs: [], kind: 'gened', category: 'gened-fspw' }
+          ]
+        },
+        {
+          id: 'pass149-spring',
+          name: 'Pass 149 Spring',
+          courses: []
+        }
+      ];
+      state.customCourses = [];
+      state.selectedSections = {
+        'pass149-fall': {
+          CMSC132: { section_id: 'CMSC132-0101', semester: '202608', number: '0101', open_seats: '0', waitlist: '8' }
+        },
+        'pass149-spring': {
+          CMSC132: { section_id: 'CMSC132-0999', semester: '202701', number: '0999', open_seats: '2', waitlist: '0' }
+        }
+      };
+      state.recentChanges = [];
+      const oldRender = render;
+      const oldToastSuccess = toastSuccess;
+      const oldGetElementById = document.getElementById;
+      let renderCalls = 0;
+      const successMessages = [];
+      const historyRoot = { innerHTML: '' };
+      render = () => { renderCalls += 1; };
+      toastSuccess = message => { successMessages.push(message); };
+      document.getElementById = id => id === 'plan-change-history' ? historyRoot : oldGetElementById(id);
+      try {
+        const moved = plannerApplyMove('CMSC 132', 'pass149-fall', 'pass149-spring');
+        const change = state.recentChanges[0] || null;
+        renderPlanChangeHistory();
+        const historyHtml = historyRoot.innerHTML;
+        const canUndoBefore = plannerChangeCanUndo(change);
+        const afterMoveSchedule = JSON.parse(JSON.stringify(state.activeSchedule));
+        const afterMoveSpringBeforeUndo = afterMoveSchedule[1].courses.map(course => course.code);
+        state.activeSchedule[1].courses = [];
+        renderPlanChangeHistory();
+        const staleHistoryHtml = historyRoot.innerHTML;
+        const staleCanUndo = plannerChangeCanUndo(change);
+        const staleTermTarget = plannerChangeTermTarget(change);
+        state.activeSchedule = afterMoveSchedule;
+        const undoApplied = undoPlanChange(change.id);
+        const undoChange = state.recentChanges[0] || null;
+        const originalChangeAfterUndo = state.recentChanges.find(item => item.id === change.id) || null;
+
+        state.customCourses = [{ code: 'INST 201', title: 'Information Science', cr: 3, semId: 'pass149-fall', isCustom: true }];
+        const customMoved = plannerApplyMove('INST 201', 'pass149-fall', 'pass149-spring');
+        const customChange = state.recentChanges[0] || null;
+        const customAfterMove = (state.customCourses || []).find(item => normalizeCode(item.code) === 'INST201')?.semId || '';
+        const customUndoApplied = undoPlanChange(customChange.id);
+        const customAfterUndo = (state.customCourses || []).find(item => normalizeCode(item.code) === 'INST201')?.semId || '';
+
+        return {
+          moved,
+          afterMoveFall: state.activeSchedule[0].courses.map(course => course.code),
+          afterMoveSpringBeforeUndo,
+          selectedFall: state.selectedSections['pass149-fall'] || null,
+          selectedSpring: state.selectedSections['pass149-spring'] || null,
+          undoKind: change && change.undo && change.undo.kind,
+          undoFrom: change && change.undo && change.undo.fromSemId,
+          undoTo: change && change.undo && change.undo.toSemId,
+          historyHtml,
+          canUndoBefore,
+          staleHistoryHtml,
+          staleCanUndo,
+          staleTermTarget,
+          undoApplied,
+          afterUndoFall: state.activeSchedule[0].courses.map(course => course.code),
+          afterUndoSpring: state.activeSchedule[1].courses.map(course => course.code),
+          undoChange,
+          originalChangeAfterUndo,
+          customMoved,
+          customAfterMove,
+          customUndoApplied,
+          customAfterUndo,
+          renderCalls,
+          successMessages,
+        };
+      } finally {
+        render = oldRender;
+        toastSuccess = oldToastSuccess;
+        document.getElementById = oldGetElementById;
+      }
+    })()
+  `, context));
+
+  assert(result.moved === true, 'planner term move undo: initial move should apply');
+  const afterMoveSpringNorm = result.afterMoveSpringBeforeUndo.map(code => String(code || '').replace(/\s+/g, '').toUpperCase());
+  assert(!afterMoveSpringNorm.includes('ENGL101') && afterMoveSpringNorm.includes('CMSC132'), 'planner term move undo: moved course should land in target term before undo');
+  assert(!result.selectedFall && !result.selectedSpring, 'planner term move undo: moving a course should clear stale selected sections in source and target terms');
+  assert(result.undoKind === 'term-move' && result.undoFrom === 'pass149-fall' && result.undoTo === 'pass149-spring', 'planner term move undo: recent change should include term-move undo payload');
+  assert(/data-change-undo/.test(result.historyHtml) && result.canUndoBefore === true, 'planner term move undo: recent history should render undo while safe');
+  assert(result.staleCanUndo === false && /moved or removed/.test(result.staleHistoryHtml), 'planner term move undo: stale target changes should disable undo with explanation');
+  assert(/data-change-term/.test(result.staleHistoryHtml) && result.staleTermTarget?.semId === 'pass149-spring', 'planner term move undo: stale row should still offer a move-term recovery jump');
+  assert(result.undoApplied === true, 'planner term move undo: undo should apply');
+  assert(result.afterUndoFall[0] === 'CMSC 132' && result.afterUndoFall.includes('ENGL 101'), 'planner term move undo: undo should restore original term and position');
+  assert(!result.afterUndoSpring.includes('CMSC 132'), 'planner term move undo: undo should remove course from target term');
+  assert(result.undoChange?.type === 'term-move-undo', 'planner term move undo: undo should record a restore change');
+  assert(result.originalChangeAfterUndo?.undo?.appliedAt, 'planner term move undo: original move should be marked applied');
+  assert(result.customMoved === true && result.customAfterMove === 'pass149-spring', 'planner term move undo: custom course move should apply');
+  assert(result.customUndoApplied === true && result.customAfterUndo === 'pass149-fall', 'planner term move undo: custom course undo should restore the original term');
+
+  return {
+    id: 'PLANNER-TERM-MOVE-UNDO',
+    restored: result.afterUndoFall[0],
+    custom: result.customAfterUndo,
+  };
+}
+
 async function testBrowseProfileDepartments(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -4005,6 +4124,7 @@ async function main() {
   const planner = testPlannerRegistrationChecklist(context);
   const questions = testPlannerAdvisorQuestions(context);
   const plannerAvailability = await testPlannerAvailabilitySeatPressure(context);
+  const plannerMoveUndo = testPlannerTermMoveUndo(context);
   const browse = await testBrowseProfileDepartments(context);
   const browseSections = await testBrowseResultSections(context);
   const browseWhy = await testBrowseExplanationPanel(context);
@@ -4039,6 +4159,7 @@ async function main() {
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
   console.log(`Planner availability fixture ${plannerAvailability.id}: ${plannerAvailability.level}; suggested ${plannerAvailability.suggestion}.`);
+  console.log(`Planner term-move undo fixture ${plannerMoveUndo.id}: restored ${plannerMoveUndo.restored}; custom ${plannerMoveUndo.custom}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
@@ -4051,7 +4172,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + planner availability seat pressure + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

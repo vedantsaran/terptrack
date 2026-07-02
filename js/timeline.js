@@ -1160,6 +1160,7 @@ function renderTimeline() {
 
 function plannerChangeIcon(type) {
   if (type === 'term-move') return '↔';
+  if (type === 'term-move-undo') return '↶';
   if (type === 'section-swap') return '▦';
   if (type === 'auto-pick') return '✓';
   if (type === 'section-pick') return '◉';
@@ -1324,9 +1325,49 @@ function plannerPriorCreditUndoAvailability(change) {
   return { can: true, reason: '' };
 }
 
+function plannerTermMoveUndoAvailability(change) {
+  const undo = change?.undo;
+  if (undo?.kind !== 'term-move' || undo.appliedAt) return { can: false, reason: '' };
+  const code = String(undo.code || '').trim();
+  const norm = normalizeCode(code);
+  const from = String(undo.fromSemId || '');
+  const to = String(undo.toSemId || '');
+  if (!norm || !from || !to) {
+    return { can: false, reason: 'Undo unavailable: this term move has incomplete restore data.' };
+  }
+  const sems = getAllSemesters();
+  const fromSem = sems.find(sem => sem.id === from);
+  const toSem = sems.find(sem => sem.id === to);
+  if (!fromSem || !toSem) {
+    return { can: false, reason: `Undo unavailable: ${code} moved between terms that are no longer in the plan.` };
+  }
+
+  if (undo.custom) {
+    const current = (state.customCourses || []).find(course => course.semId === to && normalizeCode(course.code) === norm);
+    if (!current) {
+      return { can: false, reason: `Undo unavailable: ${code} was moved or removed after this term move.` };
+    }
+    const duplicate = (state.customCourses || []).some(course => course.semId === from && normalizeCode(course.code) === norm);
+    if (duplicate) {
+      return { can: false, reason: `Undo unavailable: ${code} is already back in ${fromSem.name || 'the original term'}.` };
+    }
+    return { can: true, reason: '' };
+  }
+
+  const currentIdx = (toSem.courses || []).findIndex(course => normalizeCode(course.code) === norm);
+  if (currentIdx < 0) {
+    return { can: false, reason: `Undo unavailable: ${code} was moved or removed after this term move.` };
+  }
+  if ((fromSem.courses || []).some(course => normalizeCode(course.code) === norm)) {
+    return { can: false, reason: `Undo unavailable: ${code} is already back in ${fromSem.name || 'the original term'}.` };
+  }
+  return { can: true, reason: '' };
+}
+
 function plannerChangeUndoAvailability(change) {
   if (change?.undo?.kind === 'placeholder-replacement') return plannerPlaceholderUndoAvailability(change);
   if (change?.undo?.kind === 'prior-credit') return plannerPriorCreditUndoAvailability(change);
+  if (change?.undo?.kind === 'term-move') return plannerTermMoveUndoAvailability(change);
   return { can: false, reason: '' };
 }
 
@@ -1382,6 +1423,15 @@ function plannerChangeReviewTarget(change) {
       label: hasMissing
         ? (groups.visible.length > 1 ? 'Show first Plan edit' : 'Show Plan edit')
         : (groups.changed.length > 1 ? 'Show first edited course' : 'Show edited course'),
+    };
+  }
+  if (undo?.kind === 'term-move' && !undo.appliedAt) {
+    const code = undo.code || '';
+    const course = plannerFindVisiblePlanCourse(code);
+    if (!course) return null;
+    return {
+      code: course.code,
+      label: 'Show moved course',
     };
   }
   return null;
@@ -1442,6 +1492,14 @@ function plannerChangeScheduleTarget(change) {
 
 function plannerChangeTermTarget(change) {
   const undo = change?.undo;
+  if (undo?.kind === 'term-move' && !undo.appliedAt) {
+    const semId = String(undo.toSemId || undo.fromSemId || '');
+    if (!semId || !getAllSemesters().some(sem => sem.id === semId)) return null;
+    return {
+      semId,
+      label: 'Show move term',
+    };
+  }
   if (undo?.kind !== 'placeholder-replacement' || undo.appliedAt) return null;
   const semId = String(undo.location?.semId || undo.semId || '');
   if (!semId || !getAllSemesters().some(sem => sem.id === semId)) return null;
@@ -1688,6 +1746,53 @@ function plannerApplyPriorCreditUndo(change) {
   return true;
 }
 
+function plannerApplyTermMoveUndo(change) {
+  const undo = change?.undo;
+  const availability = plannerTermMoveUndoAvailability(change);
+  if (!availability.can) {
+    if (typeof toastError === 'function') toastError(availability.reason || 'That term move cannot be undone here.');
+    return false;
+  }
+  const code = String(undo.code || '').trim();
+  const norm = normalizeCode(code);
+  const from = String(undo.fromSemId || '');
+  const to = String(undo.toSemId || '');
+  const sems = getAllSemesters();
+  const fromSem = sems.find(sem => sem.id === from);
+  const toSem = sems.find(sem => sem.id === to);
+  if (!fromSem || !toSem) return false;
+
+  if (undo.custom) {
+    const custom = (state.customCourses || []).find(course => course.semId === to && normalizeCode(course.code) === norm);
+    if (!custom) return false;
+    custom.semId = from;
+  } else {
+    const toList = toSem.courses || [];
+    const idx = toList.findIndex(course => normalizeCode(course.code) === norm);
+    if (idx < 0) return false;
+    const [course] = toList.splice(idx, 1);
+    fromSem.courses = fromSem.courses || [];
+    const insertAt = Number.isInteger(undo.fromIndex)
+      ? Math.max(0, Math.min(undo.fromIndex, fromSem.courses.length))
+      : fromSem.courses.length;
+    fromSem.courses.splice(insertAt, 0, course);
+  }
+
+  undo.appliedAt = new Date().toISOString();
+  recordPlanChange({
+    type: 'term-move-undo',
+    source: 'Timeline',
+    title: `Restored ${code}`,
+    detail: `${code} moved back from ${toSem.name || undo.toName || to} to ${fromSem.name || undo.fromName || from}.`,
+    meta: 'Undo term move',
+  }, { save: false });
+  saveState();
+  render();
+  if (currentTab === 'timeline') renderTimeline();
+  if (typeof toastSuccess === 'function') toastSuccess(`Restored ${code} to ${fromSem.name || 'the original term'}.`);
+  return true;
+}
+
 function undoPlanChange(changeId) {
   const id = String(changeId || '');
   const change = recentPlanChanges().find(item => item.id === id);
@@ -1697,6 +1802,7 @@ function undoPlanChange(changeId) {
   }
   if (change.undo?.kind === 'placeholder-replacement') return plannerApplyPlaceholderUndo(change);
   if (change.undo?.kind === 'prior-credit') return plannerApplyPriorCreditUndo(change);
+  if (change.undo?.kind === 'term-move') return plannerApplyTermMoveUndo(change);
   if (typeof toastError === 'function') toastError('That change cannot be undone here.');
   return false;
 }
@@ -1756,7 +1862,10 @@ function plannerClearMovedSelections(code, fromSemId, toSemId) {
   const norm = normalizeCode(code);
   [fromSemId, toSemId].forEach(semId => {
     const bucket = state.selectedSections && state.selectedSections[semId];
-    if (bucket && bucket[norm]) delete bucket[norm];
+    if (bucket && bucket[norm]) {
+      delete bucket[norm];
+      if (!Object.keys(bucket).length) delete state.selectedSections[semId];
+    }
   });
 }
 
@@ -1767,6 +1876,7 @@ function plannerApplyMove(code, fromSemId, toSemId) {
   const norm = normalizeCode(code);
   const custom = (state.customCourses || []).find(course => course.semId === from && normalizeCode(course.code) === norm);
   if (custom) {
+    const fromName = getAllSemesters().find(sem => sem.id === from)?.name || from;
     const toName = getAllSemesters().find(sem => sem.id === to)?.name || to;
     custom.semId = to;
     plannerClearMovedSelections(code, from, to);
@@ -1774,8 +1884,17 @@ function plannerApplyMove(code, fromSemId, toSemId) {
       type: 'term-move',
       source: 'Timeline',
       title: `Moved ${code}`,
-      detail: `${code} moved from ${getAllSemesters().find(sem => sem.id === from)?.name || from} to ${toName}.`,
+      detail: `${code} moved from ${fromName} to ${toName}.`,
       meta: 'Timeline recommendation',
+      undo: {
+        kind: 'term-move',
+        custom: true,
+        code: custom.code || code,
+        fromSemId: from,
+        toSemId: to,
+        fromName,
+        toName,
+      },
     }, { save: false });
     saveState();
     render();
@@ -1800,6 +1919,16 @@ function plannerApplyMove(code, fromSemId, toSemId) {
     title: `Moved ${course.code}`,
     detail: `${course.code} moved from ${fromSem.name} to ${toSem.name}.`,
     meta: 'Timeline recommendation',
+    undo: {
+      kind: 'term-move',
+      code: course.code,
+      fromSemId: from,
+      toSemId: to,
+      fromName: fromSem.name,
+      toName: toSem.name,
+      fromIndex: idx,
+      toIndex: toSem.courses.length - 1,
+    },
   }, { save: false });
   saveState();
   render();
