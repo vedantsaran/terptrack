@@ -6,12 +6,16 @@
 const ACCOUNT_CONFIG_STORAGE = 'terp-track-supabase-config';
 const ACCOUNT_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 const ACCOUNT_CONFIG_FETCH_TIMEOUT_MS = 3500;
+const ACCOUNT_SCHEMA_VERSION = '2026-07-02-grants-v1';
 const ACCOUNT_SCHEMA_REQUIREMENTS = [
+  { id: 'schema_version', label: `schema ${ACCOUNT_SCHEMA_VERSION}`, detail: 'current deployment SQL, explicit grants, participant friend removal' },
   { id: 'profiles', label: 'profiles', detail: 'student profile, major, profile preferences' },
   { id: 'plans', label: 'plans', detail: 'private cloud save/load payloads' },
   { id: 'friend_requests', label: 'friend_requests', detail: 'invites, accepted friends, recipient links' },
   { id: 'shared_plans', label: 'shared_plans', detail: 'readable plans for accepted friends' },
+  { id: 'data_api_grants', label: 'Data API grants', detail: 'authenticated/service_role access for supabase-js tables' },
   { id: 'rls', label: 'RLS policies', detail: 'owner-only plans and accepted-friend visibility' },
+  { id: 'participant_delete', label: 'friend revocation', detail: 'requester or recipient can remove an accepted friend row' },
   { id: 'updated_at', label: 'updated_at triggers', detail: 'fresh timestamps after edits and publishes' },
 ];
 let accountConfigPromise = null;
@@ -244,8 +248,16 @@ function accountCloudSetupChecks(config, clientReady = false, origin = '') {
       status: configured ? 'warn' : 'missing',
       label: 'Database schema',
       detail: configured
-        ? 'Confirm supabase/schema.sql is applied in the Supabase SQL editor.'
-        : 'Apply supabase/schema.sql after creating the Supabase project.',
+        ? `Confirm supabase/schema.sql ${ACCOUNT_SCHEMA_VERSION} is applied in the Supabase SQL editor.`
+        : `Apply supabase/schema.sql ${ACCOUNT_SCHEMA_VERSION} after creating the Supabase project.`,
+    },
+    {
+      id: 'schema-version',
+      status: configured ? 'warn' : 'missing',
+      label: 'Schema version',
+      detail: configured
+        ? 'Reapply the current schema if your project predates explicit Data API grants or accepted-friend revocation.'
+        : 'Cloud sync requires the current schema version before sign-in is useful.',
     },
     {
       id: 'redirect',
@@ -289,7 +301,11 @@ function accountSchemaChecklistHtml() {
     <div class="account-schema-checklist">
       <div class="account-schema-head">
         <strong>Schema objects</strong>
-        <span>Required before accounts, friends, and shared plans are dependable.</span>
+        <span>Version ${accountEscape(ACCOUNT_SCHEMA_VERSION)}. Required before accounts, friends, and shared plans are dependable.</span>
+      </div>
+      <div class="account-schema-version">
+        <strong>Migration note</strong>
+        <span>Reapply this schema when upgrading an existing project; it includes explicit Data API grants plus the participant friend-request delete policy.</span>
       </div>
       <div class="account-schema-grid">
         ${accountSchemaChecklistItems().map(item => `
@@ -310,10 +326,10 @@ async function accountCopySchemaSql() {
     const sql = await response.text();
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(sql);
-      accountSetStatus('Schema SQL copied. Paste it into the Supabase SQL editor.', 'ok');
+      accountSetStatus(`Schema SQL ${ACCOUNT_SCHEMA_VERSION} copied. Paste it into the Supabase SQL editor.`, 'ok');
     } else {
       prompt('Copy this Supabase schema SQL:', sql);
-      accountSetStatus('Schema SQL ready to paste into Supabase.', 'ok');
+      accountSetStatus(`Schema SQL ${ACCOUNT_SCHEMA_VERSION} ready to paste into Supabase.`, 'ok');
     }
   } catch (err) {
     accountSetStatus(`Could not copy schema SQL automatically. Open supabase/schema.sql from the repo. ${err.message || ''}`.trim(), 'warn');

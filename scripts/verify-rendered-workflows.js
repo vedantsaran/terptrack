@@ -177,7 +177,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=117'), 'workflow app did not load styles.css?v=117');
+  assert(snapshot.styles.includes('styles.css?v=118'), 'workflow app did not load styles.css?v=118');
   assert(snapshot.scripts.includes('js/schedule.js?v=73'), 'workflow app did not load js/schedule.js?v=73');
   assert(snapshot.scheduleViewText.includes('Solver breadth'), 'workflow app did not render the schedule solver breadth preference');
   assert(snapshot.scripts.includes('js/timeline.js?v=27'), 'workflow app did not load js/timeline.js?v=27');
@@ -194,7 +194,7 @@ async function openFreshApp(page, url, opts, suffix) {
   assert(snapshot.scripts.includes('js/bulk.js?v=1'), 'workflow app did not load js/bulk.js?v=1');
   assert(snapshot.scripts.includes('js/placeholder-search.js?v=10'), 'workflow app did not load js/placeholder-search.js?v=10');
   assert(snapshot.scripts.includes('js/snapshots.js?v=12'), 'workflow app did not load js/snapshots.js?v=12');
-  assert(snapshot.scripts.includes('js/account.js?v=16'), 'workflow app did not load js/account.js?v=16');
+  assert(snapshot.scripts.includes('js/account.js?v=17'), 'workflow app did not load js/account.js?v=17');
   return snapshot;
 }
 
@@ -534,6 +534,9 @@ async function verifyAccountSetupMobile(page, url, opts) {
       && text.includes('Cloud setup')
       && text.includes('SUPABASE_URL')
       && text.includes('Schema objects')
+      && text.includes('2026-07-02-grants-v1')
+      && text.includes('Migration note')
+      && text.includes('Data API grants')
       && text.includes('friend_requests')
       && text.includes('shared_plans')
       && text.includes('Copy schema SQL')
@@ -718,7 +721,7 @@ async function verifyAccountSetupMobile(page, url, opts) {
   assert(!(prefs.friendInvites || []).some(invite => invite.cloudId === 'cloud-accepted'), 'account setup: accepted cloud friend should be removed after revocation');
   assert(deletedFriendRow === 'friend_requests:id:cloud-accepted', 'account setup: accepted friend removal should delete the cloud friend request row');
   assert(snapshot.accountText.includes('Local only'), 'account setup: modal should identify local-only config');
-  assert(snapshot.accountText.includes('Schema objects') && snapshot.accountText.includes('RLS policies'), 'account setup: modal should show schema checklist');
+  assert(snapshot.accountText.includes('Schema objects') && snapshot.accountText.includes('2026-07-02-grants-v1') && snapshot.accountText.includes('Data API grants') && snapshot.accountText.includes('RLS policies'), 'account setup: modal should show versioned schema checklist');
   assert(snapshot.accountText.includes('Friend invite') && snapshot.accountText.includes('roommate@umd.edu'), 'account setup: modal should preserve local invite row');
   assert(snapshot.accountText.includes('Pal STEM plan') && snapshot.accountText.includes('meeting overlaps'), 'account setup: modal should show friend-plan comparison');
   assert(snapshot.accountText.includes('Fall 2026 meeting term') && !snapshot.accountText.includes('HIST 201 with your'), 'account setup: friend meeting planner should stay scoped to the shared UMD term');

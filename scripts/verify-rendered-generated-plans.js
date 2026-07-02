@@ -454,10 +454,10 @@ async function runViewport(browser, url, viewport, selected, opts) {
     }, null, { timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.styles.includes('styles.css?v=117'), `${viewport.label}: rendered app did not load styles.css?v=117`);
+    assert(initialSnapshot.styles.includes('styles.css?v=118'), `${viewport.label}: rendered app did not load styles.css?v=118`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
-    assert(initialSnapshot.scripts.includes('js/api.js?v=6'), `${viewport.label}: rendered app did not load js/api.js?v=6`);
+    assert(initialSnapshot.scripts.includes('js/api.js?v=8'), `${viewport.label}: rendered app did not load js/api.js?v=8`);
     assert(initialSnapshot.scripts.includes('js/settings.js?v=30'), `${viewport.label}: rendered app did not load js/settings.js?v=30`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('3/4 launch checks ready'), `${viewport.label}: release checklist did not show 3/4 ready status`);

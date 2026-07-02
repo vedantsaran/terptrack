@@ -1,3 +1,8 @@
+-- TerpTrack cloud schema version: 2026-07-02-grants-v1
+-- Reapply this full file in the Supabase SQL editor after account/friend schema updates.
+-- It intentionally pairs Data API grants with RLS policies so new Supabase projects
+-- can reach the tables through supabase-js without weakening row ownership checks.
+
 create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (
@@ -63,6 +68,11 @@ alter table public.plans enable row level security;
 alter table public.friend_requests enable row level security;
 alter table public.shared_plans enable row level security;
 
+grant usage on schema public to authenticated, service_role;
+grant select, insert, update, delete
+  on table public.profiles, public.plans, public.friend_requests, public.shared_plans
+  to authenticated, service_role;
+
 drop policy if exists "profiles_select_own" on public.profiles;
 drop policy if exists "profiles_select_visible" on public.profiles;
 drop policy if exists "profiles_insert_own" on public.profiles;
@@ -70,6 +80,7 @@ drop policy if exists "profiles_update_own" on public.profiles;
 
 create policy "profiles_select_visible"
   on public.profiles for select
+  to authenticated
   using (
     auth.uid() = user_id
     or exists (
@@ -86,10 +97,12 @@ create policy "profiles_select_visible"
 
 create policy "profiles_insert_own"
   on public.profiles for insert
+  to authenticated
   with check (auth.uid() = user_id);
 
 create policy "profiles_update_own"
   on public.profiles for update
+  to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
@@ -100,19 +113,23 @@ drop policy if exists "plans_delete_own" on public.plans;
 
 create policy "plans_select_own"
   on public.plans for select
+  to authenticated
   using (auth.uid() = user_id);
 
 create policy "plans_insert_own"
   on public.plans for insert
+  to authenticated
   with check (auth.uid() = user_id);
 
 create policy "plans_update_own"
   on public.plans for update
+  to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
 create policy "plans_delete_own"
   on public.plans for delete
+  to authenticated
   using (auth.uid() = user_id);
 
 drop policy if exists "friend_requests_select_visible" on public.friend_requests;
@@ -124,6 +141,7 @@ drop policy if exists "friend_requests_delete_participant" on public.friend_requ
 
 create policy "friend_requests_select_visible"
   on public.friend_requests for select
+  to authenticated
   using (
     auth.uid() = requester_id
     or auth.uid() = recipient_id
@@ -132,6 +150,7 @@ create policy "friend_requests_select_visible"
 
 create policy "friend_requests_insert_own"
   on public.friend_requests for insert
+  to authenticated
   with check (
     auth.uid() = requester_id
     and status = 'pending'
@@ -141,6 +160,7 @@ create policy "friend_requests_insert_own"
 
 create policy "friend_requests_update_pending_by_requester"
   on public.friend_requests for update
+  to authenticated
   using (auth.uid() = requester_id and status = 'pending')
   with check (
     auth.uid() = requester_id
@@ -151,6 +171,7 @@ create policy "friend_requests_update_pending_by_requester"
 
 create policy "friend_requests_update_by_recipient"
   on public.friend_requests for update
+  to authenticated
   using (lower(recipient_email) = lower(coalesce(auth.jwt() ->> 'email', '')))
   with check (
     lower(recipient_email) = lower(coalesce(auth.jwt() ->> 'email', ''))
@@ -160,6 +181,7 @@ create policy "friend_requests_update_by_recipient"
 
 create policy "friend_requests_delete_participant"
   on public.friend_requests for delete
+  to authenticated
   using (
     auth.uid() = requester_id
     or auth.uid() = recipient_id
@@ -173,6 +195,7 @@ drop policy if exists "shared_plans_delete_own" on public.shared_plans;
 
 create policy "shared_plans_select_visible"
   on public.shared_plans for select
+  to authenticated
   using (
     auth.uid() = owner_id
     or exists (
@@ -189,15 +212,18 @@ create policy "shared_plans_select_visible"
 
 create policy "shared_plans_insert_own"
   on public.shared_plans for insert
+  to authenticated
   with check (auth.uid() = owner_id);
 
 create policy "shared_plans_update_own"
   on public.shared_plans for update
+  to authenticated
   using (auth.uid() = owner_id)
   with check (auth.uid() = owner_id);
 
 create policy "shared_plans_delete_own"
   on public.shared_plans for delete
+  to authenticated
   using (auth.uid() = owner_id);
 
 create or replace function public.set_updated_at()

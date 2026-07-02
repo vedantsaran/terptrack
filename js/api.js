@@ -10,6 +10,8 @@ const UMDIO_SECTION_CACHE_TTL_MS = 1000 * 60 * 15; // 15 minutes; seats change q
 const UMDIO_FETCH_TIMEOUT_MS = 9000;
 const UMDIO_CANONICAL_TITLES = Object.freeze({
   AMST205: 'American Material Culture: The Study of People, Places, and Things',
+  ANTH415: 'Critical Global Health',
+  ARTT428: 'Advanced Painting Studio; Painting',
   PHYS260: 'General Physics: Electricity, Magnetism and Thermodynamics',
   PHYS261: 'General Physics: Mechanics, Vibrations, Waves, Heat (Laboratory)',
 });

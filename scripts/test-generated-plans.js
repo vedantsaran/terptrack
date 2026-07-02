@@ -3556,6 +3556,7 @@ async function testAccountCloudSetup(context) {
         vercelDeployment: vercel.find(check => check.id === 'deployment')?.status || '',
         vercelCredentials: vercel.find(check => check.id === 'credentials')?.status || '',
         vercelClient: vercel.find(check => check.id === 'client')?.status || '',
+        schemaVersionCheck: vercel.find(check => check.id === 'schema-version')?.status || '',
         html,
         schemaIds: schemaItems.map(item => item.id).join(','),
         schemaHtml,
@@ -3631,13 +3632,20 @@ async function testAccountCloudSetup(context) {
   assert(result.vercelDeployment === 'ok', 'account setup: Vercel config should be deployment-ready');
   assert(result.vercelCredentials === 'ok', 'account setup: valid Supabase credentials should be ready');
   assert(result.vercelClient === 'ok', 'account setup: initialized Vercel client should be ready');
+  assert(result.schemaVersionCheck === 'warn', 'account setup: configured projects should prompt for current schema version confirmation');
   assert(/Cloud setup/.test(result.html) && /Vercel env vars are serving/.test(result.html), 'account setup: readiness HTML should explain Vercel config');
-  assert(result.schemaIds === 'profiles,plans,friend_requests,shared_plans,rls,updated_at', 'account setup: schema checklist should include every required object group');
-  assert(/Schema objects/.test(result.schemaHtml) && /friend_requests/.test(result.schemaHtml) && /shared_plans/.test(result.schemaHtml) && /RLS policies/.test(result.schemaHtml), 'account setup: schema checklist HTML should render required Supabase objects');
+  assert(result.schemaIds === 'schema_version,profiles,plans,friend_requests,shared_plans,data_api_grants,rls,participant_delete,updated_at', 'account setup: schema checklist should include every required object group');
+  assert(/Schema objects/.test(result.schemaHtml) && /2026-07-02-grants-v1/.test(result.schemaHtml) && /Migration note/.test(result.schemaHtml), 'account setup: schema checklist HTML should render schema version guidance');
+  assert(/friend_requests/.test(result.schemaHtml) && /shared_plans/.test(result.schemaHtml) && /Data API grants/.test(result.schemaHtml) && /RLS policies/.test(result.schemaHtml) && /friend revocation/.test(result.schemaHtml), 'account setup: schema checklist HTML should render required Supabase objects and grants');
   assert(result.cloudRestore.activeIds.includes('cloud-spring') && result.cloudRestore.semIds.includes('cloud-spring') && !result.cloudRestore.legacySection, 'account cloud restore: stale selected-section buckets should normalize to the active schedule term');
   assert(result.cloudRestore.springSection?.section_id === 'MATH140-0601' && result.cloudRestore.springSection?.semester === '202701', 'account cloud restore: rerouted section should preserve the posted UMD term');
   assert(/create policy "friend_requests_delete_participant"/.test(schemaSql), 'account setup: schema should create participant-owned friend-request delete policy');
   assert(/auth\.uid\(\) = requester_id/.test(schemaSql) && /auth\.uid\(\) = recipient_id/.test(schemaSql) && /lower\(recipient_email\) = lower/.test(schemaSql), 'account setup: delete policy should allow requester, recipient, and recipient email to revoke friendship');
+  assert(/TerpTrack cloud schema version: 2026-07-02-grants-v1/.test(schemaSql), 'account setup: schema should include the current migration version marker');
+  assert(/grant usage on schema public to authenticated, service_role/.test(schemaSql), 'account setup: schema should grant public schema usage for Data API roles');
+  assert(/grant select, insert, update, delete[\s\S]*on table public\.profiles, public\.plans, public\.friend_requests, public\.shared_plans[\s\S]*to authenticated, service_role/.test(schemaSql), 'account setup: schema should explicitly grant table access for Supabase Data API roles');
+  assert(/create policy "plans_update_own"[\s\S]*to authenticated[\s\S]*with check/.test(schemaSql), 'account setup: update policies should be scoped to authenticated users with WITH CHECK');
+  assert(/create policy "friend_requests_delete_participant"[\s\S]*to authenticated[\s\S]*using/.test(schemaSql), 'account setup: participant delete policy should be scoped to authenticated users');
   assert(/fr\.status = 'accepted'/.test(schemaSql) && /public\.shared_plans\.owner_id/.test(schemaSql), 'account setup: shared plans should remain visible only through accepted friend rows');
   assert(/Remove friend/.test(removal.beforeHtml), 'account friend removal: accepted cloud rows should label the action as friend removal');
   assert(removal.deletedId === 'friend_requests:id:cloud-accepted', 'account friend removal: should delete the cloud friend request row');
@@ -3693,10 +3701,14 @@ function testCanonicalCourseTitles(context) {
   const result = clone(vm.runInContext(`
     ({
       amst205: UMDIO_CANONICAL_TITLES.AMST205,
+      anth415: UMDIO_CANONICAL_TITLES.ANTH415,
+      artt428: UMDIO_CANONICAL_TITLES.ARTT428,
       phys260: UMDIO_CANONICAL_TITLES.PHYS260,
     })
   `, context));
   assert(result.amst205 === 'American Material Culture: The Study of People, Places, and Things', 'canonical titles: AMST 205 should use the current live catalog title');
+  assert(result.anth415 === 'Critical Global Health', 'canonical titles: ANTH 415 should use the current live catalog title');
+  assert(result.artt428 === 'Advanced Painting Studio; Painting', 'canonical titles: ARTT 428 should use the current live catalog title');
   assert(/Electricity/.test(result.phys260), 'canonical titles: existing PHYS override should remain present');
   return {
     id: 'COURSE-CANONICAL-TITLES',

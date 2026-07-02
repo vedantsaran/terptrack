@@ -10436,3 +10436,100 @@ Next pass candidates:
 - Add a dedicated rendered workflow that opens Schedule alternatives and checks visible solver rank/trace cards in a browser viewport.
 - Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
 - Add richer advisor-facing explanations for why `Quick`, `Standard`, or `Deep` breadth should be used on a specific section set.
+
+## 2026-07-02 Pass 185
+
+Focus: make cloud account setup safer and easier to deploy by versioning the Supabase schema, pairing explicit Data API grants with RLS, and catching fresh live catalog title drift from random schedule verification.
+
+Planned changes:
+- Verify current Supabase Data API/RLS guidance before changing the schema.
+- Add a visible TerpTrack cloud schema version to the SQL and account setup UI.
+- Add explicit authenticated/service-role grants so new Supabase projects work under the 2026 Data API default-grant change.
+- Scope RLS policies with `to authenticated` and keep update policies guarded by `WITH CHECK`.
+- Add account setup regression coverage for the schema version, grants, RLS, and friend revocation policy.
+- Run release checks and a seeded random live PlanetTerp schedule pass.
+
+Completed:
+- Checked current Supabase guidance through the Supabase MCP docs search and official docs/changelog pages.
+  - Supabase's API security docs now frame Data API access as two layers: role grants decide whether an object is reachable, and RLS policies decide which rows those roles can access.
+  - Supabase's 2026 Data API changelog says new public-schema tables increasingly require explicit grants instead of automatic Data API exposure.
+  - Supabase's RLS docs continue to recommend enabling RLS on exposed-schema tables and granting only the privileges each role needs.
+- Updated `supabase/schema.sql`.
+  - Added cloud schema version `2026-07-02-grants-v1`.
+  - Added explicit `grant usage on schema public to authenticated, service_role`.
+  - Added explicit `grant select, insert, update, delete` on `profiles`, `plans`, `friend_requests`, and `shared_plans` to `authenticated` and `service_role`.
+  - Added `to authenticated` to the account, plan, friend-request, and shared-plan policies.
+  - Kept owner/participant predicates and `WITH CHECK` on update policies so grants do not broaden row access.
+- Updated `js/account.js`.
+  - Added `ACCOUNT_SCHEMA_VERSION`.
+  - Added cloud setup checks for schema version, Data API grants, and accepted-friend revocation.
+  - Added versioned schema checklist copy and a migration note prompting existing projects to reapply the current SQL.
+  - Updated schema-copy status text to include the version.
+- Updated `styles.css` and `index.html`.
+  - Styled the schema version/migration note in the account setup surface.
+  - Bumped `styles.css` to `v=118`.
+  - Bumped `js/account.js` to `v=17`.
+  - Bumped `js/api.js` to `v=8` after live title overrides changed.
+- Updated `scripts/test-generated-plans.js`.
+  - Asserted the account schema checklist IDs include `schema_version`, `data_api_grants`, and `participant_delete`.
+  - Asserted schema HTML includes the current version, migration note, Data API grants, RLS policies, and friend revocation.
+  - Asserted the SQL includes the version marker, schema/table grants, authenticated update policies with `WITH CHECK`, and participant delete policy scope.
+  - Added canonical-title assertions for `ANTH 415` and `ARTT 428`.
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Updated asset assertions for `styles.css?v=118` and `js/account.js?v=17`.
+  - Added rendered account setup assertions for `2026-07-02-grants-v1`, `Migration note`, `Data API grants`, and `RLS`.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Updated stylesheet assertion to `styles.css?v=118`.
+  - Updated API script assertion to `js/api.js?v=8`.
+- Updated `js/api.js`.
+  - Added canonical live title overrides for `ANTH 415` (`Critical Global Health`) and `ARTT 428` (`Advanced Painting Studio; Painting`) after the seeded live verifier found catalog drift.
+
+Major-gap notes:
+- Account setup now tells deployers exactly which schema version they should be on and covers Supabase's explicit-grant behavior instead of relying on older project defaults.
+- Supabase CLI is not installed in this workspace and the repo only contains placeholder Supabase project values, so this pass could not run a live database query or Supabase advisors against a real project.
+- The seeded random live verifier found two real course-title drifts and both are now pinned through canonical title overrides with regression assertions.
+
+Verification:
+- Ran `node --check js/account.js`.
+- Ran `node --check js/api.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed account setup coverage for schema versioning, migration note, Data API grants, RLS policy scope, friend revocation, cloud restore normalization, and Vercel config checks.
+  - It passed canonical-title coverage for `AMST 205`, `ANTH 415`, `ARTT 428`, and existing PHYS overrides.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, release JSON, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed the new rendered account setup version/grants/RLS assertions.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with replacement queue, queue fill, and auto-resolver fill.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - It passed the focused rendered generated-plan browser check with `styles.css?v=118` and `js/api.js?v=8`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the account schema version/grants coverage and canonical title overrides.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass185-supabase-schema-version`.
+  - The first run caught `ANTH 415` title drift and the second caught `ARTT 428` title drift.
+  - After adding both canonical overrides, the same seeded run passed.
+  - It randomly verified `MUSC`, `AOSC`, `WMST`, `EDUC`, `BIOE`, `ARTH`, `IS`, `ARTT`, `THET`, `FMSC`, `ANTH`, and `ENAE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `command -v supabase`.
+  - It found no Supabase CLI binary in the workspace shell.
+- Ran `rg -n "SUPABASE|supabase\\.co|project_id|projectId" --glob '!README.md' --glob '!node_modules/**'`.
+  - It found only placeholder/example project values and app config references, not a real project id suitable for MCP `execute_sql` or advisors.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a dedicated rendered workflow that opens Schedule alternatives and checks visible solver rank/trace cards in a browser viewport.
+- Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
+- Add a broader live title-drift sweep for all generated required courses now that random verification has caught multiple 2026 catalog title changes.
