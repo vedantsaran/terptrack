@@ -513,7 +513,7 @@ function removeCustomCourseFromPlan(code) {
   state.customCourses = (state.customCourses || []).filter(course => normalizeCode(course.code) !== key);
   let clearedSections = 0;
   removedCourses.forEach(course => {
-    delete state.courses[course.code];
+    deleteCourseState(course.code);
     clearedSections += clearSelectedSectionsForCourse(course.code);
   });
   return { removed: removedCourses.length, clearedSections };
@@ -527,7 +527,7 @@ function removeCustomSemesterFromPlan(semId) {
   const clearedSemesterState = clearSemesterPlanningState(semId);
   let clearedSections = clearedSemesterState ? 1 : 0;
   removedCourses.forEach(course => {
-    delete state.courses[course.code];
+    deleteCourseState(course.code);
     clearedSections += clearSelectedSectionsForCourse(course.code);
   });
   return {
@@ -690,6 +690,12 @@ function courseStateKey(code) {
 function getCourseState(code) {
   const key = courseStateKey(code);
   return key && state.courses[key] || { status: "not-started", grade: "" };
+}
+function deleteCourseState(code) {
+  const key = courseStateKey(code);
+  if (!key || !Object.prototype.hasOwnProperty.call(state.courses, key)) return false;
+  delete state.courses[key];
+  return true;
 }
 function setCourseState(code, patch) {
   const key = courseStateKey(code);

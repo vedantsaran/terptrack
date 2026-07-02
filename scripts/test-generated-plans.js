@@ -2427,8 +2427,8 @@ function testCustomDeleteSelectionCleanup(context) {
         { code: 'PLCY 201', title: 'Public Leaders and Active Citizens', cr: 3, semId: 'DEL-F' }
       ];
       state.courses = {
-        'INST 201': { status: 'in-progress', grade: '' },
-        'PLCY 201': { status: 'passed', grade: 'A' },
+        INST201: { status: 'in-progress', grade: '' },
+        PLCY201: { status: 'passed', grade: 'A' },
         'ENGL 101': { status: 'not-started', grade: '' }
       };
       state.schedulePrefs = {
@@ -2455,7 +2455,9 @@ function testCustomDeleteSelectionCleanup(context) {
         summerBucket: state.selectedSections['DEL-SUM'] || null,
         staleInstInFall: state.selectedSections['DEL-F']?.INST201 || null,
         preservedFallPick: state.selectedSections['DEL-F']?.ENGL101?.section_id || '',
-        instProgress: state.courses['INST 201'] || null,
+        instProgressCompact: state.courses.INST201 || null,
+        instProgressDisplay: state.courses['INST 201'] || null,
+        instVisibleState: getCourseState('INST 201'),
         semesterRemoval,
       };
 
@@ -2463,7 +2465,9 @@ function testCustomDeleteSelectionCleanup(context) {
       return {
         afterSemester,
         remainingCustomCourses: state.customCourses.map(course => course.code),
-        hasPlcyProgress: !!state.courses['PLCY 201'],
+        plcyProgressCompact: state.courses.PLCY201 || null,
+        plcyProgressDisplay: state.courses['PLCY 201'] || null,
+        plcyVisibleState: getCourseState('PLCY 201'),
         plcyPick: state.selectedSections['DEL-F']?.PLCY201 || null,
         preservedAfterCourse: state.selectedSections['DEL-F']?.ENGL101?.section_id || '',
         fallPrefs: state.schedulePrefs['DEL-F'] || null,
@@ -2479,9 +2483,11 @@ function testCustomDeleteSelectionCleanup(context) {
   assert(!result.afterSemester.hasSummerPrefs && result.afterSemester.hasFallPrefs, 'custom delete cleanup: removed semester prefs should be cleared while active term prefs remain');
   assert(!result.afterSemester.summerBucket && !result.afterSemester.staleInstInFall, 'custom delete cleanup: removed semester course picks should clear from removed and stale buckets');
   assert(result.afterSemester.preservedFallPick === 'ENGL101-0101', 'custom delete cleanup: unrelated active term picks should remain after semester removal');
-  assert(!result.afterSemester.instProgress, 'custom delete cleanup: removed custom semester course progress should be removed');
+  assert(!result.afterSemester.instProgressCompact && !result.afterSemester.instProgressDisplay, 'custom delete cleanup: removed custom semester course compact/display progress should be removed');
+  assert(result.afterSemester.instVisibleState.status === 'not-started', 'custom delete cleanup: removed custom semester course should not leave visible normalized progress');
   assert(result.courseRemoval.removed === 1, 'custom delete cleanup: standalone custom course removal should report one removed row');
-  assert(!result.remainingCustomCourses.includes('PLCY 201') && !result.hasPlcyProgress && !result.plcyPick, 'custom delete cleanup: standalone custom course should clear row, progress, and picked section');
+  assert(!result.remainingCustomCourses.includes('PLCY 201') && !result.plcyProgressCompact && !result.plcyProgressDisplay && !result.plcyPick, 'custom delete cleanup: standalone custom course should clear row, compact/display progress, and picked section');
+  assert(result.plcyVisibleState.status === 'not-started', 'custom delete cleanup: standalone custom course should not leave visible normalized progress');
   assert(result.preservedAfterCourse === 'ENGL101-0101' && result.fallPrefs?.term === '202608', 'custom delete cleanup: unrelated pick and surviving term prefs should remain after course removal');
   assert(result.remainingBuckets.length === 1 && result.remainingBuckets[0] === 'DEL-F', 'custom delete cleanup: empty removed buckets should not remain');
 
