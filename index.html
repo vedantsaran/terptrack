@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Terp Track — UMD Degree Planner</title>
-<link rel="stylesheet" href="styles.css?v=116">
+<link rel="stylesheet" href="styles.css?v=117">
 </head>
 <body data-theme="dark">
 
@@ -225,6 +225,14 @@
           <option value="open-seats">Open seats</option>
           <option value="mornings">Mornings</option>
           <option value="afternoons">Afternoons</option>
+        </select>
+      </label>
+      <label>
+        Solver breadth
+        <select id="schedule-pref-solver-breadth">
+          <option value="quick">Quick</option>
+          <option value="standard">Standard</option>
+          <option value="deep">Deep</option>
         </select>
       </label>
       <label>
@@ -1015,7 +1023,7 @@
 <script src="js/roadmap.js?v=6"></script>
 <script src="js/planetterp.js?v=4"></script>
 <script src="js/api.js?v=6"></script>
-<script src="js/schedule.js?v=72"></script>
+<script src="js/schedule.js?v=73"></script>
 <script src="js/courses.js?v=5"></script>
 <script src="js/settings.js?v=30"></script>
 <script src="js/semesters.js"></script>

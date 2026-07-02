@@ -10355,3 +10355,84 @@ Next pass candidates:
 - Add bounded-search breadth controls or diagnostics for very large section sets.
 - Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
 - Add a rendered workflow assertion that opens Schedule alternatives specifically and checks the visible solver trace in a browser viewport.
+
+## 2026-07-02 Pass 184
+
+Focus: make the bounded schedule solver configurable for large section sets while keeping safe defaults and clear diagnostics in the UI.
+
+Planned changes:
+- Add a simple student-facing `Solver breadth` preference to Schedule.
+- Map the preference to conservative solver profiles instead of exposing raw numeric tuning.
+- Make auto-pick and alternate generation honor the selected solver profile.
+- Show the active breadth profile in solver trace/status copy.
+- Add regression coverage proving standard and deep breadth differ on a wide section set.
+- Bump changed static asset versions and rendered verifier assertions.
+- Verify with generated fixtures, rendered browser checks, release checks, and random live PlanetTerp schedules.
+
+Completed:
+- Updated `index.html`.
+  - Added a `Solver breadth` select with `Quick`, `Standard`, and `Deep` options to the Schedule preference grid.
+  - Bumped `styles.css` to `v=117`.
+  - Bumped `js/schedule.js` to `v=73`.
+- Updated `js/schedule.js`.
+  - Added `solverBreadth` to default schedule preferences and per-semester normalization.
+  - Added `SCHEDULE_SOLVER_BREADTH_DEFS` and `scheduleSolverOptionsFromPrefs()`.
+  - Mapped `Quick` to 5 sections/course and a 48-candidate beam, `Standard` to 7 and 96, and `Deep` to 10 and 192.
+  - `buildScheduleCandidate()` and alternate generation now pass solver options derived from the semester preferences.
+  - Solver metadata now includes the active breadth id/label.
+  - Solver trace summaries and rationale now show the active breadth profile.
+  - Schedule preference event handling now persists the selected breadth profile.
+- Updated `styles.css`.
+  - Made the Schedule preferences grid auto-fit additional compact controls without creating horizontal overflow.
+- Updated `scripts/test-generated-plans.js`.
+  - Extended `SCHEDULE-BOUNDED-SOLVER` to assert the quick/standard/deep profile bounds.
+  - Added a 9-section fixture proving `Standard` caps at 7 considered options while `Deep` considers all 9.
+  - Asserted invalid breadth values fall back to `Standard`.
+  - Asserted the rendered solver trace includes the active breadth profile.
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Updated asset assertions for `styles.css?v=117` and `js/schedule.js?v=73`.
+  - Added a rendered-app assertion that the Schedule view includes the `Solver breadth` preference.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Updated the stylesheet asset assertion to `styles.css?v=117`.
+
+Major-gap notes:
+- Students now have a practical control for large, section-heavy terms: `Quick` for faster draft picks, `Standard` as the default, and `Deep` when they want broader alternatives.
+- The solver still remains bounded and deterministic; no exhaustive search mode is exposed because it could stall common browser sessions on large UMD terms.
+- Remaining improvements include a dedicated rendered workflow that opens Schedule alternatives and checks visible trace cards, plus the Supabase migration/version note for deployed users.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the extended `SCHEDULE-BOUNDED-SOLVER` fixture with quick/standard/deep bounds, invalid fallback, 9-section standard/deep cap behavior, active breadth trace text, alternate-card trace markup, and variant consistency.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed the new rendered `Solver breadth` preference assertion.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with replacement queue, queue fill, and auto-resolver fill.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - It passed the focused rendered generated-plan browser check with the new stylesheet cache key.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the new solver breadth coverage.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass184-solver-breadth`.
+  - It randomly verified `PHIL`, `IS`, `WMST`, `LING`, `HIST`, `ENMA`, `CINE`, `ARTH`, `ENCE`, `ENCH`, `ARTT`, and `HESP` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a dedicated rendered workflow that opens Schedule alternatives and checks visible solver rank/trace cards in a browser viewport.
+- Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
+- Add richer advisor-facing explanations for why `Quick`, `Standard`, or `Deep` breadth should be used on a specific section set.

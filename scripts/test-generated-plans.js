@@ -2119,7 +2119,7 @@ function testScheduleBoundedSectionSolver(context) {
         seats: '30',
         waitlist: '0',
       };
-      const prefs = { ...DEFAULT_SCHEDULE_PREFS, term: '202608', mode: 'open-seats', earliest: '08:00', latest: '17:30', avoidDays: [] };
+      const prefs = { ...DEFAULT_SCHEDULE_PREFS, term: '202608', mode: 'open-seats', earliest: '08:00', latest: '17:30', avoidDays: [], solverBreadth: 'standard' };
       const sectionsByCode = {
         CMSC131: [cmscHigh, cmscFit],
         MATH140: [mathHigh, mathFallback],
@@ -2137,6 +2137,38 @@ function testScheduleBoundedSectionSolver(context) {
       const variantSecondIds = Object.fromEntries(variantSecond.items.map(item => [normalizeCode(item.course.code), item.section.section_id]));
       const solverLines = scheduleCandidateRationale(first, ranked.length, 1);
       const traceSummary = scheduleCandidateTraceSummary(first);
+      const solverOptions = {
+        quick: scheduleSolverOptionsFromPrefs({ ...DEFAULT_SCHEDULE_PREFS, solverBreadth: 'quick' }),
+        standard: scheduleSolverOptionsFromPrefs({ ...DEFAULT_SCHEDULE_PREFS, solverBreadth: 'standard' }),
+        deep: scheduleSolverOptionsFromPrefs({ ...DEFAULT_SCHEDULE_PREFS, solverBreadth: 'deep' }),
+        invalid: scheduleSolverOptionsFromPrefs({ ...DEFAULT_SCHEDULE_PREFS, solverBreadth: 'exhaustive' }),
+      };
+      const wideCourse = [{ code: 'TEST 200', title: 'Wide Section Set', cr: 3 }];
+      const wideSections = Array.from({ length: 9 }, (_, idx) => ({
+        course: 'TEST200',
+        section_id: 'TEST200-' + String(idx + 1).padStart(4, '0'),
+        semester: '202608',
+        number: String(idx + 1).padStart(4, '0'),
+        meetings: [],
+        open_seats: String(20 - idx),
+        seats: '30',
+        waitlist: '0',
+      }));
+      const wideSectionsByCode = { TEST200: wideSections };
+      const wideStandard = solveScheduleCandidates(
+        wideCourse,
+        wideSectionsByCode,
+        { ...DEFAULT_SCHEDULE_PREFS, solverBreadth: 'standard' },
+        [],
+        { ...solverOptions.standard, limit: 1 }
+      )[0];
+      const wideDeep = solveScheduleCandidates(
+        wideCourse,
+        wideSectionsByCode,
+        { ...DEFAULT_SCHEDULE_PREFS, solverBreadth: 'deep' },
+        [],
+        { ...solverOptions.deep, limit: 1 }
+      )[0];
       const altRoot = { innerHTML: '' };
       const originalGetElementById = document.getElementById;
       const originalAlternatives = scheduleAlternatives;
@@ -2163,6 +2195,9 @@ function testScheduleBoundedSectionSolver(context) {
         solverMeta: first.solverMeta,
         solverLines: solverLines.join(' | '),
         traceSummary,
+        solverOptions,
+        wideStandardMeta: wideStandard.solverMeta,
+        wideDeepMeta: wideDeep.solverMeta,
         altHtml: altRoot.innerHTML,
       };
     })()
@@ -2175,9 +2210,15 @@ function testScheduleBoundedSectionSolver(context) {
   assert(result.firstScore > result.secondScore && result.secondConflicts === 0, 'schedule bounded solver: first candidate should outrank the fallback no-conflict combination');
   assert(result.solverMeta.rank === 1 && result.solverMeta.returnedCandidateCount === 2, 'schedule solver rationale: metadata should include candidate rank');
   assert(result.solverMeta.consideredSectionTotal === 4 && result.solverMeta.generatedCount === 6, 'schedule solver rationale: metadata should count considered sections and placements');
-  assert(/Ranked #1 of 2/.test(result.solverLines) && /Searched 2 courses across 4 section options/.test(result.solverLines), 'schedule solver rationale: text should explain rank and search breadth');
-  assert(/96-schedule beam cap/.test(result.solverLines) && /4 section options checked/.test(result.traceSummary), 'schedule solver rationale: text should expose beam cap and trace summary');
+  assert(/Ranked #1 of 2/.test(result.solverLines) && /Standard breadth/.test(result.solverLines) && /Searched 2 courses across 4 section options/.test(result.solverLines), 'schedule solver rationale: text should explain rank, breadth, and search size');
+  assert(/96-schedule beam cap/.test(result.solverLines) && /Standard breadth/.test(result.traceSummary) && /4 section options checked/.test(result.traceSummary), 'schedule solver rationale: text should expose beam cap and trace summary');
   assert(/Option 1 · Rank #1/.test(result.altHtml) && /Solver trace/.test(result.altHtml), 'schedule solver rationale: alternate cards should render rank and trace');
+  assert(result.solverOptions.quick.sectionLimit === 5 && result.solverOptions.quick.beamWidth === 48, 'schedule solver breadth: quick profile should use narrow search bounds');
+  assert(result.solverOptions.standard.sectionLimit === 7 && result.solverOptions.standard.beamWidth === 96, 'schedule solver breadth: standard profile should use default search bounds');
+  assert(result.solverOptions.deep.sectionLimit === 10 && result.solverOptions.deep.beamWidth === 192, 'schedule solver breadth: deep profile should use wider search bounds');
+  assert(result.solverOptions.invalid.breadth === 'standard', 'schedule solver breadth: invalid profile should fall back to standard');
+  assert(result.wideStandardMeta.consideredSectionTotal === 7 && result.wideStandardMeta.trimmedCourseCount === 1, 'schedule solver breadth: standard should cap wide section sets');
+  assert(result.wideDeepMeta.consideredSectionTotal === 9 && result.wideDeepMeta.trimmedCourseCount === 0, 'schedule solver breadth: deep should search the full 9-section fixture');
 
   return {
     id: 'SCHEDULE-BOUNDED-SOLVER',

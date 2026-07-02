@@ -3639,7 +3639,7 @@ h1.hero-title em {
 }
 .schedule-preferences {
   display: grid;
-  grid-template-columns: repeat(6, minmax(128px, 1fr)) minmax(220px, 1.25fr);
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 10px;
   align-items: stretch;
   margin: 0 0 14px;
@@ -3681,6 +3681,7 @@ h1.hero-title em {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  min-width: min(100%, 220px);
   margin: 0;
 }
 .schedule-day-prefs legend {

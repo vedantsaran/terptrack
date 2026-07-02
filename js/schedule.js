@@ -22,6 +22,7 @@ const DEFAULT_SCHEDULE_PREFS = {
   commuteStart: '',
   commuteEnd: '',
   locationWeight: 'normal',
+  solverBreadth: 'standard',
   calendarStart: '',
   calendarEnd: '',
   registrationDate: '',
@@ -389,6 +390,7 @@ function getSchedulePrefs(semId) {
     commuteStart: normalizeScheduleChoice(CAMPUS_ANCHOR_DEFS, saved.commuteStart),
     commuteEnd: normalizeScheduleChoice(CAMPUS_ANCHOR_DEFS, saved.commuteEnd),
     locationWeight: LOCATION_WEIGHT_MULTIPLIERS[saved.locationWeight] ? saved.locationWeight : DEFAULT_SCHEDULE_PREFS.locationWeight,
+    solverBreadth: scheduleSolverBreadthDef(saved.solverBreadth).id,
     calendarStart,
     calendarEnd: calendarStart && calendarEnd && calendarEnd < calendarStart ? '' : calendarEnd,
     registrationDate: normalizeScheduleDate(saved.registrationDate),
@@ -503,10 +505,12 @@ function schedulePopulatePreferenceControls(semId) {
   const calendarEnd = document.getElementById('schedule-calendar-end');
   const registrationDate = document.getElementById('schedule-registration-date');
   const registrationTime = document.getElementById('schedule-registration-time');
+  const solverBreadth = document.getElementById('schedule-pref-solver-breadth');
   if (earliest) earliest.value = prefs.earliest || '';
   if (latest) latest.value = prefs.latest || '';
   if (minBreak) minBreak.value = String(prefs.minBreak ?? DEFAULT_SCHEDULE_PREFS.minBreak);
   if (mode) mode.value = prefs.mode || DEFAULT_SCHEDULE_PREFS.mode;
+  if (solverBreadth) solverBreadth.value = prefs.solverBreadth || DEFAULT_SCHEDULE_PREFS.solverBreadth;
   if (calendarStart) calendarStart.value = prefs.calendarStart || '';
   if (calendarEnd) calendarEnd.value = prefs.calendarEnd || '';
   if (registrationDate) registrationDate.value = prefs.registrationDate || '';
@@ -1911,10 +1915,31 @@ function evaluateScheduleCandidate(items, prefs) {
 
 const SCHEDULE_SOLVER_SECTION_LIMIT = 7;
 const SCHEDULE_SOLVER_BEAM_WIDTH = 96;
+const SCHEDULE_SOLVER_BREADTH_DEFS = [
+  { id: 'quick', label: 'Quick', sectionLimit: 5, beamWidth: 48 },
+  { id: 'standard', label: 'Standard', sectionLimit: SCHEDULE_SOLVER_SECTION_LIMIT, beamWidth: SCHEDULE_SOLVER_BEAM_WIDTH },
+  { id: 'deep', label: 'Deep', sectionLimit: 10, beamWidth: 192 },
+];
 
 function scheduleCountLabel(count, singular, plural = `${singular}s`) {
   const n = Math.max(0, Number(count) || 0);
   return `${n} ${n === 1 ? singular : plural}`;
+}
+
+function scheduleSolverBreadthDef(value) {
+  return SCHEDULE_SOLVER_BREADTH_DEFS.find(def => def.id === value)
+    || SCHEDULE_SOLVER_BREADTH_DEFS.find(def => def.id === DEFAULT_SCHEDULE_PREFS.solverBreadth)
+    || SCHEDULE_SOLVER_BREADTH_DEFS[0];
+}
+
+function scheduleSolverOptionsFromPrefs(prefs = DEFAULT_SCHEDULE_PREFS) {
+  const def = scheduleSolverBreadthDef(prefs?.solverBreadth);
+  return {
+    breadth: def.id,
+    breadthLabel: def.label,
+    sectionLimit: def.sectionLimit,
+    beamWidth: def.beamWidth,
+  };
 }
 
 function scheduleCandidateSortValue(candidate) {
@@ -1945,8 +1970,9 @@ function scheduleSectionOptionsForSolver(course, sectionsByCode, prefs, chosen, 
 
 function solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems = [], opts = {}) {
   const limit = Math.max(1, Number(opts.limit) || 1);
-  const sectionLimit = Math.max(1, Number(opts.sectionLimit) || SCHEDULE_SOLVER_SECTION_LIMIT);
-  const beamWidth = Math.max(8, Number(opts.beamWidth) || SCHEDULE_SOLVER_BEAM_WIDTH);
+  const breadthDef = scheduleSolverBreadthDef(opts.breadth);
+  const sectionLimit = Math.max(1, Number(opts.sectionLimit) || breadthDef.sectionLimit || SCHEDULE_SOLVER_SECTION_LIMIT);
+  const beamWidth = Math.max(8, Number(opts.beamWidth) || breadthDef.beamWidth || SCHEDULE_SOLVER_BEAM_WIDTH);
   const courseList = courses || [];
   const pinned = (currentItems || [])
     .filter(item => item.section && item.section.pinned)
@@ -1970,6 +1996,8 @@ function solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems = 
     skippedCodes: skipped.slice(),
     sectionLimit,
     beamWidth,
+    breadth: breadthDef.id,
+    breadthLabel: opts.breadthLabel || breadthDef.label,
     rawSectionTotal: solvable.reduce((sum, row) => sum + row.count, 0),
     consideredSectionTotal: solvable.reduce((sum, row) => sum + Math.min(row.count, sectionLimit), 0),
     trimmedCourseCount: solvable.filter(row => row.count > sectionLimit).length,
@@ -2044,7 +2072,10 @@ function solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems = 
 
 function buildScheduleCandidate(courses, sectionsByCode, prefs, variant = 0, currentItems = []) {
   const target = Math.max(0, Number(variant) || 0);
-  const candidates = solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems, { limit: target + 1 });
+  const candidates = solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems, {
+    ...scheduleSolverOptionsFromPrefs(prefs),
+    limit: target + 1,
+  });
   return candidates[target] || candidates[0] || {
     items: [],
     skipped: (courses || []).map(course => course.code),
@@ -6275,6 +6306,7 @@ function scheduleDeltaLabel(value, unit = '') {
 function scheduleCandidateTraceSummary(candidate) {
   const meta = candidate?.solverMeta || {};
   const parts = [];
+  if (meta.breadthLabel) parts.push(`${meta.breadthLabel} breadth`);
   if (Number(meta.consideredSectionTotal)) parts.push(`${meta.consideredSectionTotal} section options checked`);
   if (Number(meta.beamWidth)) parts.push(`${meta.beamWidth}-schedule beam cap`);
   if (Number(meta.skippedCount)) parts.push(`${meta.skippedCount} unscheduled`);
@@ -6344,8 +6376,9 @@ function scheduleCandidateRationale(candidate, visibleCount = 0, fallbackRank = 
   const generated = Number(meta.generatedCount) || 0;
   const beamWidth = Number(meta.beamWidth) || 0;
   const peakBeam = Number(meta.peakBeamSize) || 0;
+  const breadthLabel = meta.breadthLabel || scheduleSolverBreadthDef(meta.breadth).label;
 
-  lines.push(`Ranked #${rank}${shownCount > 1 ? ` of ${shownCount}` : ''} by conflict, warning, timing, and seat score.`);
+  lines.push(`Ranked #${rank}${shownCount > 1 ? ` of ${shownCount}` : ''} by conflict, warning, timing, and seat score (${breadthLabel} breadth).`);
   if (solvable && considered) {
     const postedText = raw > considered ? ` from ${raw} posted` : '';
     const capText = Number(meta.trimmedCourseCount) ? `, capped at ${meta.sectionLimit} per course` : '';
@@ -6450,7 +6483,10 @@ async function generateScheduleAlternatives() {
   };
   const seen = new Set();
   const alternatives = [];
-  const rankedCandidates = solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems, { limit: 12 });
+  const rankedCandidates = solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems, {
+    ...scheduleSolverOptionsFromPrefs(prefs),
+    limit: 12,
+  });
   rankedCandidates.forEach(candidate => {
     if (!candidate.items.length || seen.has(candidate.signature)) return;
     seen.add(candidate.signature);
@@ -6847,6 +6883,7 @@ function initScheduleEvents() {
     'schedule-pref-latest',
     'schedule-pref-break',
     'schedule-pref-mode',
+    'schedule-pref-solver-breadth',
     'schedule-calendar-start',
     'schedule-calendar-end',
     'schedule-registration-date',
@@ -6865,6 +6902,7 @@ function initScheduleEvents() {
       if (id === 'schedule-pref-latest') patch.latest = el.value;
       if (id === 'schedule-pref-break') patch.minBreak = Number(el.value) || 0;
       if (id === 'schedule-pref-mode') patch.mode = el.value;
+      if (id === 'schedule-pref-solver-breadth') patch.solverBreadth = scheduleSolverBreadthDef(el.value).id;
       if (id === 'schedule-calendar-start') patch.calendarStart = normalizeScheduleDate(el.value);
       if (id === 'schedule-calendar-end') patch.calendarEnd = normalizeScheduleDate(el.value);
       if (id === 'schedule-registration-date') patch.registrationDate = normalizeScheduleDate(el.value);

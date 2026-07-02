@@ -145,6 +145,7 @@ function snapshotScript() {
       accountText: accountModal ? accountModal.textContent.replace(/\\s+/g, ' ').trim() : '',
       browseText: grid ? grid.textContent.replace(/\\s+/g, ' ').trim() : '',
       scheduleText: scheduleOutput ? scheduleOutput.textContent.replace(/\\s+/g, ' ').trim() : '',
+      scheduleViewText: schedule ? schedule.textContent.replace(/\\s+/g, ' ').trim() : '',
       scheduleMapText: scheduleMap ? scheduleMap.textContent.replace(/\\s+/g, ' ').trim() : '',
       recoText: recommendations ? recommendations.textContent.replace(/\\s+/g, ' ').trim() : '',
       overflow: {
@@ -176,8 +177,9 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=116'), 'workflow app did not load styles.css?v=116');
-  assert(snapshot.scripts.includes('js/schedule.js?v=72'), 'workflow app did not load js/schedule.js?v=72');
+  assert(snapshot.styles.includes('styles.css?v=117'), 'workflow app did not load styles.css?v=117');
+  assert(snapshot.scripts.includes('js/schedule.js?v=73'), 'workflow app did not load js/schedule.js?v=73');
+  assert(snapshot.scheduleViewText.includes('Solver breadth'), 'workflow app did not render the schedule solver breadth preference');
   assert(snapshot.scripts.includes('js/timeline.js?v=27'), 'workflow app did not load js/timeline.js?v=27');
   assert(snapshot.scripts.includes('js/io.js?v=13'), 'workflow app did not load js/io.js?v=13');
   assert(snapshot.scripts.includes('js/recommendations.js?v=18'), 'workflow app did not load js/recommendations.js?v=18');
