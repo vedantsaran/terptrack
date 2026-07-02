@@ -102,16 +102,15 @@ function courseCodeCollisionMessage(inputCode, collision) {
 }
 
 function migrateEditedCourseProgress(oldCode, newCode) {
+  if (typeof moveCourseState === 'function') {
+    moveCourseState(oldCode, newCode, { preferNewCodeOnEquivalent: true });
+    return;
+  }
   if (!oldCode || !newCode || oldCode === newCode) return;
   state.courses = state.courses || {};
-  const oldKey = typeof courseStateKey === 'function' ? courseStateKey(oldCode) : oldCode;
-  if (!oldKey || !Object.prototype.hasOwnProperty.call(state.courses, oldKey)) return;
-  const newKey = normalizeCode(oldCode) === normalizeCode(newCode)
-    ? newCode
-    : (typeof courseStateKey === 'function' ? courseStateKey(newCode) : newCode);
-  if (!newKey || oldKey === newKey) return;
-  state.courses[newKey] = state.courses[oldKey];
-  delete state.courses[oldKey];
+  if (!state.courses[oldCode]) return;
+  state.courses[newCode] = state.courses[oldCode];
+  delete state.courses[oldCode];
 }
 
 async function lookupCourseFromPlanetTerp() {

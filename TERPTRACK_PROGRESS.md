@@ -9782,3 +9782,65 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 176
+
+Focus: make placeholder replacement move normalized progress state and keep Timeline undo symmetric, so replacing a GenEd placeholder with a real course preserves progress stored under compact placeholder keys like `GENEDDSHS`.
+
+Planned changes:
+- Inspect placeholder replacement progress migration after the normalized state-key cleanup passes.
+- Add a shared normalized course-state move helper for old-code to new-code migrations.
+- Reuse that helper from course edit and placeholder replacement.
+- Make placeholder undo snapshots read normalized progress keys.
+- Strengthen placeholder section replacement coverage for forward migration and undo restoration.
+- Bump changed state/course/placeholder asset cache tags and rendered workflow assertions.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/state.js`.
+  - Added `moveCourseState(oldCode, newCode, opts)`, which resolves the old key through `courseStateKey()` and writes the resolved new key.
+  - The helper supports formatting-equivalent edits through `preferNewCodeOnEquivalent`.
+- Updated `js/courses.js`.
+  - `migrateEditedCourseProgress()` now delegates to `moveCourseState()` while preserving formatting-only display-code behavior.
+- Updated `js/placeholder-search.js`.
+  - Placeholder replacement now calls `moveCourseState(oldCode, updated.code)`.
+  - `placeholderCourseStateSnapshot()` now resolves through `courseStateKey()`, so Timeline undo captures normalized placeholder progress correctly.
+- Strengthened `PLACEHOLDER-SECTIONS` in `scripts/test-generated-plans.js`.
+  - The fixture now seeds `GENEDDSHS` progress before replacing `GenEd DSHS` with `GVPT 200`.
+  - It verifies replacement migrates progress to `GVPT 200` and the migrated status is visible through normalized lookup.
+  - It verifies Timeline undo restores the placeholder progress and removes replacement progress state.
+- Bumped and asserted changed assets:
+  - `js/state.js?v=23`.
+  - `js/courses.js?v=5`.
+  - `js/placeholder-search.js?v=10`.
+  - Updated rendered workflow cache assertions for all three.
+
+Verification:
+- Ran `node --check js/state.js`.
+- Ran `node --check js/courses.js`.
+- Ran `node --check js/placeholder-search.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the strengthened `PLACEHOLDER-SECTIONS` fixture with `progress in-progress`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, drag/drop section cleanup, custom delete cleanup, course edit cleanup, course code collision guard, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the strengthened placeholder progress migration and undo coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass176-placeholder-normalized-state`.
+  - It randomly verified `ANTH`, `CINE`, `SCM`, `GEOG`, `KNES`, and `MATH` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

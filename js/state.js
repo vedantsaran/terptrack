@@ -697,6 +697,20 @@ function deleteCourseState(code) {
   delete state.courses[key];
   return true;
 }
+function moveCourseState(oldCode, newCode, opts = {}) {
+  if (!oldCode || !newCode || oldCode === newCode) return false;
+  state.courses = state.courses || {};
+  const oldKey = courseStateKey(oldCode);
+  if (!oldKey || !Object.prototype.hasOwnProperty.call(state.courses, oldKey)) return false;
+  const sameNormalized = normalizeCode(oldCode) === normalizeCode(newCode);
+  const newKey = opts.preferNewCodeOnEquivalent && sameNormalized
+    ? String(newCode || '').trim()
+    : courseStateKey(newCode);
+  if (!newKey || oldKey === newKey) return false;
+  state.courses[newKey] = state.courses[oldKey];
+  delete state.courses[oldKey];
+  return true;
+}
 function setCourseState(code, patch) {
   const key = courseStateKey(code);
   if (!key) return;

@@ -4201,7 +4201,7 @@ async function testPlaceholderSectionPreview(context) {
         }]
       }];
       state.customCourses = [];
-      state.courses = {};
+      state.courses = { GENEDDSHS: { status: 'in-progress', grade: 'P' } };
       state.selectedSections = {
         PASS55: {
           GENEDDSHS: {
@@ -4274,6 +4274,9 @@ async function testPlaceholderSectionPreview(context) {
       }, { sectionId: 'GVPT200-0201', pin: true });
       const selected = state.selectedSections.PASS55?.GVPT200 || null;
       const staleSelected = state.selectedSections.PASS55?.GENEDDSHS || null;
+      const oldProgress = state.courses.GENEDDSHS || null;
+      const newProgress = state.courses['GVPT 200'] || null;
+      const visibleProgress = getCourseState('GVPT 200');
       const replaced = state.activeSchedule[0].courses[0];
       const recentChange = state.recentChanges[0] || null;
       const oldGetElementById = document.getElementById;
@@ -4329,6 +4332,8 @@ async function testPlaceholderSectionPreview(context) {
       const restored = state.activeSchedule[0].courses[0];
       const restoredOldSection = state.selectedSections.PASS55?.GENEDDSHS || null;
       const clearedReplacementSection = state.selectedSections.PASS55?.GVPT200 || null;
+      const restoredProgress = getCourseState('GenEd DSHS');
+      const replacementProgressAfterUndo = state.courses['GVPT 200'] || state.courses.GVPT200 || null;
       const undoChange = state.recentChanges[0] || null;
       const originalChangeAfterUndo = state.recentChanges.find(change => change.id === recentChange.id) || null;
       return {
@@ -4343,6 +4348,9 @@ async function testPlaceholderSectionPreview(context) {
         loadingHtml,
         selected,
         staleSelected,
+        oldProgress,
+        newProgress,
+        visibleProgress,
         replaced,
         targetAfterReplace: placeholderSearchTarget,
         recentChange,
@@ -4366,6 +4374,8 @@ async function testPlaceholderSectionPreview(context) {
         restored,
         restoredOldSection,
         clearedReplacementSection,
+        restoredProgress,
+        replacementProgressAfterUndo,
         undoChange,
         originalChangeAfterUndo,
       };
@@ -4393,6 +4403,8 @@ async function testPlaceholderSectionPreview(context) {
   assert(result.selected.pinned === true, 'placeholder section preview: section action should pin the selected section');
   assert(result.selected.semester === '202608', 'placeholder section preview: selected section should keep the target term');
   assert(!result.staleSelected, 'placeholder section preview: stale placeholder section picks should be cleared');
+  assert(!result.oldProgress && result.newProgress?.status === 'in-progress' && result.newProgress?.grade === 'P', 'placeholder section preview: replacement should migrate normalized placeholder progress to the replacement course');
+  assert(result.visibleProgress.status === 'in-progress', 'placeholder section preview: migrated replacement progress should be visible through normalized lookup');
   assert(result.targetAfterReplace === null, 'placeholder section preview: target should clear after replacement');
   assert(result.recentChange?.type === 'placeholder-section-replacement', 'placeholder section preview: replacement with section should record a recent change');
   assert(result.recentChange?.undo?.kind === 'placeholder-replacement', 'placeholder section preview: recent change should include undo payload');
@@ -4418,6 +4430,8 @@ async function testPlaceholderSectionPreview(context) {
   assert(result.restored.code === 'GenEd DSHS', 'placeholder section preview: undo should restore the placeholder course');
   assert(result.restoredOldSection?.section_id === 'PLACEHOLDER-OLD' && result.restoredOldSection.pinned === true, 'placeholder section preview: undo should restore the prior placeholder section state');
   assert(!result.clearedReplacementSection, 'placeholder section preview: undo should clear replacement section state');
+  assert(result.restoredProgress.status === 'in-progress' && result.restoredProgress.grade === 'P', 'placeholder section preview: undo should restore migrated placeholder progress');
+  assert(!result.replacementProgressAfterUndo, 'placeholder section preview: undo should remove replacement progress state');
   assert(result.undoChange?.type === 'placeholder-undo', 'placeholder section preview: undo should record a restore change');
   assert(result.originalChangeAfterUndo?.undo?.appliedAt, 'placeholder section preview: original undo action should be marked applied');
 
@@ -4427,6 +4441,7 @@ async function testPlaceholderSectionPreview(context) {
     pinned: result.selected?.number || '',
     undo: result.restored?.code || '',
     load: `${result.context.currentCredits}->${result.context.afterCredits}`,
+    progress: result.newProgress?.status || '',
   };
 }
 
@@ -5596,7 +5611,7 @@ async function main() {
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
   console.log(`Browse impact fixture ${browseImpact.id}: ${browseImpact.mode}; load ${browseImpact.load}.`);
-  console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; pinned ${placeholderSections.pinned}; undo ${placeholderSections.undo}; load ${placeholderSections.load}.`);
+  console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; pinned ${placeholderSections.pinned}; undo ${placeholderSections.undo}; load ${placeholderSections.load}; progress ${placeholderSections.progress}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);

@@ -672,7 +672,7 @@ function placeholderClonePlain(value) {
 }
 
 function placeholderCourseStateSnapshot(code) {
-  const key = String(code || '');
+  const key = String(typeof courseStateKey === 'function' ? courseStateKey(code) : code || '');
   const courses = state.courses || {};
   const had = Object.prototype.hasOwnProperty.call(courses, key);
   return { had, value: had ? placeholderClonePlain(courses[key]) : null };
@@ -985,7 +985,8 @@ async function replacePlaceholderWithCourse(courseId, prefetched = null, options
     }
   }
   if (!replaced) { toastError('Could not locate placeholder to replace.'); return; }
-  if (state.courses[placeholderSearchTarget.code]) {
+  if (typeof moveCourseState === 'function') moveCourseState(oldCode, updated.code);
+  else if (state.courses[placeholderSearchTarget.code]) {
     state.courses[updated.code] = state.courses[placeholderSearchTarget.code];
     delete state.courses[placeholderSearchTarget.code];
   }
