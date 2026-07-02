@@ -176,8 +176,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=109'), 'workflow app did not load styles.css?v=109');
-  assert(snapshot.scripts.includes('js/schedule.js?v=63'), 'workflow app did not load js/schedule.js?v=63');
+  assert(snapshot.styles.includes('styles.css?v=110'), 'workflow app did not load styles.css?v=110');
+  assert(snapshot.scripts.includes('js/schedule.js?v=64'), 'workflow app did not load js/schedule.js?v=64');
   assert(snapshot.scripts.includes('js/recommendations.js?v=14'), 'workflow app did not load js/recommendations.js?v=14');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
@@ -654,11 +654,11 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
     state.activeSchedule = [{
       id: 'PASS98F',
       name: 'Fall 2026',
-      year: 'Year 1',
-      courses: [
-        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, kind: 'core', category: 'major-core' },
-        { code: 'MATH 140', title: 'Calculus I', cr: 4, kind: 'core', category: 'gened-fsma', prereqs: ['MATH 115'] },
-        { code: 'ENGL 101', title: 'Academic Writing', cr: 3, kind: 'gened', category: 'gened-fspw' },
+	      year: 'Year 1',
+	      courses: [
+	        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, kind: 'core', category: 'major-core', coreqs: ['CMSC 100'] },
+	        { code: 'MATH 140', title: 'Calculus I', cr: 4, kind: 'core', category: 'gened-fsma', prereqs: ['MATH 115'] },
+	        { code: 'ENGL 101', title: 'Academic Writing', cr: 3, kind: 'gened', category: 'gened-fspw' },
         { code: 'GenEd DSHU', title: 'Humanities placeholder', cr: 3, kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu'], note: 'Auto-generated DSHU placeholder' },
       ],
     }, {
@@ -744,11 +744,13 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
       && text.includes('Download registration list')
       && text.includes('Download calendar')
       && text.includes('Download advisor packet')
-      && text.includes('Registration Readiness')
-      && text.includes('Prereqs')
-      && text.includes('MATH 115')
-      && text.includes('Eligibility')
-      && text.includes('Computer Science majors')
+	      && text.includes('Registration Readiness')
+	      && text.includes('Prereqs')
+	      && text.includes('MATH 115')
+	      && text.includes('Coreqs')
+	      && text.includes('CMSC 100')
+	      && text.includes('Eligibility')
+	      && text.includes('Computer Science majors')
       && text.includes('Plan Readiness Map')
       && text.includes('0/2 terms registration-ready')
       && text.includes('Registration Appointment')
@@ -972,15 +974,17 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(result.registrationDateInput === '2099-08-25' && result.registrationTimeInput === '09:30', 'advisor packet: registration appointment inputs should render saved values');
   assert(/Registration appointment: Scheduled - Aug 25, 2099 at 9:30am/.test(result.registrationText), 'advisor packet: registration export should include appointment summary');
   assert(/Seat data freshness:[\s\S]*MATH 140: 1 hr 30 min ago/.test(result.registrationText), 'advisor packet: registration export should include seat freshness');
-  assert(/Workload balance:[\s\S]*8\/11 credits/.test(result.registrationText), 'advisor packet: registration export should include workload balance');
-  assert(/Prereqs: MATH 140: missing MATH 115/.test(result.registrationText), 'advisor packet: registration export should include missing prerequisite notes');
-  assert(/Eligibility: Restricted to Computer Science majors/.test(result.registrationText), 'advisor packet: registration export should include section eligibility notes');
+	  assert(/Workload balance:[\s\S]*8\/11 credits/.test(result.registrationText), 'advisor packet: registration export should include workload balance');
+	  assert(/Prereqs: MATH 140: missing MATH 115/.test(result.registrationText), 'advisor packet: registration export should include missing prerequisite notes');
+	  assert(/Coreqs: CMSC 131:[^\n]*CMSC 100/.test(result.registrationText), 'advisor packet: registration export should include missing corequisite notes');
+	  assert(/Eligibility: Restricted to Computer Science majors/.test(result.registrationText), 'advisor packet: registration export should include section eligibility notes');
   assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.registrationText), 'advisor packet: registration export should include seat-refresh action guidance');
   assert(/Plan readiness map:[\s\S]*Fall 2026 \(Fall 2026\): Needs sections[\s\S]*Spring 2027 \(Spring 2027\): Needs sections/.test(result.registrationText), 'advisor packet: registration export should include plan-wide readiness rows');
   assert(/Testudo entry queue:[\s\S]*1\. MATH 140 0201 \| Section ID: MATH140-0201/.test(result.registrationText), 'advisor packet: registration export should include Testudo queue');
-  assert(result.registrationBackupPlan[0]?.backupId === 'MATH140-0301', 'advisor packet: output cache should include backup section ID');
-  assert(/MATH 115/.test(result.registrationHandoff[0]?.prereqDetail || ''), 'advisor packet: output cache should include missing prerequisite detail');
-  assert(result.registrationHandoff.some(row => row.courseCode === 'CMSC 131' && row.status === 'blocked' && /Computer Science majors/.test(row.eligibilityDetail || '')), 'advisor packet: output cache should block restricted sections until eligibility is confirmed');
+	  assert(result.registrationBackupPlan[0]?.backupId === 'MATH140-0301', 'advisor packet: output cache should include backup section ID');
+	  assert(/MATH 115/.test(result.registrationHandoff[0]?.prereqDetail || ''), 'advisor packet: output cache should include missing prerequisite detail');
+	  assert(result.registrationHandoff.some(row => row.courseCode === 'CMSC 131' && /CMSC 100/.test(row.coreqDetail || '')), 'advisor packet: output cache should include missing corequisite detail');
+	  assert(result.registrationHandoff.some(row => row.courseCode === 'CMSC 131' && row.status === 'blocked' && /Computer Science majors/.test(row.eligibilityDetail || '')), 'advisor packet: output cache should block restricted sections until eligibility is confirmed');
   assert(/Backup ID: MATH140-0301/.test(result.registrationText), 'advisor packet: registration export should include backup ID in Testudo queue');
   assert(/Backup sections:[\s\S]*MATH 140 primary 0201:[\s\S]*Backup: 0301; Section ID MATH140-0301/.test(result.registrationText), 'advisor packet: registration export should include backup section handoff');
   assert(/Missing section picks:[\s\S]*ENGL 101/.test(result.registrationText), 'advisor packet: registration export should include missing picks');
@@ -997,6 +1001,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Registration Blockers/.test(result.advisorDocument), 'advisor packet: exported HTML should include blocker view heading');
 	  assert(/Registration Readiness/.test(result.advisorDocument) && /Fix before registration/.test(result.advisorDocument), 'advisor packet: exported HTML should include registration readiness gates');
 	  assert(/Prereqs:[\s\S]*MATH 115/.test(result.advisorDocument), 'advisor packet: exported HTML should include prerequisite notes');
+	  assert(/Coreqs:[\s\S]*CMSC 100/.test(result.advisorDocument), 'advisor packet: exported HTML should include corequisite notes');
 	  assert(/Eligibility:[\s\S]*Computer Science majors/.test(result.advisorDocument), 'advisor packet: exported HTML should include section eligibility notes');
 	  assert(/Final Registration Checklist/.test(result.advisorDocument) && /schedule-final-checklist/.test(result.advisorDocument), 'advisor packet: exported HTML should include final checklist');
 	  assert(/Workload Balance/.test(result.advisorDocument) && /schedule-workload-card/.test(result.advisorDocument), 'advisor packet: exported HTML should include workload balance');
@@ -1014,6 +1019,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Plan readiness map:[\s\S]*Summary: 0\/2 terms registration-ready/.test(result.advisorText), 'advisor packet: exported text should include plan-wide readiness summary');
 	  assert(/Registration readiness/.test(result.advisorText) && /Sections: 2\/3/.test(result.advisorText), 'advisor packet: exported text should include registration readiness gates');
 	  assert(/Prereqs: 2\/3[\s\S]*MATH 115/.test(result.advisorText), 'advisor packet: exported text should include prerequisite gate');
+	  assert(/Coreqs: 2\/3[\s\S]*CMSC 100/.test(result.advisorText), 'advisor packet: exported text should include corequisite gate');
 	  assert(/Eligibility: 1\/2[\s\S]*Computer Science majors/.test(result.advisorText), 'advisor packet: exported text should include section eligibility gate');
 	  assert(/Final registration checklist:[\s\S]*Seat freshness: DANGER/.test(result.advisorText), 'advisor packet: exported text should include final checklist');
 	  assert(/Workload balance:[\s\S]*8\/11 credits/.test(result.advisorText), 'advisor packet: exported text should include workload balance');
@@ -1029,6 +1035,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/MATH 140 0201: 2 seats open/.test(result.advisorText) && /backup section/.test(result.advisorText), 'advisor packet: exported text should include low-seat backup warning');
 	  assert(/Registration Readiness/.test(result.outputText) && /Fix before registration/.test(result.outputText), 'advisor packet: rendered packet should include registration readiness gates');
 	  assert(/Prereqs[\s\S]*MATH 115/.test(result.outputText), 'advisor packet: rendered packet should include prerequisite gate');
+	  assert(/Coreqs[\s\S]*CMSC 100/.test(result.outputText), 'advisor packet: rendered packet should include corequisite gate');
 	  assert(/Eligibility[\s\S]*Computer Science majors/.test(result.outputText), 'advisor packet: rendered packet should include section eligibility notes');
 	  assert(/Final Registration Checklist/.test(result.outputText) && /launch checks ready/.test(result.outputText), 'advisor packet: rendered packet should include final checklist');
 	  assert(/Workload Balance/.test(result.outputText) && /weekly in-class time/.test(result.outputText), 'advisor packet: rendered packet should include workload balance');
@@ -1094,7 +1101,7 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   }, null, { timeout: opts.timeoutMs });
   const refreshSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('advisor packet seat refresh mobile', refreshSnapshot);
-	  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, prerequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, ready backup apply action, seat refresh action, export action, and no overflow.');
+	  console.log('Advisor packet [mobile]: rendered readiness map, blocker view, registration readiness, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, ready backup apply action, seat refresh action, export action, and no overflow.');
 }
 
 async function main() {

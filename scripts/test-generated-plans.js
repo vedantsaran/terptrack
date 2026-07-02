@@ -804,7 +804,7 @@ function testScheduleRegistrationReadiness(context) {
       recoGenEdGaps = () => [];
       state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, catalogYear: '2026-2027', programName: 'Readiness Plan', totalCredits: 120 });
       const courses = [
-        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, kind: 'core', category: 'major-core' },
+        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, kind: 'core', category: 'major-core', coreqs: ['CMSC 100'] },
         { code: 'MATH 140', title: 'Calculus I', cr: 4, kind: 'core', category: 'gened-fsma', prereqs: ['MATH 115'] },
         { code: 'ENGL 101', title: 'Academic Writing', cr: 3, kind: 'gened', category: 'gened-fspw' },
       ];
@@ -920,6 +920,7 @@ function testScheduleRegistrationReadiness(context) {
         gateLevels: Object.fromEntries(readiness.gates.map(gate => [gate.id, gate.level])),
         sectionsDetail: gateMap.sections.detail,
         prereqsDetail: gateMap.prereqs.detail,
+        coreqsDetail: gateMap.coreqs.detail,
         conflictsDetail: gateMap.conflicts.detail,
         seatsDetail: gateMap.seats.detail,
         eligibilityDetail: gateMap.eligibility.detail,
@@ -966,17 +967,20 @@ function testScheduleRegistrationReadiness(context) {
   assert(result.level === 'danger' && result.label === 'Fix before registration', 'registration readiness: blocker scenario should require fixes');
   assert(result.gateLevels.sections === 'danger', 'registration readiness: unpicked current-term course should block registration');
   assert(result.gateLevels.prereqs === 'danger', 'registration readiness: missing prerequisite should block registration');
+  assert(result.gateLevels.coreqs === 'danger', 'registration readiness: missing corequisite should block registration');
   assert(result.gateLevels.conflicts === 'danger', 'registration readiness: picked-section conflict should block registration');
   assert(result.gateLevels.seats === 'danger', 'registration readiness: low-seat section should block registration');
   assert(result.gateLevels.eligibility === 'danger', 'registration readiness: restricted picked section should block eligibility gate');
   assert(/ENGL 101/.test(result.sectionsDetail), 'registration readiness: sections gate should name the unpicked course');
   assert(/MATH 140/.test(result.prereqsDetail) && /MATH 115/.test(result.prereqsDetail), 'registration readiness: prereq gate should name the missing prerequisite');
+  assert(/CMSC 131/.test(result.coreqsDetail) && /CMSC 100/.test(result.coreqsDetail), 'registration readiness: coreq gate should name the missing corequisite');
   assert(/1 overlap/.test(result.conflictsDetail), 'registration readiness: conflicts gate should summarize overlap count');
   assert(/MATH 140 0201: 2 seats open/.test(result.seatsDetail), 'registration readiness: seats gate should name the risky section');
   assert(/CMSC 131 0101/.test(result.eligibilityDetail) && /Computer Science majors/.test(result.eligibilityDetail), 'registration readiness: eligibility gate should name the restricted section');
   assert(result.fixes.length >= 3, 'registration readiness: blocker scenario should produce multiple recommended fixes');
   assert(result.fixes.some(fix => /Pick sections for ENGL 101/.test(fix)), 'registration readiness: fixes should include missing section action');
   assert(result.fixes.some(fix => /missing prerequisites/.test(fix)), 'registration readiness: fixes should include prerequisite action');
+  assert(result.fixes.some(fix => /required corequisites/.test(fix)), 'registration readiness: fixes should include corequisite action');
   assert(result.fixes.some(fix => /overlapping section|0 conflicts/.test(fix)), 'registration readiness: fixes should include conflict action');
   assert(result.fixes.some(fix => /backup section|higher-seat/.test(fix)), 'registration readiness: fixes should include seat-risk action');
   assert(result.fixes.some(fix => /Confirm Testudo eligibility/.test(fix)), 'registration readiness: fixes should include eligibility confirmation action');
@@ -988,6 +992,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Quick actions/.test(result.html) && /data-readiness-action="auto-pick"/.test(result.html), 'registration readiness: HTML should render quick actions');
   assert(/Registration readiness/.test(result.text) && result.text.includes('Sections: 2/3'), 'registration readiness: text should include gate lines');
   assert(/Prereqs: 2\/3/.test(result.text) && /MATH 115/.test(result.text), 'registration readiness: text should include prereq gate line');
+  assert(/Coreqs: 2\/3/.test(result.text) && /CMSC 100/.test(result.text), 'registration readiness: text should include coreq gate line');
   assert(/Eligibility: 1\/2/.test(result.text) && /Computer Science majors/.test(result.text), 'registration readiness: text should include eligibility gate line');
   assert(/Fix: Pick sections for ENGL 101/.test(result.text), 'registration readiness: text should include recommended fixes');
   assert(/Registration Readiness/.test(result.outputHtml) && /Seat risk/.test(result.outputHtml), 'registration readiness: schedule output HTML should include readiness gates');
@@ -1001,6 +1006,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Workload Balance/.test(result.outputHtml) && /8\/11/.test(result.outputHtml) && /3 hr 45 min/.test(result.outputHtml), 'workload balance: schedule output HTML should include workload card metrics');
   assert(/Workload balance:[\s\S]*Overall: Review workload[\s\S]*8\/11 credits[\s\S]*Mon: 2 hr 30 min/.test(result.outputText), 'workload balance: schedule text should include workload rows');
   assert(/Prereqs: MATH 140: missing MATH 115/.test(result.outputText), 'registration prereqs: schedule text should include missing prerequisite notes');
+  assert(/Coreqs: CMSC 131:[^\n]*CMSC 100/.test(result.outputText), 'registration coreqs: schedule text should include missing corequisite notes');
   assert(/Eligibility: Restricted to Computer Science majors/.test(result.outputText), 'registration eligibility: schedule text should include section restriction notes');
   assert(result.outputRegistrationAppointment?.label === 'Scheduled' && /Aug 25, 2099 at 9:30am/.test(result.outputRegistrationAppointment.when), 'registration appointment: should summarize saved Testudo time');
   assert(/Registration Appointment/.test(result.outputHtml) && /Aug 25, 2099 at 9:30am/.test(result.outputHtml), 'registration appointment: schedule output HTML should include saved appointment');
@@ -1012,8 +1018,10 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Action: Refresh sections in Terp Track shortly before opening Testudo/.test(result.outputText), 'seat freshness: schedule text should include refresh action guidance');
   assert(result.outputRegistrationHandoff[0]?.courseCode === 'MATH 140' && result.outputRegistrationHandoff[0]?.sectionId === 'MATH140-0201', 'testudo queue: should order exact section IDs by registration priority');
   assert(/MATH 115/.test(result.outputRegistrationHandoff[0]?.prereqDetail || ''), 'testudo queue: should include missing prerequisite detail');
+  assert(result.outputRegistrationHandoff.some(row => row.courseCode === 'CMSC 131' && /CMSC 100/.test(row.coreqDetail || '')), 'testudo queue: should include missing corequisite detail');
   assert(/Testudo Entry Queue/.test(result.outputHtml) && /Section ID MATH140-0201/.test(result.outputHtml), 'testudo queue: schedule output HTML should include exact section IDs');
   assert(/Prereqs:[\s\S]*MATH 115/.test(result.outputHtml), 'registration prereqs: schedule output HTML should include prerequisite notes');
+  assert(/Coreqs:[\s\S]*CMSC 100/.test(result.outputHtml), 'registration coreqs: schedule output HTML should include corequisite notes');
   assert(/Eligibility:[\s\S]*Computer Science majors/.test(result.outputHtml), 'registration eligibility: schedule output HTML should include eligibility notes');
   assert(/Testudo entry queue:[\s\S]*1\. MATH 140 0201 \| Section ID: MATH140-0201/.test(result.outputText), 'testudo queue: schedule text should include ordered section IDs');
   assert(result.outputRegistrationHandoff.some(row => row.courseCode === 'CMSC 131' && row.status === 'blocked' && /Computer Science majors/.test(row.eligibilityDetail || '')), 'testudo queue: restricted section should be blocked until eligibility is confirmed');
@@ -1036,6 +1044,7 @@ function testScheduleRegistrationReadiness(context) {
 	  assert(/Testudo entry queue:[\s\S]*1\. MATH 140 0201 \| Section ID: MATH140-0201/.test(result.outputRegistrationText), 'registration list: text should include Testudo entry queue');
   assert(/CMSC 131 \| Section 0101 \| Section ID CMSC131-0101/.test(result.outputRegistrationText), 'registration list: text should include course section and section ID');
   assert(/Prereqs: MATH 140: missing MATH 115/.test(result.outputRegistrationText), 'registration list: text should include prerequisite notes');
+  assert(/Coreqs: CMSC 131:[^\n]*CMSC 100/.test(result.outputRegistrationText), 'registration list: text should include corequisite notes');
   assert(/Eligibility: Restricted to Computer Science majors/.test(result.outputRegistrationText), 'registration list: text should include eligibility notes');
   assert(/Missing section picks:[\s\S]*ENGL 101/.test(result.outputRegistrationText), 'registration list: text should include missing section picks');
   assert(/Conflicts to resolve before registration:[\s\S]*CMSC 131 overlaps MATH 140/.test(result.outputRegistrationText), 'registration list: text should include conflict handoff');
@@ -1068,6 +1077,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Fix: Apply a backup section/.test(result.outputText), 'registration readiness: schedule text should include fix guidance');
   assert(/Registration Readiness/.test(result.advisorHtml) && /Fix before registration/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness gates');
   assert(/Prereqs:[\s\S]*MATH 115/.test(result.advisorHtml), 'registration prereqs: advisor HTML should include prerequisite notes');
+  assert(/Coreqs:[\s\S]*CMSC 100/.test(result.advisorHtml), 'registration coreqs: advisor HTML should include corequisite notes');
   assert(/Eligibility:[\s\S]*Computer Science majors/.test(result.advisorHtml), 'registration eligibility: advisor HTML should include eligibility notes');
 		  assert(/schedule-advisor-readiness-map/.test(result.advisorHtml) && /Plan Readiness Map/.test(result.advisorHtml) && /Spring 2027/.test(result.advisorHtml), 'readiness map export: advisor HTML should include plan-wide readiness map');
   assert(/Final Registration Checklist/.test(result.advisorHtml) && /Fix before Testudo/.test(result.advisorHtml), 'final checklist: advisor HTML should include final checklist');
@@ -1080,6 +1090,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Quick actions/.test(result.advisorHtml) && /Review section picks/.test(result.advisorHtml), 'registration readiness: advisor HTML should include readiness quick actions');
   assert(/Registration readiness/.test(result.advisorText) && result.advisorText.includes('Sections: 2/3'), 'registration readiness: advisor text should include readiness gates');
   assert(/Prereqs: 2\/3[\s\S]*MATH 115/.test(result.advisorText), 'registration prereqs: advisor text should include prerequisite gate');
+  assert(/Coreqs: 2\/3[\s\S]*CMSC 100/.test(result.advisorText), 'registration coreqs: advisor text should include corequisite gate');
   assert(/Eligibility: 1\/2[\s\S]*Computer Science majors/.test(result.advisorText), 'registration eligibility: advisor text should include eligibility gate');
 	  assert(/Plan readiness map:[\s\S]*Summary: 0\/2 terms registration-ready/.test(result.advisorText), 'readiness map export: advisor text should include plan-wide readiness summary');
 	  assert(/Registration appointment:[\s\S]*Use the registration list to submit exact section IDs/.test(result.advisorText), 'registration appointment: advisor text should include appointment checklist');
@@ -1093,6 +1104,7 @@ function testScheduleRegistrationReadiness(context) {
   assert(/Fix: Pick sections for ENGL 101/.test(result.advisorText), 'registration readiness: advisor text should include recommended fixes');
   assert(/schedule-readiness/.test(result.advisorDocument) && /Recommended fixes/.test(result.advisorDocument), 'registration readiness: exported advisor document should include readiness markup and fixes');
   assert(/Prereqs:[\s\S]*MATH 115/.test(result.advisorDocument), 'registration prereqs: exported advisor document should include prerequisite notes');
+  assert(/Coreqs:[\s\S]*CMSC 100/.test(result.advisorDocument), 'registration coreqs: exported advisor document should include corequisite notes');
   assert(/Eligibility:[\s\S]*Computer Science majors/.test(result.advisorDocument), 'registration eligibility: exported advisor document should include eligibility notes');
 		  assert(/schedule-advisor-readiness-map/.test(result.advisorDocument) && /Plan Readiness Map/.test(result.advisorDocument), 'readiness map export: exported advisor document should include plan-wide readiness markup');
   assert(/schedule-final-checklist/.test(result.advisorDocument) && /Final Registration Checklist/.test(result.advisorDocument), 'final checklist: exported advisor document should include final checklist markup');

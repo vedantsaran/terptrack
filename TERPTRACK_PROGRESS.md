@@ -7927,3 +7927,68 @@ Verification:
   - It randomly verified `WMST`, `PLSC`, `THET`, `GEOG`, `ARTT`, and `ENCH` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 144
+
+Focus: add corequisite readiness to registration handoff so a course cannot look Testudo-ready when its required co-req is missing, unpicked, only pending, or planned in the wrong term.
+
+Planned changes:
+- Reuse existing `coreqs` course data rather than introducing a separate parser.
+- Add a first-class `Coreqs` registration readiness gate beside prerequisites, eligibility, seats, conflicts, timing, and preferences.
+- Treat already-completed or same-term picked corequisites as ready, pending/prior planned corequisites as review, and missing/same-term-unpicked/later corequisites as blockers.
+- Carry corequisite blockers into enrollment order, Testudo entry queue, schedule text, registration-list text, advisor packet HTML/text, and picked-section tables.
+- Verify focused fixtures, rendered browser workflows, release checks, and deterministic plus random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added shared corequisite readiness helpers in `js/schedule.js`.
+  - `scheduleCourseCoreqStatus()` classifies course `coreqs` as ready, warning, or danger using completed credit, in-progress credit, plan order, current-term course lists, and picked sections.
+  - Same-term corequisites must have picked sections before the Testudo queue treats them as ready.
+  - Prior planned or in-progress corequisites remain warning-level confirmation items.
+  - Missing, failed, later-term, or same-term-unpicked corequisites become danger-level blockers.
+- Added a first-class `Coreqs` gate to `scheduleRegistrationReadiness()`.
+  - Recommended fixes now call out required corequisites separately from prerequisites.
+  - Quick actions route students to section review when co-req pairs need same-term picks.
+- Added corequisite status to registration handoff surfaces.
+  - Enrollment order now scores co-req blockers and labels them `Coreq first` or `Confirm coreq` when they are the highest-priority issue.
+  - Testudo entry queue marks corequisite-blocked rows as blocked and includes `Coreqs:` detail lines in HTML/text.
+  - Schedule output text, registration-list text, advisor HTML/text, advisor document HTML, and the picked-section table now include corequisite notes.
+- Bumped cache tags:
+  - `styles.css?v=110`.
+  - `js/schedule.js?v=64`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now fixtures `CMSC 131` with missing `CMSC 100` corequisite evidence.
+  - The fixture asserts the `coreqs:danger` readiness gate, co-req fix guidance, Testudo queue co-req detail, schedule text, registration-list text, advisor HTML/text, and exported advisor document markup.
+  - The rendered mobile advisor packet workflow now waits for the `Coreqs` gate, checks missing `CMSC 100`, verifies co-req detail in exports/cache, and logs corequisite gate coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with `coreqs:danger` coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with prerequisite gate, corequisite gate, eligibility gate, workload balance, final registration checklist, ready backup apply, calendar omission auto-fill, clear-picks undo, calendar omission review, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js --live --live-seed=pass144-coreq-readiness-live`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including corequisite gate coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with corequisite gate coverage.
+  - It live-verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp with every generated required course reporting a matching live title/credit pair.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass144-coreq-readiness-random-live`.
+  - It randomly verified `ENAE`, `IS`, `PHIL`, `SPAN`, `HIST`, and `AOSC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- After final template/helper cleanup, reran final-state checks:
+  - `node --check js/schedule.js`.
+  - `node scripts/test-generated-plans.js`.
+  - `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
