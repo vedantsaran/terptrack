@@ -73,6 +73,9 @@ function attachDndHandlers() {
 }
 
 function dndClearSelectedSection(semId, code) {
+  if (typeof clearSelectedSectionForCourse === 'function') {
+    return clearSelectedSectionForCourse(semId, code);
+  }
   const key = normalizeCode(code);
   const bucket = state.selectedSections && state.selectedSections[semId];
   if (!key || !bucket || !bucket[key]) return false;
@@ -83,6 +86,9 @@ function dndClearSelectedSection(semId, code) {
 
 function dndClearMovedSelections(code, semIds = []) {
   const uniqueSemIds = Array.from(new Set(semIds.filter(Boolean)));
+  if (typeof clearSelectedSectionsForCourse === 'function') {
+    return clearSelectedSectionsForCourse(code, uniqueSemIds);
+  }
   return uniqueSemIds.reduce((count, semId) => count + (dndClearSelectedSection(semId, code) ? 1 : 0), 0);
 }
 

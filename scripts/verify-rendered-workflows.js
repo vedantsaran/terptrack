@@ -183,8 +183,9 @@ async function openFreshApp(page, url, opts, suffix) {
   assert(snapshot.scripts.includes('js/recommendations.js?v=18'), 'workflow app did not load js/recommendations.js?v=18');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
-  assert(snapshot.scripts.includes('js/dnd.js?v=1'), 'workflow app did not load js/dnd.js?v=1');
-  assert(snapshot.scripts.includes('js/state.js?v=19'), 'workflow app did not load js/state.js?v=19');
+  assert(snapshot.scripts.includes('js/dnd.js?v=2'), 'workflow app did not load js/dnd.js?v=2');
+  assert(snapshot.scripts.includes('js/state.js?v=20'), 'workflow app did not load js/state.js?v=20');
+  assert(snapshot.scripts.includes('js/render.js?v=3'), 'workflow app did not load js/render.js?v=3');
   assert(snapshot.scripts.includes('js/share.js?v=17'), 'workflow app did not load js/share.js?v=17');
   assert(snapshot.scripts.includes('js/snapshots.js?v=12'), 'workflow app did not load js/snapshots.js?v=12');
   assert(snapshot.scripts.includes('js/account.js?v=16'), 'workflow app did not load js/account.js?v=16');

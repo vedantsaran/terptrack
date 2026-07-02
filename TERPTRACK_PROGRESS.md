@@ -9220,3 +9220,68 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 166
+
+Focus: make custom semester and custom course deletion clean up scheduling state, so removed plan rows do not leave stale posted-section picks, term prefs, or progress records behind.
+
+Planned changes:
+- Inspect custom semester and custom course removal after the drag/drop section cleanup pass.
+- Add shared state helpers for clearing selected sections by course and clearing a removed semester's schedule state.
+- Use those helpers from drag/drop cleanup and from render delete actions.
+- Cover custom semester deletion and standalone custom course deletion in the generated-plan harness.
+- Bump changed asset cache tags and rendered workflow assertions.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added cleanup helpers in `js/state.js`.
+  - `clearSelectedSectionForCourse()` removes one course pick from one semester and removes empty buckets.
+  - `clearSelectedSectionsForCourse()` removes all stale picks for a deleted course, including legacy flat selected-section entries.
+  - `clearSemesterPlanningState()` removes schedule prefs and selected-section buckets for a deleted semester.
+  - `removeCustomCourseFromPlan()` removes a custom course, its progress entry, and all picked sections for that course.
+  - `removeCustomSemesterFromPlan()` removes a custom semester, its contained custom courses, the deleted semester's prefs/picks, removed-course progress, and stale removed-course picks from other buckets.
+- Updated `js/render.js`.
+  - Custom semester delete actions now call `removeCustomSemesterFromPlan()`.
+  - Custom course delete actions now call `removeCustomCourseFromPlan()`.
+  - Existing fallback behavior remains for older helper-less contexts.
+- Updated `js/dnd.js`.
+  - Drag/drop cleanup now delegates to the shared state selected-section cleanup helpers when available.
+- Strengthened generated-plan regression coverage.
+  - Added `CUSTOM-DELETE-CLEANUP`.
+  - The fixture removes a Summer 2027 custom semester and verifies contained courses, term prefs, selected sections, stale cross-term picks, and progress are removed while unrelated Fall 2026 picks/prefs remain.
+  - The fixture then removes standalone custom course `PLCY 201` and verifies its row, progress, and section pick are cleared while `ENGL 101` remains picked.
+- Bumped cache tags:
+  - `js/state.js?v=20`.
+  - `js/render.js?v=3`.
+  - `js/dnd.js?v=2`.
+  - Updated rendered workflow cache assertions for all three assets.
+
+Verification:
+- Ran `node --check js/state.js`.
+- Ran `node --check js/render.js`.
+- Ran `node --check js/dnd.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `CUSTOM-DELETE-CLEANUP` custom semester/course cleanup coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, drag/drop section cleanup, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the new custom delete cleanup coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass166-custom-delete-cleanup`.
+  - It randomly verified `SCM`, `AREC`, `BCHM`, `CHEM`, `ENGL`, and `ENST` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

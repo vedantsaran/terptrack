@@ -97,8 +97,11 @@ function renderSemesters() {
       rm.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!confirm(`Remove semester ${sem.name}? Custom courses inside it will also be removed.`)) return;
-        state.customSemesters = (state.customSemesters || []).filter(s => s.id !== sem.id);
-        state.customCourses = (state.customCourses || []).filter(c => c.semId !== sem.id);
+        if (typeof removeCustomSemesterFromPlan === 'function') removeCustomSemesterFromPlan(sem.id);
+        else {
+          state.customSemesters = (state.customSemesters || []).filter(s => s.id !== sem.id);
+          state.customCourses = (state.customCourses || []).filter(c => c.semId !== sem.id);
+        }
         saveState();
         render();
       });
@@ -262,8 +265,11 @@ function renderCourse(course, semId, isCustom = false) {
     remove.addEventListener('click', (e) => {
       e.stopPropagation();
       if (confirm(`Remove ${course.code}?`)) {
-        state.customCourses = state.customCourses.filter(c => c.code !== course.code);
-        delete state.courses[course.code];
+        if (typeof removeCustomCourseFromPlan === 'function') removeCustomCourseFromPlan(course.code);
+        else {
+          state.customCourses = state.customCourses.filter(c => c.code !== course.code);
+          delete state.courses[course.code];
+        }
         saveState();
         render();
       }

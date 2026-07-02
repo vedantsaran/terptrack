@@ -2295,6 +2295,85 @@ function testDragDropSelectionCleanup(context) {
   };
 }
 
+function testCustomDeleteSelectionCleanup(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      state.activeSchedule = [{
+        id: 'DEL-F',
+        name: 'Fall 2026',
+        courses: [{ code: 'ENGL 101', title: 'Academic Writing', cr: 3 }]
+      }];
+      state.customSemesters = [{ id: 'DEL-SUM', name: 'Summer 2027', year: 'Year 1', courses: [] }];
+      state.customCourses = [
+        { code: 'INST 201', title: 'Introduction to Information Science', cr: 3, semId: 'DEL-SUM' },
+        { code: 'PLCY 201', title: 'Public Leaders and Active Citizens', cr: 3, semId: 'DEL-F' }
+      ];
+      state.courses = {
+        'INST 201': { status: 'in-progress', grade: '' },
+        'PLCY 201': { status: 'passed', grade: 'A' },
+        'ENGL 101': { status: 'not-started', grade: '' }
+      };
+      state.schedulePrefs = {
+        'DEL-SUM': { term: '202705', mode: 'compact' },
+        'DEL-F': { term: '202608', mode: 'balanced' }
+      };
+      state.selectedSections = {
+        'DEL-SUM': {
+          INST201: { course: 'INST 201', section_id: 'INST201-0101', number: '0101', semester: '202705', meetings: [] }
+        },
+        'DEL-F': {
+          INST201: { course: 'INST 201', section_id: 'INST201-0999', number: '0999', semester: '202608', meetings: [] },
+          PLCY201: { course: 'PLCY 201', section_id: 'PLCY201-0201', number: '0201', semester: '202608', meetings: [] },
+          ENGL101: { course: 'ENGL 101', section_id: 'ENGL101-0101', number: '0101', semester: '202608', meetings: [] }
+        }
+      };
+
+      const semesterRemoval = removeCustomSemesterFromPlan('DEL-SUM');
+      const afterSemester = {
+        customSemesters: state.customSemesters.map(sem => sem.id),
+        customCourses: state.customCourses.map(course => course.code),
+        hasSummerPrefs: !!state.schedulePrefs['DEL-SUM'],
+        hasFallPrefs: !!state.schedulePrefs['DEL-F'],
+        summerBucket: state.selectedSections['DEL-SUM'] || null,
+        staleInstInFall: state.selectedSections['DEL-F']?.INST201 || null,
+        preservedFallPick: state.selectedSections['DEL-F']?.ENGL101?.section_id || '',
+        instProgress: state.courses['INST 201'] || null,
+        semesterRemoval,
+      };
+
+      const courseRemoval = removeCustomCourseFromPlan('PLCY 201');
+      return {
+        afterSemester,
+        remainingCustomCourses: state.customCourses.map(course => course.code),
+        hasPlcyProgress: !!state.courses['PLCY 201'],
+        plcyPick: state.selectedSections['DEL-F']?.PLCY201 || null,
+        preservedAfterCourse: state.selectedSections['DEL-F']?.ENGL101?.section_id || '',
+        fallPrefs: state.schedulePrefs['DEL-F'] || null,
+        remainingBuckets: Object.keys(state.selectedSections || {}),
+        courseRemoval,
+      };
+    })()
+  `, context));
+
+  assert(result.afterSemester.semesterRemoval.removedSemester === true && result.afterSemester.semesterRemoval.removedCourses === 1, 'custom delete cleanup: custom semester removal should report removed semester and contained course');
+  assert(!result.afterSemester.customSemesters.includes('DEL-SUM'), 'custom delete cleanup: removed custom semester should leave customSemesters');
+  assert(!result.afterSemester.customCourses.includes('INST 201'), 'custom delete cleanup: courses inside removed custom semester should be removed');
+  assert(!result.afterSemester.hasSummerPrefs && result.afterSemester.hasFallPrefs, 'custom delete cleanup: removed semester prefs should be cleared while active term prefs remain');
+  assert(!result.afterSemester.summerBucket && !result.afterSemester.staleInstInFall, 'custom delete cleanup: removed semester course picks should clear from removed and stale buckets');
+  assert(result.afterSemester.preservedFallPick === 'ENGL101-0101', 'custom delete cleanup: unrelated active term picks should remain after semester removal');
+  assert(!result.afterSemester.instProgress, 'custom delete cleanup: removed custom semester course progress should be removed');
+  assert(result.courseRemoval.removed === 1, 'custom delete cleanup: standalone custom course removal should report one removed row');
+  assert(!result.remainingCustomCourses.includes('PLCY 201') && !result.hasPlcyProgress && !result.plcyPick, 'custom delete cleanup: standalone custom course should clear row, progress, and picked section');
+  assert(result.preservedAfterCourse === 'ENGL101-0101' && result.fallPrefs?.term === '202608', 'custom delete cleanup: unrelated pick and surviving term prefs should remain after course removal');
+  assert(result.remainingBuckets.length === 1 && result.remainingBuckets[0] === 'DEL-F', 'custom delete cleanup: empty removed buckets should not remain');
+
+  return {
+    id: 'CUSTOM-DELETE-CLEANUP',
+    semesterRemoved: result.afterSemester.semesterRemoval.removedCourses,
+    courseRemoved: result.courseRemoval.removed,
+  };
+}
+
 function testRecommendationMoveAction(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -4998,6 +5077,7 @@ async function main() {
   const seatRisk = testScheduleSeatRiskBackups(context);
   const readyBackups = await testScheduleReadyBackupBulkAction(context);
   const dndCleanup = testDragDropSelectionCleanup(context);
+  const customDeleteCleanup = testCustomDeleteSelectionCleanup(context);
   const recoMove = testRecommendationMoveAction(context);
   const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
@@ -5036,6 +5116,7 @@ async function main() {
   console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
   console.log(`Schedule ready backups fixture ${readyBackups.id}: applied ${readyBackups.applied}; restored ${readyBackups.restored}.`);
   console.log(`Drag/drop cleanup fixture ${dndCleanup.id}: required ${dndCleanup.required}; custom ${dndCleanup.custom}.`);
+  console.log(`Custom delete cleanup fixture ${customDeleteCleanup.id}: semester courses ${customDeleteCleanup.semesterRemoved}; course rows ${customDeleteCleanup.courseRemoved}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
@@ -5055,7 +5136,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

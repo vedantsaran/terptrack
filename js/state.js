@@ -467,6 +467,76 @@ function normalizeSelectedSectionsForPlan(selectedSections, planState = {}) {
   return Object.keys(unplaced).length ? { ...normalized, ...unplaced } : normalized;
 }
 
+function clearSelectedSectionForCourse(semId, code) {
+  const key = normalizeCode(code);
+  const bucket = state.selectedSections && state.selectedSections[semId];
+  if (!key || !bucket || !bucket[key]) return false;
+  delete bucket[key];
+  if (!Object.keys(bucket).length) delete state.selectedSections[semId];
+  return true;
+}
+
+function clearSelectedSectionsForCourse(code, semIds = null) {
+  const key = normalizeCode(code);
+  if (!key || !state.selectedSections) return 0;
+  const targetSemIds = Array.isArray(semIds) && semIds.length
+    ? Array.from(new Set(semIds.filter(Boolean)))
+    : Object.keys(state.selectedSections || {});
+  let removed = targetSemIds.reduce((count, semId) => count + (clearSelectedSectionForCourse(semId, key) ? 1 : 0), 0);
+  Object.entries(state.selectedSections || {}).forEach(([semOrCode, value]) => {
+    if (normalizeCode(semOrCode) === key && stateSelectedSectionLike(value)) {
+      delete state.selectedSections[semOrCode];
+      removed += 1;
+    }
+  });
+  return removed;
+}
+
+function clearSemesterPlanningState(semId) {
+  let changed = false;
+  if (state.schedulePrefs && state.schedulePrefs[semId]) {
+    delete state.schedulePrefs[semId];
+    changed = true;
+  }
+  if (state.selectedSections && state.selectedSections[semId]) {
+    delete state.selectedSections[semId];
+    changed = true;
+  }
+  return changed;
+}
+
+function removeCustomCourseFromPlan(code) {
+  const key = normalizeCode(code);
+  if (!key) return { removed: 0, clearedSections: 0 };
+  const removedCourses = (state.customCourses || []).filter(course => normalizeCode(course.code) === key);
+  if (!removedCourses.length) return { removed: 0, clearedSections: 0 };
+  state.customCourses = (state.customCourses || []).filter(course => normalizeCode(course.code) !== key);
+  let clearedSections = 0;
+  removedCourses.forEach(course => {
+    delete state.courses[course.code];
+    clearedSections += clearSelectedSectionsForCourse(course.code);
+  });
+  return { removed: removedCourses.length, clearedSections };
+}
+
+function removeCustomSemesterFromPlan(semId) {
+  const removedSemester = (state.customSemesters || []).some(sem => sem.id === semId);
+  const removedCourses = (state.customCourses || []).filter(course => course.semId === semId);
+  state.customSemesters = (state.customSemesters || []).filter(sem => sem.id !== semId);
+  state.customCourses = (state.customCourses || []).filter(course => course.semId !== semId);
+  const clearedSemesterState = clearSemesterPlanningState(semId);
+  let clearedSections = clearedSemesterState ? 1 : 0;
+  removedCourses.forEach(course => {
+    delete state.courses[course.code];
+    clearedSections += clearSelectedSectionsForCourse(course.code);
+  });
+  return {
+    removedSemester,
+    removedCourses: removedCourses.length,
+    clearedSections,
+  };
+}
+
 function loadState() {
   const fallback = {
     courses: {},
