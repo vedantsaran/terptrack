@@ -16,6 +16,7 @@ function exportData() {
 function openImport() {
   document.getElementById('import-file').click();
 }
+
 document.getElementById('import-file').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -25,13 +26,14 @@ document.getElementById('import-file').addEventListener('change', (e) => {
       const data = JSON.parse(ev.target.result);
       if (!data.courses) throw new Error('Invalid file');
       if (confirm('This will replace your current data. Continue?')) {
+        const nextState = { ...state, ...data };
         state = {
           ...state,
           ...data,
           settings: typeof normalizeSettings === 'function' ? normalizeSettings({ ...DEFAULT_SETTINGS, ...(data.settings || state.settings || {}) }) : { ...DEFAULT_SETTINGS, ...(data.settings || state.settings || {}) },
           customSemesters: data.customSemesters || state.customSemesters || [],
-          selectedSections: data.selectedSections || {},
           schedulePrefs: data.schedulePrefs || {},
+          selectedSections: normalizeRestoredSelectedSections(data.selectedSections || {}, nextState),
           scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(data.scheduleAdvisorFilter) ? data.scheduleAdvisorFilter : 'all',
           scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(data.scheduleOutputPreset) ? data.scheduleOutputPreset : 'personal',
           scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true, ...(data.scheduleOutputOptions || {}) },

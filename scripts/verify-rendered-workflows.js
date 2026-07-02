@@ -179,10 +179,12 @@ async function openFreshApp(page, url, opts, suffix) {
   assert(snapshot.styles.includes('styles.css?v=113'), 'workflow app did not load styles.css?v=113');
   assert(snapshot.scripts.includes('js/schedule.js?v=70'), 'workflow app did not load js/schedule.js?v=70');
   assert(snapshot.scripts.includes('js/timeline.js?v=26'), 'workflow app did not load js/timeline.js?v=26');
+  assert(snapshot.scripts.includes('js/io.js?v=13'), 'workflow app did not load js/io.js?v=13');
   assert(snapshot.scripts.includes('js/recommendations.js?v=18'), 'workflow app did not load js/recommendations.js?v=18');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
-  assert(snapshot.scripts.includes('js/share.js?v=15'), 'workflow app did not load js/share.js?v=15');
+  assert(snapshot.scripts.includes('js/share.js?v=16'), 'workflow app did not load js/share.js?v=16');
+  assert(snapshot.scripts.includes('js/snapshots.js?v=12'), 'workflow app did not load js/snapshots.js?v=12');
   assert(snapshot.scripts.includes('js/account.js?v=15'), 'workflow app did not load js/account.js?v=15');
   return snapshot;
 }

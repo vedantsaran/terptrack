@@ -43,13 +43,16 @@ function saveSnapshot(name) {
 function loadSnapshot(id) {
   const snap = (state.snapshots || []).find(s => s.id === id);
   if (!snap) { toastError('Snapshot not found.'); return; }
+  const nextState = { ...state, ...(snap.payload || {}) };
   Object.assign(state, {
     courses: snap.payload.courses,
     customCourses: snap.payload.customCourses,
     customSemesters: snap.payload.customSemesters,
     activeSchedule: snap.payload.activeSchedule,
-    selectedSections: snap.payload.selectedSections || {},
     schedulePrefs: snap.payload.schedulePrefs || {},
+    selectedSections: typeof normalizeRestoredSelectedSections === 'function'
+      ? normalizeRestoredSelectedSections(snap.payload.selectedSections || {}, nextState)
+      : (snap.payload.selectedSections || {}),
     scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(snap.payload.scheduleAdvisorFilter) ? snap.payload.scheduleAdvisorFilter : 'all',
     scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(snap.payload.scheduleOutputPreset) ? snap.payload.scheduleOutputPreset : 'personal',
     scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true, ...(snap.payload.scheduleOutputOptions || {}) },

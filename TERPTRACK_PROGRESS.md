@@ -8991,3 +8991,64 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 162
+
+Focus: make local JSON imports and saved snapshots repair selected-section buckets the same way shared-plan imports do, so restored backups and scenario snapshots keep section picks tied to the correct UMD term.
+
+Planned changes:
+- Reuse the shared selected-section normalization for local JSON import restore.
+- Reuse the same normalization when loading saved snapshots.
+- Keep shared-plan URL import behavior unchanged while moving the common restore helper beside the shared normalizer.
+- Add regressions for local restore and snapshot restore with stale nested section buckets.
+- Bump changed asset cache tags and rendered workflow assertions.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `normalizeRestoredSelectedSections()` in `js/share.js` beside `normalizeSharedSelectedSections()`.
+  - Local restore paths now share the same course/term repair logic as shared URL imports.
+- Updated `js/io.js` import restore.
+  - JSON imports now build a candidate plan state and normalize `selectedSections` against its active schedule, custom semesters, and schedule prefs.
+  - Stale nested buckets no longer survive as orphaned semester ids when the section has a clear UMD term match.
+- Updated `js/snapshots.js` restore.
+  - Loading a saved snapshot now normalizes selected-section buckets before assigning them to state.
+  - Saved scenarios with regenerated or legacy semester ids recover section picks into the matching term.
+- Strengthened generated-plan regression coverage.
+  - Account/share fixture now verifies `normalizeRestoredSelectedSections()` routes a Spring 2027 `MATH 140` section from a stale nested bucket into the Spring restore term.
+  - The same fixture loads an actual snapshot with a stale selected-section bucket and verifies `loadSnapshot()` routes `MATH140-0501` into the Spring 2027 snapshot term.
+  - The generated-plan VM now loads `js/snapshots.js` so the snapshot assertion exercises the real restore function.
+- Bumped cache tags:
+  - `js/io.js?v=13`.
+  - `js/share.js?v=16`.
+  - `js/snapshots.js?v=12`.
+  - Added rendered workflow cache assertions for IO and snapshots.
+
+Verification:
+- Ran `node --check js/io.js`.
+- Ran `node --check js/share.js`.
+- Ran `node --check js/snapshots.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the updated `ACCOUNT-FRIENDS` local restore and snapshot restore selected-section normalization coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the updated local restore and snapshot restore coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass162-local-restore-sections`.
+  - It randomly verified `PHSC`, `JOUR`, `BIOE`, `SCM`, `FMSC`, and `SOCY` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

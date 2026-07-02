@@ -206,6 +206,10 @@ function normalizeSharedSelectedSections(selectedSections, planState = {}) {
   return Object.keys(unplaced).length ? { ...normalized, ...unplaced } : normalized;
 }
 
+function normalizeRestoredSelectedSections(selectedSections, planState = {}) {
+  return normalizeSharedSelectedSections(selectedSections || {}, planState || {});
+}
+
 async function generateShareUrl() {
   const json = JSON.stringify(_planSharePayload());
   const encoded = await _gzipBase64(json);

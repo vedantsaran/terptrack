@@ -56,6 +56,7 @@ function buildContext() {
     'js/import.js',
     'js/settings.js',
     'js/share.js',
+    'js/snapshots.js',
     'js/account.js',
     'js/schedule.js',
     'js/timeline.js',
@@ -465,6 +466,30 @@ function testAccountAndShareState(context) {
       customSemesters: [],
       schedulePrefs: {},
     });
+    const restoredImportSections = normalizeRestoredSelectedSections({
+      'legacy-fall-id': {
+        MATH140: {
+          course: 'MATH 140',
+          section_id: 'MATH140-0401',
+          number: '0401',
+          semester: '202701',
+          meetings: [{ days: 'F', start_time: '1:00pm', end_time: '1:50pm', building: 'MTH', room: '0501' }]
+        }
+      }
+    }, {
+      activeSchedule: [{
+        id: 'restore-fall',
+        name: 'Fall 2026',
+        courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+      }, {
+        id: 'restore-spring',
+        name: 'Spring 2027',
+        courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+      }],
+      customCourses: [],
+      customSemesters: [],
+      schedulePrefs: {},
+    });
     const applied = applySharedPlanData({
       v: 1,
       courses: { 'MATH 140': { status: 'passed' } },
@@ -550,6 +575,57 @@ function testAccountAndShareState(context) {
         springSection: nestedInferredImportSections['share-spring']?.MATH140 || null,
         legacySection: nestedInferredImportSections['legacy-fall-id']?.MATH140 || null,
       },
+      restoredImport: {
+        semIds: Object.keys(restoredImportSections),
+        springSection: restoredImportSections['restore-spring']?.MATH140 || null,
+        legacySection: restoredImportSections['legacy-fall-id']?.MATH140 || null,
+      },
+      snapshotRestore: (() => {
+        state.snapshots = [{
+          id: 'restore-snap',
+          name: 'Restored spring scenario',
+          payload: {
+            courses: { 'MATH 140': { status: 'planned' } },
+            customCourses: [],
+            customSemesters: [],
+            activeSchedule: [{
+              id: 'snap-fall',
+              name: 'Fall 2026',
+              courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+            }, {
+              id: 'snap-spring',
+              name: 'Spring 2027',
+              courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+            }],
+            selectedSections: {
+              'old-fall-snap': {
+                MATH140: {
+                  course: 'MATH 140',
+                  section_id: 'MATH140-0501',
+                  number: '0501',
+                  semester: '202701',
+                  meetings: [{ days: 'M', start_time: '3:00pm', end_time: '3:50pm', building: 'MTH', room: '0601' }]
+                }
+              }
+            },
+            schedulePrefs: {},
+            scheduleAdvisorFilter: 'all',
+            scheduleOutputPreset: 'personal',
+            scheduleOutputOptions: {},
+            roadmapPrefs: {},
+            browseSavedSearches: [],
+            recentChanges: [],
+            profilePrefs: defaultProfilePrefs(),
+            settings: { ...DEFAULT_SETTINGS, programName: 'Snapshot Math' },
+          }
+        }];
+        loadSnapshot('restore-snap');
+        return {
+          activeIds: (state.activeSchedule || []).map(sem => sem.id),
+          springSection: state.selectedSections['snap-spring']?.MATH140 || null,
+          legacySection: state.selectedSections['old-fall-snap']?.MATH140 || null,
+        };
+      })(),
     })
   `, context));
 
@@ -610,6 +686,10 @@ function testAccountAndShareState(context) {
   assert(result.inferredImport.springSection?.section_id === 'MATH140-0201' && result.inferredImport.springSection?.semester === '202701', 'shared plan import: routed section should preserve the posted UMD term');
   assert(result.nestedInferredImport.semIds.includes('share-spring') && !result.nestedInferredImport.legacySection, 'shared plan import: stale nested section buckets should reroute to the inferred matching UMD term');
   assert(result.nestedInferredImport.springSection?.section_id === 'MATH140-0301' && result.nestedInferredImport.springSection?.semester === '202701', 'shared plan import: nested rerouted section should preserve the posted UMD term');
+  assert(result.restoredImport.semIds.includes('restore-spring') && !result.restoredImport.legacySection, 'JSON import restore: stale nested section buckets should use shared selected-section normalization');
+  assert(result.restoredImport.springSection?.section_id === 'MATH140-0401' && result.restoredImport.springSection?.semester === '202701', 'JSON import restore: rerouted section should preserve the posted UMD term');
+  assert(result.snapshotRestore.activeIds.includes('snap-spring') && !result.snapshotRestore.legacySection, 'snapshot restore: stale selected-section buckets should normalize when loading a saved scenario');
+  assert(result.snapshotRestore.springSection?.section_id === 'MATH140-0501' && result.snapshotRestore.springSection?.semester === '202701', 'snapshot restore: rerouted section should preserve the posted UMD term');
 
   return {
     id: 'ACCOUNT-FRIENDS',
