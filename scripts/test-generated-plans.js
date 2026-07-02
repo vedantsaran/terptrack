@@ -819,6 +819,27 @@ function testScheduleTimingFit(context) {
       const changeDigestText = scheduleRecentChangesText([altChange]).join(' | ');
       const advisorDiagnosticHtml = scheduleAdvisorTimingDiagnosticsHtml(idle);
       const advisorDiagnosticText = scheduleAdvisorTimingDiagnosticsText(idle).join(' | ');
+      const thursdaySection = {
+        section_id: 'TEST101-0101',
+        number: '0101',
+        course: 'TEST101',
+        meetings: [{ days: 'TH', start_time: '11:00am', end_time: '12:15pm', building: 'ESJ', room: '1201' }],
+      };
+      const thursdayBlocks = sectionBlocks(thursdaySection, { code: 'TEST 101', title: 'Thursday Lab' });
+      const thursdayCalendar = buildScheduleCalendarIcs(
+        { id: 'PASS155F', name: 'Fall 2026' },
+        '202608',
+        [{ course: { code: 'TEST 101', title: 'Thursday Lab' }, section: thursdaySection }],
+        { ...DEFAULT_SCHEDULE_PREFS, calendarStart: '2026-09-02', calendarEnd: '2026-12-14' }
+      ).replace(/\\r?\\n /g, '');
+      const dayVariants = {
+        uppercaseTh: parseMeetingDays('TH').join(','),
+        registrarR: parseMeetingDays('R').join(','),
+        compactTTh: parseMeetingDays('TTh').join(','),
+        verbose: parseMeetingDays('Tuesday Thursday').join(','),
+        slashed: parseMeetingDays('Mon/Wed/Fri').join(','),
+        tbaCount: parseMeetingDays('TBA').length,
+      };
       return {
         compactScore: compact.score,
         idleScore: idle.score,
@@ -836,10 +857,22 @@ function testScheduleTimingFit(context) {
         changeDigestText,
         advisorDiagnosticHtml,
         advisorDiagnosticText,
+        dayVariants,
+        thursdayBlocks,
+        thursdayCalendar,
       };
     })()
   `, context));
 
+  assert(result.dayVariants.uppercaseTh === 'Th', 'meeting days: uppercase TH should parse as Thursday');
+  assert(result.dayVariants.registrarR === 'Th', 'meeting days: registrar R shorthand should parse as Thursday');
+  assert(result.dayVariants.compactTTh === 'Tu,Th', 'meeting days: compact TTh should parse as Tuesday and Thursday');
+  assert(result.dayVariants.verbose === 'Tu,Th', 'meeting days: verbose Tuesday Thursday should parse both days');
+  assert(result.dayVariants.slashed === 'M,W,F', 'meeting days: slashed weekdays should parse in order');
+  assert(result.dayVariants.tbaCount === 0, 'meeting days: TBA should stay untimed');
+  assert(result.thursdayBlocks.length === 1 && result.thursdayBlocks[0].day === 'Th', 'section blocks: uppercase TH should create one Thursday block');
+  assert(/DTSTART;TZID=America\/New_York:20260903T110000/.test(result.thursdayCalendar), 'schedule calendar: uppercase TH should start on the first Thursday in range');
+  assert(/RRULE:FREQ=WEEKLY;BYDAY=TH;UNTIL=20261214T235900/.test(result.thursdayCalendar), 'schedule calendar: uppercase TH should recur on Thursday');
   assert(result.compactScore > result.idleScore, 'schedule timing: compact schedule should score above idle schedule');
   assert(result.idleTotal > result.compactIdle, 'schedule timing: idle schedule should report more idle time');
   assert(/idle gap|idle time/i.test(result.idleInsight), 'schedule timing: idle insight should mention idle time');

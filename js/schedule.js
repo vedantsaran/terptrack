@@ -10,6 +10,7 @@ const SCHEDULE_DAY_DEFS = [
   { key: 'Th', label: 'Thu' },
   { key: 'F', label: 'Fri' },
 ];
+const SCHEDULE_NO_MEETING_DAY_WORDS = new Set(['tba', 'tbd', 'arr', 'arranged', 'online', 'asynchronous', 'async', 'none', 'na']);
 const DEFAULT_SCHEDULE_PREFS = {
   earliest: '',
   latest: '',
@@ -721,21 +722,49 @@ function formatMeetingTime(mins) {
 }
 
 function parseMeetingDays(days) {
-  const raw = String(days || '').replace(/\s+/g, '');
+  const raw = String(days || '').trim();
+  const words = raw.toLowerCase().replace(/[^a-z]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!raw || (words.length && words.every(word => SCHEDULE_NO_MEETING_DAY_WORDS.has(word)))) return [];
+  const rawCompact = raw.replace(/[^A-Za-z]/g, '').toLowerCase();
+  if (!rawCompact || SCHEDULE_NO_MEETING_DAY_WORDS.has(rawCompact)) return [];
   const out = [];
-  for (let i = 0; i < raw.length;) {
-    const two = raw.slice(i, i + 2);
-    if (two === 'Tu' || two === 'Th' || two === 'Sa' || two === 'Su') {
-      out.push(two);
-      i += 2;
-    } else {
-      const one = raw[i];
-      if (one === 'M') out.push('M');
-      else if (one === 'T') out.push('Tu');
-      else if (one === 'W') out.push('W');
-      else if (one === 'F') out.push('F');
-      i += 1;
-    }
+  const pushDay = day => {
+    if (day && !out.includes(day)) out.push(day);
+  };
+  for (let i = 0; i < rawCompact.length;) {
+    const rest = rawCompact.slice(i);
+    const match = (day, length) => {
+      pushDay(day);
+      i += length;
+      return true;
+    };
+    if (rest.startsWith('thursday')) match('Th', 8);
+    else if (rest.startsWith('thurs')) match('Th', 5);
+    else if (rest.startsWith('thur')) match('Th', 4);
+    else if (rest.startsWith('thu')) match('Th', 3);
+    else if (rest.startsWith('th')) match('Th', 2);
+    else if (rest.startsWith('tuesday')) match('Tu', 7);
+    else if (rest.startsWith('tues')) match('Tu', 4);
+    else if (rest.startsWith('tue')) match('Tu', 3);
+    else if (rest.startsWith('tu')) match('Tu', 2);
+    else if (rest.startsWith('monday')) match('M', 6);
+    else if (rest.startsWith('mon')) match('M', 3);
+    else if (rest.startsWith('wednesday')) match('W', 9);
+    else if (rest.startsWith('wed')) match('W', 3);
+    else if (rest.startsWith('friday')) match('F', 6);
+    else if (rest.startsWith('fri')) match('F', 3);
+    else if (rest.startsWith('saturday')) match('Sa', 8);
+    else if (rest.startsWith('sat')) match('Sa', 3);
+    else if (rest.startsWith('sa')) match('Sa', 2);
+    else if (rest.startsWith('sunday')) match('Su', 6);
+    else if (rest.startsWith('sun')) match('Su', 3);
+    else if (rest.startsWith('su')) match('Su', 2);
+    else if (rest[0] === 'm') match('M', 1);
+    else if (rest[0] === 't') match('Tu', 1);
+    else if (rest[0] === 'r') match('Th', 1);
+    else if (rest[0] === 'w') match('W', 1);
+    else if (rest[0] === 'f') match('F', 1);
+    else i += 1;
   }
   return out;
 }

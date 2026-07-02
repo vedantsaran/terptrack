@@ -8587,3 +8587,56 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 155
+
+Focus: harden real meeting-day parsing so Schedule, conflicts, friend free-time, and calendar exports do not misread common UMD Thursday variants.
+
+Planned changes:
+- Fix `parseMeetingDays()` so uppercase `TH` is Thursday, not Tuesday.
+- Accept common registrar and student-facing day variants like `R`, `TTh`, `Tuesday Thursday`, and `Mon/Wed/Fri`.
+- Keep TBA, arranged, online-only, and asynchronous meetings untimed.
+- Add focused regression coverage that proves uppercase Thursday produces the right `sectionBlocks()` day and ICS recurrence.
+- Bump the `schedule.js` cache tag and verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `SCHEDULE_NO_MEETING_DAY_WORDS` and rewrote `parseMeetingDays()` in `js/schedule.js`.
+  - The parser now scans compact and verbose day strings case-insensitively.
+  - It handles full day names, three-letter names, `Tu`/`Th`, weekend aliases, and registrar-style `R` for Thursday.
+  - It deduplicates parsed days while preserving order.
+  - It still returns no blocks for TBA/arranged/online-only meeting labels.
+- Strengthened the `SCHEDULE-TIMING` generated-plan fixture.
+  - It verifies `TH`, `R`, `TTh`, `Tuesday Thursday`, `Mon/Wed/Fri`, and `TBA`.
+  - It verifies uppercase `TH` creates one Thursday `sectionBlocks()` block.
+  - It verifies an uppercase-Thursday section exports to ICS with `DTSTART;TZID=America/New_York:20260903T110000` and `RRULE:FREQ=WEEKLY;BYDAY=TH`.
+- Bumped cache tags:
+  - `js/schedule.js?v=69`.
+  - Updated rendered workflow cache assertions for `js/schedule.js?v=69`.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the strengthened `SCHEDULE-TIMING` fixture with robust meeting-day parsing and Thursday ICS coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendation move action, recommendation section pick, planner checklist, planner questions, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the strengthened meeting-day parser coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass155-meeting-day-parser`.
+  - It randomly verified `ENAE`, `THET`, `ENFP`, `NEUR`, `ARCH`, and `WMST` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
