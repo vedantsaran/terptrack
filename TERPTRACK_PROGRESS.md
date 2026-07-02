@@ -8530,3 +8530,60 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 154
+
+Focus: make friend meeting planning term-aware so TerpTrack never mixes picked sections from different UMD semesters when comparing schedules.
+
+Planned changes:
+- Group current-user and friend picked sections by UMD term before computing overlaps and shared free windows.
+- Choose the best shared picked term for meeting suggestions and label that scope in the account modal and copied meeting note.
+- Show direct guidance when two plans have picked sections but no matching UMD term.
+- Extend account/share regression fixtures and rendered mobile workflow coverage with a cross-term friend section that would corrupt the old all-terms calculation.
+- Bump the `account.js` cache tag and verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added account meeting-term grouping helpers in `js/account.js`.
+  - Selected sections now use `section.semester` as the primary term key, with selected-section semester ids as a fallback for legacy data.
+  - Friend/current picked sections are grouped by term and the meeting planner compares only terms present in both plans.
+  - The chosen meeting context records the shared term label, term-specific friend/current picked counts, and shared-term count.
+- Scoped account friend-plan calculations to the shared UMD term.
+  - Meeting overlap counts and overlap samples now ignore picked sections from other terms.
+  - Shared free windows and recommended meeting slots now come only from the chosen shared term.
+  - The account modal now displays the meeting term scope, prefixes overlap/free-window summaries with the term label, and shows a same-term empty state when needed.
+  - Copied meeting notes now name the UMD term for the best shared slot and overlap review.
+- Strengthened account fixtures.
+  - Added a Spring 2027 friend section that overlaps the current Fall 2026 pick and blocks the lunch slot if terms are mixed.
+  - Verified the Fall 2026 meeting recommendation remains `Mon 12:00pm-1:15pm`.
+  - Verified a Spring-only friend plan with current Fall picks produces no meeting windows and tells students to pick sections in the same UMD term.
+- Bumped cache tags:
+  - `js/account.js?v=14`.
+  - Updated rendered workflow cache assertions for `js/account.js?v=14`.
+
+Verification:
+- Ran `node --check js/account.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the strengthened `ACCOUNT-FRIENDS` fixture with term-scoped friend meeting coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendation move action, recommendation section pick, planner checklist, planner questions, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with the term-scoped friend meeting planner.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the strengthened account friend meeting fixture.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass154-friend-term-meetings`.
+  - It randomly verified `HIST`, `WMST`, `AOSC`, `GEOL`, `BCHM`, and `ENGL` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

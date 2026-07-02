@@ -275,6 +275,12 @@ function testAccountAndShareState(context) {
               { code: 'MATH 140', title: 'Calculus I', cr: 4 },
               { code: 'ENGL 101', title: 'Academic Writing', cr: 3 }
             ]
+          }, {
+            id: 'S27',
+            name: 'Spring 2027',
+            courses: [
+              { code: 'HIST 201', title: 'History of Modern Science', cr: 3 }
+            ]
           }],
           customCourses: [],
           customSemesters: [],
@@ -294,6 +300,18 @@ function testAccountAndShareState(context) {
                 semester: '202608',
                 meetings: [{ days: 'Tu', start_time: '9:30am', end_time: '10:45am', building: 'TWS', room: '0201' }]
               }
+            },
+            S27: {
+              HIST201: {
+                course: 'HIST 201',
+                section_id: 'HIST201-0101',
+                number: '0101',
+                semester: '202701',
+                meetings: [
+                  { days: 'M', start_time: '10:10am', end_time: '10:40am', building: 'TWS', room: '1101' },
+                  { days: 'M', start_time: '12:00pm', end_time: '1:15pm', building: 'TWS', room: '1101' }
+                ]
+              }
             }
           },
           settings: { ...DEFAULT_SETTINGS, programName: 'Mathematics' },
@@ -304,6 +322,39 @@ function testAccountAndShareState(context) {
     const friendSummary = accountFriendPlanSummary(accountFriendPlans[0]);
     const friendPlansHtml = accountFriendPlansHtml();
     const meetingNote = accountFriendMeetingPlanText(accountFriendPlans[0], friendSummary);
+    const springOnlyPlan = {
+      id: 'spring-only-pal',
+      owner_id: 'user-pal-1',
+      name: 'Pal spring-only plan',
+      payload: {
+        state: {
+          v: 1,
+          activeSchedule: [{
+            id: 'S27',
+            name: 'Spring 2027',
+            courses: [{ code: 'HIST 201', title: 'History of Modern Science', cr: 3 }]
+          }],
+          customCourses: [],
+          customSemesters: [],
+          selectedSections: {
+            S27: {
+              HIST201: {
+                course: 'HIST 201',
+                section_id: 'HIST201-0101',
+                number: '0101',
+                semester: '202701',
+                meetings: [{ days: 'M', start_time: '12:00pm', end_time: '1:15pm', building: 'TWS', room: '1101' }]
+              }
+            }
+          },
+          settings: { ...DEFAULT_SETTINGS, programName: 'Mathematics' },
+          profilePrefs: defaultProfilePrefs()
+        }
+      }
+    };
+    const springOnlySummary = accountFriendPlanSummary(springOnlyPlan);
+    const springOnlyHtml = accountFriendMeetingPlanHtml(springOnlySummary, springOnlyPlan);
+    const springOnlyNote = accountFriendMeetingPlanText(springOnlyPlan, springOnlySummary);
     const applied = applySharedPlanData({
       v: 1,
       courses: { 'MATH 140': { status: 'passed' } },
@@ -354,6 +405,14 @@ function testAccountAndShareState(context) {
         availableText: window.availableText,
         campusAligned: window.campusAligned,
       })),
+      springOnly: {
+        termKey: springOnlySummary.meetingTermKey,
+        sharedTermCount: springOnlySummary.sharedMeetingTermCount,
+        sharedFreeWindowCount: springOnlySummary.sharedFreeWindows.length,
+        recommendedMeetingWindowCount: springOnlySummary.recommendedMeetingWindows.length,
+        html: springOnlyHtml,
+        note: springOnlyNote,
+      },
     })
   `, context));
 
@@ -375,23 +434,33 @@ function testAccountAndShareState(context) {
   assert(result.browseSearchQuery === 'ethics', 'shared plan: saved browse search keyword should persist');
   assert(result.outputPreset === 'advisor', 'shared plan: output preset should persist');
   assert(/^#plan=/.test(result.advisorImportHash) && result.advisorImportUrl === result.advisorImportHash, 'advisor packet import: should create a same-format shared-plan hash without a browser origin');
-  assert(result.friendSummary.courseCount === 2, 'friend compare: should count friend plan courses');
-  assert(result.friendSummary.selectedCount === 2, 'friend compare: should count picked friend sections');
+  assert(result.friendSummary.courseCount === 3, 'friend compare: should count friend plan courses');
+  assert(result.friendSummary.selectedCount === 3, 'friend compare: should count picked friend sections');
   assert(result.friendSummary.sharedCourseCount === 1, 'friend compare: should count courses shared with current plan');
+  assert(result.friendSummary.meetingTermLabel === 'Fall 2026', 'friend compare: should choose the shared UMD term for meeting analysis');
+  assert(result.friendSummary.sharedMeetingTermCount === 1, 'friend compare: should count only terms with picked sections in both plans');
+  assert(result.friendSummary.meetingFriendSelectedCount === 2, 'friend compare: should compare only friend sections in the shared UMD term');
+  assert(result.friendSummary.meetingCurrentSelectedCount === 1, 'friend compare: should compare only current sections in the shared UMD term');
   assert(result.friendSummary.meetingOverlapCount === 1, 'friend compare: should count timed overlaps with current plan');
+  assert(result.friendSummary.meetingOverlapSamples.every(sample => !/HIST 201/.test(sample)), 'friend compare: should ignore picked sections from other UMD terms');
   assert(result.friendSummary.sharedFreeWindows.length >= 3, 'friend compare: should compute shared free windows');
   assert(result.sharedFreeWindows[0] === 'Mon 8:00am-10:00am', 'friend compare: first shared free window should precede both Monday meetings');
   assert(result.friendSummary.recommendedMeetingWindows.length >= 3, 'friend meeting planner: should rank suggested meeting slots');
   assert(result.recommendedMeetingWindows[0].suggestedText === 'Mon 12:00pm-1:15pm', 'friend meeting planner: should prefer a campus-aligned Monday lunch slot');
   assert(result.recommendedMeetingWindows[0].campusAligned, 'friend meeting planner: best slot should be marked campus aligned');
   assert(/Pal STEM plan/.test(result.friendPlansHtml) && /Mathematics/.test(result.friendPlansHtml), 'friend compare: should render friend plan identity');
-  assert(/2<\/strong> courses/.test(result.friendPlansHtml) && /2<\/strong> picked sections/.test(result.friendPlansHtml), 'friend compare: should render course and section counts');
+  assert(/3<\/strong> courses/.test(result.friendPlansHtml) && /3<\/strong> picked sections/.test(result.friendPlansHtml), 'friend compare: should render course and section counts');
   assert(/1<\/strong> shared courses/.test(result.friendPlansHtml) && /1<\/strong> meeting overlaps/.test(result.friendPlansHtml), 'friend compare: should render shared and overlap counts');
+  assert(/Fall 2026<\/strong> meeting term/.test(result.friendPlansHtml), 'friend compare: should render the meeting term scope');
   assert(/MATH 140 with your MATH 140 M 10:30am-10:50am/.test(result.friendPlansHtml), 'friend compare: should render overlap sample');
+  assert(!/HIST 201 with your/.test(result.friendPlansHtml), 'friend compare: should not render cross-term overlap samples');
   assert(/Shared free windows/.test(result.friendPlansHtml) && /Mon 8:00am-10:00am/.test(result.friendPlansHtml), 'friend compare: should render shared free windows');
   assert(/Meeting planner/.test(result.friendPlansHtml) && /Mon 12:00pm-1:15pm/.test(result.friendPlansHtml), 'friend meeting planner: should render best meeting slot');
   assert(/Copy meeting note/.test(result.friendPlansHtml), 'friend meeting planner: should render copy note action');
-  assert(/best shared slot Mon 12:00pm-1:15pm/.test(result.meetingNote) && /1 picked-section overlap/.test(result.meetingNote), 'friend meeting planner: should generate a concrete copy note');
+  assert(/best shared slot in Fall 2026 Mon 12:00pm-1:15pm/.test(result.meetingNote) && /1 picked-section overlap in Fall 2026/.test(result.meetingNote), 'friend meeting planner: should generate a concrete term-scoped copy note');
+  assert(result.springOnly.termKey === '' && result.springOnly.sharedTermCount === 0, 'friend meeting planner: should not compare picked sections from unmatched terms');
+  assert(result.springOnly.sharedFreeWindowCount === 0 && result.springOnly.recommendedMeetingWindowCount === 0, 'friend meeting planner: should not create windows for unmatched terms');
+  assert(/same UMD term/.test(result.springOnly.html) && /same UMD term/.test(result.springOnly.note), 'friend meeting planner: should guide users to pick matching terms');
 
   return {
     id: 'ACCOUNT-FRIENDS',

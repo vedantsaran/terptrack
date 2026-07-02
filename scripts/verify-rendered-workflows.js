@@ -181,7 +181,7 @@ async function openFreshApp(page, url, opts, suffix) {
   assert(snapshot.scripts.includes('js/recommendations.js?v=17'), 'workflow app did not load js/recommendations.js?v=17');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
-  assert(snapshot.scripts.includes('js/account.js?v=13'), 'workflow app did not load js/account.js?v=13');
+  assert(snapshot.scripts.includes('js/account.js?v=14'), 'workflow app did not load js/account.js?v=14');
   return snapshot;
 }
 
@@ -514,6 +514,12 @@ async function verifyAccountSetupMobile(page, url, opts) {
               { code: 'MATH 140', title: 'Calculus I', cr: 4 },
               { code: 'ENGL 101', title: 'Academic Writing', cr: 3 },
             ],
+          }, {
+            id: 'S27',
+            name: 'Spring 2027',
+            courses: [
+              { code: 'HIST 201', title: 'History of Modern Science', cr: 3 },
+            ],
           }],
           customCourses: [],
           customSemesters: [],
@@ -534,6 +540,18 @@ async function verifyAccountSetupMobile(page, url, opts) {
                 meetings: [{ days: 'Tu', start_time: '9:30am', end_time: '10:45am', building: 'TWS', room: '0201' }],
               },
             },
+            S27: {
+              HIST201: {
+                course: 'HIST 201',
+                section_id: 'HIST201-0101',
+                number: '0101',
+                semester: '202701',
+                meetings: [
+                  { days: 'M', start_time: '10:10am', end_time: '10:40am', building: 'TWS', room: '1101' },
+                  { days: 'M', start_time: '12:00pm', end_time: '1:15pm', building: 'TWS', room: '1101' },
+                ],
+              },
+            },
           },
           settings: { ...DEFAULT_SETTINGS, programName: 'Mathematics' },
           profilePrefs: defaultProfilePrefs(),
@@ -546,9 +564,10 @@ async function verifyAccountSetupMobile(page, url, opts) {
   await page.waitForFunction(() => {
     const modalText = document.querySelector('#account-modal.open')?.textContent?.replace(/\s+/g, ' ') || '';
     return modalText.includes('Pal STEM plan')
-      && modalText.includes('2 courses')
-      && modalText.includes('2 picked sections')
+      && modalText.includes('3 courses')
+      && modalText.includes('3 picked sections')
       && modalText.includes('1 shared courses')
+      && modalText.includes('Fall 2026 meeting term')
       && modalText.includes('1 meeting overlaps')
       && modalText.includes('MATH 140 with your MATH 140 M 10:30am-10:50am')
       && modalText.includes('Shared free windows')
@@ -571,6 +590,7 @@ async function verifyAccountSetupMobile(page, url, opts) {
   assert(snapshot.accountText.includes('Schema objects') && snapshot.accountText.includes('RLS policies'), 'account setup: modal should show schema checklist');
   assert(snapshot.accountText.includes('Friend invite') && snapshot.accountText.includes('roommate@umd.edu'), 'account setup: modal should preserve local invite row');
   assert(snapshot.accountText.includes('Pal STEM plan') && snapshot.accountText.includes('meeting overlaps'), 'account setup: modal should show friend-plan comparison');
+  assert(snapshot.accountText.includes('Fall 2026 meeting term') && !snapshot.accountText.includes('HIST 201 with your'), 'account setup: friend meeting planner should stay scoped to the shared UMD term');
   assert(snapshot.accountText.includes('Shared free windows') && snapshot.accountText.includes('Mon 8:00am-10:00am'), 'account setup: modal should show shared free windows');
   assert(snapshot.accountText.includes('Meeting planner') && snapshot.accountText.includes('Mon 12:00pm-1:15pm'), 'account setup: modal should show meeting planner recommendation');
   assert(snapshot.accountText.includes('Meeting note'), 'account setup: modal should expose copied meeting note status');

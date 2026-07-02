@@ -917,6 +917,72 @@ function accountSelectedSectionItems(selectedSections) {
   return items;
 }
 
+const ACCOUNT_UNKNOWN_MEETING_TERM = '__unknown_meeting_term__';
+
+function accountSelectedSectionTermKey(item) {
+  const term = String(item?.section?.semester || '').trim();
+  if (term) return term;
+  const semId = String(item?.semId || '').trim();
+  return semId || ACCOUNT_UNKNOWN_MEETING_TERM;
+}
+
+function accountMeetingTermLabel(termKey) {
+  if (!termKey) return '';
+  if (termKey === ACCOUNT_UNKNOWN_MEETING_TERM) return 'Selected term';
+  return typeof scheduleTermLabel === 'function' ? scheduleTermLabel(termKey) : termKey;
+}
+
+function accountMeetingTermSortKey(termKey) {
+  const key = String(termKey || '');
+  if (key === ACCOUNT_UNKNOWN_MEETING_TERM) return '999999999999';
+  return /^\d+$/.test(key) ? key.padStart(12, '0') : key;
+}
+
+function accountItemsByMeetingTerm(items) {
+  const grouped = new Map();
+  (items || []).forEach(item => {
+    const termKey = accountSelectedSectionTermKey(item);
+    if (!grouped.has(termKey)) grouped.set(termKey, []);
+    grouped.get(termKey).push(item);
+  });
+  return grouped;
+}
+
+function accountSharedMeetingContext(friendItems, currentItems) {
+  const friendByTerm = accountItemsByMeetingTerm(friendItems);
+  const currentByTerm = accountItemsByMeetingTerm(currentItems);
+  const sharedTerms = Array.from(friendByTerm.keys()).filter(termKey => currentByTerm.has(termKey));
+  const rankedTerms = sharedTerms
+    .map(termKey => {
+      const friendTermItems = friendByTerm.get(termKey) || [];
+      const currentTermItems = currentByTerm.get(termKey) || [];
+      return {
+        termKey,
+        friendItems: friendTermItems,
+        currentItems: currentTermItems,
+        friendCount: friendTermItems.length,
+        currentCount: currentTermItems.length,
+        knownTerm: termKey !== ACCOUNT_UNKNOWN_MEETING_TERM,
+      };
+    })
+    .sort((a, b) => (
+      Number(b.knownTerm) - Number(a.knownTerm)
+      || (b.friendCount + b.currentCount) - (a.friendCount + a.currentCount)
+      || b.friendCount - a.friendCount
+      || accountMeetingTermSortKey(a.termKey).localeCompare(accountMeetingTermSortKey(b.termKey))
+    ));
+  const best = rankedTerms[0] || null;
+  return {
+    termKey: best?.termKey || '',
+    termLabel: accountMeetingTermLabel(best?.termKey),
+    friendItems: best?.friendItems || [],
+    currentItems: best?.currentItems || [],
+    sharedTermCount: sharedTerms.length,
+    friendTermCount: friendByTerm.size,
+    currentTermCount: currentByTerm.size,
+  };
+}
+
 function accountCurrentPlanPayload() {
   return typeof _planSharePayload === 'function' ? _planSharePayload() : accountCloudPayload().state;
 }
@@ -1079,14 +1145,21 @@ function accountFriendPlanSummary(plan) {
   const currentCodes = new Set(accountPlanCourseCodes(current));
   const friendItems = accountSelectedSectionItems(payload.selectedSections || {});
   const currentItems = accountSelectedSectionItems(current.selectedSections || {});
-  const overlaps = accountMeetingOverlapSummary(friendItems, currentItems);
-  const sharedFreeWindows = accountSharedFreeWindows(friendItems, currentItems, { limit: 8 });
+  const meetingContext = accountSharedMeetingContext(friendItems, currentItems);
+  const overlaps = accountMeetingOverlapSummary(meetingContext.friendItems, meetingContext.currentItems);
+  const sharedFreeWindows = accountSharedFreeWindows(meetingContext.friendItems, meetingContext.currentItems, { limit: 8 });
   const recommendedMeetingWindows = accountRecommendedMeetingWindows(sharedFreeWindows);
   return {
     majorName: payload.settings?.programName || payload.settings?.majorName || payload.majorId || 'Shared plan',
     courseCount: friendCodes.length,
     selectedCount: friendItems.length,
+    currentSelectedCount: currentItems.length,
     sharedCourseCount: friendCodes.filter(code => currentCodes.has(code)).length,
+    meetingTermKey: meetingContext.termKey,
+    meetingTermLabel: meetingContext.termLabel,
+    sharedMeetingTermCount: meetingContext.sharedTermCount,
+    meetingFriendSelectedCount: meetingContext.friendItems.length,
+    meetingCurrentSelectedCount: meetingContext.currentItems.length,
     meetingOverlapCount: overlaps.count,
     meetingOverlapSamples: overlaps.samples,
     sharedFreeWindows,
@@ -1098,28 +1171,52 @@ function accountFriendMeetingPlanText(plan, summary) {
   const owner = accountProfileLabel(plan?.owner_id, plan?.owner_id ? `friend ${accountShortId(plan.owner_id)}` : 'friend');
   const title = plan?.name || 'Friend plan';
   const picks = summary?.recommendedMeetingWindows || [];
+  const termLabel = summary?.meetingTermLabel || '';
+  const termPhrase = termLabel ? ` in ${termLabel}` : '';
+  if (!summary?.meetingTermKey) {
+    let help = 'pick sections in both plans to find shared meeting windows.';
+    if (summary?.selectedCount && summary?.currentSelectedCount) {
+      help = 'pick sections in the same UMD term before comparing meeting windows.';
+    } else if (summary?.selectedCount) {
+      help = 'pick sections in your plan before comparing meeting windows.';
+    } else if (summary?.currentSelectedCount) {
+      help = 'ask your friend to pick sections before comparing meeting windows.';
+    }
+    return `TerpTrack meeting plan for ${title} (${owner}): ${help}`;
+  }
   const conflict = summary?.meetingOverlapCount
-    ? `${summary.meetingOverlapCount} picked-section overlap${summary.meetingOverlapCount === 1 ? '' : 's'} to review first.`
-    : 'No picked-section overlaps.';
+    ? `${summary.meetingOverlapCount} picked-section overlap${summary.meetingOverlapCount === 1 ? '' : 's'}${termPhrase} to review first.`
+    : `No picked-section overlaps${termPhrase}.`;
   if (!picks.length) {
-    return `TerpTrack meeting plan for ${title} (${owner}): pick sections in both plans to find shared meeting windows. ${conflict}`;
+    return `TerpTrack meeting plan for ${title} (${owner}): no shared meeting slot found${termPhrase}. ${conflict}`;
   }
   const [best, ...backups] = picks;
   const backupText = backups.length ? ` Backups: ${backups.map(slot => slot.suggestedText).join('; ')}.` : '';
-  return `TerpTrack meeting plan for ${title} (${owner}): best shared slot ${best.suggestedText} (${best.durationText}, inside ${best.availableText}).${backupText} ${conflict}`;
+  return `TerpTrack meeting plan for ${title} (${owner}): best shared slot${termPhrase} ${best.suggestedText} (${best.durationText}, inside ${best.availableText}).${backupText} ${conflict}`;
 }
 
 function accountFriendMeetingPlanHtml(summary, plan = null) {
   const picks = summary.recommendedMeetingWindows || [];
+  const termLabel = summary.meetingTermLabel || '';
   if (!picks.length) {
-    const empty = summary.selectedCount
-      ? 'No meeting slot is available from picked sections. Try different sections or expand the day window.'
-      : 'Pick sections in both plans to generate meeting suggestions.';
+    let empty = 'Pick sections in both plans to generate meeting suggestions.';
+    let stateLabel = 'Needs picked sections';
+    if (summary.selectedCount && summary.currentSelectedCount && !summary.meetingTermKey) {
+      empty = 'Pick sections in the same UMD term to compare realistic meeting windows.';
+      stateLabel = 'Needs same term';
+    } else if (summary.selectedCount && !summary.currentSelectedCount) {
+      empty = 'Pick sections in your plan to compare meeting windows.';
+    } else if (!summary.selectedCount && summary.currentSelectedCount) {
+      empty = 'Friend plan has no picked sections yet.';
+    } else if (summary.meetingTermKey) {
+      empty = `No meeting slot is available from ${termLabel} picked sections. Try different sections or expand the day window.`;
+      stateLabel = termLabel || 'No slot found';
+    }
     return `
       <div class="account-meeting-plan empty">
         <div class="account-meeting-head">
           <strong>Meeting planner</strong>
-          <span>Needs picked sections</span>
+          <span>${accountEscape(stateLabel)}</span>
         </div>
         <p>${accountEscape(empty)}</p>
       </div>
@@ -1131,7 +1228,7 @@ function accountFriendMeetingPlanHtml(summary, plan = null) {
     <div class="account-meeting-plan">
       <div class="account-meeting-head">
         <strong>Meeting planner</strong>
-        <span>${accountEscape(summary.meetingOverlapCount ? 'Review overlaps' : 'Ready to coordinate')}</span>
+        <span>${accountEscape(`${termLabel ? `${termLabel} · ` : ''}${summary.meetingOverlapCount ? 'Review overlaps' : 'Ready to coordinate'}`)}</span>
       </div>
       <div class="account-meeting-best">
         <b>${accountEscape(best.suggestedText)}</b>
@@ -1146,17 +1243,34 @@ function accountFriendMeetingPlanHtml(summary, plan = null) {
 }
 
 function accountFriendPlanSummaryHtml(summary, plan = null) {
-  const overlapText = summary.meetingOverlapSamples.length
-    ? summary.meetingOverlapSamples.join(' · ')
-    : (summary.selectedCount ? 'No picked-section overlaps with your current plan.' : 'Friend plan has no picked sections yet.');
-  const freeText = (summary.sharedFreeWindows || []).length
-    ? summary.sharedFreeWindows.map(window => window.text).join(' · ')
-    : (summary.selectedCount ? 'No shared free windows found from picked sections.' : 'Pick sections in both plans to compare free time.');
+  const termLabel = summary.meetingTermLabel || '';
+  const termPrefix = termLabel ? `${termLabel}: ` : '';
+  let overlapText = 'Friend plan has no picked sections yet.';
+  if (summary.selectedCount && !summary.currentSelectedCount) {
+    overlapText = 'Pick sections in your plan to compare meeting overlaps.';
+  } else if (summary.selectedCount && summary.currentSelectedCount && !summary.meetingTermKey) {
+    overlapText = 'No matching picked UMD term with your current plan yet.';
+  } else if (summary.meetingOverlapSamples.length) {
+    overlapText = `${termPrefix}${summary.meetingOverlapSamples.join(' · ')}`;
+  } else if (summary.selectedCount) {
+    overlapText = `${termPrefix}No picked-section overlaps with your current plan.`;
+  }
+  let freeText = 'Pick sections in both plans to compare free time.';
+  if (summary.selectedCount && !summary.currentSelectedCount) {
+    freeText = 'Pick sections in your plan to compare free time.';
+  } else if (summary.selectedCount && summary.currentSelectedCount && !summary.meetingTermKey) {
+    freeText = 'Pick sections in the same UMD term to compare free time.';
+  } else if ((summary.sharedFreeWindows || []).length) {
+    freeText = `${termPrefix}${summary.sharedFreeWindows.map(window => window.text).join(' · ')}`;
+  } else if (summary.meetingTermKey) {
+    freeText = `${termPrefix}No shared free windows found from picked sections.`;
+  }
   return `
     <div class="account-friend-compare">
       <span><strong>${accountEscape(summary.courseCount)}</strong> courses</span>
       <span><strong>${accountEscape(summary.selectedCount)}</strong> picked sections</span>
       <span><strong>${accountEscape(summary.sharedCourseCount)}</strong> shared courses</span>
+      <span><strong>${accountEscape(termLabel || 'No match')}</strong> meeting term</span>
       <span><strong>${accountEscape(summary.meetingOverlapCount)}</strong> meeting overlaps</span>
     </div>
     <em class="account-friend-overlaps">${accountEscape(overlapText)}</em>
