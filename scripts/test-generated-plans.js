@@ -2532,6 +2532,40 @@ function testAccountCloudSetup(context) {
       const html = accountCloudSetupHtml({ source: 'vercel', supabaseUrl: 'https://demo.supabase.co', supabaseAnonKey: 'b'.repeat(80) }, true);
       const schemaItems = accountSchemaChecklistItems();
       const schemaHtml = accountSchemaChecklistHtml();
+      const normalizedCloudState = accountNormalizeLoadedState({
+        activeSchedule: [{
+          id: 'cloud-fall',
+          name: 'Fall 2026',
+          courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+        }, {
+          id: 'cloud-spring',
+          name: 'Spring 2027',
+          courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+        }],
+        customCourses: [],
+        customSemesters: [],
+        customMajors: [],
+        selectedSections: {
+          'legacy-cloud-fall': {
+            MATH140: {
+              course: 'MATH 140',
+              section_id: 'MATH140-0601',
+              number: '0601',
+              semester: '202701',
+              meetings: [{ days: 'TuTh', start_time: '2:00pm', end_time: '3:15pm', building: 'MTH', room: '0701' }]
+            }
+          }
+        },
+        schedulePrefs: {},
+        scheduleAdvisorFilter: 'all',
+        scheduleOutputPreset: 'personal',
+        scheduleOutputOptions: {},
+        roadmapPrefs: {},
+        browseSavedSearches: [],
+        recentChanges: [],
+        profilePrefs: defaultProfilePrefs(),
+        settings: { ...DEFAULT_SETTINGS, programName: 'Cloud Math' },
+      });
       return {
         missingStatuses: missing.map(check => check.status).join(','),
         manualDeployment: manual.find(check => check.id === 'deployment')?.status || '',
@@ -2542,6 +2576,12 @@ function testAccountCloudSetup(context) {
         html,
         schemaIds: schemaItems.map(item => item.id).join(','),
         schemaHtml,
+        cloudRestore: {
+          activeIds: (normalizedCloudState.activeSchedule || []).map(sem => sem.id),
+          semIds: Object.keys(normalizedCloudState.selectedSections || {}),
+          springSection: normalizedCloudState.selectedSections?.['cloud-spring']?.MATH140 || null,
+          legacySection: normalizedCloudState.selectedSections?.['legacy-cloud-fall']?.MATH140 || null,
+        },
       };
     })()
   `, context));
@@ -2555,6 +2595,8 @@ function testAccountCloudSetup(context) {
   assert(/Cloud setup/.test(result.html) && /Vercel env vars are serving/.test(result.html), 'account setup: readiness HTML should explain Vercel config');
   assert(result.schemaIds === 'profiles,plans,friend_requests,shared_plans,rls,updated_at', 'account setup: schema checklist should include every required object group');
   assert(/Schema objects/.test(result.schemaHtml) && /friend_requests/.test(result.schemaHtml) && /shared_plans/.test(result.schemaHtml) && /RLS policies/.test(result.schemaHtml), 'account setup: schema checklist HTML should render required Supabase objects');
+  assert(result.cloudRestore.activeIds.includes('cloud-spring') && result.cloudRestore.semIds.includes('cloud-spring') && !result.cloudRestore.legacySection, 'account cloud restore: stale selected-section buckets should normalize to the active schedule term');
+  assert(result.cloudRestore.springSection?.section_id === 'MATH140-0601' && result.cloudRestore.springSection?.semester === '202701', 'account cloud restore: rerouted section should preserve the posted UMD term');
 
   return {
     id: 'ACCOUNT-CLOUD-SETUP',

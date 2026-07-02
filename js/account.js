@@ -394,26 +394,32 @@ function accountCloudPayload() {
   return { version: 1, savedAt: new Date().toISOString(), state: clean };
 }
 
-function accountNormalizeLoadedState(cloudState) {
-  return {
+function accountNormalizeLoadedState(cloudState = {}) {
+  const incomingState = cloudState && typeof cloudState === 'object' ? cloudState : {};
+  const mergedState = {
     ...state,
-    ...cloudState,
-    settings: typeof normalizeSettings === 'function' ? normalizeSettings({ ...DEFAULT_SETTINGS, ...(cloudState.settings || {}) }) : { ...DEFAULT_SETTINGS, ...(cloudState.settings || {}) },
-    customCourses: cloudState.customCourses || [],
-    customSemesters: cloudState.customSemesters || [],
-    customMajors: cloudState.customMajors || [],
-    selectedSections: cloudState.selectedSections || {},
-    schedulePrefs: cloudState.schedulePrefs || {},
-    scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(cloudState.scheduleAdvisorFilter) ? cloudState.scheduleAdvisorFilter : 'all',
-    scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(cloudState.scheduleOutputPreset) ? cloudState.scheduleOutputPreset : 'personal',
-    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true, ...(cloudState.scheduleOutputOptions || {}) },
-    roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(cloudState.roadmapPrefs || {}) },
-    browseSavedSearches: typeof normalizeBrowseSavedSearches === 'function' ? normalizeBrowseSavedSearches(cloudState.browseSavedSearches) : (cloudState.browseSavedSearches || []),
-    recentChanges: Array.isArray(cloudState.recentChanges) ? cloudState.recentChanges.slice(0, 12) : [],
+    ...incomingState,
+  };
+  return {
+    ...mergedState,
+    settings: typeof normalizeSettings === 'function' ? normalizeSettings({ ...DEFAULT_SETTINGS, ...(incomingState.settings || {}) }) : { ...DEFAULT_SETTINGS, ...(incomingState.settings || {}) },
+    customCourses: incomingState.customCourses || [],
+    customSemesters: incomingState.customSemesters || [],
+    customMajors: incomingState.customMajors || [],
+    selectedSections: typeof normalizeRestoredSelectedSections === 'function'
+      ? normalizeRestoredSelectedSections(incomingState.selectedSections || {}, mergedState)
+      : (incomingState.selectedSections || {}),
+    schedulePrefs: incomingState.schedulePrefs || {},
+    scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(incomingState.scheduleAdvisorFilter) ? incomingState.scheduleAdvisorFilter : 'all',
+    scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(incomingState.scheduleOutputPreset) ? incomingState.scheduleOutputPreset : 'personal',
+    scheduleOutputOptions: { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true, ...(incomingState.scheduleOutputOptions || {}) },
+    roadmapPrefs: { filter: 'all', query: '', selectedCode: '', ...(incomingState.roadmapPrefs || {}) },
+    browseSavedSearches: typeof normalizeBrowseSavedSearches === 'function' ? normalizeBrowseSavedSearches(incomingState.browseSavedSearches) : (incomingState.browseSavedSearches || []),
+    recentChanges: Array.isArray(incomingState.recentChanges) ? incomingState.recentChanges.slice(0, 12) : [],
     accountPrefs: typeof normalizeAccountPrefs === 'function'
-      ? normalizeAccountPrefs({ ...getAccountPrefs(), ...(cloudState.accountPrefs || {}) })
-      : { ...getAccountPrefs(), ...(cloudState.accountPrefs || {}) },
-    profilePrefs: typeof normalizeProfilePrefs === 'function' ? normalizeProfilePrefs(cloudState.profilePrefs || {}) : (cloudState.profilePrefs || {}),
+      ? normalizeAccountPrefs({ ...getAccountPrefs(), ...(incomingState.accountPrefs || {}) })
+      : { ...getAccountPrefs(), ...(incomingState.accountPrefs || {}) },
+    profilePrefs: typeof normalizeProfilePrefs === 'function' ? normalizeProfilePrefs(incomingState.profilePrefs || {}) : (incomingState.profilePrefs || {}),
   };
 }
 
