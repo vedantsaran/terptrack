@@ -2440,15 +2440,30 @@ async function testCourseEditSelectionCleanup(context) {
         state.schedulePrefs = { 'EDIT-F': { term: '202608' }, 'EDIT-S': { term: '202701' } };
 
         editingCourseCode = 'GenEd DSHS';
-        setEditFields({ code: 'GVPT 200', title: 'International Political Relations', semester: 'EDIT-F' });
+        setEditFields({ code: 'TEST 299', title: 'Synthetic Planning Seminar', semester: 'EDIT-F' });
         await saveCustomCourse();
         const afterSemanticEdit = {
-          customCourse: (state.customCourses || []).find(course => course.code === 'GVPT 200') || null,
+          customCourse: ((course) => course ? { ...course } : null)((state.customCourses || []).find(course => course.code === 'TEST 299')),
           oldProgress: state.courses['GenEd DSHS'] || null,
-          newProgress: state.courses['GVPT 200'] || null,
+          newProgress: state.courses['TEST 299'] || null,
           oldFallPick: state.selectedSections['EDIT-F']?.GENEDDSHS || null,
           oldSpringPick: state.selectedSections['EDIT-S']?.GENEDDSHS || null,
           flatOldPick: state.selectedSections['GenEd DSHS'] || null,
+          preservedCmsc: state.selectedSections['EDIT-F']?.CMSC131?.section_id || '',
+          preservedEngl: state.selectedSections['EDIT-F']?.ENGL101?.section_id || '',
+        };
+
+        state.selectedSections['EDIT-F'].TEST299 = { course: 'TEST 299', section_id: 'TEST299-0101', number: '0101', semester: '202608', meetings: [] };
+        state.selectedSections['EDIT-S'] = {
+          TEST299: { course: 'TEST 299', section_id: 'TEST299-0201', number: '0201', semester: '202701', meetings: [] }
+        };
+        editingCourseCode = 'TEST 299';
+        setEditFields({ code: 'TEST 299', title: 'Synthetic Planning Seminar', semester: 'EDIT-S' });
+        await saveCustomCourse();
+        const afterCustomMove = {
+          customSemId: (state.customCourses || []).find(course => course.code === 'TEST 299')?.semId || '',
+          fallPick: state.selectedSections['EDIT-F']?.TEST299 || null,
+          springPick: state.selectedSections['EDIT-S']?.TEST299 || null,
           preservedCmsc: state.selectedSections['EDIT-F']?.CMSC131?.section_id || '',
           preservedEngl: state.selectedSections['EDIT-F']?.ENGL101?.section_id || '',
         };
@@ -2463,7 +2478,21 @@ async function testCourseEditSelectionCleanup(context) {
           newProgress: state.courses['CMSC 131'] || null,
         };
 
-        return { afterSemanticEdit, afterFormatEdit, calls };
+        state.selectedSections['EDIT-S'] = {
+          CMSC131: { course: 'CMSC 131', section_id: 'CMSC131-0201', number: '0201', semester: '202701', meetings: [] }
+        };
+        editingCourseCode = 'CMSC 131';
+        setEditFields({ code: 'CMSC 131', title: 'Object-Oriented Programming I', semester: 'EDIT-S', category: 'major-core', credits: '4' });
+        await saveCustomCourse();
+        const afterScheduledMove = {
+          fallCodes: state.activeSchedule[0].courses.map(course => course.code),
+          springCodes: state.activeSchedule[1].courses.map(course => course.code),
+          fallPick: state.selectedSections['EDIT-F']?.CMSC131 || null,
+          springPick: state.selectedSections['EDIT-S']?.CMSC131 || null,
+          preservedEngl: state.selectedSections['EDIT-F']?.ENGL101?.section_id || '',
+        };
+
+        return { afterSemanticEdit, afterCustomMove, afterFormatEdit, afterScheduledMove, calls };
       } finally {
         document.getElementById = originalGetElementById;
         render = originalRender;
@@ -2480,14 +2509,20 @@ async function testCourseEditSelectionCleanup(context) {
   assert(!result.afterSemanticEdit.oldProgress && result.afterSemanticEdit.newProgress?.status === 'in-progress', 'course edit cleanup: semantic code change should migrate course progress to the new code');
   assert(!result.afterSemanticEdit.oldFallPick && !result.afterSemanticEdit.oldSpringPick && !result.afterSemanticEdit.flatOldPick, 'course edit cleanup: semantic code change should clear old picked sections in nested and flat storage');
   assert(result.afterSemanticEdit.preservedCmsc === 'CMSC131-0101' && result.afterSemanticEdit.preservedEngl === 'ENGL101-0101', 'course edit cleanup: semantic code change should preserve unrelated picked sections');
+  assert(result.afterCustomMove.customSemId === 'EDIT-S' && !result.afterCustomMove.fallPick && !result.afterCustomMove.springPick, 'course edit cleanup: moving a custom course in the edit modal should clear source and target picked sections');
+  assert(result.afterCustomMove.preservedCmsc === 'CMSC131-0101' && result.afterCustomMove.preservedEngl === 'ENGL101-0101', 'course edit cleanup: moving a custom course should preserve unrelated picked sections');
   assert(result.afterFormatEdit.fallCodes.includes('CMSC 131'), 'course edit cleanup: formatting-only code edit should update the plan row');
   assert(result.afterFormatEdit.cmscPick?.section_id === 'CMSC131-0101', 'course edit cleanup: formatting-only code edit should preserve the normalized section pick');
   assert(!result.afterFormatEdit.oldProgress && result.afterFormatEdit.newProgress?.status === 'not-started', 'course edit cleanup: formatting-only code edit should migrate progress without clearing section data');
+  assert(!result.afterScheduledMove.fallCodes.includes('CMSC 131') && result.afterScheduledMove.springCodes.includes('CMSC 131'), 'course edit cleanup: moving a scheduled course in the edit modal should move the plan row');
+  assert(!result.afterScheduledMove.fallPick && !result.afterScheduledMove.springPick, 'course edit cleanup: moving a scheduled course in the edit modal should clear source and target picked sections');
+  assert(result.afterScheduledMove.preservedEngl === 'ENGL101-0101', 'course edit cleanup: moving a scheduled course should preserve unrelated picked sections');
 
   return {
     id: 'COURSE-EDIT-CLEANUP',
     semantic: result.afterSemanticEdit.customCourse?.code || '',
     formatted: result.afterFormatEdit.fallCodes.includes('CMSC 131') ? 'CMSC 131' : '',
+    moved: result.afterScheduledMove.springCodes.includes('CMSC 131') ? 'EDIT-S' : '',
   };
 }
 
@@ -5235,7 +5270,7 @@ async function main() {
   console.log(`Schedule ready backups fixture ${readyBackups.id}: applied ${readyBackups.applied}; restored ${readyBackups.restored}.`);
   console.log(`Drag/drop cleanup fixture ${dndCleanup.id}: required ${dndCleanup.required}; custom ${dndCleanup.custom}.`);
   console.log(`Custom delete cleanup fixture ${customDeleteCleanup.id}: semester courses ${customDeleteCleanup.semesterRemoved}; course rows ${customDeleteCleanup.courseRemoved}.`);
-  console.log(`Course edit cleanup fixture ${courseEditCleanup.id}: semantic ${courseEditCleanup.semantic}; formatting ${courseEditCleanup.formatted}.`);
+  console.log(`Course edit cleanup fixture ${courseEditCleanup.id}: semantic ${courseEditCleanup.semantic}; formatting ${courseEditCleanup.formatted}; moved ${courseEditCleanup.moved}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);

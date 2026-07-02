@@ -128,6 +128,7 @@ async function saveCustomCourse() {
   if (editingCourseCode) {
     const codeChanged = codeInput !== editingCourseCode;
     const normalizedCodeChanged = normalizeCode(codeInput) !== normalizeCode(editingCourseCode);
+    const movedSelectionSemIds = [];
     // Block code collisions with another course in the plan
     if (codeChanged && findCourse(codeInput)) {
       toastError(`A course with code "${codeInput}" already exists.`);
@@ -136,7 +137,9 @@ async function saveCustomCourse() {
     // EDIT path: find course in customCourses or activeSchedule, mutate in place
     const cust = (state.customCourses || []).find(c => c.code === editingCourseCode);
     if (cust) {
+      const sourceSemId = cust.semId || '';
       Object.assign(cust, { code: codeInput, title, cr, prereqs, kind, category, semId, isGoal, note });
+      if (sourceSemId && semId && sourceSemId !== semId) movedSelectionSemIds.push(sourceSemId, semId);
     } else {
       // Find in active schedule and mutate
       const sched = mutableSchedule();
@@ -150,6 +153,7 @@ async function saveCustomCourse() {
             sem.courses = sem.courses.filter(x => x.code !== codeInput);
             const target = [...sched, ...(state.customSemesters || [])].find(s => s.id === semId);
             if (target) { target.courses = target.courses || []; target.courses.push(c); }
+            movedSelectionSemIds.push(sem.id, semId);
           }
           found = true;
           break;
@@ -164,6 +168,9 @@ async function saveCustomCourse() {
     }
     if (normalizedCodeChanged && typeof clearSelectedSectionsForCourse === 'function') {
       clearSelectedSectionsForCourse(editingCourseCode);
+    }
+    if (movedSelectionSemIds.length && typeof clearSelectedSectionsForCourse === 'function') {
+      clearSelectedSectionsForCourse(codeInput, movedSelectionSemIds);
     }
     saveState();
     closeAddCourse();

@@ -9339,3 +9339,58 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 168
+
+Focus: clear stale posted-section picks when a course is moved to another semester through the edit modal, matching the drag/drop cleanup behavior.
+
+Planned changes:
+- Inspect the existing course edit cleanup path after Pass 167.
+- Track source and target semester ids during edit-modal semester moves.
+- Clear selected sections for moved courses in both source and destination terms.
+- Extend the generated-plan edit fixture to cover custom-course moves and scheduled-course moves.
+- Bump the changed course editor asset cache tag and rendered workflow assertion.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/courses.js`.
+  - `saveCustomCourse()` now records source/target semester ids when an edited custom course changes `semId`.
+  - It also records source/target semester ids when an edited scheduled course is moved to another term.
+  - After the edit, it clears selected sections for the edited course in those moved terms so stale source and destination posted sections do not survive.
+  - Existing semantic-code cleanup remains in place, and formatting-only code edits still preserve normalized section picks.
+- Strengthened `COURSE-EDIT-CLEANUP` in `scripts/test-generated-plans.js`.
+  - The fixture now uses deterministic synthetic `TEST 299` for semantic edit cleanup without depending on catalog state.
+  - It verifies custom-course edit-modal moves update the row to `EDIT-S` and clear stale picks in both `EDIT-F` and `EDIT-S`.
+  - It verifies scheduled-course edit-modal moves transfer `CMSC 131` to `EDIT-S` and clear stale source/target picks while preserving unrelated `ENGL 101` picks.
+  - The fixture summary now reports `moved EDIT-S`.
+- Bumped cache tags:
+  - `js/courses.js?v=2`.
+  - Updated the rendered workflow cache assertion for the course editor asset.
+
+Verification:
+- Ran `node --check js/courses.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the strengthened `COURSE-EDIT-CLEANUP` coverage with semantic `TEST 299`, formatting `CMSC 131`, and moved `EDIT-S`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, drag/drop section cleanup, custom delete cleanup, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the strengthened course edit cleanup coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass168-edit-semester-cleanup`.
+  - It randomly verified `CINE`, `HESP`, `GEOG`, `ARCH`, `MARKETING`, and `SCM` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
