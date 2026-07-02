@@ -10,7 +10,7 @@ let _resolverState = null; // { resolved: [course], rootCode, skipSet: Set<code>
 // Returns true if the course is already in the plan or marked passed/transfer.
 function _alreadyHave(code) {
   const display = displayCode(code);
-  const cs = state.courses[display];
+  const cs = getCourseState(display);
   if (cs && (cs.status === 'passed' || cs.status === 'transfer')) return true;
   return !!findCourse(display);
 }

@@ -64,6 +64,7 @@ function buildContext() {
     'js/browse.js',
     'js/gened.js',
     'js/recommendations.js',
+    'js/prereq-resolver.js',
     'js/placeholder-search.js',
     'js/audit.js',
     'js/onboarding.js',
@@ -215,6 +216,51 @@ function testSyntheticPrerequisites(context) {
     category: 'prerequisite chain',
     terms: [cmsc131, cmsc132, cmsc216, cmsc330].join(' -> '),
     loads: loads.map(term => term.credits).join(','),
+  };
+}
+
+function testPrereqResolverNormalizedState(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      const previousState = JSON.parse(JSON.stringify(state));
+      try {
+        state.activeSchedule = [{
+          id: 'F26',
+          name: 'Fall 2026',
+          courses: [
+            { code: 'ENGL101', title: 'Academic Writing', cr: 3, prereqs: [], coreqs: [] }
+          ]
+        }];
+        state.customCourses = [];
+        state.customSemesters = [];
+        state.courses = {
+          CMSC131: { status: 'passed', grade: 'A' },
+          MATH140: { status: 'transfer', grade: '' }
+        };
+        return {
+          displayPassed: _alreadyHave('CMSC 131'),
+          compactPassed: _alreadyHave('CMSC131'),
+          displayTransfer: _alreadyHave('MATH 140'),
+          compactTransfer: _alreadyHave('MATH140'),
+          plannedNoState: _alreadyHave('ENGL 101'),
+          missing: _alreadyHave('CMSC 132'),
+        };
+      } finally {
+        state = previousState;
+      }
+    })()
+  `, context));
+
+  assert(result.displayPassed && result.compactPassed, 'prereq resolver: no-space passed state should satisfy display and compact course checks');
+  assert(result.displayTransfer && result.compactTransfer, 'prereq resolver: no-space transfer state should satisfy display and compact course checks');
+  assert(result.plannedNoState, 'prereq resolver: planned no-space course rows should still count as already in plan');
+  assert(!result.missing, 'prereq resolver: missing courses should not count as already complete');
+
+  return {
+    id: 'PREREQ-RESOLVER-STATE',
+    completed: `${Number(result.displayPassed)}/${Number(result.displayTransfer)}`,
+    planned: Number(result.plannedNoState),
+    missing: Number(result.missing),
   };
 }
 
@@ -5376,6 +5422,7 @@ async function main() {
     rows.push(await testMajorFixture(context, fixture));
   }
   const prereq = testSyntheticPrerequisites(context);
+  const prereqResolver = testPrereqResolverNormalizedState(context);
   const diagnostics = await testAutoPlanDiagnostics(context);
   const allGroups = await testAllGeneratedRequirementGroups(context);
   const catalogYear = await testCatalogYearTargeting(context);
@@ -5417,6 +5464,7 @@ async function main() {
 
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
+  console.log(`Prerequisite resolver fixture ${prereqResolver.id}: completed ${prereqResolver.completed}; planned ${prereqResolver.planned}; missing ${prereqResolver.missing}.`);
   console.log(`Auto-plan diagnostics fixture ${diagnostics.id}: template missing ${diagnostics.templateMissing}; mixed ${diagnostics.mixedCoverage}.`);
   console.log(`All generated requirement groups fixture ${allGroups.id}: ${allGroups.majors} majors; ${allGroups.requirements} grouped requirements.`);
   console.log(`Catalog year fixture ${catalogYear.id}: target ${catalogYear.target}; source ${catalogYear.source}.`);
@@ -5455,7 +5503,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

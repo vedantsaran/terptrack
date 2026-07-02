@@ -9571,3 +9571,54 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 172
+
+Focus: make the prerequisite resolver honor normalized course-state keys, so passed or transfer credit stored as `CMSC131` satisfies resolver checks for `CMSC 131` and does not get re-added as a missing prerequisite.
+
+Planned changes:
+- Inspect the prerequisite resolver after the normalized course-state lookup fixes.
+- Replace exact display-key state reads with the shared course-state helper.
+- Add generated-plan coverage for passed and transfer state stored under no-space keys.
+- Cache-bust the resolver asset and assert the versioned script in rendered workflow checks.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/prereq-resolver.js`.
+  - `_alreadyHave()` now uses `getCourseState(display)` instead of `state.courses[display]`, preserving normalized state lookup for display and compact course-code inputs.
+  - Planned-course fallback through `findCourse(display)` still covers courses already in the plan.
+- Updated `scripts/test-generated-plans.js`.
+  - The VM harness now loads `js/prereq-resolver.js`.
+  - Added `PREREQ-RESOLVER-STATE`, which verifies no-space `passed` and `transfer` state keys satisfy display and compact resolver checks.
+  - The fixture also verifies no-space planned rows still count as already in plan and genuinely missing courses stay missing.
+- Bumped and asserted the resolver asset:
+  - `index.html` now loads `js/prereq-resolver.js?v=1`.
+  - `scripts/verify-rendered-workflows.js` now asserts the versioned resolver script is present in the rendered app shell.
+
+Verification:
+- Ran `node --check js/prereq-resolver.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `PREREQ-RESOLVER-STATE` fixture.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, drag/drop section cleanup, custom delete cleanup, course edit cleanup, course code collision guard, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the new prerequisite resolver state coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass172-prereq-normalized-state`.
+  - It randomly verified `PHSC`, `ANSC`, `MUSC`, `ENGL`, `ARCH`, and `KNES` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
