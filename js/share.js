@@ -159,6 +159,21 @@ function shareSemIdForSelectedCourse(code, section, planState = {}) {
   return matches[0].id;
 }
 
+function shareSectionBelongsInSem(semId, code, section, planState = {}) {
+  const norm = shareNormalizeCode(code || section?.course || '');
+  if (!semId || !norm) return false;
+  const sem = sharePlanSemesters(planState).find(item => String(item.id) === String(semId));
+  if (!sem || !(sem.courses || []).some(course => shareNormalizeCode(course.code) === norm)) return false;
+  const sectionTerm = String(section?.semester || '').trim();
+  const semTerm = shareSemesterTerm(sem, planState);
+  return !sectionTerm || !semTerm || sectionTerm === semTerm;
+}
+
+function shareSemIdForBucketedSection(semId, code, section, planState = {}) {
+  if (shareSectionBelongsInSem(semId, code, section, planState)) return semId;
+  return shareSemIdForSelectedCourse(code, section, planState);
+}
+
 function shareAddSelectedSection(bucket, semId, code, section) {
   const norm = shareNormalizeCode(code || section?.course || '');
   if (!semId || !norm || !section) return false;
@@ -182,7 +197,10 @@ function normalizeSharedSelectedSections(selectedSections, planState = {}) {
     Object.entries(value || {}).forEach(([code, rawSection]) => {
       if (!rawSection) return;
       const section = shareNormalizeSectionValue(rawSection, code);
-      shareAddSelectedSection(normalized, semOrCode, code, section);
+      const semId = shareSemIdForBucketedSection(semOrCode, code, section, planState);
+      if (!shareAddSelectedSection(normalized, semId, code, section)) {
+        shareAddSelectedSection(normalized, semOrCode, code, section);
+      }
     });
   });
   return Object.keys(unplaced).length ? { ...normalized, ...unplaced } : normalized;

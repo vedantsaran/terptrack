@@ -441,6 +441,30 @@ function testAccountAndShareState(context) {
       customSemesters: [],
       schedulePrefs: {},
     });
+    const nestedInferredImportSections = normalizeSharedSelectedSections({
+      'legacy-fall-id': {
+        MATH140: {
+          course: 'MATH 140',
+          section_id: 'MATH140-0301',
+          number: '0301',
+          semester: '202701',
+          meetings: [{ days: 'TuTh', start_time: '9:30am', end_time: '10:45am', building: 'MTH', room: '0401' }]
+        }
+      }
+    }, {
+      activeSchedule: [{
+        id: 'share-fall',
+        name: 'Fall 2026',
+        courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+      }, {
+        id: 'share-spring',
+        name: 'Spring 2027',
+        courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+      }],
+      customCourses: [],
+      customSemesters: [],
+      schedulePrefs: {},
+    });
     const applied = applySharedPlanData({
       v: 1,
       courses: { 'MATH 140': { status: 'passed' } },
@@ -521,6 +545,11 @@ function testAccountAndShareState(context) {
         springSection: inferredImportSections['share-spring']?.MATH140 || null,
         fallSection: inferredImportSections['share-fall']?.MATH140 || null,
       },
+      nestedInferredImport: {
+        semIds: Object.keys(nestedInferredImportSections),
+        springSection: nestedInferredImportSections['share-spring']?.MATH140 || null,
+        legacySection: nestedInferredImportSections['legacy-fall-id']?.MATH140 || null,
+      },
     })
   `, context));
 
@@ -579,6 +608,8 @@ function testAccountAndShareState(context) {
   assert(result.explicitMismatch.sharedFreeWindowCount === 0, 'friend meeting planner: explicit wrong-term picks should not create free windows');
   assert(result.inferredImport.semIds.includes('share-spring') && !result.inferredImport.fallSection, 'shared plan import: flat picked section should route to inferred matching UMD term when a course appears twice');
   assert(result.inferredImport.springSection?.section_id === 'MATH140-0201' && result.inferredImport.springSection?.semester === '202701', 'shared plan import: routed section should preserve the posted UMD term');
+  assert(result.nestedInferredImport.semIds.includes('share-spring') && !result.nestedInferredImport.legacySection, 'shared plan import: stale nested section buckets should reroute to the inferred matching UMD term');
+  assert(result.nestedInferredImport.springSection?.section_id === 'MATH140-0301' && result.nestedInferredImport.springSection?.semester === '202701', 'shared plan import: nested rerouted section should preserve the posted UMD term');
 
   return {
     id: 'ACCOUNT-FRIENDS',
