@@ -214,11 +214,18 @@ function plannerActionCard(action, idx) {
 }
 
 function plannerRegistrationSelectedItems(semId, items = []) {
+  const sem = (typeof getAllSemesters === 'function' ? getAllSemesters() : []).find(item => item.id === semId) || null;
+  const term = typeof scheduleTermForSemId === 'function'
+    ? scheduleTermForSemId(semId)
+    : ((state.schedulePrefs || {})[semId]?.term || (sem && plannerInferTermCode(sem)) || '');
   const bucket = (state.selectedSections || {})[semId] || {};
   return items
     .filter(item => !plannerIsComplete(item.course))
     .map(item => {
-      const section = bucket[normalizeCode(item.course.code)];
+      const section = typeof getSelectedSectionForTerm === 'function'
+        ? getSelectedSectionForTerm(semId, item.course.code, term)
+        : bucket[normalizeCode(item.course.code)];
+      if (section?.semester && term && String(section.semester) !== String(term)) return null;
       return section ? { course: item.course, section } : null;
     })
     .filter(Boolean);

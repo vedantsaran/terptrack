@@ -2520,6 +2520,89 @@ function testPlannerAdvisorQuestions(context) {
   };
 }
 
+function testPlannerSectionTermGuards(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      recoGenEdGaps = () => [];
+      state.settings = normalizeSettings({ ...DEFAULT_SETTINGS, catalogYear: '2026-2027' });
+      const cmscWrongTerm = {
+        section_id: 'CMSC131-0999',
+        semester: '202701',
+        number: '0999',
+        open_seats: '14',
+        waitlist: '0',
+        seats: '30',
+        meetings: [{ days: 'MW', start_time: '10:00am', end_time: '11:15am', building: 'IRB', room: '1101' }]
+      };
+      const englCurrentTerm = {
+        section_id: 'ENGL101-0101',
+        semester: '202608',
+        number: '0101',
+        open_seats: '8',
+        waitlist: '0',
+        seats: '24',
+        meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'TWS', room: '1200' }]
+      };
+      state.activeSchedule = [{
+        id: 'pass158-fall',
+        name: 'Pass 158 Fall',
+        courses: [
+          { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, prereqs: [], kind: 'core', category: 'major-core' },
+          { code: 'ENGL 101', title: 'Academic Writing', cr: 3, prereqs: [], kind: 'gened', category: 'gened-fspw' }
+        ]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.schedulePrefs = { 'pass158-fall': { ...DEFAULT_SCHEDULE_PREFS, term: '202608', minBreak: 15, mode: 'balanced' } };
+      state.selectedSections = {
+        'pass158-fall': {
+          CMSC131: cmscWrongTerm,
+          ENGL101: englCurrentTerm
+        }
+      };
+      const advisor = plannerBuildAdvisor();
+      const sem = state.activeSchedule[0];
+      const semItems = advisor.itemsBySem['pass158-fall'] || [];
+      const selectedItems = plannerRegistrationSelectedItems('pass158-fall', semItems);
+      const readinessContext = plannerRegistrationReadinessContext(sem, semItems);
+      const checklist = plannerRegistrationChecklist(advisor);
+      const questions = plannerAdvisorQuestions(advisor, checklist);
+      const checklistText = plannerRegistrationChecklistText(checklist);
+      const questionsText = plannerAdvisorQuestionsText(questions);
+      return {
+        selectedCodes: selectedItems.map(item => item.course.code),
+        unscheduled: readinessContext.unscheduled.map(course => course.code),
+        gateLevels: Object.fromEntries(readinessContext.readiness.gates.map(gate => [gate.id, gate.level])),
+        readinessLabel: readinessContext.readiness.label,
+        readinessDetail: readinessContext.readiness.detail,
+        readinessFixes: readinessContext.readiness.fixes,
+        checklistText,
+        questionsText,
+        checklistMeta: checklist.map(item => item.meta || '').join(' | '),
+        questionMeta: questions.map(item => item.meta || '').join(' | '),
+        hasScheduleButton: /data-planner-schedule="pass158-fall"/.test(plannerChecklistHtml(checklist) + plannerAdvisorQuestionsHtml(questions)),
+      };
+    })()
+  `, context));
+
+  assert(result.selectedCodes.length === 1 && result.selectedCodes[0] === 'ENGL 101', 'planner term guards: wrong-term sections should not count as selected next-term items');
+  assert(result.unscheduled.includes('CMSC 131') && !result.unscheduled.includes('ENGL 101'), 'planner term guards: wrong-term pick should stay unscheduled while current-term pick counts');
+  assert(result.gateLevels.sections === 'danger', 'planner term guards: readiness sections gate should block wrong-term picks');
+  assert(/Fix before registration/.test(result.readinessLabel), 'planner term guards: readiness should require fixes');
+  assert(result.readinessFixes.some(fix => /Pick sections for CMSC 131/.test(fix)), 'planner term guards: fixes should name the course needing a current-term section');
+  assert(/Sections danger/.test(result.checklistMeta + result.checklistText), 'planner term guards: checklist should summarize the section blocker');
+  assert(/CMSC 131/.test(result.checklistText) && !/0999/.test(result.checklistText), 'planner term guards: checklist should name the course without treating the stale section as picked');
+  assert(/registration issue should I resolve first/i.test(result.questionsText), 'planner term guards: advisor questions should ask about the readiness blocker');
+  assert(/Sections danger/.test(result.questionMeta + result.questionsText), 'planner term guards: advisor question should summarize the section blocker');
+  assert(result.hasScheduleButton, 'planner term guards: checklist/questions should keep the Schedule recovery action');
+
+  return {
+    id: 'PLANNER-TERM-SECTIONS',
+    selected: result.selectedCodes.join(','),
+    unscheduled: result.unscheduled.join(','),
+  };
+}
+
 async function testPlannerAvailabilitySeatPressure(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -4506,6 +4589,7 @@ async function main() {
   const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
   const questions = testPlannerAdvisorQuestions(context);
+  const plannerTermSections = testPlannerSectionTermGuards(context);
   const plannerAvailability = await testPlannerAvailabilitySeatPressure(context);
   const plannerMoveUndo = testPlannerTermMoveUndo(context);
   const browse = await testBrowseProfileDepartments(context);
@@ -4542,6 +4626,7 @@ async function main() {
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
+  console.log(`Planner term-section fixture ${plannerTermSections.id}: selected ${plannerTermSections.selected}; unscheduled ${plannerTermSections.unscheduled}.`);
   console.log(`Planner availability fixture ${plannerAvailability.id}: ${plannerAvailability.level}; suggested ${plannerAvailability.suggestion}.`);
   console.log(`Planner term-move undo fixture ${plannerMoveUndo.id}: restored ${plannerMoveUndo.restored}; custom ${plannerMoveUndo.custom}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
@@ -4556,7 +4641,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
