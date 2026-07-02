@@ -3176,6 +3176,24 @@ h1.hero-title em {
   min-height: 28px;
   white-space: nowrap;
 }
+.auto-plan-review-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+.auto-plan-review-actions .btn {
+  min-height: 30px;
+}
+.auto-plan-review-actions span {
+  color: var(--slate);
+  flex: 1 1 180px;
+  font-size: .7rem;
+  line-height: 1.3;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .auto-plan-reality {
   border: 1px solid var(--line);
   border-left: 4px solid var(--amber);

@@ -43,6 +43,7 @@ function renderMajorSelectNote(majorId) {
 
 let autoPlanReviewSeq = 0;
 let autoPlanReviewTimer = null;
+let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'June 30, 2026',
   seed: 'pass87-all',
@@ -755,6 +756,19 @@ function autoPlanRealityHtml(review, opts = {}) {
   `;
 }
 
+function autoPlanResolveActionHtml(review, opts = {}) {
+  if (opts.actions === false || review?.kind === 'curated' || !(Number(review?.placeholderCredits) > 0)) return '';
+  const count = Number(review.placeholderCredits) || 0;
+  return `
+    <div class="auto-plan-review-actions">
+      <button class="btn small primary" type="button" data-auto-plan-apply-resolve="1">
+        ${autoPlanResolveRunning ? 'Resolving...' : 'Apply + resolve placeholders'}
+      </button>
+      <span>${settingsHtml(count)} placeholder credit${count === 1 ? '' : 's'} queued for automatic real-course search</span>
+    </div>
+  `;
+}
+
 function autoPlanElectiveStageLabel(stage) {
   if (stage === 'specialize') return 'Senior focus';
   if (stage === 'build') return 'Build';
@@ -876,9 +890,15 @@ document.addEventListener('click', (event) => {
     return;
   }
   const button = event.target && event.target.closest ? event.target.closest('[data-auto-plan-browse-placeholder]') : null;
-  if (!button) return;
+  if (button) {
+    event.preventDefault();
+    autoPlanOpenBrowseReplacement(button);
+    return;
+  }
+  const resolveButton = event.target && event.target.closest ? event.target.closest('[data-auto-plan-apply-resolve]') : null;
+  if (!resolveButton) return;
   event.preventDefault();
-  autoPlanOpenBrowseReplacement(button);
+  applyMajorAndResolvePlaceholdersFromSettings(resolveButton);
 });
 
 function autoPlanSourceSamplesHtml(review, opts = {}) {
@@ -991,6 +1011,7 @@ function autoPlanReviewHtml(review, opts = {}) {
       <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>
     </div>
     ${autoPlanRealityHtml(review, opts)}
+    ${autoPlanResolveActionHtml(review, opts)}
     ${autoPlanElectiveRoadmapHtml(review, opts)}
     ${autoPlanDiagnosticsHtml(review)}
     ${generatedTemplateFreshnessHtml(review)}
@@ -1262,28 +1283,30 @@ function openSettings() {
   renderAutoPlanReview(document.getElementById('set-major')?.value);
 }
 
-async function applyMajorFromSettings() {
+async function applyMajorFromSettings(opts = {}) {
+  const options = opts && opts.preventDefault ? {} : (opts || {});
   const sel = document.getElementById('set-major');
   const status = document.getElementById('set-major-status');
   const id = sel.value;
   const tpl = getMajorTemplate(id);
-  if (!tpl) return;
+  if (!tpl) return { applied: false, reason: 'missing-template' };
   // Skip confirmation when applying CE default (no destructive change vs default)
   // or when user has no progress / customizations yet.
   const hasProgress = Object.keys(state.courses || {}).length > 0
     || (state.customCourses || []).length > 0
     || (state.customSemesters || []).length > 0;
-  if (hasProgress && !confirm(`Apply ${tpl.name}? Your current schedule structure will be replaced. Course progress (passed/transfer marks) is preserved.`)) return;
+  if (hasProgress && !confirm(`Apply ${tpl.name}? Your current schedule structure will be replaced. Course progress (passed/transfer marks) is preserved.`)) return { applied: false, reason: 'cancelled' };
 
   status.style.color = 'var(--slate)';
   status.textContent = isMajorFullyBaked(tpl) ? 'Applying curated schedule…' : 'Generating schedule from API…';
   try {
+    state.profilePrefs = readProfileForm('set');
     await applyMajorTemplate(id, { catalogYear: settingsCatalogYearValue() });
     const courseCount = (state.activeSchedule || []).reduce((a, sem) => a + (sem.courses || []).length, 0);
     const baked = isMajorFullyBaked(tpl);
     status.style.color = 'var(--green)';
     status.textContent = `Applied ${tpl.name} · ${courseCount} courses across ${(state.activeSchedule || []).length || 8} semesters.`;
-    toastSuccess(`${baked ? '★' : '✱'} ${tpl.name} applied (${courseCount} courses).${baked ? '' : ' Auto-generated full draft with editable placeholders.'}`);
+    if (!options.silentToast) toastSuccess(`${baked ? '★' : '✱'} ${tpl.name} applied (${courseCount} courses).${baked ? '' : ' Auto-generated full draft with editable placeholders.'}`);
     // Refresh the visible settings inputs to reflect new program metadata
     const s = getSettings();
     document.getElementById('set-program').value = s.programName || '';
@@ -1293,12 +1316,60 @@ async function applyMajorFromSettings() {
     document.getElementById('set-total-credits').value = s.totalCredits || 125;
     document.getElementById('set-goals').value = (s.goalCourses || []).join(', ');
     renderReleaseChecklist();
+    return { applied: true, tpl, courseCount, baked };
   } catch (e) {
     status.style.color = 'var(--red)';
     status.textContent = 'Error: ' + e.message;
     toastError('Could not apply major: ' + e.message);
+    return { applied: false, error: e };
   }
 }
+
+async function applyMajorAndResolvePlaceholdersFromSettings(button = null) {
+  if (autoPlanResolveRunning) return { applied: false, resolved: 0 };
+  if (typeof browseAutoResolveReplacementQueue !== 'function') {
+    toastError('Automatic replacement search is still loading.');
+    return { applied: false, resolved: 0 };
+  }
+  const status = document.getElementById('set-major-status');
+  autoPlanResolveRunning = true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Resolving...';
+  }
+  try {
+    if (status) {
+      status.style.color = 'var(--slate)';
+      status.textContent = 'Applying plan before resolving placeholders...';
+    }
+    const applied = await applyMajorFromSettings({ silentToast: true });
+    if (!applied?.applied) return { applied: false, resolved: 0, reason: applied?.reason || 'not-applied' };
+    closeSettings();
+    if (typeof switchTab === 'function') switchTab('browse');
+    else if (typeof renderBrowse === 'function') renderBrowse();
+    const result = await browseAutoResolveReplacementQueue({
+      source: 'Initial plan resolver',
+      successContext: 'from initial plan review',
+      quiet: true,
+    });
+    if (result.applied) {
+      toastSuccess(`Applied ${applied.tpl.name} and resolved ${result.applied} placeholder${result.applied === 1 ? '' : 's'}.`);
+    } else if (typeof toastInfo === 'function') {
+      toastInfo(`Applied ${applied.tpl.name}; no automatic placeholder replacements were ready.`);
+    }
+    return { applied: true, resolved: result.applied || 0, result };
+  } catch (error) {
+    if (typeof toastError === 'function') toastError('Could not resolve placeholders: ' + (error.message || error));
+    return { applied: false, resolved: 0, error };
+  } finally {
+    autoPlanResolveRunning = false;
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Apply + resolve placeholders';
+    }
+  }
+}
+
 function closeSettings() {
   document.getElementById('settings-modal').classList.remove('open');
 }
@@ -1377,6 +1448,7 @@ if (typeof window !== 'undefined') {
     resetAllData,
     applySettings,
     applyMajorFromSettings,
+    applyMajorAndResolvePlaceholdersFromSettings,
     applySettingsPriorCredits,
   });
 }

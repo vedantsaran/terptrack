@@ -10210,3 +10210,83 @@ Next pass candidates:
 - Add bounded-search breadth controls or diagnostics for very large section sets.
 - Promote the auto-resolver into an initial-plan review workflow so students can resolve remaining placeholders without first opening Browse.
 - Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
+
+## 2026-07-02 Pass 182
+
+Focus: promote placeholder resolution into the initial generated-plan review so a student can apply a full draft and immediately replace placeholders with real UMD courses without first discovering the Browse queue.
+
+Planned changes:
+- Reuse the existing Browse automatic slot resolver instead of creating a second replacement engine.
+- Add an Auto Plan Review action that applies the selected generated major and runs automatic placeholder resolution in one flow.
+- Preserve visible Settings profile preferences before generation so the resolver uses the interests, career goal, and preferred departments the student just entered.
+- Stamp replacements from this workflow with an `Initial plan resolver` source in recent-change history.
+- Keep the user in a concrete follow-up workspace by landing in Browse after the handoff.
+- Keep the review UI compact and responsive.
+- Bump changed static asset versions and rendered verifier assertions.
+- Verify with generated fixtures, rendered browser checks, release checks, and random live PlanetTerp schedules.
+
+Completed:
+- Updated `js/settings.js`.
+  - Added `Apply + resolve placeholders` to generated Auto Plan Review cards when placeholder credits are present.
+  - Added `applyMajorAndResolvePlaceholdersFromSettings()`.
+  - The combined action applies the selected major, saves the visible profile form into `state.profilePrefs`, closes Settings, switches to Browse, and runs the automatic resolver.
+  - `applyMajorFromSettings()` now returns structured apply/cancel/error results and supports quiet toast mode for the combined workflow.
+- Updated `js/browse.js`.
+  - `browseAutoResolveReplacementQueue()` now accepts a custom source and success context while preserving its existing default Browse behavior.
+  - The shared queue apply path now supports quiet mode so the initial-plan workflow reports one clear completion toast.
+- Updated `styles.css`.
+  - Added compact responsive styling for the Auto Plan Review action row.
+- Updated `index.html`.
+  - Bumped `styles.css` to `v=116`.
+  - Bumped `js/settings.js` to `v=30`.
+  - Bumped `js/browse.js` to `v=18`.
+- Updated `scripts/test-generated-plans.js`.
+  - Auto Plan Review diagnostics now assert the combined action renders.
+  - Added `AUTO-PLAN-INITIAL-RESOLVER`, which verifies the combined action applies a generated plan, saves visible profile choices, switches to Browse, calls the resolver with `Initial plan resolver`, and leaves a real replacement in the applied plan.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Rendered generated-plan checks now assert the browser review includes `Apply + resolve placeholders`.
+  - Updated asset assertions for `styles.css?v=116` and `js/settings.js?v=30`.
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Updated asset assertions for `styles.css?v=116` and `js/browse.js?v=18`.
+
+Major-gap notes:
+- Initial generated-plan review now has a one-step path from preview to real-course placeholder search, which removes the previous dependency on manually opening Browse first.
+- The resolver still intentionally leaves unmatched placeholders for manual Browse/advisor review when no unique real-course assignment is found.
+- Remaining improvements include exposing schedule solver rationale/alternatives directly in the schedule UI, adding bounded-search diagnostics for very large section sets, and adding a Supabase migration/version note for deployed users.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check js/browse.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed `AUTO-PLAN-INITIAL-RESOLVER` with 1 resolved placeholder and `Initial plan resolver` replacement source.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with replacement queue, queue fill, and auto-resolver fill.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - It passed the focused rendered generated-plan browser check and confirmed the new review action assertion.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the new initial-plan resolver coverage.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass182-initial-plan-resolver`.
+  - It randomly verified `AREC`, `ARTH`, `ENST`, `THET`, `BIOE`, `WMST`, `MUSC`, `AAST`, `NEUR`, `ENCH`, `IS`, and `BCHM` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Surface schedule solver rationale and ranked alternatives in the UI so students can understand why a section set was chosen.
+- Add bounded-search breadth controls or diagnostics for very large section sets.
+- Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.

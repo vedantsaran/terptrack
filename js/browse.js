@@ -1188,10 +1188,10 @@ async function browseApplyReplacementQueue(items = browseLastDecoratedRows, opts
       saveState();
       browseQueueApplying = false;
       if (typeof render === 'function') render();
-      toastSuccess(`Filled ${applied.length} unresolved slot${applied.length === 1 ? '' : 's'} ${opts.successContext || 'from this search'}.`);
+      if (!opts.quiet) toastSuccess(`Filled ${applied.length} unresolved slot${applied.length === 1 ? '' : 's'} ${opts.successContext || 'from this search'}.`);
     } else if (typeof toastInfo === 'function') {
       browseQueueApplying = false;
-      toastInfo('No replacement slots changed. Refresh the search and try again.');
+      if (!opts.quiet) toastInfo('No replacement slots changed. Refresh the search and try again.');
     }
     return { applied: applied.length, skipped, total: plan.total };
   } finally {
@@ -1199,7 +1199,7 @@ async function browseApplyReplacementQueue(items = browseLastDecoratedRows, opts
   }
 }
 
-async function browseAutoResolveReplacementQueue() {
+async function browseAutoResolveReplacementQueue(opts = {}) {
   if (browseAutoResolving) return { applied: 0, skipped: 0 };
   const slots = browsePlaceholderSlots();
   if (!slots.length) {
@@ -1226,8 +1226,9 @@ async function browseAutoResolveReplacementQueue() {
     browseLastDecoratedRows = decorated;
     browseAutoResolving = false;
     const result = await browseApplyReplacementQueue(decorated, {
-      source: 'Browse auto-resolver',
-      successContext: 'from automatic slot search',
+      source: opts.source || 'Browse auto-resolver',
+      successContext: opts.successContext || 'from automatic slot search',
+      quiet: !!opts.quiet,
     });
     return { ...result, searched: found.searched.length };
   } finally {

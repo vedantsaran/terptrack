@@ -981,6 +981,7 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Elective Roadmap/.test(result.templateHtml) && /profile\/elective slots/.test(result.templateHtml), 'auto plan elective roadmap: review should render roadmap summary');
   assert(/Senior focus/.test(result.templateHtml) && /Find profile fits/.test(result.templateHtml), 'auto plan elective roadmap: should show senior-stage elective rows with Browse actions');
   assert(/Next replacement actions/.test(result.templateHtml) && /data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan reality: review should render actionable replacement buttons');
+  assert(/data-auto-plan-apply-resolve/.test(result.templateHtml) && /Apply \+ resolve placeholders/.test(result.templateHtml), 'auto plan initial resolver: review should render apply-and-resolve action');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
@@ -1026,6 +1027,142 @@ async function testAutoPlanDiagnostics(context) {
     id: 'AUTO-PLAN-DIAGNOSTICS',
     templateMissing: result.templateCoverage.missing,
     mixedCoverage: `${result.mixedCoverage.found}/${result.mixedCoverage.total}`,
+  };
+}
+
+async function testAutoPlanInitialResolverAction(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const originalGetElementById = document.getElementById;
+      const originalQuerySelectorAll = document.querySelectorAll;
+      const originalApplyMajorTemplate = applyMajorTemplate;
+      const originalBrowseAutoResolve = browseAutoResolveReplacementQueue;
+      const originalSwitchTab = typeof switchTab === 'function' ? switchTab : null;
+      const originalRenderReleaseChecklist = renderReleaseChecklist;
+      const originalPopulateCatalogYearSelect = populateCatalogYearSelect;
+      const originalRenderCatalogYearNote = renderSettingsCatalogYearNote;
+      const originalToastSuccess = typeof toastSuccess === 'function' ? toastSuccess : null;
+      const originalToastInfo = typeof toastInfo === 'function' ? toastInfo : null;
+      const originalConfirm = confirm;
+      const elements = {};
+      function el(id, extra = {}) {
+        if (!elements[id]) {
+          elements[id] = {
+            id,
+            value: '',
+            textContent: '',
+            innerHTML: '',
+            style: {},
+            classList: { add() {}, remove(name) { this.removed = name; } },
+            ...extra,
+          };
+        }
+        return elements[id];
+      }
+      try {
+        state.activeSchedule = [];
+        state.courses = {};
+        state.customCourses = [];
+        state.customSemesters = [];
+        state.recentChanges = [];
+        state.profilePrefs = normalizeProfilePrefs({});
+        currentTab = 'settings';
+        const toasts = [];
+        document.getElementById = id => {
+          const defaults = {
+            'set-major': { value: 'STAT' },
+            'set-catalog-year': { value: '2026-2027' },
+            'set-career-goal': { value: 'climate policy analytics' },
+            'set-gened-depts': { value: 'INST, GVPT' },
+          };
+          return el(id, defaults[id] || {});
+        };
+        document.querySelectorAll = selector => selector === 'input[name="set-interest"]:checked'
+          ? [{ value: 'sustainability' }]
+          : [];
+        confirm = () => true;
+        renderReleaseChecklist = () => {};
+        populateCatalogYearSelect = (id, value) => { el(id).value = value || '2026-2027'; };
+        renderSettingsCatalogYearNote = () => {};
+        toastSuccess = message => { toasts.push(message); };
+        toastInfo = message => { toasts.push(message); };
+        switchTab = tab => { currentTab = tab; };
+        applyMajorTemplate = async (id, opts) => {
+          state.majorId = id;
+          state.settings = normalizeSettings({
+            ...state.settings,
+            programName: 'Statistics',
+            eyebrow: 'UMD · Statistics',
+            totalCredits: 120,
+            catalogYear: opts.catalogYear,
+          });
+          state.activeSchedule = [{
+            id: 'F26',
+            name: 'Fall 2026',
+            year: 'Year 1',
+            courses: [
+              { code: 'STAT 100', title: 'Elementary Statistics and Probability', cr: 3, category: 'major-core' },
+              { code: 'GenEd DSHU', title: 'Humanities placeholder', cr: 3, kind: 'gened', category: 'gened-dshu' },
+            ],
+          }];
+          return { ok: true, schedule: state.activeSchedule };
+        };
+        let resolverOptions = null;
+        browseAutoResolveReplacementQueue = async opts => {
+          resolverOptions = opts;
+          state.activeSchedule[0].courses[1] = { code: 'HIST 210', title: 'The Historian as Detective', cr: 3, kind: 'gened', category: 'gened-dshu' };
+          state.recentChanges.unshift({ type: 'placeholder-replacement', source: opts.source, title: 'Replaced GenEd DSHU' });
+          return { applied: 1, skipped: 0, total: 1, searched: 1 };
+        };
+        const button = { disabled: false, textContent: 'Apply + resolve placeholders' };
+        const action = await applyMajorAndResolvePlaceholdersFromSettings(button);
+        return {
+          action,
+          currentTab,
+          resolverOptions,
+          statusText: el('set-major-status').textContent,
+          profilePrefs: state.profilePrefs,
+          finalCodes: state.activeSchedule[0].courses.map(course => course.code),
+          changeSource: state.recentChanges[0]?.source || '',
+          settingsClosed: el('settings-modal').classList.removed || '',
+          button,
+          toasts,
+        };
+      } finally {
+        document.getElementById = originalGetElementById;
+        document.querySelectorAll = originalQuerySelectorAll;
+        applyMajorTemplate = originalApplyMajorTemplate;
+        browseAutoResolveReplacementQueue = originalBrowseAutoResolve;
+        if (originalSwitchTab) switchTab = originalSwitchTab;
+        else delete globalThis.switchTab;
+        renderReleaseChecklist = originalRenderReleaseChecklist;
+        populateCatalogYearSelect = originalPopulateCatalogYearSelect;
+        renderSettingsCatalogYearNote = originalRenderCatalogYearNote;
+        if (originalToastSuccess) toastSuccess = originalToastSuccess;
+        else delete globalThis.toastSuccess;
+        if (originalToastInfo) toastInfo = originalToastInfo;
+        else delete globalThis.toastInfo;
+        confirm = originalConfirm;
+      }
+    })()
+  `, context));
+
+  assert(result.action.applied && result.action.resolved === 1, 'auto plan initial resolver: should apply the selected generated plan and resolve a placeholder');
+  assert(result.currentTab === 'browse', 'auto plan initial resolver: should land in Browse after applying');
+  assert(result.resolverOptions.source === 'Initial plan resolver', 'auto plan initial resolver: should stamp replacement history with the initial-plan source');
+  assert(result.resolverOptions.successContext === 'from initial plan review', 'auto plan initial resolver: should pass review-specific success context');
+  assert(result.resolverOptions.quiet === true, 'auto plan initial resolver: should quiet the nested Browse resolver toast');
+  assert(result.profilePrefs.interests.includes('sustainability') && result.profilePrefs.careerGoal === 'climate policy analytics', 'auto plan initial resolver: should save visible profile preferences before generation');
+  assert(result.finalCodes.includes('HIST 210') && !result.finalCodes.includes('GenEd DSHU'), 'auto plan initial resolver: should leave the applied plan with resolver replacements');
+  assert(result.changeSource === 'Initial plan resolver', 'auto plan initial resolver: replacement changes should have the review source');
+  assert(result.settingsClosed === 'open', 'auto plan initial resolver: should close Settings before Browse handoff');
+  assert(!result.button.disabled && result.button.textContent === 'Apply + resolve placeholders', 'auto plan initial resolver: should restore button state');
+  assert(result.toasts.some(message => /resolved 1 placeholder/.test(message)), 'auto plan initial resolver: should announce resolved placeholders');
+
+  return {
+    id: 'AUTO-PLAN-INITIAL-RESOLVER',
+    resolved: result.action.resolved,
+    source: result.changeSource,
   };
 }
 
@@ -6044,6 +6181,7 @@ async function main() {
   const prereqResolver = testPrereqResolverNormalizedState(context);
   const bulkState = testBulkCourseStateNormalization(context);
   const diagnostics = await testAutoPlanDiagnostics(context);
+  const initialResolver = await testAutoPlanInitialResolverAction(context);
   const allGroups = await testAllGeneratedRequirementGroups(context);
   const catalogYear = await testCatalogYearTargeting(context);
   const account = testAccountAndShareState(context);
@@ -6091,6 +6229,7 @@ async function main() {
   console.log(`Prerequisite resolver fixture ${prereqResolver.id}: completed ${prereqResolver.completed}; planned ${prereqResolver.planned}; missing ${prereqResolver.missing}.`);
   console.log(`Bulk state fixture ${bulkState.id}: transfer ${bulkState.transfer}; reset ${bulkState.reset}; progress ${bulkState.progress}.`);
   console.log(`Auto-plan diagnostics fixture ${diagnostics.id}: template missing ${diagnostics.templateMissing}; mixed ${diagnostics.mixedCoverage}.`);
+  console.log(`Auto-plan initial resolver fixture ${initialResolver.id}: resolved ${initialResolver.resolved}; source ${initialResolver.source}.`);
   console.log(`All generated requirement groups fixture ${allGroups.id}: ${allGroups.majors} majors; ${allGroups.requirements} grouped requirements.`);
   console.log(`Catalog year fixture ${catalogYear.id}: target ${catalogYear.target}; source ${catalogYear.source}.`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
@@ -6132,7 +6271,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + auto-plan initial resolver + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
