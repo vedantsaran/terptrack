@@ -2331,6 +2331,18 @@ function testPlannerTermMoveUndo(context) {
         const staleSectionHistoryHtml = historyRoot.innerHTML;
         const staleSectionCanUndo = plannerChangeCanUndo(change);
         const staleSectionReviewTarget = plannerChangeReviewTarget(change);
+        const staleSectionScheduleTarget = plannerChangeScheduleTarget(change);
+        const staleSectionTermTarget = plannerChangeTermTarget(change);
+        state.selectedSections = {
+          'pass149-fall': {
+            CMSC132: { section_id: 'CMSC132-SOURCE-NEW', semester: '202608', number: 'SRC', open_seats: '4', waitlist: '0' }
+          }
+        };
+        renderPlanChangeHistory();
+        const staleSourceSectionHistoryHtml = historyRoot.innerHTML;
+        const staleSourceSectionCanUndo = plannerChangeCanUndo(change);
+        const staleSourceSectionScheduleTarget = plannerChangeScheduleTarget(change);
+        const staleSourceSectionTermTarget = plannerChangeTermTarget(change);
         state.selectedSections = JSON.parse(JSON.stringify(afterMoveSelectedSections));
         const undoApplied = undoPlanChange(change.id);
         const undoChange = state.recentChanges[0] || null;
@@ -2362,6 +2374,12 @@ function testPlannerTermMoveUndo(context) {
           staleSectionHistoryHtml,
           staleSectionCanUndo,
           staleSectionReviewTarget,
+          staleSectionScheduleTarget,
+          staleSectionTermTarget,
+          staleSourceSectionHistoryHtml,
+          staleSourceSectionCanUndo,
+          staleSourceSectionScheduleTarget,
+          staleSourceSectionTermTarget,
           undoApplied,
           afterUndoFall: state.activeSchedule[0].courses.map(course => course.code),
           afterUndoSpring: state.activeSchedule[1].courses.map(course => course.code),
@@ -2394,6 +2412,11 @@ function testPlannerTermMoveUndo(context) {
   assert(/data-change-term/.test(result.staleHistoryHtml) && result.staleTermTarget?.semId === 'pass149-spring', 'planner term move undo: stale row should still offer a move-term recovery jump');
   assert(result.staleSectionCanUndo === false && /target-term section pick changed/.test(result.staleSectionHistoryHtml), 'planner term move undo: new target section picks should disable undo');
   assert(result.staleSectionReviewTarget?.code === 'CMSC 132', 'planner term move undo: stale section row should offer the moved-course recovery jump');
+  assert(/data-change-schedule/.test(result.staleSectionHistoryHtml) && result.staleSectionScheduleTarget?.semId === 'pass149-spring' && result.staleSectionScheduleTarget?.code === 'CMSC 132', 'planner term move undo: stale target section row should offer a target Schedule jump');
+  assert(result.staleSectionTermTarget?.semId === 'pass149-spring' && result.staleSectionTermTarget?.label === 'Show target term', 'planner term move undo: stale target section row should label the target term jump');
+  assert(result.staleSourceSectionCanUndo === false && /source-term section pick changed/.test(result.staleSourceSectionHistoryHtml), 'planner term move undo: new source section picks should disable undo');
+  assert(!result.staleSourceSectionScheduleTarget && !/data-change-schedule/.test(result.staleSourceSectionHistoryHtml), 'planner term move undo: stale source-only section row should not offer a Schedule jump to a missing course row');
+  assert(result.staleSourceSectionTermTarget?.semId === 'pass149-fall' && result.staleSourceSectionTermTarget?.label === 'Show source term', 'planner term move undo: stale source section row should point to the source term');
   assert(result.undoApplied === true, 'planner term move undo: undo should apply');
   assert(result.afterUndoFall[0] === 'CMSC 132' && result.afterUndoFall.includes('ENGL 101'), 'planner term move undo: undo should restore original term and position');
   assert(!result.afterUndoSpring.includes('CMSC 132'), 'planner term move undo: undo should remove course from target term');

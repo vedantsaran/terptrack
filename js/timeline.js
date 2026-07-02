@@ -1325,6 +1325,39 @@ function plannerPriorCreditUndoAvailability(change) {
   return { can: true, reason: '' };
 }
 
+function plannerTermMoveSelectedSectionMismatch(undo) {
+  if (undo?.kind !== 'term-move') return null;
+  const code = String(undo.code || '').trim();
+  if (!code) return null;
+  if (plannerHasOwn(undo, 'expectedFromSelectedSection')) {
+    const expectedHad = !!undo.hadExpectedFromSelectedSection;
+    const expectedValue = expectedHad ? undo.expectedFromSelectedSection : null;
+    const current = plannerSelectedSectionSnapshot(undo.fromSemId, code);
+    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
+      return {
+        side: 'source',
+        semId: String(undo.fromSemId || ''),
+        code,
+        label: 'source-term section pick',
+      };
+    }
+  }
+  if (plannerHasOwn(undo, 'expectedToSelectedSection')) {
+    const expectedHad = !!undo.hadExpectedToSelectedSection;
+    const expectedValue = expectedHad ? undo.expectedToSelectedSection : null;
+    const current = plannerSelectedSectionSnapshot(undo.toSemId, code);
+    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
+      return {
+        side: 'target',
+        semId: String(undo.toSemId || ''),
+        code,
+        label: 'target-term section pick',
+      };
+    }
+  }
+  return null;
+}
+
 function plannerTermMoveUndoAvailability(change) {
   const undo = change?.undo;
   if (undo?.kind !== 'term-move' || undo.appliedAt) return { can: false, reason: '' };
@@ -1341,21 +1374,9 @@ function plannerTermMoveUndoAvailability(change) {
   if (!fromSem || !toSem) {
     return { can: false, reason: `Undo unavailable: ${code} moved between terms that are no longer in the plan.` };
   }
-  if (plannerHasOwn(undo, 'expectedFromSelectedSection')) {
-    const expectedHad = !!undo.hadExpectedFromSelectedSection;
-    const expectedValue = expectedHad ? undo.expectedFromSelectedSection : null;
-    const current = plannerSelectedSectionSnapshot(from, code);
-    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
-      return { can: false, reason: `Undo unavailable: ${code}'s source-term section pick changed after this term move.` };
-    }
-  }
-  if (plannerHasOwn(undo, 'expectedToSelectedSection')) {
-    const expectedHad = !!undo.hadExpectedToSelectedSection;
-    const expectedValue = expectedHad ? undo.expectedToSelectedSection : null;
-    const current = plannerSelectedSectionSnapshot(to, code);
-    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
-      return { can: false, reason: `Undo unavailable: ${code}'s target-term section pick changed after this term move.` };
-    }
+  const sectionMismatch = plannerTermMoveSelectedSectionMismatch(undo);
+  if (sectionMismatch) {
+    return { can: false, reason: `Undo unavailable: ${code}'s ${sectionMismatch.label} changed after this term move.` };
   }
 
   if (undo.custom) {
@@ -1491,6 +1512,16 @@ function plannerRenderPriorCreditRecovery(codes = []) {
 
 function plannerChangeScheduleTarget(change) {
   const undo = change?.undo;
+  if (undo?.kind === 'term-move' && !undo.appliedAt) {
+    const mismatch = plannerTermMoveSelectedSectionMismatch(undo);
+    if (!mismatch || mismatch.side !== 'target') return null;
+    if (!mismatch.semId || !getAllSemesters().some(item => item.id === mismatch.semId)) return null;
+    return {
+      semId: mismatch.semId,
+      code: mismatch.code,
+      label: 'Show target schedule',
+    };
+  }
   if (undo?.kind !== 'placeholder-replacement' || undo.appliedAt) return null;
   if (!undo.semId || !plannerHasOwn(undo, 'expectedReplacementSelectedSection')) return null;
   const expectedHad = !!undo.hadExpectedReplacementSelectedSection;
@@ -1509,11 +1540,15 @@ function plannerChangeScheduleTarget(change) {
 function plannerChangeTermTarget(change) {
   const undo = change?.undo;
   if (undo?.kind === 'term-move' && !undo.appliedAt) {
-    const semId = String(undo.toSemId || undo.fromSemId || '');
+    const mismatch = plannerTermMoveSelectedSectionMismatch(undo);
+    const semId = String(mismatch?.semId || undo.toSemId || undo.fromSemId || '');
     if (!semId || !getAllSemesters().some(sem => sem.id === semId)) return null;
+    const label = mismatch?.side === 'source'
+      ? 'Show source term'
+      : (mismatch?.side === 'target' ? 'Show target term' : 'Show move term');
     return {
       semId,
-      label: 'Show move term',
+      label,
     };
   }
   if (undo?.kind !== 'placeholder-replacement' || undo.appliedAt) return null;
