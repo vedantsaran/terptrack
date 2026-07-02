@@ -1341,6 +1341,22 @@ function plannerTermMoveUndoAvailability(change) {
   if (!fromSem || !toSem) {
     return { can: false, reason: `Undo unavailable: ${code} moved between terms that are no longer in the plan.` };
   }
+  if (plannerHasOwn(undo, 'expectedFromSelectedSection')) {
+    const expectedHad = !!undo.hadExpectedFromSelectedSection;
+    const expectedValue = expectedHad ? undo.expectedFromSelectedSection : null;
+    const current = plannerSelectedSectionSnapshot(from, code);
+    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
+      return { can: false, reason: `Undo unavailable: ${code}'s source-term section pick changed after this term move.` };
+    }
+  }
+  if (plannerHasOwn(undo, 'expectedToSelectedSection')) {
+    const expectedHad = !!undo.hadExpectedToSelectedSection;
+    const expectedValue = expectedHad ? undo.expectedToSelectedSection : null;
+    const current = plannerSelectedSectionSnapshot(to, code);
+    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
+      return { can: false, reason: `Undo unavailable: ${code}'s target-term section pick changed after this term move.` };
+    }
+  }
 
   if (undo.custom) {
     const current = (state.customCourses || []).find(course => course.semId === to && normalizeCode(course.code) === norm);
@@ -1777,6 +1793,12 @@ function plannerApplyTermMoveUndo(change) {
       : fromSem.courses.length;
     fromSem.courses.splice(insertAt, 0, course);
   }
+  if (plannerHasOwn(undo, 'hadFromSelectedSection')) {
+    plannerRestoreSelectedSection(from, code, !!undo.hadFromSelectedSection, undo.fromSelectedSection || null);
+  }
+  if (plannerHasOwn(undo, 'expectedToSelectedSection')) {
+    plannerRestoreSelectedSection(to, code, false, null);
+  }
 
   undo.appliedAt = new Date().toISOString();
   recordPlanChange({
@@ -1878,8 +1900,11 @@ function plannerApplyMove(code, fromSemId, toSemId) {
   if (custom) {
     const fromName = getAllSemesters().find(sem => sem.id === from)?.name || from;
     const toName = getAllSemesters().find(sem => sem.id === to)?.name || to;
+    const fromSection = plannerSelectedSectionSnapshot(from, custom.code || code);
     custom.semId = to;
     plannerClearMovedSelections(code, from, to);
+    const expectedFromSection = plannerSelectedSectionSnapshot(from, custom.code || code);
+    const expectedToSection = plannerSelectedSectionSnapshot(to, custom.code || code);
     recordPlanChange({
       type: 'term-move',
       source: 'Timeline',
@@ -1894,6 +1919,12 @@ function plannerApplyMove(code, fromSemId, toSemId) {
         toSemId: to,
         fromName,
         toName,
+        hadFromSelectedSection: fromSection.had,
+        fromSelectedSection: fromSection.value,
+        hadExpectedFromSelectedSection: expectedFromSection.had,
+        expectedFromSelectedSection: expectedFromSection.value,
+        hadExpectedToSelectedSection: expectedToSection.had,
+        expectedToSelectedSection: expectedToSection.value,
       },
     }, { save: false });
     saveState();
@@ -1909,10 +1940,13 @@ function plannerApplyMove(code, fromSemId, toSemId) {
   if (!fromSem || !toSem) return false;
   const idx = (fromSem.courses || []).findIndex(course => normalizeCode(course.code) === norm);
   if (idx === -1) return false;
+  const fromSection = plannerSelectedSectionSnapshot(from, code);
   const [course] = fromSem.courses.splice(idx, 1);
   toSem.courses = toSem.courses || [];
   toSem.courses.push(course);
   plannerClearMovedSelections(course.code, from, to);
+  const expectedFromSection = plannerSelectedSectionSnapshot(from, course.code);
+  const expectedToSection = plannerSelectedSectionSnapshot(to, course.code);
   recordPlanChange({
     type: 'term-move',
     source: 'Timeline',
@@ -1928,6 +1962,12 @@ function plannerApplyMove(code, fromSemId, toSemId) {
       toName: toSem.name,
       fromIndex: idx,
       toIndex: toSem.courses.length - 1,
+      hadFromSelectedSection: fromSection.had,
+      fromSelectedSection: fromSection.value,
+      hadExpectedFromSelectedSection: expectedFromSection.had,
+      expectedFromSelectedSection: expectedFromSection.value,
+      hadExpectedToSelectedSection: expectedToSection.had,
+      expectedToSelectedSection: expectedToSection.value,
     },
   }, { save: false });
   saveState();

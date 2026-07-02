@@ -2313,15 +2313,30 @@ function testPlannerTermMoveUndo(context) {
         const canUndoBefore = plannerChangeCanUndo(change);
         const afterMoveSchedule = JSON.parse(JSON.stringify(state.activeSchedule));
         const afterMoveSpringBeforeUndo = afterMoveSchedule[1].courses.map(course => course.code);
+        const afterMoveSelectedSections = JSON.parse(JSON.stringify(state.selectedSections || {}));
+        const afterMoveSelectedFall = afterMoveSelectedSections['pass149-fall'] || null;
+        const afterMoveSelectedSpring = afterMoveSelectedSections['pass149-spring'] || null;
         state.activeSchedule[1].courses = [];
         renderPlanChangeHistory();
         const staleHistoryHtml = historyRoot.innerHTML;
         const staleCanUndo = plannerChangeCanUndo(change);
         const staleTermTarget = plannerChangeTermTarget(change);
         state.activeSchedule = afterMoveSchedule;
+        state.selectedSections = {
+          'pass149-spring': {
+            CMSC132: { section_id: 'CMSC132-NEW', semester: '202701', number: 'NEW', open_seats: '6', waitlist: '0' }
+          }
+        };
+        renderPlanChangeHistory();
+        const staleSectionHistoryHtml = historyRoot.innerHTML;
+        const staleSectionCanUndo = plannerChangeCanUndo(change);
+        const staleSectionReviewTarget = plannerChangeReviewTarget(change);
+        state.selectedSections = JSON.parse(JSON.stringify(afterMoveSelectedSections));
         const undoApplied = undoPlanChange(change.id);
         const undoChange = state.recentChanges[0] || null;
         const originalChangeAfterUndo = state.recentChanges.find(item => item.id === change.id) || null;
+        const afterUndoSourceSelected = state.selectedSections['pass149-fall']?.CMSC132 || null;
+        const afterUndoTargetSelected = state.selectedSections['pass149-spring']?.CMSC132 || null;
 
         state.customCourses = [{ code: 'INST 201', title: 'Information Science', cr: 3, semId: 'pass149-fall', isCustom: true }];
         const customMoved = plannerApplyMove('INST 201', 'pass149-fall', 'pass149-spring');
@@ -2334,8 +2349,8 @@ function testPlannerTermMoveUndo(context) {
           moved,
           afterMoveFall: state.activeSchedule[0].courses.map(course => course.code),
           afterMoveSpringBeforeUndo,
-          selectedFall: state.selectedSections['pass149-fall'] || null,
-          selectedSpring: state.selectedSections['pass149-spring'] || null,
+          afterMoveSelectedFall,
+          afterMoveSelectedSpring,
           undoKind: change && change.undo && change.undo.kind,
           undoFrom: change && change.undo && change.undo.fromSemId,
           undoTo: change && change.undo && change.undo.toSemId,
@@ -2344,9 +2359,14 @@ function testPlannerTermMoveUndo(context) {
           staleHistoryHtml,
           staleCanUndo,
           staleTermTarget,
+          staleSectionHistoryHtml,
+          staleSectionCanUndo,
+          staleSectionReviewTarget,
           undoApplied,
           afterUndoFall: state.activeSchedule[0].courses.map(course => course.code),
           afterUndoSpring: state.activeSchedule[1].courses.map(course => course.code),
+          afterUndoSourceSelected,
+          afterUndoTargetSelected,
           undoChange,
           originalChangeAfterUndo,
           customMoved,
@@ -2367,14 +2387,18 @@ function testPlannerTermMoveUndo(context) {
   assert(result.moved === true, 'planner term move undo: initial move should apply');
   const afterMoveSpringNorm = result.afterMoveSpringBeforeUndo.map(code => String(code || '').replace(/\s+/g, '').toUpperCase());
   assert(!afterMoveSpringNorm.includes('ENGL101') && afterMoveSpringNorm.includes('CMSC132'), 'planner term move undo: moved course should land in target term before undo');
-  assert(!result.selectedFall && !result.selectedSpring, 'planner term move undo: moving a course should clear stale selected sections in source and target terms');
+  assert(!result.afterMoveSelectedFall && !result.afterMoveSelectedSpring, 'planner term move undo: moving a course should clear stale selected sections in source and target terms');
   assert(result.undoKind === 'term-move' && result.undoFrom === 'pass149-fall' && result.undoTo === 'pass149-spring', 'planner term move undo: recent change should include term-move undo payload');
   assert(/data-change-undo/.test(result.historyHtml) && result.canUndoBefore === true, 'planner term move undo: recent history should render undo while safe');
   assert(result.staleCanUndo === false && /moved or removed/.test(result.staleHistoryHtml), 'planner term move undo: stale target changes should disable undo with explanation');
   assert(/data-change-term/.test(result.staleHistoryHtml) && result.staleTermTarget?.semId === 'pass149-spring', 'planner term move undo: stale row should still offer a move-term recovery jump');
+  assert(result.staleSectionCanUndo === false && /target-term section pick changed/.test(result.staleSectionHistoryHtml), 'planner term move undo: new target section picks should disable undo');
+  assert(result.staleSectionReviewTarget?.code === 'CMSC 132', 'planner term move undo: stale section row should offer the moved-course recovery jump');
   assert(result.undoApplied === true, 'planner term move undo: undo should apply');
   assert(result.afterUndoFall[0] === 'CMSC 132' && result.afterUndoFall.includes('ENGL 101'), 'planner term move undo: undo should restore original term and position');
   assert(!result.afterUndoSpring.includes('CMSC 132'), 'planner term move undo: undo should remove course from target term');
+  assert(result.afterUndoSourceSelected?.section_id === 'CMSC132-0101', 'planner term move undo: undo should restore the source-term section pick cleared by the move');
+  assert(!result.afterUndoTargetSelected, 'planner term move undo: undo should leave the target term free of stale moved-course picks');
   assert(result.undoChange?.type === 'term-move-undo', 'planner term move undo: undo should record a restore change');
   assert(result.originalChangeAfterUndo?.undo?.appliedAt, 'planner term move undo: original move should be marked applied');
   assert(result.customMoved === true && result.customAfterMove === 'pass149-spring', 'planner term move undo: custom course move should apply');
