@@ -2185,6 +2185,89 @@ function testPlannerAdvisorQuestions(context) {
   };
 }
 
+async function testPlannerAvailabilitySeatPressure(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const originalFetchSemesters = umdioFetchSemesters;
+      const originalFetchSections = umdioFetchSections;
+      try {
+        state.activeSchedule = [
+          {
+            id: 'pass148-fall',
+            name: 'Fall 2026',
+            courses: [
+              { code: 'CMSC 132', title: 'Object-Oriented Programming II', cr: 4, prereqs: [], kind: 'core', category: 'major-core' }
+            ]
+          },
+          {
+            id: 'pass148-spring',
+            name: 'Spring 2027',
+            courses: []
+          }
+        ];
+        state.customCourses = [];
+        state.courses = {};
+        state.selectedSections = {};
+        state.schedulePrefs = {};
+        umdioFetchSemesters = async () => ['202701', '202608', '202508', '202408'];
+        umdioFetchSections = async (code, term) => {
+          const norm = normalizeCode(code);
+          const cleanTerm = String(term || '');
+          if (norm === 'CMSC132' && cleanTerm === '202608') {
+            return [
+              { section_id: 'CMSC132-0101', semester: cleanTerm, number: '0101', open_seats: '0', waitlist: '12', seats: '30' },
+              { section_id: 'CMSC132-0201', semester: cleanTerm, number: '0201', open_seats: '0', waitlist: '3', seats: '30' }
+            ];
+          }
+          if (norm === 'CMSC132' && cleanTerm === '202701') {
+            return [
+              { section_id: 'CMSC132-0301', semester: cleanTerm, number: '0301', open_seats: '24', waitlist: '0', seats: '30' }
+            ];
+          }
+          if (norm === 'CMSC132' && (cleanTerm === '202508' || cleanTerm === '202408')) {
+            return [
+              { section_id: 'CMSC132-HIST', semester: cleanTerm, number: '0101', open_seats: '6', waitlist: '0', seats: '30' }
+            ];
+          }
+          return [];
+        };
+        const advisor = plannerBuildAdvisor();
+        const analysis = await plannerAnalyzeAvailability(advisor);
+        const row = analysis.rows.find(item => item.code === 'CMSC 132');
+        const html = plannerAvailabilityRow(row);
+        return {
+          stats: analysis.stats,
+          level: row && row.level,
+          title: row && row.title,
+          detail: row && row.detail,
+          seatLevel: row && row.seatProfile && row.seatProfile.level,
+          seatLabel: row && row.seatProfile && row.seatProfile.shortLabel,
+          suggestionSem: row && row.suggestion && row.suggestion.sem && row.suggestion.sem.id,
+          suggestionReason: row && row.suggestion && row.suggestion.reason,
+          html,
+        };
+      } finally {
+        umdioFetchSemesters = originalFetchSemesters;
+        umdioFetchSections = originalFetchSections;
+      }
+    })()
+  `, context));
+
+  assert(result.level === 'danger', 'planner availability: posted but closed sections should be urgent');
+  assert(/posted sections but no open seats/i.test(result.title), 'planner availability: title should name closed posted sections');
+  assert(/0 open seats.*15 waitlisted/i.test(result.detail), 'planner availability: detail should include total open seats and waitlist pressure');
+  assert(result.seatLevel === 'danger' && /0 open seats, 15 waitlisted/.test(result.seatLabel), 'planner availability: seat profile should summarize closed/waitlisted sections');
+  assert(result.stats.risk === 1 && result.stats.checked === 1, 'planner availability: stats should count the closed-seat row as risk');
+  assert(result.suggestionSem === 'pass148-spring', 'planner availability: should suggest the future term with open seats');
+  assert(/24 open seats/.test(result.suggestionReason) && /Move there/.test(result.html), 'planner availability: rendered row should show open-seat suggestion and move action');
+
+  return {
+    id: 'PLANNER-AVAILABILITY-SEATS',
+    level: result.level,
+    suggestion: result.suggestionSem,
+  };
+}
+
 async function testBrowseProfileDepartments(context) {
   const result = clone(await vm.runInContext(`
     (async () => {
@@ -3921,6 +4004,7 @@ async function main() {
   const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
   const questions = testPlannerAdvisorQuestions(context);
+  const plannerAvailability = await testPlannerAvailabilitySeatPressure(context);
   const browse = await testBrowseProfileDepartments(context);
   const browseSections = await testBrowseResultSections(context);
   const browseWhy = await testBrowseExplanationPanel(context);
@@ -3954,6 +4038,7 @@ async function main() {
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
   console.log(`Planner questions fixture ${questions.id}: ${questions.count} questions; levels ${questions.levels}.`);
+  console.log(`Planner availability fixture ${plannerAvailability.id}: ${plannerAvailability.level}; suggested ${plannerAvailability.suggestion}.`);
   console.log(`Browse profile fixture ${browse.id}: ${browse.scope}; ${browse.genEdCount} GenEd rows; ${browse.deptCount} dept rows; saved ${browse.saved}.`);
   console.log(`Browse sections fixture ${browseSections.id}: first ${browseSections.first}; availability ${browseSections.availability}; ${browseSections.sections}.`);
   console.log(`Browse explanation fixture ${browseWhy.id}: score ${browseWhy.score}; reasons ${browseWhy.reasons}.`);
@@ -3966,7 +4051,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + planner availability seat pressure + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

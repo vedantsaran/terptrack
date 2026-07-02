@@ -8177,3 +8177,59 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 148
+
+Focus: make planner term availability seat-aware so a course with posted sections but no open seats is treated as a registration risk instead of a safe placement.
+
+Planned changes:
+- Reuse live UMD section evidence already loaded by the planner availability checker.
+- Distinguish posted-section count from actual open-seat availability.
+- Warn or escalate when posted sections are closed, waitlisted, or already tight.
+- Let the planner suggest a later term when that term has stronger posted/open-seat evidence.
+- Bump the `timeline.js` cache key and add a focused fixture for closed posted sections.
+- Verify focused fixtures, rendered browser workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `plannerFetchSections()` and `plannerAvailabilitySeatProfile()` in `js/timeline.js`.
+  - Availability rows now calculate total open seats, open-section count, waitlist total, closed sections, filling sections, TBA sections, and best open-seat count.
+  - Posted terms with all sections closed now become `danger`.
+  - Posted terms with very low seats, waitlists, filling sections, or TBA seat counts become `warn`.
+- Updated planner availability scoring.
+  - A posted-but-closed term no longer outranks a future term with open seats.
+  - Destination suggestions include seat evidence such as `24 open seats`.
+- Updated planner availability copy.
+  - Rows now render a seat snapshot instead of only saying a course has posted sections.
+  - Closed posted sections get a title like `has posted sections but no open seats`.
+- Bumped `index.html` from `js/timeline.js?v=20` to `js/timeline.js?v=21`.
+- Extended `scripts/test-generated-plans.js`.
+  - Added `PLANNER-AVAILABILITY-SEATS`.
+  - The fixture stubs live UMD section data where `CMSC 132` has two Fall 2026 sections, both with `0 open` and `15` total waitlisted students.
+  - The fixture verifies danger status, seat snapshot text, risk stats, and a Spring 2027 move suggestion with `24 open seats`.
+
+Verification:
+- Ran `node --check js/timeline.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `PLANNER-AVAILABILITY-SEATS` fixture.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendations, planner checklist, planner questions, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the planner availability seat-pressure fixture.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass148-availability-seats`.
+  - It randomly verified `GEOL`, `THET`, `HLTH`, `MARKETING`, `ENMA`, and `ENAE` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

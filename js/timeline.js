@@ -819,18 +819,77 @@ function plannerRecentTermsForSeason(terms, plannedTerm) {
     .slice(0, PLANNER_AVAILABILITY_HISTORY);
 }
 
-async function plannerSectionCount(code, term) {
+async function plannerFetchSections(code, term) {
   if (typeof umdioFetchSections !== 'function') return null;
   try {
     const sections = await umdioFetchSections(code, term);
-    return Array.isArray(sections) ? sections.length : 0;
+    return Array.isArray(sections) ? sections : [];
   } catch {
     return null;
   }
 }
 
-function plannerAvailabilityScore(exactPosted, exactCount, offeredHistory, historyCounts) {
-  if (exactPosted && Number(exactCount) > 0) return 100 + Math.min(60, Number(exactCount));
+async function plannerSectionCount(code, term) {
+  const sections = await plannerFetchSections(code, term);
+  return Array.isArray(sections) ? sections.length : null;
+}
+
+function plannerSeatNumber(value) {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function plannerAvailabilitySeatProfile(sections = []) {
+  const list = Array.isArray(sections) ? sections : [];
+  if (!list.length) return null;
+  const risks = list.map(section => typeof sectionSeatRisk === 'function'
+    ? sectionSeatRisk(section)
+    : {
+      level: plannerSeatNumber(section?.open_seats) > 0 ? 'ok' : 'unknown',
+      open: plannerSeatNumber(section?.open_seats),
+      wait: plannerSeatNumber(section?.waitlist),
+    });
+  const known = risks.filter(risk => risk.open !== null);
+  const totalOpen = risks.reduce((sum, risk) => sum + (risk.open !== null && risk.open > 0 ? risk.open : 0), 0);
+  const waitlistTotal = risks.reduce((sum, risk) => sum + (risk.wait !== null && risk.wait > 0 ? risk.wait : 0), 0);
+  const openSections = risks.filter(risk => risk.open !== null && risk.open > 0).length;
+  const closedSections = risks.filter(risk => risk.level === 'closed' || (risk.open !== null && risk.open <= 0)).length;
+  const tightSections = risks.filter(risk => risk.level === 'risk' || risk.level === 'watch').length;
+  const unknownSections = risks.filter(risk => risk.open === null).length;
+  const bestOpen = risks.reduce((max, risk) => risk.open !== null ? Math.max(max, risk.open) : max, 0);
+  const openText = `${totalOpen} open seat${totalOpen === 1 ? '' : 's'}`;
+  const sectionText = `${openSections} open section${openSections === 1 ? '' : 's'}`;
+  const parts = known.length ? [`${openText} across ${sectionText}`] : ['seat counts TBA'];
+  if (waitlistTotal) parts.push(`${waitlistTotal} waitlisted`);
+  if (closedSections) parts.push(`${closedSections} closed`);
+  if (tightSections) parts.push(`${tightSections} filling`);
+  if (unknownSections) parts.push(`${unknownSections} TBA`);
+
+  let level = 'ok';
+  if (known.length && openSections === 0) level = 'danger';
+  else if (unknownSections || bestOpen <= 3 || totalOpen <= Math.max(3, list.length) || waitlistTotal || tightSections) level = 'warn';
+
+  return {
+    level,
+    totalSections: list.length,
+    totalOpen,
+    waitlistTotal,
+    openSections,
+    closedSections,
+    tightSections,
+    unknownSections,
+    bestOpen,
+    shortLabel: known.length ? `${openText}${waitlistTotal ? `, ${waitlistTotal} waitlisted` : ''}` : 'seat counts TBA',
+    detail: `Seat snapshot: ${parts.join('; ')}.`,
+  };
+}
+
+function plannerAvailabilityScore(exactPosted, exactCount, offeredHistory, historyCounts, seatProfile = null) {
+  if (exactPosted && Number(exactCount) > 0) {
+    if (seatProfile?.level === 'danger') return 35 + Math.min(10, Number(exactCount));
+    if (seatProfile?.level === 'warn') return 78 + Math.min(12, Number(exactCount)) + Math.min(10, Number(seatProfile.totalOpen) || 0);
+    return 100 + Math.min(60, Number(exactCount));
+  }
   const positiveCounts = (historyCounts || []).filter(count => Number(count) > 0);
   const avg = positiveCounts.length
     ? positiveCounts.reduce((sum, count) => sum + Number(count), 0) / positiveCounts.length
@@ -870,23 +929,28 @@ async function plannerFindAvailabilityDestination(item, advisor, terms, currentS
     let profile = profileCache[key];
     if (!profile) {
       const exactPosted = posted.has(candidate.term);
-      const exactCount = exactPosted ? await plannerSectionCount(item.course.code, candidate.term) : null;
+      const exactSections = exactPosted ? await plannerFetchSections(item.course.code, candidate.term) : null;
+      const exactCount = Array.isArray(exactSections) ? exactSections.length : null;
+      const seatProfile = Array.isArray(exactSections) && exactSections.length
+        ? plannerAvailabilitySeatProfile(exactSections)
+        : null;
       const historyTerms = plannerRecentTermsForSeason(terms, candidate.term);
       const historyCounts = await Promise.all(historyTerms.map(term => plannerSectionCount(item.course.code, term)));
       const offeredHistory = historyCounts.filter(count => Number(count) > 0).length;
       profile = {
         exactPosted,
         exactCount,
+        seatProfile,
         historyTerms,
         historyCounts,
         offeredHistory,
-        score: plannerAvailabilityScore(exactPosted, exactCount, offeredHistory, historyCounts),
+        score: plannerAvailabilityScore(exactPosted, exactCount, offeredHistory, historyCounts, seatProfile),
       };
       profileCache[key] = profile;
     }
     if (profile.score <= currentScore + 8) continue;
     const availabilityReason = profile.exactPosted && Number(profile.exactCount) > 0
-      ? `${profile.exactCount} posted section${Number(profile.exactCount) === 1 ? '' : 's'} in ${plannerTermLabel(candidate.term)}`
+      ? `${profile.exactCount} posted section${Number(profile.exactCount) === 1 ? '' : 's'} in ${plannerTermLabel(candidate.term)}${profile.seatProfile ? `; ${profile.seatProfile.shortLabel}` : ''}`
       : `${profile.offeredHistory}/${profile.historyTerms.length || PLANNER_AVAILABILITY_HISTORY} recent ${plannerSeasonName(candidate.suffix)} terms had sections`;
     const balanceNote = candidate.needsBalancing ? ` · would make ${candidate.sem.name} ${candidate.loadAfter} cr` : '';
     const option = {
@@ -912,18 +976,29 @@ async function plannerAnalyzeAvailability(advisor) {
     const code = displayCode(item.course.code);
     const plannedTerm = String(item.plannedTerm || '');
     const exactPosted = posted.has(plannedTerm);
-    const exactCount = exactPosted ? await plannerSectionCount(item.course.code, plannedTerm) : null;
+    const exactSections = exactPosted ? await plannerFetchSections(item.course.code, plannedTerm) : null;
+    const exactCount = Array.isArray(exactSections) ? exactSections.length : null;
+    const seatProfile = Array.isArray(exactSections) && exactSections.length
+      ? plannerAvailabilitySeatProfile(exactSections)
+      : null;
     const historyTerms = plannerRecentTermsForSeason(terms, plannedTerm);
     const historyCounts = await Promise.all(historyTerms.map(term => plannerSectionCount(item.course.code, term)));
     const offeredHistory = historyCounts.filter(count => Number(count) > 0).length;
     const checkedHistory = historyCounts.filter(count => count !== null).length;
-    const currentScore = plannerAvailabilityScore(exactPosted, exactCount, offeredHistory, historyCounts);
+    const currentScore = plannerAvailabilityScore(exactPosted, exactCount, offeredHistory, historyCounts, seatProfile);
     let level = 'ok';
     let title = `${code} looks available`;
     let detail = '';
 
     if (exactPosted && exactCount > 0) {
-      detail = `${exactCount} posted section${exactCount === 1 ? '' : 's'} for ${plannerTermLabel(plannedTerm)}.`;
+      if (seatProfile?.level === 'danger') {
+        level = 'danger';
+        title = `${code} has posted sections but no open seats`;
+      } else if (seatProfile?.level === 'warn') {
+        level = 'warn';
+        title = `${code} seats are tight for ${plannerTermLabel(plannedTerm)}`;
+      }
+      detail = `${exactCount} posted section${exactCount === 1 ? '' : 's'} for ${plannerTermLabel(plannedTerm)}. ${seatProfile ? seatProfile.detail : ''}`.trim();
     } else if (exactPosted && exactCount === 0 && offeredHistory > 0) {
       level = 'warn';
       title = `${code} is not posted for ${plannerTermLabel(plannedTerm)}`;
@@ -956,6 +1031,7 @@ async function plannerAnalyzeAvailability(advisor) {
       semName: item.sem.name,
       fromSemId: item.sem.id,
       plannedTerm,
+      seatProfile,
       historyTerms,
       suggestion,
     };
