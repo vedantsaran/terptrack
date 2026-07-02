@@ -337,6 +337,16 @@ function recoMutableSemesters() {
   return [...mutableSchedule(), ...(state.customSemesters || [])];
 }
 
+function recoSelectedSectionSnapshot(semId, code) {
+  const bucket = (state.selectedSections || {})[semId] || {};
+  const key = normalizeCode(code || '');
+  const had = !!key && Object.prototype.hasOwnProperty.call(bucket, key);
+  const value = had && typeof scheduleCloneSection === 'function'
+    ? scheduleCloneSection(bucket[key])
+    : (had ? { ...bucket[key] } : null);
+  return { had, value };
+}
+
 function recoFindCoursePlacement(code) {
   const norm = normalizeCode(code);
   const custom = (state.customCourses || []).find(course => normalizeCode(course.code) === norm);
@@ -350,7 +360,13 @@ function recoFindCoursePlacement(code) {
 
 function recoMovePlacementToTarget(placement, target, targetSemId) {
   const sourceName = placement.sem?.name || (placement.semId ? placement.semId : 'Outside Plan');
-  if (placement.semId === targetSemId) return { moved: false, sourceName };
+  const sourceIndex = placement.custom
+    ? -1
+    : ((placement.sem?.courses || []).findIndex(course => normalizeCode(course.code) === normalizeCode(placement.course.code)));
+  if (placement.semId === targetSemId) {
+    const targetIndex = (target.courses || []).findIndex(course => normalizeCode(course.code) === normalizeCode(placement.course.code));
+    return { moved: false, sourceName, sourceIndex, targetIndex };
+  }
   if (placement.custom) {
     placement.course.semId = targetSemId;
   } else {
@@ -358,7 +374,8 @@ function recoMovePlacementToTarget(placement, target, targetSemId) {
     target.courses = target.courses || [];
     target.courses.push(placement.course);
   }
-  return { moved: true, sourceName };
+  const targetIndex = (target.courses || []).findIndex(course => normalizeCode(course.code) === normalizeCode(placement.course.code));
+  return { moved: true, sourceName, sourceIndex, targetIndex };
 }
 
 function recoMoveToSemester(code, targetSemId) {
@@ -448,8 +465,12 @@ function recoPickBestSection(code, targetSemId, term, sectionId) {
     ? scheduleCloneSection(previous)
     : (previous ? { ...previous } : null);
   const previousPinned = !!previousTarget?.pinned;
+  const previousTargetSnapshot = recoSelectedSectionSnapshot(targetSemId, placement.course.code);
   const sourceSemId = placement.semId;
-  const { moved, sourceName } = recoMovePlacementToTarget(placement, target, targetSemId);
+  const previousSourceSnapshot = sourceSemId
+    ? recoSelectedSectionSnapshot(sourceSemId, placement.course.code)
+    : { had: false, value: null };
+  const { moved, sourceName, sourceIndex, targetIndex } = recoMovePlacementToTarget(placement, target, targetSemId);
   if (moved && sourceSemId) recoClearSelectedSection(sourceSemId, placement.course.code);
   const sectionForSave = {
     ...section,
@@ -460,6 +481,10 @@ function recoPickBestSection(code, targetSemId, term, sectionId) {
   if (previousPinned && typeof setSelectedSectionPinned === 'function') {
     setSelectedSectionPinned(targetSemId, placement.course.code, true);
   }
+  const expectedTargetSnapshot = recoSelectedSectionSnapshot(targetSemId, placement.course.code);
+  const expectedSourceSnapshot = sourceSemId
+    ? recoSelectedSectionSnapshot(sourceSemId, placement.course.code)
+    : { had: false, value: null };
   const risk = typeof sectionSeatRisk === 'function' ? sectionSeatRisk(sectionForSave) : null;
   const prefs = typeof getSchedulePrefs === 'function' ? getSchedulePrefs(targetSemId) : {};
   const notes = typeof sectionPreferenceNotes === 'function' ? sectionPreferenceNotes(sectionForSave, prefs, placement.course) : [];
@@ -478,6 +503,27 @@ function recoPickBestSection(code, targetSemId, term, sectionId) {
       ...notes.filter(note => note.type === 'warn').slice(0, 2).map(note => note.text),
       'Open Schedule to review the weekly grid and advisor packet.',
     ].filter(Boolean),
+    undo: {
+      kind: 'recommendation-section-pick',
+      code: placement.course.code,
+      term,
+      moved,
+      custom: !!placement.custom,
+      sourceSemId: sourceSemId || '',
+      targetSemId,
+      sourceName,
+      targetName: target.name || targetSemId,
+      sourceIndex,
+      targetIndex,
+      hadTargetSelectedSection: previousTargetSnapshot.had,
+      targetSelectedSection: previousTargetSnapshot.value,
+      hadSourceSelectedSection: previousSourceSnapshot.had,
+      sourceSelectedSection: previousSourceSnapshot.value,
+      hadExpectedTargetSelectedSection: expectedTargetSnapshot.had,
+      expectedTargetSelectedSection: expectedTargetSnapshot.value,
+      hadExpectedSourceSelectedSection: expectedSourceSnapshot.had,
+      expectedSourceSelectedSection: expectedSourceSnapshot.value,
+    },
   }, { save: false });
   saveState();
   render();

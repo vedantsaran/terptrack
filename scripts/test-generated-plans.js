@@ -1893,16 +1893,49 @@ function testRecommendationBestSectionAction(context) {
       const picked = recoPickBestSection('CMSC 132', 'PASS101F', '202608', 'CMSC132-0101');
       const selected = getSelectedSection('PASS101F', 'CMSC 132');
       const sourceSelected = (state.selectedSections.PASS101S || {}).CMSC132 || null;
+      const change = state.recentChanges[0] || null;
+      const canUndoBefore = plannerChangeCanUndo(change);
+      const afterPickFallCodes = state.activeSchedule[0].courses.map(course => course.code);
+      const afterPickSpringCodes = state.activeSchedule[1].courses.map(course => course.code);
+      const afterPickSelectedSections = JSON.parse(JSON.stringify(state.selectedSections || {}));
+      state.selectedSections.PASS101F.CMSC132 = {
+        course: 'CMSC132',
+        section_id: 'CMSC132-0201',
+        semester: '202608',
+        number: '0201',
+        meetings: [{ days: 'TuTh', start_time: '5:00pm', end_time: '6:15pm', building: 'CSI', room: '1115' }],
+        open_seats: '2',
+        seats: '30',
+        waitlist: '4',
+      };
+      const staleCanUndo = plannerChangeCanUndo(change);
+      const staleScheduleTarget = plannerChangeScheduleTarget(change);
+      state.selectedSections = JSON.parse(JSON.stringify(afterPickSelectedSections));
+      const undoApplied = undoPlanChange(change.id);
+      const undoChange = state.recentChanges[0] || null;
+      const originalChangeAfterUndo = state.recentChanges.find(item => item.id === change.id) || null;
+      const afterUndoTargetSelected = getSelectedSection('PASS101F', 'CMSC 132');
+      const afterUndoSourceSelected = getSelectedSection('PASS101S', 'CMSC 132');
       render = originalRender;
       return {
         candidateCode: candidate?.course?.code || '',
         picked,
-        fallCodes: state.activeSchedule[0].courses.map(course => course.code),
-        springCodes: state.activeSchedule[1].courses.map(course => course.code),
+        fallCodes: afterPickFallCodes,
+        springCodes: afterPickSpringCodes,
         htmlBefore,
         selected,
         sourceSelected,
-        change: state.recentChanges[0] || null,
+        change,
+        canUndoBefore,
+        staleCanUndo,
+        staleScheduleTarget,
+        undoApplied,
+        afterUndoFallCodes: state.activeSchedule[0].courses.map(course => course.code),
+        afterUndoSpringCodes: state.activeSchedule[1].courses.map(course => course.code),
+        afterUndoTargetSelected,
+        afterUndoSourceSelected,
+        undoChange,
+        originalChangeAfterUndo,
         readinessImpact: candidate.readinessImpact,
         renderCalls,
       };
@@ -1919,9 +1952,16 @@ function testRecommendationBestSectionAction(context) {
   assert(result.selected?.section_id === 'CMSC132-0101' && result.selected?.semester === '202608', 'recommendation section: target term should save selected posted section');
   assert(!result.sourceSelected, 'recommendation section: stale source-term section pick should be cleared');
   assert(result.change?.type === 'section-pick' && result.change?.source === 'Smart next picks', 'recommendation section: should record a single Smart next picks section change');
+  assert(result.change?.undo?.kind === 'recommendation-section-pick' && result.canUndoBefore === true, 'recommendation section: Smart next pick should include an undoable restore payload');
   assert(/Picked CMSC 132/.test(result.change.title || ''), 'recommendation section: change title should name picked course');
   assert((result.change?.highlights || []).some(item => /weekly grid/i.test(item)), 'recommendation section: change should direct student to review the Schedule grid');
-  assert(result.renderCalls === 1, 'recommendation section: should rerender the app once after picking');
+  assert(result.staleCanUndo === false && result.staleScheduleTarget?.semId === 'PASS101F' && result.staleScheduleTarget?.code === 'CMSC 132', 'recommendation section: edited picked section should block undo and offer Schedule recovery');
+  assert(result.undoApplied === true, 'recommendation section: undo should apply when picked section is unchanged');
+  assert(!result.afterUndoFallCodes.includes('CMSC 132') && result.afterUndoSpringCodes.includes('CMSC 132'), 'recommendation section: undo should move the course back to its source term');
+  assert(!result.afterUndoTargetSelected, 'recommendation section: undo should restore the target term to no previous section pick');
+  assert(result.afterUndoSourceSelected?.section_id === 'CMSC132-0999' && result.afterUndoSourceSelected?.pinned === true, 'recommendation section: undo should restore the source-term pinned section pick');
+  assert(result.undoChange?.type === 'section-pick-undo' && result.originalChangeAfterUndo?.undo?.appliedAt, 'recommendation section: undo should record a restore change and mark the original applied');
+  assert(result.renderCalls === 2, 'recommendation section: should rerender after picking and undoing');
 
   return {
     id: 'RECO-SECTION',

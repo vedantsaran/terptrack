@@ -4180,6 +4180,7 @@ function scheduleChangeIcon(type) {
   if (type === 'section-swap') return 'Swap';
   if (type === 'auto-pick') return 'Auto';
   if (type === 'section-pick') return 'Pick';
+  if (type === 'section-pick-undo') return 'Undo';
   if (type === 'clear') return 'Clear';
   return 'Edit';
 }

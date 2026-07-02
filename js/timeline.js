@@ -1164,6 +1164,7 @@ function plannerChangeIcon(type) {
   if (type === 'section-swap') return '▦';
   if (type === 'auto-pick') return '✓';
   if (type === 'section-pick') return '◉';
+  if (type === 'section-pick-undo') return '↶';
   if (type === 'placeholder-section-replacement' || type === 'placeholder-replacement') return '↺';
   if (type === 'placeholder-undo') return '↶';
   if (type === 'prior-credit') return 'T';
@@ -1358,6 +1359,93 @@ function plannerTermMoveSelectedSectionMismatch(undo) {
   return null;
 }
 
+function plannerRecommendationSectionPickMismatch(undo) {
+  if (undo?.kind !== 'recommendation-section-pick') return null;
+  const code = String(undo.code || '').trim();
+  if (!code) return null;
+  if (plannerHasOwn(undo, 'expectedTargetSelectedSection')) {
+    const expectedHad = !!undo.hadExpectedTargetSelectedSection;
+    const expectedValue = expectedHad ? undo.expectedTargetSelectedSection : null;
+    const current = plannerSelectedSectionSnapshot(undo.targetSemId, code);
+    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
+      return {
+        side: 'target',
+        semId: String(undo.targetSemId || ''),
+        code,
+        label: 'picked section',
+      };
+    }
+  }
+  if (plannerHasOwn(undo, 'expectedSourceSelectedSection') && undo.sourceSemId) {
+    const expectedHad = !!undo.hadExpectedSourceSelectedSection;
+    const expectedValue = expectedHad ? undo.expectedSourceSelectedSection : null;
+    const current = plannerSelectedSectionSnapshot(undo.sourceSemId, code);
+    if (current.had !== expectedHad || !plannerValuesEqual(current.value, expectedValue)) {
+      return {
+        side: 'source',
+        semId: String(undo.sourceSemId || ''),
+        code,
+        label: 'source-term section pick',
+      };
+    }
+  }
+  return null;
+}
+
+function plannerRecommendationSectionPickUndoAvailability(change) {
+  const undo = change?.undo;
+  if (undo?.kind !== 'recommendation-section-pick' || undo.appliedAt) return { can: false, reason: '' };
+  const code = String(undo.code || '').trim();
+  const norm = normalizeCode(code);
+  const target = String(undo.targetSemId || '');
+  const source = String(undo.sourceSemId || '');
+  if (!norm || !target) {
+    return { can: false, reason: 'Undo unavailable: this Smart next pick has incomplete restore data.' };
+  }
+  const sems = getAllSemesters();
+  const targetSem = sems.find(sem => sem.id === target);
+  if (!targetSem) {
+    return { can: false, reason: `Undo unavailable: ${code}'s picked term is no longer in the plan.` };
+  }
+  const mismatch = plannerRecommendationSectionPickMismatch(undo);
+  if (mismatch) {
+    const reason = mismatch.side === 'source'
+      ? `${code}'s source-term section pick changed after Smart next picks moved it.`
+      : `${code}'s picked section changed after Smart next picks saved it.`;
+    return { can: false, reason: `Undo unavailable: ${reason}` };
+  }
+
+  if (undo.moved) {
+    if (undo.custom) {
+      const current = (state.customCourses || []).find(course => course.semId === target && normalizeCode(course.code) === norm);
+      if (!current) return { can: false, reason: `Undo unavailable: ${code} was moved or removed after this Smart next pick.` };
+      if (source && (state.customCourses || []).some(course => course.semId === source && normalizeCode(course.code) === norm)) {
+        return { can: false, reason: `Undo unavailable: ${code} is already back in ${undo.sourceName || 'the original term'}.` };
+      }
+      return { can: true, reason: '' };
+    }
+    const sourceSem = sems.find(sem => sem.id === source);
+    if (!sourceSem) {
+      return { can: false, reason: `Undo unavailable: ${code}'s original term is no longer in the plan.` };
+    }
+    if (!(targetSem.courses || []).some(course => normalizeCode(course.code) === norm)) {
+      return { can: false, reason: `Undo unavailable: ${code} was moved or removed after this Smart next pick.` };
+    }
+    if ((sourceSem.courses || []).some(course => normalizeCode(course.code) === norm)) {
+      return { can: false, reason: `Undo unavailable: ${code} is already back in ${sourceSem.name || 'the original term'}.` };
+    }
+    return { can: true, reason: '' };
+  }
+
+  if (undo.custom) {
+    const current = (state.customCourses || []).find(course => course.semId === target && normalizeCode(course.code) === norm);
+    if (!current) return { can: false, reason: `Undo unavailable: ${code} was moved or removed after this Smart next pick.` };
+  } else if (!(targetSem.courses || []).some(course => normalizeCode(course.code) === norm)) {
+    return { can: false, reason: `Undo unavailable: ${code} was moved or removed after this Smart next pick.` };
+  }
+  return { can: true, reason: '' };
+}
+
 function plannerTermMoveUndoAvailability(change) {
   const undo = change?.undo;
   if (undo?.kind !== 'term-move' || undo.appliedAt) return { can: false, reason: '' };
@@ -1405,6 +1493,7 @@ function plannerChangeUndoAvailability(change) {
   if (change?.undo?.kind === 'placeholder-replacement') return plannerPlaceholderUndoAvailability(change);
   if (change?.undo?.kind === 'prior-credit') return plannerPriorCreditUndoAvailability(change);
   if (change?.undo?.kind === 'term-move') return plannerTermMoveUndoAvailability(change);
+  if (change?.undo?.kind === 'recommendation-section-pick') return plannerRecommendationSectionPickUndoAvailability(change);
   return { can: false, reason: '' };
 }
 
@@ -1471,6 +1560,14 @@ function plannerChangeReviewTarget(change) {
       label: 'Show moved course',
     };
   }
+  if (undo?.kind === 'recommendation-section-pick' && !undo.appliedAt) {
+    const course = plannerFindVisiblePlanCourse(undo.code);
+    if (!course) return null;
+    return {
+      code: course.code,
+      label: 'Show picked course',
+    };
+  }
   return null;
 }
 
@@ -1512,6 +1609,16 @@ function plannerRenderPriorCreditRecovery(codes = []) {
 
 function plannerChangeScheduleTarget(change) {
   const undo = change?.undo;
+  if (undo?.kind === 'recommendation-section-pick' && !undo.appliedAt) {
+    const mismatch = plannerRecommendationSectionPickMismatch(undo);
+    if (!mismatch || mismatch.side !== 'target') return null;
+    if (!mismatch.semId || !getAllSemesters().some(item => item.id === mismatch.semId)) return null;
+    return {
+      semId: mismatch.semId,
+      code: mismatch.code,
+      label: 'Show picked schedule',
+    };
+  }
   if (undo?.kind === 'term-move' && !undo.appliedAt) {
     const mismatch = plannerTermMoveSelectedSectionMismatch(undo);
     if (!mismatch || mismatch.side !== 'target') return null;
@@ -1539,6 +1646,16 @@ function plannerChangeScheduleTarget(change) {
 
 function plannerChangeTermTarget(change) {
   const undo = change?.undo;
+  if (undo?.kind === 'recommendation-section-pick' && !undo.appliedAt) {
+    const mismatch = plannerRecommendationSectionPickMismatch(undo);
+    if (mismatch?.side !== 'source') return null;
+    const semId = String(mismatch.semId || '');
+    if (!semId || !getAllSemesters().some(sem => sem.id === semId)) return null;
+    return {
+      semId,
+      label: 'Show source term',
+    };
+  }
   if (undo?.kind === 'term-move' && !undo.appliedAt) {
     const mismatch = plannerTermMoveSelectedSectionMismatch(undo);
     const semId = String(mismatch?.semId || undo.toSemId || undo.fromSemId || '');
@@ -1850,6 +1967,65 @@ function plannerApplyTermMoveUndo(change) {
   return true;
 }
 
+function plannerApplyRecommendationSectionPickUndo(change) {
+  const undo = change?.undo;
+  const availability = plannerRecommendationSectionPickUndoAvailability(change);
+  if (!availability.can) {
+    if (typeof toastError === 'function') toastError(availability.reason || 'That Smart next pick cannot be undone here.');
+    return false;
+  }
+  const code = String(undo.code || '').trim();
+  const norm = normalizeCode(code);
+  const target = String(undo.targetSemId || '');
+  const source = String(undo.sourceSemId || '');
+  const sems = getAllSemesters();
+  const targetSem = sems.find(sem => sem.id === target);
+  const sourceSem = source ? sems.find(sem => sem.id === source) : null;
+  if (!targetSem) return false;
+
+  if (undo.moved) {
+    if (undo.custom) {
+      const custom = (state.customCourses || []).find(course => course.semId === target && normalizeCode(course.code) === norm);
+      if (!custom) return false;
+      custom.semId = source;
+    } else {
+      if (!sourceSem) return false;
+      const targetList = targetSem.courses || [];
+      const idx = targetList.findIndex(course => normalizeCode(course.code) === norm);
+      if (idx < 0) return false;
+      const [course] = targetList.splice(idx, 1);
+      sourceSem.courses = sourceSem.courses || [];
+      const insertAt = Number.isInteger(undo.sourceIndex)
+        ? Math.max(0, Math.min(undo.sourceIndex, sourceSem.courses.length))
+        : sourceSem.courses.length;
+      sourceSem.courses.splice(insertAt, 0, course);
+    }
+  }
+
+  if (plannerHasOwn(undo, 'hadTargetSelectedSection')) {
+    plannerRestoreSelectedSection(target, code, !!undo.hadTargetSelectedSection, undo.targetSelectedSection || null);
+  }
+  if (source && plannerHasOwn(undo, 'hadSourceSelectedSection')) {
+    plannerRestoreSelectedSection(source, code, !!undo.hadSourceSelectedSection, undo.sourceSelectedSection || null);
+  }
+
+  undo.appliedAt = new Date().toISOString();
+  recordPlanChange({
+    type: 'section-pick-undo',
+    source: 'Timeline',
+    title: `Undid ${code} Smart pick`,
+    detail: undo.moved
+      ? `${code} moved back from ${targetSem.name || undo.targetName || target} to ${sourceSem?.name || undo.sourceName || source || 'the original place'}, and section choices were restored.`
+      : `${code}'s previous section choice was restored.`,
+    meta: 'Undo Smart next pick',
+  }, { save: false });
+  saveState();
+  render();
+  if (currentTab === 'timeline') renderTimeline();
+  if (typeof toastSuccess === 'function') toastSuccess(`Undid ${code} Smart next pick.`);
+  return true;
+}
+
 function undoPlanChange(changeId) {
   const id = String(changeId || '');
   const change = recentPlanChanges().find(item => item.id === id);
@@ -1860,6 +2036,7 @@ function undoPlanChange(changeId) {
   if (change.undo?.kind === 'placeholder-replacement') return plannerApplyPlaceholderUndo(change);
   if (change.undo?.kind === 'prior-credit') return plannerApplyPriorCreditUndo(change);
   if (change.undo?.kind === 'term-move') return plannerApplyTermMoveUndo(change);
+  if (change.undo?.kind === 'recommendation-section-pick') return plannerApplyRecommendationSectionPickUndo(change);
   if (typeof toastError === 'function') toastError('That change cannot be undone here.');
   return false;
 }
