@@ -325,6 +325,148 @@ function normalizeBrowseSavedSearches(value) {
     .slice(0, 12);
 }
 
+function statePlanSemesters(planState = {}) {
+  const active = Array.isArray(planState.activeSchedule) && planState.activeSchedule.length
+    ? planState.activeSchedule
+    : (typeof SCHEDULE !== 'undefined' && Array.isArray(SCHEDULE) ? SCHEDULE : []);
+  return [
+    ...active,
+    ...(Array.isArray(planState.customSemesters) ? planState.customSemesters : []),
+  ].filter(sem => sem && sem.id && Array.isArray(sem.courses));
+}
+
+function stateDisplayCode(code) {
+  const id = normalizeCode(code);
+  const match = id.match(/^([A-Z]{3,4})(\d{3}[A-Z]?)$/);
+  return match ? `${match[1]} ${match[2]}` : String(code || '').trim();
+}
+
+function stateSelectedSectionLike(value) {
+  return typeof value === 'string'
+    || !!(value && typeof value === 'object' && (
+      value.section_id
+      || value.number
+      || value.course
+      || Array.isArray(value.meetings)
+    ));
+}
+
+function stateCloneValue(value) {
+  if (!value || typeof value !== 'object') return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return { ...value };
+  }
+}
+
+function stateNormalizeSectionValue(rawSection, code) {
+  const norm = normalizeCode(code);
+  const course = stateDisplayCode(code || norm);
+  if (typeof rawSection === 'string') {
+    const number = rawSection.trim();
+    return {
+      course,
+      section_id: number && !number.includes('-') ? `${norm}-${number}` : number,
+      number,
+      meetings: [],
+    };
+  }
+  const section = stateCloneValue(rawSection) || {};
+  const number = String(section.number || section.section || section.section_number || '').trim();
+  return {
+    ...section,
+    course: stateDisplayCode(section.course || course || norm),
+    section_id: section.section_id || (number ? `${norm}-${number}` : ''),
+    number: section.number || number,
+    meetings: Array.isArray(section.meetings) ? section.meetings : [],
+  };
+}
+
+function stateInferSemesterTerm(sem) {
+  const name = `${sem && sem.name || ''} ${sem && sem.id || ''}`;
+  const yearMatch = name.match(/\b(20\d{2})\b/);
+  const shortYear = (sem && sem.id || '').match(/(\d{2})$/);
+  const year = yearMatch ? parseInt(yearMatch[1], 10)
+    : shortYear ? 2000 + parseInt(shortYear[1], 10)
+      : new Date().getFullYear();
+  if (/summer|sum/i.test(name)) return `${year}05`;
+  if (/fall|\bF\d{2}\b/i.test(name)) return `${year}08`;
+  if (/winter/i.test(name)) return `${year}12`;
+  return `${year}01`;
+}
+
+function stateSemesterTerm(sem, planState = {}) {
+  return String(
+    (planState.schedulePrefs || {})[sem.id]?.term
+    || sem.term
+    || sem.semester
+    || stateInferSemesterTerm(sem)
+    || ''
+  ).trim();
+}
+
+function stateSemIdForSelectedCourse(code, section, planState = {}) {
+  const norm = normalizeCode(code || section?.course || '');
+  if (!norm) return '';
+  const matches = statePlanSemesters(planState)
+    .filter(sem => (sem.courses || []).some(course => normalizeCode(course.code) === norm));
+  if (!matches.length) return '';
+  const sectionTerm = String(section?.semester || '').trim();
+  if (sectionTerm) {
+    const termMatch = matches.find(sem => stateSemesterTerm(sem, planState) === sectionTerm);
+    if (termMatch) return termMatch.id;
+  }
+  return matches[0].id;
+}
+
+function stateSectionBelongsInSem(semId, code, section, planState = {}) {
+  const norm = normalizeCode(code || section?.course || '');
+  if (!semId || !norm) return false;
+  const sem = statePlanSemesters(planState).find(item => String(item.id) === String(semId));
+  if (!sem || !(sem.courses || []).some(course => normalizeCode(course.code) === norm)) return false;
+  const sectionTerm = String(section?.semester || '').trim();
+  const semTerm = stateSemesterTerm(sem, planState);
+  return !sectionTerm || !semTerm || sectionTerm === semTerm;
+}
+
+function stateSemIdForBucketedSection(semId, code, section, planState = {}) {
+  if (stateSectionBelongsInSem(semId, code, section, planState)) return semId;
+  return stateSemIdForSelectedCourse(code, section, planState);
+}
+
+function stateAddSelectedSection(bucket, semId, code, section) {
+  const norm = normalizeCode(code || section?.course || '');
+  if (!semId || !norm || !section) return false;
+  bucket[semId] = bucket[semId] || {};
+  bucket[semId][norm] = stateNormalizeSectionValue(section, code || section.course || norm);
+  return true;
+}
+
+function normalizeSelectedSectionsForPlan(selectedSections, planState = {}) {
+  const source = selectedSections && typeof selectedSections === 'object' ? selectedSections : {};
+  const normalized = {};
+  const unplaced = {};
+  Object.entries(source).forEach(([semOrCode, value]) => {
+    if (!value) return;
+    if (stateSelectedSectionLike(value)) {
+      const section = stateNormalizeSectionValue(value, semOrCode);
+      const semId = stateSemIdForSelectedCourse(semOrCode, section, planState);
+      if (!stateAddSelectedSection(normalized, semId, semOrCode, section)) unplaced[semOrCode] = value;
+      return;
+    }
+    Object.entries(value || {}).forEach(([code, rawSection]) => {
+      if (!rawSection) return;
+      const section = stateNormalizeSectionValue(rawSection, code);
+      const semId = stateSemIdForBucketedSection(semOrCode, code, section, planState);
+      if (!stateAddSelectedSection(normalized, semId, code, section)) {
+        stateAddSelectedSection(normalized, semOrCode, code, section);
+      }
+    });
+  });
+  return Object.keys(unplaced).length ? { ...normalized, ...unplaced } : normalized;
+}
+
 function loadState() {
   const fallback = {
     courses: {},
@@ -353,12 +495,17 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return {
+      const mergedState = {
         ...fallback,
         ...parsed,
+        customSemesters: parsed.customSemesters || [],
+        schedulePrefs: parsed.schedulePrefs || {},
+      };
+      return {
+        ...mergedState,
         settings: normalizeSettings({ ...DEFAULT_SETTINGS, ...(parsed.settings || {}) }),
         customSemesters: parsed.customSemesters || [],
-        selectedSections: parsed.selectedSections || {},
+        selectedSections: normalizeSelectedSectionsForPlan(parsed.selectedSections || {}, mergedState),
         schedulePrefs: parsed.schedulePrefs || {},
         scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(parsed.scheduleAdvisorFilter) ? parsed.scheduleAdvisorFilter : 'all',
         scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(parsed.scheduleOutputPreset) ? parsed.scheduleOutputPreset : 'personal',

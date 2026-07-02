@@ -207,6 +207,9 @@ function normalizeSharedSelectedSections(selectedSections, planState = {}) {
 }
 
 function normalizeRestoredSelectedSections(selectedSections, planState = {}) {
+  if (typeof normalizeSelectedSectionsForPlan === 'function') {
+    return normalizeSelectedSectionsForPlan(selectedSections || {}, planState || {});
+  }
   return normalizeSharedSelectedSections(selectedSections || {}, planState || {});
 }
 

@@ -490,6 +490,42 @@ function testAccountAndShareState(context) {
       customSemesters: [],
       schedulePrefs: {},
     });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      activeSchedule: [{
+        id: 'local-fall',
+        name: 'Fall 2026',
+        courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+      }, {
+        id: 'local-spring',
+        name: 'Spring 2027',
+        courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+      }],
+      customCourses: [],
+      customSemesters: [],
+      customMajors: [],
+      selectedSections: {
+        'legacy-local-fall': {
+          MATH140: {
+            course: 'MATH 140',
+            section_id: 'MATH140-0701',
+            number: '0701',
+            semester: '202701',
+            meetings: [{ days: 'W', start_time: '11:00am', end_time: '11:50am', building: 'MTH', room: '0801' }]
+          }
+        }
+      },
+      schedulePrefs: {},
+      scheduleAdvisorFilter: 'all',
+      scheduleOutputPreset: 'personal',
+      scheduleOutputOptions: {},
+      roadmapPrefs: {},
+      browseSavedSearches: [],
+      recentChanges: [],
+      profilePrefs: defaultProfilePrefs(),
+      settings: { ...DEFAULT_SETTINGS, programName: 'Local Math' },
+    }));
+    const localStartupState = loadState();
+    localStorage.removeItem(STORAGE_KEY);
     const applied = applySharedPlanData({
       v: 1,
       courses: { 'MATH 140': { status: 'passed' } },
@@ -579,6 +615,12 @@ function testAccountAndShareState(context) {
         semIds: Object.keys(restoredImportSections),
         springSection: restoredImportSections['restore-spring']?.MATH140 || null,
         legacySection: restoredImportSections['legacy-fall-id']?.MATH140 || null,
+      },
+      localStartupRestore: {
+        activeIds: (localStartupState.activeSchedule || []).map(sem => sem.id),
+        semIds: Object.keys(localStartupState.selectedSections || {}),
+        springSection: localStartupState.selectedSections['local-spring']?.MATH140 || null,
+        legacySection: localStartupState.selectedSections['legacy-local-fall']?.MATH140 || null,
       },
       snapshotRestore: (() => {
         state.snapshots = [{
@@ -688,6 +730,8 @@ function testAccountAndShareState(context) {
   assert(result.nestedInferredImport.springSection?.section_id === 'MATH140-0301' && result.nestedInferredImport.springSection?.semester === '202701', 'shared plan import: nested rerouted section should preserve the posted UMD term');
   assert(result.restoredImport.semIds.includes('restore-spring') && !result.restoredImport.legacySection, 'JSON import restore: stale nested section buckets should use shared selected-section normalization');
   assert(result.restoredImport.springSection?.section_id === 'MATH140-0401' && result.restoredImport.springSection?.semester === '202701', 'JSON import restore: rerouted section should preserve the posted UMD term');
+  assert(result.localStartupRestore.activeIds.includes('local-spring') && result.localStartupRestore.semIds.includes('local-spring') && !result.localStartupRestore.legacySection, 'local startup restore: persisted stale selected-section buckets should normalize when loading browser state');
+  assert(result.localStartupRestore.springSection?.section_id === 'MATH140-0701' && result.localStartupRestore.springSection?.semester === '202701', 'local startup restore: rerouted section should preserve the posted UMD term');
   assert(result.snapshotRestore.activeIds.includes('snap-spring') && !result.snapshotRestore.legacySection, 'snapshot restore: stale selected-section buckets should normalize when loading a saved scenario');
   assert(result.snapshotRestore.springSection?.section_id === 'MATH140-0501' && result.snapshotRestore.springSection?.semester === '202701', 'snapshot restore: rerouted section should preserve the posted UMD term');
 

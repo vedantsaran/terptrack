@@ -9106,3 +9106,62 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 164
+
+Focus: make normal browser startup repair persisted selected-section buckets, so reopening TerpTrack locally is as dependable as importing, restoring a snapshot, loading a share link, or loading a cloud plan.
+
+Planned changes:
+- Inspect `loadState()` after the recent import/share/snapshot/cloud selected-section restore passes.
+- Add startup-safe selected-section normalization in `state.js`, because `loadState()` runs before `share.js` and `schedule.js`.
+- Preserve the same routing semantics: use saved active schedule, custom semesters, schedule prefs, section posted term, and fallback term inference.
+- Make `normalizeRestoredSelectedSections()` delegate to the state-level helper when available.
+- Add a localStorage startup regression with a stale nested selected-section bucket.
+- Bump changed asset cache tags and rendered workflow assertions.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added startup-safe selected-section normalization helpers in `js/state.js`.
+  - `loadState()` now builds a merged persisted plan state before applying defaults.
+  - Persisted `selectedSections` now normalize against saved active schedule, custom semesters, and schedule prefs during normal local browser startup.
+  - The helper preserves flat legacy picks, nested bucket picks, section objects, string section numbers, meetings, section ids, posted UMD terms, and unknown/unplaced fallback buckets.
+  - The helper can fall back to the built-in default schedule when older local state lacks `activeSchedule`.
+- Updated `js/share.js`.
+  - `normalizeRestoredSelectedSections()` now delegates to the state-level normalizer when it is loaded, keeping local startup and restore/import paths aligned.
+  - The existing shared-plan normalizer remains as a fallback.
+- Strengthened generated-plan regression coverage.
+  - `ACCOUNT-FRIENDS` now writes a legacy localStorage payload with `MATH 140` in Fall 2026 and Spring 2027.
+  - The fixture stores a Spring 2027 posted section under a stale `legacy-local-fall` bucket, calls `loadState()`, and verifies `MATH140-0701` lands under `local-spring`.
+- Bumped cache tags:
+  - `js/state.js?v=19`.
+  - `js/share.js?v=17`.
+  - Updated rendered workflow cache assertions for both assets.
+
+Verification:
+- Ran `node --check js/state.js`.
+- Ran `node --check js/share.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the updated `ACCOUNT-FRIENDS` localStorage startup selected-section normalization coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the updated localStorage startup restore coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass164-local-startup-sections`.
+  - It randomly verified `GEOG`, `ARCH`, `NEUR`, `PHIL`, `ENMA`, and `HLTH` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
