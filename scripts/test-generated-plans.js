@@ -1550,6 +1550,8 @@ async function testScheduleActionUndo(context) {
 function testScheduleCourseChip(context) {
   const result = clone(vm.runInContext(`
     (() => {
+      state.activeSchedule = [{ id: 'PASS102F', name: 'Fall 2026', courses: [] }];
+      state.schedulePrefs = { PASS102F: { term: '202608' } };
       state.selectedSections = {};
       setSelectedSection('PASS102F', 'CMSC 132', {
         course: 'CMSC132',
@@ -1603,6 +1605,123 @@ function testScheduleCourseChip(context) {
     risk: '2 left',
     closed: '7 waitlisted',
     ok: '18 open',
+  };
+}
+
+async function testScheduleTermMismatchGuards(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const undoRoot = { innerHTML: '' };
+      const originalGetElementById = document.getElementById;
+      const originalRenderSchedule = renderSchedule;
+      const originalRenderSemesters = typeof renderSemesters === 'function' ? renderSemesters : null;
+      const originalFetchSections = scheduleFetchSectionsFor;
+      const originalToastInfo = typeof toastInfo === 'function' ? toastInfo : null;
+      const originalToastSuccess = typeof toastSuccess === 'function' ? toastSuccess : null;
+      document.getElementById = id => {
+        if (id === 'schedule-undo') return undoRoot;
+        if (id === 'save-indicator') return { classList: { add() {}, remove() {} } };
+        return null;
+      };
+      renderSchedule = async () => renderScheduleUndo();
+      renderSemesters = () => {};
+      toastInfo = message => { window.__termMismatchToasts = [...(window.__termMismatchToasts || []), message]; };
+      toastSuccess = message => { window.__termMismatchToasts = [...(window.__termMismatchToasts || []), message]; };
+      try {
+        const course = { code: 'GVPT 200', title: 'International Political Relations', cr: 3, kind: 'gened', category: 'gened-dsbs' };
+        const springSection = {
+          course: 'GVPT200',
+          section_id: 'GVPT200-0999',
+          semester: '202701',
+          number: '0999',
+          meetings: [{ days: 'MW', start_time: '1:00pm', end_time: '2:15pm', building: 'TYD', room: '1101' }],
+          open_seats: '12',
+          waitlist: '0',
+          seats: '30',
+        };
+        const fallSection = {
+          course: 'GVPT200',
+          section_id: 'GVPT200-0101',
+          semester: '202608',
+          number: '0101',
+          meetings: [{ days: 'TuTh', start_time: '10:00am', end_time: '11:15am', building: 'TYD', room: '1101' }],
+          open_seats: '18',
+          waitlist: '0',
+          seats: '30',
+        };
+        state.activeSchedule = [{ id: 'TERMF', name: 'Fall 2026', courses: [course] }];
+        scheduleCurrentSemId = 'TERMF';
+        state.customCourses = [];
+        state.courses = {};
+        state.schedulePrefs = { TERMF: { ...DEFAULT_SCHEDULE_PREFS, term: '202608', minBreak: 15 } };
+        state.selectedSections = { TERMF: { GVPT200: springSection } };
+        state.recentChanges = [];
+        const chipBefore = scheduleCourseSummary('TERMF', 'GVPT 200');
+        const guardedSelected = getSelectedSectionForTerm('TERMF', 'GVPT 200', '202608');
+        const selectedItems = scheduleSelectedItemsFor('TERMF', '202608', [course], { GVPT200: [fallSection] });
+        const advisorHtml = scheduleAdvisorPlanHtml('TERMF', selectedItems, {
+          filter: 'all',
+          currentSemId: 'TERMF',
+          currentSemName: 'Fall 2026',
+          unscheduledCodes: new Set(['GVPT200']),
+          conflictCodes: new Set(),
+          warningCodes: new Set(),
+        }).html;
+        const advisorText = scheduleAdvisorText(
+          state.activeSchedule[0],
+          '202608',
+          [course],
+          selectedItems,
+          [],
+          [],
+          getSchedulePrefs('TERMF'),
+          'Schedule summary',
+          'all',
+          [course],
+          { preferences: false, warnings: true, unscheduled: true, recentChanges: false, auditIssues: false }
+        );
+        scheduleFetchSectionsFor = async () => ({ GVPT200: [fallSection] });
+        await autoFillScheduleCalendarOmissions();
+        const afterAutoFill = getSelectedSection('TERMF', 'GVPT 200');
+        return {
+          chipBefore,
+          guardedEmpty: !guardedSelected,
+          selectedItemsCount: selectedItems.length,
+          advisorHtml,
+          advisorText,
+          afterAutoFill,
+          banner: undoRoot.innerHTML,
+          toasts: (window.__termMismatchToasts || []).join(' | '),
+        };
+      } finally {
+        scheduleFetchSectionsFor = originalFetchSections;
+        document.getElementById = originalGetElementById;
+        renderSchedule = originalRenderSchedule;
+        if (originalRenderSemesters) renderSemesters = originalRenderSemesters;
+        else delete globalThis.renderSemesters;
+        if (originalToastInfo) toastInfo = originalToastInfo;
+        else delete globalThis.toastInfo;
+        if (originalToastSuccess) toastSuccess = originalToastSuccess;
+        else delete globalThis.toastSuccess;
+        delete window.__termMismatchToasts;
+      }
+    })()
+  `, context));
+
+  assert(/section-term-stale/.test(result.chipBefore) && /wrong term/.test(result.chipBefore), 'schedule term guards: Plan chip should flag wrong-term saved picks');
+  assert(/Spring 2027/.test(result.chipBefore) && /Fall 2026/.test(result.chipBefore), 'schedule term guards: wrong-term chip should name saved and target terms');
+  assert(result.guardedEmpty && result.selectedItemsCount === 0, 'schedule term guards: mismatched saved pick should not count as a current-term selected item');
+  assert(/Saved 0999 belongs to Spring 2027, not Fall 2026/.test(result.advisorHtml), 'schedule term guards: advisor HTML should explain stale section evidence');
+  assert(!/section 0999/.test(result.advisorText), 'schedule term guards: advisor text should not list the stale section as a current pick');
+  assert(/stale pick: Saved 0999 belongs to Spring 2027, not Fall 2026/.test(result.advisorText), 'schedule term guards: advisor text should carry stale-pick guidance');
+  assert(result.afterAutoFill?.section_id === 'GVPT200-0101' && result.afterAutoFill?.semester === '202608', 'schedule term guards: calendar auto-fill should replace wrong-term picks with current-term timed sections');
+  assert(/Auto-filled 1 calendar section/.test(result.banner), 'schedule term guards: calendar auto-fill should register undo for replaced wrong-term pick');
+  assert(/Filled 1 omitted calendar section/.test(result.toasts), 'schedule term guards: calendar auto-fill should announce the term-correct replacement');
+
+  return {
+    id: 'SCHEDULE-TERM-GUARDS',
+    replaced: result.afterAutoFill?.section_id || '',
+    stale: 'wrong term flagged',
   };
 }
 
@@ -4380,6 +4499,7 @@ async function main() {
   const mapUndo = testScheduleReadinessMapUndo(context);
   const actionUndo = await testScheduleActionUndo(context);
   const chip = testScheduleCourseChip(context);
+  const termGuards = await testScheduleTermMismatchGuards(context);
   const seatRisk = testScheduleSeatRiskBackups(context);
   const readyBackups = await testScheduleReadyBackupBulkAction(context);
   const recoMove = testRecommendationMoveAction(context);
@@ -4415,6 +4535,7 @@ async function main() {
   console.log(`Schedule map undo fixture ${mapUndo.id}: restored ${mapUndo.restored}.`);
   console.log(`Schedule action undo fixture ${actionUndo.id}: clear ${actionUndo.clear}, auto ${actionUndo.auto}, alternate ${actionUndo.alternate}.`);
   console.log(`Schedule chip fixture ${chip.id}: ${chip.risk}, ${chip.closed}, ${chip.ok}.`);
+  console.log(`Schedule term guards fixture ${termGuards.id}: replaced ${termGuards.replaced}; ${termGuards.stale}.`);
   console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
   console.log(`Schedule ready backups fixture ${readyBackups.id}: applied ${readyBackups.applied}; restored ${readyBackups.restored}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
@@ -4435,7 +4556,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + recommendation move action + recommendation section pick + planner checklist + planner questions + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

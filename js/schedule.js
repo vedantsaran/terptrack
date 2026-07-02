@@ -536,6 +536,39 @@ function getSelectedSection(semId, code) {
   return bucket[normalizeCode(code)] || null;
 }
 
+function scheduleTermForSemId(semId) {
+  const saved = (state.schedulePrefs || {})[semId]?.term;
+  if (saved) return String(saved);
+  const sem = getAllSemesters().find(item => item.id === semId);
+  return sem ? scheduleInferTermCode(sem) : '';
+}
+
+function scheduleSectionMatchesTerm(section, term) {
+  if (!section) return false;
+  const sectionTerm = String(section.semester || '').trim();
+  const expectedTerm = String(term || '').trim();
+  return !sectionTerm || !expectedTerm || sectionTerm === expectedTerm;
+}
+
+function getSelectedSectionForTerm(semId, code, term = '') {
+  const section = getSelectedSection(semId, code);
+  const expectedTerm = term || scheduleTermForSemId(semId);
+  return scheduleSectionMatchesTerm(section, expectedTerm) ? section : null;
+}
+
+function scheduleMismatchedSelectedSection(semId, code, term = '') {
+  const section = getSelectedSection(semId, code);
+  if (!section) return null;
+  const expectedTerm = term || scheduleTermForSemId(semId);
+  return scheduleSectionMatchesTerm(section, expectedTerm) ? null : section;
+}
+
+function scheduleSectionTermMismatchText(section, term) {
+  const savedTerm = section?.semester ? scheduleTermLabel(section.semester) : 'another UMD term';
+  const targetTerm = term ? scheduleTermLabel(term) : 'this term';
+  return `Saved ${scheduleSectionShortLabel(section)} belongs to ${savedTerm}, not ${targetTerm}. Pick a term-matching section.`;
+}
+
 function setSelectedSection(semId, code, section) {
   const bucket = scheduleSelectionBucket(semId);
   const key = normalizeCode(code);
@@ -936,8 +969,15 @@ function renderSectionSeatOverview(sections, picked) {
 }
 
 function scheduleCourseSummary(semId, code) {
-  const section = getSelectedSection(semId, code);
-  if (!section) return '';
+  const term = scheduleTermForSemId(semId);
+  const section = getSelectedSectionForTerm(semId, code, term);
+  if (!section) {
+    const stale = scheduleMismatchedSelectedSection(semId, code, term);
+    if (!stale) return '';
+    const detail = scheduleSectionTermMismatchText(stale, term);
+    const label = `${scheduleSectionShortLabel(stale)} · ${stale.semester ? scheduleTermLabel(stale.semester) : 'wrong term'}`;
+    return `<span class="schedule-chip section-term-stale" title="${scheduleEscape(detail)}"><span>${scheduleEscape(label)}</span><b>wrong term</b></span>`;
+  }
   const summary = sectionSummary(section);
   const risk = typeof sectionSeatRisk === 'function' ? sectionSeatRisk(section) : null;
   const eligibility = sectionEligibilityStatus(section);
@@ -1835,8 +1875,8 @@ function scheduleSelectedItemsFor(semId, term, courses, sectionsByCode) {
   const selectedItems = [];
   courses.forEach(course => {
     const norm = normalizeCode(course.code);
-    const selected = getSelectedSection(semId, course.code);
-    if (!selected || String(selected.semester || '') !== String(term)) return;
+    const selected = getSelectedSectionForTerm(semId, course.code, term);
+    if (!selected) return;
     const fresh = (sectionsByCode[norm] || []).find(s => s.section_id === selected.section_id);
     selectedItems.push({ course, section: { ...(fresh || selected), pinned: !!selected.pinned } });
   });
@@ -4828,10 +4868,13 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
       shownCourses += 1;
       shownCredits += cr;
       const key = `${sem.id}:${normalizeCode(course.code)}`;
-      const section = selectedMap[key] || getSelectedSection(sem.id, course.code);
+      const semTerm = scheduleTermForSemId(sem.id);
+      const section = selectedMap[key] || getSelectedSectionForTerm(sem.id, course.code, semTerm);
+      const staleSection = section ? null : scheduleMismatchedSelectedSection(sem.id, course.code, semTerm);
       const sectionLine = section ? `<span>${scheduleEscape(section.number || section.section_id || 'Section')} - ${scheduleEscape(scheduleSectionMeetingLines(section).join(' / '))}</span>` : '';
       const eligibility = section ? sectionEligibilityStatus(section) : null;
       const eligibilityLine = eligibility?.notes?.length ? `<em>Eligibility: ${scheduleEscape(eligibility.detail)}</em>` : '';
+      const staleLine = staleSection ? `<em>${scheduleEscape(scheduleSectionTermMismatchText(staleSection, semTerm))}</em>` : '';
       const note = course.note ? `<em>${scheduleEscape(course.note)}</em>` : '';
       const reasonLine = filterResult.reasons.length ? `<em>${scheduleEscape(filterResult.reasons.join(' · '))}</em>` : '';
       return `
@@ -4841,6 +4884,7 @@ function scheduleAdvisorPlanHtml(currentSemId, selectedItems, context) {
             <span>${scheduleEscape(course.title || '')}</span>
             ${sectionLine}
             ${eligibilityLine}
+            ${staleLine}
             ${note}
             ${reasonLine}
           </div>
@@ -4934,14 +4978,17 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
       const filterResult = scheduleAdvisorCourseFilter(course, planSem.id, context);
       if (!filterResult.include) return;
       const status = scheduleAdvisorCourseStatus(course);
+      const planTerm = planSem.id === sem?.id ? term : scheduleTermForSemId(planSem.id);
       const section = planSem.id === sem?.id
         ? selectedItems.find(item => normalizeCode(item.course.code) === normalizeCode(course.code))?.section
-        : getSelectedSection(planSem.id, course.code);
+        : getSelectedSectionForTerm(planSem.id, course.code, planTerm);
+      const staleSection = section ? null : scheduleMismatchedSelectedSection(planSem.id, course.code, planTerm);
       const sectionText = section ? `; section ${section.number || section.section_id || 'TBA'}; ${scheduleSectionMeetingLines(section).join(' / ')}` : '';
       const eligibility = section ? sectionEligibilityStatus(section) : null;
       const eligibilityText = eligibility?.notes?.length ? `; eligibility: ${eligibility.detail}` : '';
+      const staleText = staleSection ? `; stale pick: ${scheduleSectionTermMismatchText(staleSection, planTerm)}` : '';
       const reasonText = filterResult.reasons.length ? `; review: ${filterResult.reasons.join(' / ')}` : '';
-      courseLines.push(`- ${course.code} ${course.title || ''} (${Number(course.cr) || 0} cr; ${scheduleAdvisorCourseType(course)}; ${status}${sectionText}${eligibilityText}${reasonText})`);
+      courseLines.push(`- ${course.code} ${course.title || ''} (${Number(course.cr) || 0} cr; ${scheduleAdvisorCourseType(course)}; ${status}${sectionText}${eligibilityText}${staleText}${reasonText})`);
     });
     if (filter !== 'all' && semCourses.length && !courseLines.length) {
       lines.pop();
@@ -5876,7 +5923,7 @@ async function autoFillScheduleCalendarOmissions() {
     if (!sectionHasTimedMeetings(item.section)) targetCodes.add(normalizeCode(item.course.code));
   });
   courses.forEach(course => {
-    if (!getSelectedSection(semId, course.code)) targetCodes.add(normalizeCode(course.code));
+    if (!getSelectedSectionForTerm(semId, course.code, term)) targetCodes.add(normalizeCode(course.code));
   });
   if (!targetCodes.size) {
     toastInfo('Calendar export already has timed sections for every picked course.');
@@ -6386,8 +6433,9 @@ function renderSectionList(semId, term, courses, sectionsByCode, selectedItems, 
   root.innerHTML = courses.map(course => {
     const norm = normalizeCode(course.code);
     const sections = sectionsByCode[norm] || [];
-    const saved = getSelectedSection(semId, course.code);
-    const picked = selectedMap[norm] || (saved && String(saved.semester || '') === String(term) ? saved : null);
+    const saved = getSelectedSectionForTerm(semId, course.code, term);
+    const stale = saved ? null : scheduleMismatchedSelectedSection(semId, course.code, term);
+    const picked = selectedMap[norm] || saved;
     const posted = sections.length > 0;
     const options = [
       `<option value="">Pick a section…</option>`,
@@ -6432,6 +6480,7 @@ function renderSectionList(semId, term, courses, sectionsByCode, selectedItems, 
             ? `${sections.length} section${sections.length === 1 ? '' : 's'} posted for ${scheduleEscape(scheduleTermLabel(term))}. ${scheduleEscape(picked ? instructors : prefText)}`
             : `No sections posted for ${scheduleEscape(scheduleTermLabel(term))} yet. Keep the course in the plan and refresh when UMD releases seats.`}
         </div>
+        ${stale ? `<div class="section-pref-note warn">${scheduleEscape(scheduleSectionTermMismatchText(stale, term))}</div>` : ''}
         ${picked ? `<div class="section-pref-note ${notes.length ? 'warn' : 'ok'}">${scheduleEscape(prefText)}</div>` : ''}
       </div>
     `;
