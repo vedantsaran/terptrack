@@ -25,6 +25,8 @@ const BROWSE_PROFILE_DEPTS_VALUE = '__PROFILE_DEPTS__';
 const BROWSE_ALL_DEPTS_VALUE = '__ALL_DEPTS__';
 const BROWSE_GENED_TAGS = ['FSAW','FSPW','FSOC','FSMA','FSAR','DSHS','DSHU','DSNS','DSNL','DSSP','DVUP','DVCC','SCIS'];
 const BROWSE_SAVED_LIMIT = 12;
+const BROWSE_AUTO_LANGUAGE_DEPTS = ['SPAN','FREN','GERM','ITAL','PORT','RUSS','CHIN','JAPN','KORA','ARAB','HEBR','PERS','LATN','GREK'];
+const BROWSE_AUTO_ELECTIVE_DEPTS = ['INST','GVPT','PSYC','ENGL','HIST','BMGT','COMM','SOCY','AMST','PLCY','GEOG','HLTH'];
 
 let browseDept = '';
 let browseSearch = '';
@@ -40,6 +42,7 @@ let browseSlotKey = '';
 let browseImpactKey = '';
 let browseLastDecoratedRows = [];
 let browseQueueApplying = false;
+let browseAutoResolving = false;
 
 function ensureBrowseTab() {
   // No-op; the tab + view are in HTML. This just renders.
@@ -1037,6 +1040,60 @@ function browseReplacementQueuePlan(items, opts = {}) {
   };
 }
 
+function browseAutoSlotDepartments(slot) {
+  const out = [];
+  const add = dept => {
+    const clean = String(dept || '').trim().toUpperCase();
+    if (clean && browseAllSearchDepts().includes(clean) && !out.includes(clean)) out.push(clean);
+  };
+  if (slot.requiredDept) add(slot.requiredDept);
+  if (slot.kind === 'language') BROWSE_AUTO_LANGUAGE_DEPTS.forEach(add);
+  const profile = browseProfileDepartments();
+  if (!slot.requiredDept && slot.kind !== 'language') profile.forEach(add);
+  if (slot.kind === 'free-elective' || slot.kind === 'technical-elective' || slot.kind === 'major-support') {
+    BROWSE_AUTO_ELECTIVE_DEPTS.forEach(add);
+  }
+  return out.slice(0, slot.kind === 'language' ? 8 : 10);
+}
+
+async function browseAutoRowsForSlot(slot) {
+  const tags = slot.tags || [];
+  const depts = browseAutoSlotDepartments(slot);
+  const lists = [];
+  if (tags.length) {
+    if (depts.length) {
+      const deptLists = await Promise.all(depts.map(dept => browseListCoursesByGenEdTags(tags, { dept }).catch(() => [])));
+      lists.push(...deptLists);
+    }
+    lists.push(await browseListCoursesByGenEdTags(tags).catch(() => []));
+  } else if (depts.length) {
+    const deptLists = await Promise.all(depts.map(dept => umdioListCoursesByDept(dept).catch(() => [])));
+    lists.push(...deptLists);
+  }
+  return browseMergeCourseRows(lists);
+}
+
+async function browseAutoRowsForSlots(slots, opts = {}) {
+  const selected = (slots || []).slice(0, Number(opts.limit) || 16);
+  const rows = [];
+  const searched = [];
+  let idx = 0;
+  const concurrency = Math.min(3, selected.length || 0);
+  async function worker() {
+    while (idx < selected.length) {
+      const slot = selected[idx++];
+      const found = await browseAutoRowsForSlot(slot).catch(() => []);
+      searched.push(slot.course?.code || slot.key || 'slot');
+      found.forEach(row => rows.push(row));
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return {
+    rows: browseMergeCourseRows([rows]),
+    searched,
+  };
+}
+
 function browseSlotRequirementText(slot) {
   const parts = [
     browseSlotKindLabel(slot.kind),
@@ -1084,7 +1141,7 @@ function browseOpenSlotSearch(slotKey) {
   browseOpenSearch({ ...browseSlotSearchConfig(slot), save: true });
 }
 
-async function browseApplyReplacementQueue(items = browseLastDecoratedRows) {
+async function browseApplyReplacementQueue(items = browseLastDecoratedRows, opts = {}) {
   if (browseQueueApplying) return { applied: 0, skipped: 0 };
   if (typeof replacePlaceholderWithCourse !== 'function' || typeof placeholderSearchTarget === 'undefined') {
     toastError('Placeholder replacement is still loading.');
@@ -1115,7 +1172,7 @@ async function browseApplyReplacementQueue(items = browseLastDecoratedRows) {
         quiet: true,
         skipRender: true,
         skipSave: true,
-        source: 'Browse replacement queue',
+        source: opts.source || 'Browse replacement queue',
       });
       if (result?.replaced) applied.push(result);
       else skipped += 1;
@@ -1131,7 +1188,7 @@ async function browseApplyReplacementQueue(items = browseLastDecoratedRows) {
       saveState();
       browseQueueApplying = false;
       if (typeof render === 'function') render();
-      toastSuccess(`Filled ${applied.length} unresolved slot${applied.length === 1 ? '' : 's'} from this search.`);
+      toastSuccess(`Filled ${applied.length} unresolved slot${applied.length === 1 ? '' : 's'} ${opts.successContext || 'from this search'}.`);
     } else if (typeof toastInfo === 'function') {
       browseQueueApplying = false;
       toastInfo('No replacement slots changed. Refresh the search and try again.');
@@ -1139,6 +1196,42 @@ async function browseApplyReplacementQueue(items = browseLastDecoratedRows) {
     return { applied: applied.length, skipped, total: plan.total };
   } finally {
     browseQueueApplying = false;
+  }
+}
+
+async function browseAutoResolveReplacementQueue() {
+  if (browseAutoResolving) return { applied: 0, skipped: 0 };
+  const slots = browsePlaceholderSlots();
+  if (!slots.length) {
+    if (typeof toastInfo === 'function') toastInfo('No unresolved placeholders are in the current plan.');
+    return { applied: 0, skipped: 0 };
+  }
+  browseAutoResolving = true;
+  try {
+    const visibleRows = (browseLastDecoratedRows || []).map(item => item.row || item).filter(Boolean);
+    const found = await browseAutoRowsForSlots(slots);
+    const rows = browseMergeCourseRows([visibleRows, found.rows]);
+    if (!rows.length) {
+      if (typeof toastInfo === 'function') toastInfo('No replacement courses were found from automatic slot searches.');
+      return { applied: 0, skipped: 0, searched: found.searched.length };
+    }
+    const profilePrefs = typeof getProfilePrefs === 'function' ? getProfilePrefs() : null;
+    const profileActive = !!(profilePrefs && ((profilePrefs.interests || []).length || profilePrefs.careerGoal || (profilePrefs.genEdDepts || []).length));
+    const nextTerm = browseNextTermContext();
+    const decorated = browseDecorateRows(rows, {
+      profilePrefs,
+      profileActive,
+      nextTerm,
+    }).sort(browseCompareRows);
+    browseLastDecoratedRows = decorated;
+    browseAutoResolving = false;
+    const result = await browseApplyReplacementQueue(decorated, {
+      source: 'Browse auto-resolver',
+      successContext: 'from automatic slot search',
+    });
+    return { ...result, searched: found.searched.length };
+  } finally {
+    browseAutoResolving = false;
   }
 }
 
@@ -1158,6 +1251,7 @@ function browseReplacementQueueHtml(items, nextTerm = browseNextTermContext()) {
         <div class="browse-replacement-actions">
           <b>${browseEscape(queue.total - queue.matched)} left</b>
           <button class="btn small primary" type="button" onclick="browseApplyReplacementQueue()" ${plan.applied ? '' : 'disabled'}>${browseQueueApplying ? 'Filling...' : `Fill ${browseEscape(plan.applied)} slot${plan.applied === 1 ? '' : 's'}`}</button>
+          <button class="btn small" type="button" onclick="browseAutoResolveReplacementQueue()" ${browseAutoResolving ? 'disabled' : ''}>${browseAutoResolving ? 'Searching...' : 'Find + fill'}</button>
         </div>
       </div>
       <div class="browse-replacement-queue-list">

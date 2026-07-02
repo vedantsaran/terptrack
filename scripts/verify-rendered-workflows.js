@@ -183,7 +183,7 @@ async function openFreshApp(page, url, opts, suffix) {
   assert(snapshot.scripts.includes('js/recommendations.js?v=18'), 'workflow app did not load js/recommendations.js?v=18');
   assert(snapshot.scripts.includes('js/courses.js?v=5'), 'workflow app did not load js/courses.js?v=5');
   assert(snapshot.scripts.includes('js/onboarding.js?v=19'), 'workflow app did not load js/onboarding.js?v=19');
-  assert(snapshot.scripts.includes('js/browse.js?v=16'), 'workflow app did not load js/browse.js?v=16');
+  assert(snapshot.scripts.includes('js/browse.js?v=17'), 'workflow app did not load js/browse.js?v=17');
   assert(snapshot.scripts.includes('js/dnd.js?v=2'), 'workflow app did not load js/dnd.js?v=2');
   assert(snapshot.scripts.includes('js/state.js?v=23'), 'workflow app did not load js/state.js?v=23');
   assert(snapshot.scripts.includes('js/render.js?v=3'), 'workflow app did not load js/render.js?v=3');
@@ -274,6 +274,19 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
     state.customCourses = [];
     if (document.querySelector('#onboard-modal.open')) document.querySelector('#onboard-modal.open').classList.remove('open');
     browseHydrateAvailability = async () => {};
+    umdioListCoursesByDept = async dept => {
+      if (dept === 'INST') {
+        return [{
+          course_id: 'INST201',
+          name: 'Finding Information',
+          credits: '3',
+          description: 'Profile-aligned information studies elective.',
+          gen_ed: [],
+          department: 'INST',
+        }];
+      }
+      return [];
+    };
     placeholderSearchTarget = {
       code: 'GenEd HS-1',
       title: 'History/Social Sciences #1',
@@ -333,6 +346,24 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   }));
   assert(fillResult.codes.includes('GVPT 200') && fillResult.codes.includes('Free Elective #1'), 'browse queue fill: should replace the matched GenEd slot and leave unmatched free elective unresolved');
   assert(fillResult.change?.type === 'placeholder-replacement' && fillResult.change?.source === 'Browse replacement queue', 'browse queue fill: should record a queue-sourced placeholder replacement');
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#br-grid')?.textContent?.replace(/\s+/g, ' ') || '';
+    return text.includes('Free Elective #1') && text.includes('Find + fill');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('button:has-text("Find + fill")').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const codes = state.activeSchedule?.[0]?.courses?.map(course => course.code) || [];
+    const change = state.recentChanges?.[0] || {};
+    return codes.includes('INST 201')
+      && !codes.includes('Free Elective #1')
+      && change.source === 'Browse auto-resolver';
+  }, null, { timeout: opts.timeoutMs });
+  const autoResult = await page.evaluate(() => ({
+    codes: state.activeSchedule[0].courses.map(course => course.code),
+    change: state.recentChanges[0] || null,
+  }));
+  assert(autoResult.codes.includes('GVPT 200') && autoResult.codes.includes('INST 201'), 'browse auto resolver: should preserve prior queue fill and resolve the remaining profile elective');
+  assert(autoResult.change?.type === 'placeholder-replacement' && autoResult.change?.source === 'Browse auto-resolver', 'browse auto resolver: should record an automatic resolver replacement');
 
   await page.evaluate(async () => {
     window.__browseAllDeptCalls = [];
@@ -376,7 +407,7 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   assert(allDeptResult.text.includes('HIST 210'), 'browse all departments: broad GenEd search should render global results');
   const allDeptSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('browse all departments mobile', allDeptSnapshot);
-  console.log('Browse replacement [mobile]: rendered replacement banner, replacement queue, result card, all-department GenEd search, actions, and no overflow.');
+  console.log('Browse replacement [mobile]: rendered replacement banner, replacement queue, queue fill, auto-resolver fill, result card, all-department GenEd search, actions, and no overflow.');
 }
 
 async function verifyRecommendationsSectionMobile(page, url, opts) {

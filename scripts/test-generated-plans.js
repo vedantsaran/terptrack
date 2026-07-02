@@ -4852,6 +4852,118 @@ async function testBrowseReplacementQueue(context) {
   };
 }
 
+async function testBrowseAutoResolver(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const originalGenEd = umdioListCoursesByGenEd;
+      const originalDept = umdioListCoursesByDept;
+      const calls = [];
+      try {
+        umdioListCoursesByGenEd = async (tag, opts = {}) => {
+          const dept = String(opts.dept || '');
+          calls.push('gened:' + tag + ':' + (dept || 'global'));
+          if (tag === 'DSHS' && (!dept || dept === 'GVPT')) {
+            return [{ course_id: 'GVPT200', name: 'International Political Relations', credits: '3', description: 'policy and international relations', gen_ed: ['DSHS'] }];
+          }
+          if (tag === 'DSHU' && !dept) {
+            return [{ course_id: 'HIST210', name: 'Global Humanities', credits: '3', description: 'history and culture', gen_ed: ['DSHU'] }];
+          }
+          return [];
+        };
+        umdioListCoursesByDept = async dept => {
+          calls.push('dept:' + dept);
+          if (dept === 'GVPT') {
+            return [{ course_id: 'GVPT356', name: 'Politics of the Developing World', credits: '3', description: 'upper policy elective', gen_ed: [] }];
+          }
+          if (dept === 'BMGT') {
+            return [{ course_id: 'BMGT110', name: 'Business Value Chain', credits: '3', description: 'open elective option', gen_ed: [] }];
+          }
+          return [];
+        };
+        state.activeSchedule = [{
+          id: 'PASS180F',
+          name: 'Pass 180 Fall',
+          courses: [{
+            code: 'GenEd DSHS',
+            title: 'History and Social Sciences placeholder',
+            cr: 3,
+            kind: 'gened',
+            category: 'gened-dshs',
+            categories: ['gened-dshs']
+          }, {
+            code: 'GenEd DSHU',
+            title: 'Humanities placeholder',
+            cr: 3,
+            kind: 'gened',
+            category: 'gened-dshu',
+            categories: ['gened-dshu']
+          }, {
+            code: 'GVPT 3xx Elective A',
+            title: 'Upper-Division GVPT Elective',
+            cr: 3,
+            category: 'major-upper'
+          }, {
+            code: 'Free Elective #1',
+            title: 'Free Elective 1',
+            cr: 3,
+            kind: 'tech',
+            category: 'elective',
+            note: 'Auto-generated credit placeholder'
+          }]
+        }];
+        state.customCourses = [{ code: 'ENGL 101', title: 'Academic Writing', cr: 3, semId: 'PASS180F' }];
+        state.courses = {};
+        state.recentChanges = [];
+        state.profilePrefs = normalizeProfilePrefs({
+          interests: ['policy-society'],
+          careerGoal: 'public policy',
+          genEdDepts: 'GVPT'
+        });
+        browseDept = 'GVPT';
+        browseGenEd = 'DSHS';
+        browseSearch = '';
+        const visible = browseDecorateRows([{
+          course_id: 'GVPT200',
+          name: 'International Political Relations',
+          credits: '3',
+          description: 'policy and international relations',
+          gen_ed: ['DSHS']
+        }], {
+          nextTerm: { term: '202608', termLabel: 'Fall 2026' }
+        }).sort(browseCompareRows);
+        browseLastDecoratedRows = visible;
+        const visiblePlan = browseReplacementQueuePlan(visible, { candidateLimit: 5 });
+        const autoResult = await browseAutoResolveReplacementQueue();
+        const finalCodes = state.activeSchedule[0].courses.map(course => course.code);
+        return {
+          visibleApplied: visiblePlan.applied,
+          autoResult,
+          finalCodes,
+          uniqueFinalCodes: Array.from(new Set(finalCodes)).length,
+          calls,
+          changeSources: (state.recentChanges || []).map(change => change.source)
+        };
+      } finally {
+        umdioListCoursesByGenEd = originalGenEd;
+        umdioListCoursesByDept = originalDept;
+      }
+    })()
+  `, context));
+
+  assert(result.visibleApplied === 1, 'browse auto resolver: visible search should only resolve one slot before automatic slot search');
+  assert(result.autoResult?.applied === 4 && result.autoResult?.skipped === 0, 'browse auto resolver: automatic slot search should fill every unique fixture assignment');
+  assert(['GVPT 200', 'HIST 210', 'GVPT 356', 'BMGT 110'].every(code => result.finalCodes.includes(code)), 'browse auto resolver: should fill GenEd, major elective, and free elective slots from fetched rows');
+  assert(result.uniqueFinalCodes === result.finalCodes.length && !result.finalCodes.some(code => /GenEd|Elective #|3xx/.test(code)), 'browse auto resolver: should leave no duplicate or unresolved fixture placeholders');
+  assert(result.calls.includes('gened:DSHU:global') && result.calls.includes('dept:GVPT') && result.calls.includes('dept:BMGT'), 'browse auto resolver: should search global GenEd, required major department, and broad elective departments');
+  assert(result.changeSources.slice(0, 4).every(source => source === 'Browse auto-resolver'), 'browse auto resolver: bulk changes should be queue-sourced from auto resolver');
+
+  return {
+    id: 'BROWSE-AUTO-RESOLVER',
+    visible: result.visibleApplied,
+    applied: result.autoResult?.applied || 0,
+  };
+}
+
 async function testBrowseTypedSlotMatching(context) {
   const result = clone(await vm.runInContext(`
     (() => {
@@ -5812,6 +5924,7 @@ async function main() {
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
   const browseQueue = await testBrowseReplacementQueue(context);
+  const browseAuto = await testBrowseAutoResolver(context);
   const browseTypedSlots = await testBrowseTypedSlotMatching(context);
   const auditIssues = testAuditIssueDrawer(context);
   const priorCredit = await testOnboardingPriorCredit(context);
@@ -5856,12 +5969,13 @@ async function main() {
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
   console.log(`Browse replacement queue fixture ${browseQueue.id}: matched ${browseQueue.matched}; first ${browseQueue.first}; bulk applied ${browseQueue.applied}.`);
+  console.log(`Browse auto-resolver fixture ${browseAuto.id}: visible ${browseAuto.visible}; automatic bulk applied ${browseAuto.applied}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
   console.log(`Audit issue fixture ${auditIssues.id}: ${auditIssues.count} issues; opened ${auditIssues.opened}; browse ${auditIssues.browse}.`);
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

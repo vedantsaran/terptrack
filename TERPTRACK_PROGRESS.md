@@ -10059,3 +10059,71 @@ Next pass candidates:
 - Build the broader automatic placeholder resolver that searches the needed categories/departments itself instead of relying only on the currently visible Browse result set.
 - Replace greedy schedule auto-pick with a bounded solver for multi-course section combinations, conflicts, breaks, and preference tradeoffs.
 - Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
+
+## 2026-07-02 Pass 180
+
+Focus: broaden the Browse placeholder resolver so it can search the needed official catalog scopes itself, instead of only filling slots from whatever results are currently visible.
+
+Planned changes:
+- Extend the Pass 179 queue fill into a real automatic slot search for unmatched placeholders.
+- Search GenEd tags globally when profile departments do not produce a match.
+- Search required major departments for typed upper-level/support placeholders.
+- Search profile plus common departments for open/free-elective placeholders.
+- Keep the one-course-per-slot uniqueness rule and reuse the existing placeholder replacement path.
+- Verify in generated fixtures, rendered mobile workflow, release checks, and random live PlanetTerp schedules.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/browse.js`.
+  - Added automatic language and broad elective department pools.
+  - Added `browseAutoSlotDepartments()`, `browseAutoRowsForSlot()`, and `browseAutoRowsForSlots()`.
+  - Added `browseAutoResolveReplacementQueue()`, exposed as `Find + fill` in the replacement queue header.
+  - Auto search merges the currently visible rows with fetched slot-specific rows, decorates them through the same Browse ranking path, then applies unique assignments through `browseApplyReplacementQueue()`.
+  - Auto-applied changes are sourced as `Browse auto-resolver` in recent-change history.
+- Updated `index.html`.
+  - Bumped `js/browse.js` to `v=17`.
+- Strengthened `scripts/test-generated-plans.js`.
+  - Added `BROWSE-AUTO-RESOLVER`.
+  - The fixture starts with visible results that can only fill one slot.
+  - It verifies automatic slot search finds a global DSHU course, a required GVPT upper elective, and a broad BMGT free elective.
+  - It verifies four unique replacements are applied and no generated placeholder remains in the fixture.
+- Strengthened `scripts/verify-rendered-workflows.js`.
+  - The mobile Browse workflow now clicks the normal `Fill 1 slot` button, then clicks `Find + fill` to resolve the remaining profile elective from a stubbed official department row.
+  - It verifies the second replacement is sourced from `Browse auto-resolver`.
+  - It asserts `js/browse.js?v=17`.
+
+Major-gap notes:
+- The placeholder resolver now searches needed slot scopes automatically from Browse. It still runs as a user-triggered Browse action, not a full background crawl during initial plan generation.
+- The largest remaining scheduling correctness gap is replacing greedy section auto-pick with a bounded multi-course section solver for conflicts, breaks, seats, and preference tradeoffs.
+
+Verification:
+- Ran `node --check js/browse.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed `BROWSE-AUTO-RESOLVER` with visible 1 and automatic bulk applied 4.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with replacement queue, queue fill, and auto-resolver fill.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the new Browse auto-resolver coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass180-browse-auto-slot-search`.
+  - It randomly verified `ASTR`, `GEOL`, `NEUR`, `HLTH`, `HIST`, `IS`, `CINE`, `LING`, `ENGL`, `ENCH`, `ENST`, and `ANSC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Replace greedy schedule auto-pick with a bounded solver for multi-course section combinations, conflicts, breaks, seats, and timing preferences.
+- Promote the auto-resolver into an initial-plan review workflow so students can resolve remaining placeholders without first opening Browse.
+- Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
