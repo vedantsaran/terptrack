@@ -8178,68 +8178,6 @@ Verification:
 - Ran `git diff --check`.
   - It reported no whitespace errors.
 
-## 2026-07-02 Pass 159
-
-Focus: keep section-aware planning consistent for imported or legacy picks that omit a UMD term, without letting explicit wrong-term picks satisfy readiness or friend meeting comparisons.
-
-Planned changes:
-- Align Smart next picks with Schedule's term-aware selected-section lookup.
-- Preserve no-semester legacy picks in recommendation readiness while continuing to reject explicit term mismatches.
-- Let friend-plan meeting comparisons infer a real UMD term from each plan's schedule prefs or semester labels when a saved section has no `semester`.
-- Keep explicit section `semester` values authoritative so stale wrong-term picks do not get matched by a saved schedule preference.
-- Add generated-plan regressions for recommendation readiness and friend meeting planner term inference.
-- Bump changed asset cache tags and rendered workflow assertions.
-- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
-- Keep `README.md` untouched and unstaged.
-
-Completed:
-- Updated `recoSelectedItemsForContext()` in `js/recommendations.js`.
-  - It now uses `getSelectedSectionForTerm()` when available.
-  - It keeps no-semester selected sections for the target term, matching Schedule semantics.
-  - It still filters explicit `section.semester` mismatches when the shared helper is unavailable.
-- Updated friend meeting planner section normalization in `js/account.js`.
-  - Added plan-semester term inference from `schedulePrefs[semId].term`.
-  - Falls back to `scheduleInferTermCode()` from each plan's active/custom semester metadata.
-  - Stores an inferred `termKey` for no-semester picks while keeping explicit section terms first.
-  - Passes both friend and current plan payloads into section-item extraction so arbitrary imported semester IDs can still compare by UMD term.
-- Strengthened generated-plan regression coverage.
-  - Account/share fixture now verifies a no-semester friend section under an imported semester ID still matches the current plan's Fall 2026 picks through `schedulePrefs`.
-  - The same fixture verifies an explicit Spring 2027 section under a Fall 2026 bucket is not matched or used for shared free windows.
-  - Recommendation best-section fixture now includes a no-semester `ENGL 101` pick that must count toward Fall 2026 readiness and a wrong-term `HIST 201` pick that must not count.
-- Bumped cache tags:
-  - `js/recommendations.js?v=18`.
-  - `js/account.js?v=15`.
-  - Updated rendered workflow cache assertions.
-
-Verification:
-- Ran `node --check js/recommendations.js`.
-- Ran `node --check js/account.js`.
-- Ran `node --check scripts/test-generated-plans.js`.
-- Ran `node --check scripts/verify-rendered-workflows.js`.
-- Ran `node scripts/test-generated-plans.js`.
-  - It passed the updated `ACCOUNT-FRIENDS` friend meeting planner term-inference coverage.
-  - It passed the updated `RECO-SECTION` recommendation readiness coverage.
-  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, recommendation move action, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
-- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
-  - It passed mobile onboarding.
-  - It passed mobile Browse replacement.
-  - It passed mobile Recommendations section pick.
-  - It passed mobile Account setup.
-  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
-- Ran `node scripts/run-release-checks.js`.
-  - It syntax-checked 43 JavaScript files.
-  - It passed the offline umd.io proxy fixture.
-  - It passed generated-plan fixtures, including the updated account/share and recommendation section coverage.
-  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
-  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
-  - Live verification was skipped by the release runner as expected because no live flag was provided.
-- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass159-term-alias-picks`.
-  - It randomly verified `WMST`, `AMST`, `SOCY`, `MATH`, `ENAE`, and `JOUR` against PlanetTerp.
-  - Every generated required course reported a matching live title/credit pair.
-  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
-- Ran `git diff --check`.
-  - It reported no whitespace errors.
-
 ## 2026-07-02 Pass 148
 
 Focus: make planner term availability seat-aware so a course with posted sections but no open seats is treated as a registration risk instead of a safe placement.
@@ -8876,6 +8814,125 @@ Verification:
   - Live verification was skipped by the release runner as expected because no live flag was provided.
 - Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass158-planner-term-sections`.
   - It randomly verified `AREC`, `AMST`, `ENCE`, `MATH`, `ACCOUNTING`, and `AOSC` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+## 2026-07-02 Pass 159
+
+Focus: keep section-aware planning consistent for imported or legacy picks that omit a UMD term, without letting explicit wrong-term picks satisfy readiness or friend meeting comparisons.
+
+Planned changes:
+- Align Smart next picks with Schedule's term-aware selected-section lookup.
+- Preserve no-semester legacy picks in recommendation readiness while continuing to reject explicit term mismatches.
+- Let friend-plan meeting comparisons infer a real UMD term from each plan's schedule prefs or semester labels when a saved section has no `semester`.
+- Keep explicit section `semester` values authoritative so stale wrong-term picks do not get matched by a saved schedule preference.
+- Add generated-plan regressions for recommendation readiness and friend meeting planner term inference.
+- Bump changed asset cache tags and rendered workflow assertions.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `recoSelectedItemsForContext()` in `js/recommendations.js`.
+  - It now uses `getSelectedSectionForTerm()` when available.
+  - It keeps no-semester selected sections for the target term, matching Schedule semantics.
+  - It still filters explicit `section.semester` mismatches when the shared helper is unavailable.
+- Updated friend meeting planner section normalization in `js/account.js`.
+  - Added plan-semester term inference from `schedulePrefs[semId].term`.
+  - Falls back to `scheduleInferTermCode()` from each plan's active/custom semester metadata.
+  - Stores an inferred `termKey` for no-semester picks while keeping explicit section terms first.
+  - Passes both friend and current plan payloads into section-item extraction so arbitrary imported semester IDs can still compare by UMD term.
+- Strengthened generated-plan regression coverage.
+  - Account/share fixture now verifies a no-semester friend section under an imported semester ID still matches the current plan's Fall 2026 picks through `schedulePrefs`.
+  - The same fixture verifies an explicit Spring 2027 section under a Fall 2026 bucket is not matched or used for shared free windows.
+  - Recommendation best-section fixture now includes a no-semester `ENGL 101` pick that must count toward Fall 2026 readiness and a wrong-term `HIST 201` pick that must not count.
+- Bumped cache tags:
+  - `js/recommendations.js?v=18`.
+  - `js/account.js?v=15`.
+  - Updated rendered workflow cache assertions.
+
+Verification:
+- Ran `node --check js/recommendations.js`.
+- Ran `node --check js/account.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the updated `ACCOUNT-FRIENDS` friend meeting planner term-inference coverage.
+  - It passed the updated `RECO-SECTION` recommendation readiness coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, recommendation move action, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the updated account/share and recommendation section coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass159-term-alias-picks`.
+  - It randomly verified `WMST`, `AMST`, `SOCY`, `MATH`, `ENAE`, and `JOUR` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+## 2026-07-02 Pass 160
+
+Focus: make shared-plan imports route flat legacy section picks to the matching UMD term when the same course appears in multiple semesters, and repair the progress ledger ordering from the previous pass.
+
+Planned changes:
+- Infer UMD terms for shared-plan semester rows from saved schedule prefs, explicit semester metadata, or semester name/id.
+- Use inferred terms when normalizing flat legacy selected sections from shared URLs.
+- Add a regression where `MATH 140` appears in Fall 2026 and Spring 2027 and a flat Spring 2027 section pick must land in the Spring term.
+- Bump the Share asset cache tag and rendered workflow assertion.
+- Move the misplaced Pass 159 ledger entry after Pass 158 so future passes can trust the tail of `TERPTRACK_PROGRESS.md`.
+- Verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated shared-plan selected-section normalization in `js/share.js`.
+  - `shareSemesterTerm()` now falls back to `shareInferSemesterTerm()`.
+  - The fallback reuses `scheduleInferTermCode()` when available.
+  - It keeps a local inference fallback for share normalization contexts where Schedule helpers are unavailable.
+  - Flat selected sections with explicit `section.semester` can now match semester rows by inferred UMD term instead of defaulting to the first matching course occurrence.
+- Strengthened account/share regression coverage.
+  - Added a flat legacy `MATH 140` selected section with `semester: 202701`.
+  - The plan state contains both Fall 2026 and Spring 2027 `MATH 140` rows and no `schedulePrefs`.
+  - The fixture verifies the section routes to `share-spring`, not `share-fall`, and preserves `MATH140-0201` plus the Spring 2027 term.
+- Bumped cache tags:
+  - `js/share.js?v=14`.
+  - Updated rendered workflow cache assertions.
+- Repaired `TERPTRACK_PROGRESS.md` ordering.
+  - Moved Pass 159 from its accidental location before Pass 148 to after Pass 158.
+  - Added this Pass 160 entry at the end of the file.
+
+Verification:
+- Ran `node --check js/share.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the updated `ACCOUNT-FRIENDS` shared-plan import routing coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the updated account/share import coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass160-share-term-import`.
+  - It randomly verified `ENCE`, `ARTT`, `ENAE`, `SPAN`, `IS`, and `CHEM` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.

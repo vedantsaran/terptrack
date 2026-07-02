@@ -419,6 +419,28 @@ function testAccountAndShareState(context) {
       }
     };
     const explicitMismatchSummary = accountFriendPlanSummary(explicitMismatchPlan);
+    const inferredImportSections = normalizeSharedSelectedSections({
+      'MATH 140': {
+        course: 'MATH 140',
+        section_id: 'MATH140-0201',
+        number: '0201',
+        semester: '202701',
+        meetings: [{ days: 'MW', start_time: '11:00am', end_time: '12:15pm', building: 'MTH', room: '0301' }]
+      }
+    }, {
+      activeSchedule: [{
+        id: 'share-fall',
+        name: 'Fall 2026',
+        courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+      }, {
+        id: 'share-spring',
+        name: 'Spring 2027',
+        courses: [{ code: 'MATH 140', title: 'Calculus I', cr: 4 }]
+      }],
+      customCourses: [],
+      customSemesters: [],
+      schedulePrefs: {},
+    });
     const applied = applySharedPlanData({
       v: 1,
       courses: { 'MATH 140': { status: 'passed' } },
@@ -494,6 +516,11 @@ function testAccountAndShareState(context) {
         sharedTermCount: explicitMismatchSummary.sharedMeetingTermCount,
         sharedFreeWindowCount: explicitMismatchSummary.sharedFreeWindows.length,
       },
+      inferredImport: {
+        semIds: Object.keys(inferredImportSections),
+        springSection: inferredImportSections['share-spring']?.MATH140 || null,
+        fallSection: inferredImportSections['share-fall']?.MATH140 || null,
+      },
     })
   `, context));
 
@@ -550,6 +577,8 @@ function testAccountAndShareState(context) {
   assert(/best shared slot in Fall 2026/.test(result.aliasNoSemester.note), 'friend meeting planner: inferred-term copy note should name the UMD term');
   assert(result.explicitMismatch.termKey === '' && result.explicitMismatch.sharedTermCount === 0, 'friend meeting planner: explicit section semester should override schedulePrefs term');
   assert(result.explicitMismatch.sharedFreeWindowCount === 0, 'friend meeting planner: explicit wrong-term picks should not create free windows');
+  assert(result.inferredImport.semIds.includes('share-spring') && !result.inferredImport.fallSection, 'shared plan import: flat picked section should route to inferred matching UMD term when a course appears twice');
+  assert(result.inferredImport.springSection?.section_id === 'MATH140-0201' && result.inferredImport.springSection?.semester === '202701', 'shared plan import: routed section should preserve the posted UMD term');
 
   return {
     id: 'ACCOUNT-FRIENDS',

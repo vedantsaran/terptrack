@@ -126,8 +126,23 @@ function shareSemesterTerm(sem, planState = {}) {
     (planState.schedulePrefs || {})[sem.id]?.term
     || sem.term
     || sem.semester
+    || shareInferSemesterTerm(sem)
     || ''
   ).trim();
+}
+
+function shareInferSemesterTerm(sem) {
+  if (typeof scheduleInferTermCode === 'function') return scheduleInferTermCode(sem);
+  const name = `${sem && sem.name || ''} ${sem && sem.id || ''}`;
+  const yearMatch = name.match(/\b(20\d{2})\b/);
+  const shortYear = (sem && sem.id || '').match(/(\d{2})$/);
+  const year = yearMatch ? parseInt(yearMatch[1], 10)
+    : shortYear ? 2000 + parseInt(shortYear[1], 10)
+      : new Date().getFullYear();
+  if (/summer|sum/i.test(name)) return `${year}05`;
+  if (/fall|\bF\d{2}\b/i.test(name)) return `${year}08`;
+  if (/winter/i.test(name)) return `${year}12`;
+  return `${year}01`;
 }
 
 function shareSemIdForSelectedCourse(code, section, planState = {}) {
