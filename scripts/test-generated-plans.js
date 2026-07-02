@@ -69,6 +69,7 @@ function buildContext() {
     'js/audit.js',
     'js/onboarding.js',
     'js/dnd.js',
+    'js/bulk.js',
   ].forEach(file => vm.runInContext(read(file), context, { filename: file }));
   vm.runInContext(`
     state = loadState();
@@ -261,6 +262,76 @@ function testPrereqResolverNormalizedState(context) {
     completed: `${Number(result.displayPassed)}/${Number(result.displayTransfer)}`,
     planned: Number(result.plannedNoState),
     missing: Number(result.missing),
+  };
+}
+
+function testBulkCourseStateNormalization(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      const previousState = JSON.parse(JSON.stringify(state));
+      try {
+        state.activeSchedule = [{
+          id: 'BULK-STATE',
+          name: 'Fall 2026',
+          courses: [
+            { code: 'MATH 140', title: 'Calculus I', cr: 4 },
+            { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4 }
+          ]
+        }];
+        state.customSemesters = [];
+        state.customCourses = [];
+        state.courses = {
+          MATH140: { status: 'passed', grade: 'A' },
+          CMSC131: { status: 'passed', grade: 'B' }
+        };
+
+        bulkApply(['MATH 140', 'CMSC 131'], 'transfer');
+        const afterTransfer = {
+          mathCompact: state.courses.MATH140 || null,
+          mathDisplay: state.courses['MATH 140'] || null,
+          cmscCompact: state.courses.CMSC131 || null,
+          cmscDisplay: state.courses['CMSC 131'] || null,
+          mathVisible: getCourseState('MATH 140'),
+          cmscVisible: getCourseState('CMSC 131')
+        };
+
+        bulkApply(['MATH 140'], 'reset');
+        const afterMathReset = {
+          mathCompact: state.courses.MATH140 || null,
+          mathDisplay: state.courses['MATH 140'] || null,
+          mathVisible: getCourseState('MATH 140'),
+          cmscVisible: getCourseState('CMSC 131')
+        };
+
+        bulkApply(['CMSC 131'], 'in-progress');
+        const afterCmscProgress = {
+          cmscCompact: state.courses.CMSC131 || null,
+          cmscDisplay: state.courses['CMSC 131'] || null,
+          cmscVisible: getCourseState('CMSC 131')
+        };
+
+        return { afterTransfer, afterMathReset, afterCmscProgress };
+      } finally {
+        state = previousState;
+      }
+    })()
+  `, context));
+
+  assert(result.afterTransfer.mathCompact.status === 'transfer', 'bulk state: spaced MATH 140 should update existing no-space state key');
+  assert(result.afterTransfer.cmscCompact.status === 'transfer', 'bulk state: spaced CMSC 131 should update existing no-space state key');
+  assert(!result.afterTransfer.mathDisplay && !result.afterTransfer.cmscDisplay, 'bulk state: mark should not create display-key duplicates');
+  assert(result.afterTransfer.mathVisible.status === 'transfer' && result.afterTransfer.cmscVisible.status === 'transfer', 'bulk state: visible statuses should reflect normalized transfer marks');
+  assert(!result.afterMathReset.mathCompact && !result.afterMathReset.mathDisplay, 'bulk state: reset should remove the normalized state key without leaving a duplicate');
+  assert(result.afterMathReset.mathVisible.status === 'not-started', 'bulk state: reset should clear visible normalized status');
+  assert(result.afterMathReset.cmscVisible.status === 'transfer', 'bulk state: resetting one course should preserve sibling bulk status');
+  assert(result.afterCmscProgress.cmscCompact.status === 'in-progress', 'bulk state: later marks should keep using the normalized existing key');
+  assert(!result.afterCmscProgress.cmscDisplay, 'bulk state: later marks should not create a display-key duplicate');
+
+  return {
+    id: 'BULK-STATE-NORMALIZED',
+    transfer: `${result.afterTransfer.mathVisible.status}/${result.afterTransfer.cmscVisible.status}`,
+    reset: result.afterMathReset.mathVisible.status,
+    progress: result.afterCmscProgress.cmscVisible.status,
   };
 }
 
@@ -5423,6 +5494,7 @@ async function main() {
   }
   const prereq = testSyntheticPrerequisites(context);
   const prereqResolver = testPrereqResolverNormalizedState(context);
+  const bulkState = testBulkCourseStateNormalization(context);
   const diagnostics = await testAutoPlanDiagnostics(context);
   const allGroups = await testAllGeneratedRequirementGroups(context);
   const catalogYear = await testCatalogYearTargeting(context);
@@ -5465,6 +5537,7 @@ async function main() {
   console.table(rows);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
   console.log(`Prerequisite resolver fixture ${prereqResolver.id}: completed ${prereqResolver.completed}; planned ${prereqResolver.planned}; missing ${prereqResolver.missing}.`);
+  console.log(`Bulk state fixture ${bulkState.id}: transfer ${bulkState.transfer}; reset ${bulkState.reset}; progress ${bulkState.progress}.`);
   console.log(`Auto-plan diagnostics fixture ${diagnostics.id}: template missing ${diagnostics.templateMissing}; mixed ${diagnostics.mixedCoverage}.`);
   console.log(`All generated requirement groups fixture ${allGroups.id}: ${allGroups.majors} majors; ${allGroups.requirements} grouped requirements.`);
   console.log(`Catalog year fixture ${catalogYear.id}: target ${catalogYear.target}; source ${catalogYear.source}.`);
@@ -5503,7 +5576,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

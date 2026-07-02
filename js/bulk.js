@@ -43,12 +43,15 @@ function hideBulkMenu() {
 }
 
 function bulkApply(codes, action) {
+  state.courses = state.courses || {};
   codes.forEach(code => {
+    const key = typeof courseStateKey === 'function' ? courseStateKey(code) : code;
+    if (!key) return;
     if (action === 'reset') {
-      delete state.courses[code];
+      delete state.courses[key];
     } else {
-      const cur = state.courses[code] || {};
-      state.courses[code] = { ...cur, status: action };
+      const cur = typeof getCourseState === 'function' ? getCourseState(key) : (state.courses[key] || {});
+      state.courses[key] = { ...cur, status: action };
     }
   });
   saveState();
