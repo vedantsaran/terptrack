@@ -8120,3 +8120,60 @@ Verification:
   - It randomly verified `EDUC`, `SPAN`, `CHEM`, `ENFP`, `SOCY`, and `SCM` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-02 Pass 147
+
+Focus: bring full Schedule registration readiness into the Planner/Advisor surfaces so the next open term shows the same registration blockers before a student opens the Schedule tab.
+
+Planned changes:
+- Reuse the existing Schedule readiness engine from Timeline instead of duplicating separate readiness rules.
+- Add a next-term registration-readiness card to the planner checklist with gate summaries and an Open Schedule action.
+- Add a matching advisor question when the readiness engine finds blockers or review items.
+- Keep existing timing, prerequisite, seat-backup, catalog-year, and GenEd planner actions intact.
+- Bump the `timeline.js` cache key and extend focused fixtures for the new planner/advisor readiness handoff.
+- Verify focused fixtures, rendered browser workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `plannerRegistrationReadinessContext()` in `js/timeline.js`.
+  - It gathers next-term UMD-coded open courses, selected sections, saved schedule preferences, conflicts, warnings, and unscheduled courses.
+  - It calls `scheduleRegistrationReadiness()` directly so Timeline uses the same sections, credits, prereqs, coreqs, conflicts, seats, eligibility, timing, and preferences gates as Schedule.
+- Added planner helper copy for readiness bodies and gate summaries.
+  - Checklist cards now show labels like `Fix before registration` with the first recommended fix.
+  - Metadata summarizes flagged gates such as `Credits warn`, `Prereqs danger`, and `Seats warn`.
+- Added a registration-readiness checklist card for the next open planner term.
+  - The card keeps an `Open Schedule` action and appears alongside existing load, prerequisite, timing, seat-risk, catalog-year, and GenEd items.
+  - The checklist limit increased from 7 to 8 so the new readiness card does not crowd out existing high-value actions.
+- Added a registration-readiness advisor question.
+  - When readiness is not clear, the advisor questions now ask which registration issue should be resolved first before the registration appointment.
+  - The question carries the same gate summary and `Open Schedule` action.
+- Updated planner headings to include readiness as a source of checklist actions and advisor questions.
+- Bumped `index.html` from `js/timeline.js?v=19` to `js/timeline.js?v=20`.
+- Extended `scripts/test-generated-plans.js`.
+  - `PLANNER-CHECKLIST` now asserts the full registration-readiness status, readiness detail, and flagged gate summary.
+  - `PLANNER-QUESTIONS` now asserts the advisor readiness question and flagged gate summary.
+
+Verification:
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded planner checklist fixture with 8 items and readiness gate coverage.
+  - It passed the expanded planner advisor-questions fixture with 8 questions and readiness gate coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendations, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the new planner readiness coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass147-planner-readiness`.
+  - It randomly verified `EDUC`, `WMST`, `ENFP`, `MARKETING`, `JOUR`, and `KNES` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

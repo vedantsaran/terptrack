@@ -2072,6 +2072,7 @@ function testPlannerRegistrationChecklist(context) {
         titles: checklist.map(item => item.title),
         levels: checklist.map(item => item.level),
         bodies: checklist.map(item => item.body).join(' | '),
+        meta: checklist.map(item => item.meta).join(' | '),
         text,
         hasScheduleButton: /data-planner-schedule/.test(html),
         hasGenEdButton: /data-planner-gened/.test(html),
@@ -2082,6 +2083,9 @@ function testPlannerRegistrationChecklist(context) {
   assert(result.titles.some(title => /full-time|credit load|credits/i.test(title)), 'planner checklist: should include next-term credit-load status');
   assert(result.titles.some(title => /Confirm 2024-2025 catalog requirements/.test(title)), 'planner checklist: should include catalog-year confirmation when target differs from source');
   assert(result.titles.some(title => /prerequisite/i.test(title)), 'planner checklist: should include prerequisite order risk');
+  assert(result.titles.some(title => /registration readiness/i.test(title)), 'planner checklist: should include full registration-readiness status');
+  assert(/Fix before registration|Review before registration/i.test(result.bodies + result.text), 'planner checklist: readiness card should include schedule readiness detail');
+  assert(/Credits warn|Prereqs danger|Seats warn/i.test(result.meta + result.text), 'planner checklist: readiness card should summarize flagged readiness gates');
   assert(result.titles.some(title => /timing fit/i.test(title)), 'planner checklist: should include picked-section timing fit');
   assert(result.titles.some(title => /Humanities|DSHU/i.test(title)), 'planner checklist: should include GenEd gap action');
   assert(result.levels.includes('danger') || result.levels.includes('warn'), 'planner checklist: should flag registration risks');
@@ -2150,6 +2154,7 @@ function testPlannerAdvisorQuestions(context) {
         levels: questions.map(item => item.level),
         questions: questions.map(item => item.question).join(' | '),
         whys: questions.map(item => item.why).join(' | '),
+        meta: questions.map(item => item.meta).join(' | '),
         text,
         hasCopyButton: /data-planner-copy-questions/.test(html),
         hasScheduleButton: /data-planner-schedule/.test(html),
@@ -2161,6 +2166,9 @@ function testPlannerAdvisorQuestions(context) {
   assert(result.titles.some(title => /credit|load|full-time/i.test(title)), 'planner questions: should include credit-load advisor question');
   assert(result.titles.some(title => /Catalog-year confirmation/.test(title)), 'planner questions: should include catalog-year advisor question');
   assert(result.titles.some(title => /CMSC 216 prerequisite/i.test(title)), 'planner questions: should include prerequisite advisor question');
+  assert(result.titles.some(title => /registration readiness/i.test(title)), 'planner questions: should include full registration-readiness advisor question');
+  assert(/registration issue should I resolve first/i.test(result.questions), 'planner questions: readiness question should ask which registration blocker to resolve first');
+  assert(/Credits warn|Prereqs danger|Seats warn/i.test(result.meta + result.text), 'planner questions: readiness question should summarize flagged readiness gates');
   assert(/switch any Pass 41 Fall sections|timing|schedule/i.test(result.questions), 'planner questions: should include picked-section timing question');
   assert(/DSHU|Humanities|GenEd/i.test(result.questions + result.whys), 'planner questions: should include GenEd advisor question');
   assert(result.levels.includes('danger') || result.levels.includes('warn'), 'planner questions: should preserve risk levels');

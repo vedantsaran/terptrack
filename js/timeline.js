@@ -224,6 +224,53 @@ function plannerRegistrationSelectedItems(semId, items = []) {
     .filter(Boolean);
 }
 
+function plannerRegistrationReadinessContext(sem, items = []) {
+  if (!sem || typeof scheduleRegistrationReadiness !== 'function') return null;
+  const courseItems = (items || [])
+    .filter(item => !plannerIsComplete(item.course) && plannerIsUmdCode(item.course?.code));
+  const courses = courseItems.map(item => item.course);
+  const selectedItems = plannerRegistrationSelectedItems(sem.id, courseItems);
+  const prefs = typeof getSchedulePrefs === 'function' ? getSchedulePrefs(sem.id) : {};
+  const conflictResult = typeof detectScheduleConflicts === 'function'
+    ? detectScheduleConflicts(selectedItems)
+    : { conflicts: [] };
+  const conflicts = Array.isArray(conflictResult?.conflicts) ? conflictResult.conflicts : [];
+  const warnings = typeof selectedScheduleWarnings === 'function'
+    ? selectedScheduleWarnings(selectedItems, prefs)
+    : [];
+  const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course?.code || item.section?.course || '')));
+  const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled, sem.id);
+
+  return { courses, selectedItems, prefs, conflicts, warnings, unscheduled, readiness };
+}
+
+function plannerReadinessHasCourses(context) {
+  return !!(context && context.courses && context.courses.length && context.readiness);
+}
+
+function plannerReadinessGateSummary(readiness, limit = 4) {
+  const gates = (readiness?.gates || []).filter(gate => gate.level === 'danger' || gate.level === 'warn');
+  if (!gates.length) return 'All registration gates clear';
+  const shown = gates.slice(0, limit).map(gate => `${gate.label} ${gate.level}`);
+  const extra = gates.length > limit ? ` +${gates.length - limit} more` : '';
+  return `${shown.join(' · ')}${extra}`;
+}
+
+function plannerReadinessBody(readiness) {
+  if (!readiness) return '';
+  const firstFix = (readiness.fixes || [])[0];
+  return firstFix ? `${readiness.detail} ${firstFix}` : readiness.detail;
+}
+
+function plannerReadinessMeta(readiness) {
+  if (!readiness) return '';
+  const parts = [plannerReadinessGateSummary(readiness)];
+  if (readiness.dangerCount) parts.push(`${readiness.dangerCount} blocker${readiness.dangerCount === 1 ? '' : 's'}`);
+  if (readiness.warnCount) parts.push(`${readiness.warnCount} review`);
+  return parts.filter(Boolean).join(' · ');
+}
+
 function plannerSelectedSeatRiskItems(selectedItems) {
   if (typeof sectionSeatRisk !== 'function') return [];
   return (selectedItems || [])
@@ -315,7 +362,18 @@ function plannerRegistrationChecklist(advisor) {
     items.push(plannerChecklistItem('ok', 'Prerequisites look ready', `${counts.ready} next-term course${counts.ready === 1 ? '' : 's'} can be attempted based on the current plan.`, 'Still confirm official restrictions'));
   }
 
-  const selectedItems = plannerRegistrationSelectedItems(nextSem.id, semItems);
+  const readinessContext = plannerRegistrationReadinessContext(nextSem, semItems);
+  const selectedItems = readinessContext?.selectedItems || plannerRegistrationSelectedItems(nextSem.id, semItems);
+  if (plannerReadinessHasCourses(readinessContext)) {
+    const readiness = readinessContext.readiness;
+    items.push(plannerChecklistItem(
+      readiness.level,
+      `${nextSem.name} registration readiness: ${readiness.label}`,
+      plannerReadinessBody(readiness),
+      plannerReadinessMeta(readiness),
+      scheduleButton,
+    ));
+  }
   if (selectedItems.length && typeof scheduleTimingFit === 'function' && typeof detectScheduleConflicts === 'function') {
     const prefs = typeof getSchedulePrefs === 'function' ? getSchedulePrefs(nextSem.id) : {};
     const { conflicts } = detectScheduleConflicts(selectedItems);
@@ -359,9 +417,9 @@ function plannerRegistrationChecklist(advisor) {
   });
 
   if (!items.length) {
-    items.push(plannerChecklistItem('ok', 'Registration checklist is clear', 'Credit load, prerequisites, GenEds, and picked-section timing look ready from the current plan.', `${nextSem.name} reviewed`));
+    items.push(plannerChecklistItem('ok', 'Registration checklist is clear', 'Credit load, prerequisites, GenEds, registration readiness, and picked-section timing look ready from the current plan.', `${nextSem.name} reviewed`));
   }
-  return items.slice(0, 7);
+  return items.slice(0, 8);
 }
 
 function plannerChecklistCard(item, idx) {
@@ -397,7 +455,7 @@ function plannerChecklistHtml(items) {
       <div class="planner-checklist-head">
         <div>
           <h3>Registration Checklist</h3>
-          <span>${items.length} next actions from load, prerequisites, GenEds, and picked sections</span>
+          <span>${items.length} next actions from readiness, load, prerequisites, GenEds, and picked sections</span>
         </div>
         <button class="btn small" type="button" data-planner-copy-checklist>Select checklist</button>
       </div>
@@ -498,7 +556,20 @@ function plannerAdvisorQuestions(advisor, checklist = []) {
     ));
   }
 
-  const selectedItems = plannerRegistrationSelectedItems(nextSem.id, semItems);
+  const readinessContext = plannerRegistrationReadinessContext(nextSem, semItems);
+  const selectedItems = readinessContext?.selectedItems || plannerRegistrationSelectedItems(nextSem.id, semItems);
+  if (plannerReadinessHasCourses(readinessContext) && readinessContext.readiness.level !== 'ok') {
+    const readiness = readinessContext.readiness;
+    const gates = plannerReadinessGateSummary(readiness, 3).replace(/ · /g, ', ');
+    questions.push(plannerAdvisorQuestion(
+      readiness.level,
+      `${nextSem.name} registration readiness`,
+      `Which ${nextSem.name} registration issue should I resolve first before my appointment: ${gates}?`,
+      plannerReadinessBody(readiness),
+      plannerReadinessMeta(readiness),
+      scheduleButton,
+    ));
+  }
   if (selectedItems.length && typeof scheduleTimingFit === 'function' && typeof detectScheduleConflicts === 'function') {
     const prefs = typeof getSchedulePrefs === 'function' ? getSchedulePrefs(nextSem.id) : {};
     const { conflicts } = detectScheduleConflicts(selectedItems);
@@ -572,7 +643,7 @@ function plannerAdvisorQuestions(advisor, checklist = []) {
     ));
   }
 
-  return questions.slice(0, 7);
+  return questions.slice(0, 8);
 }
 
 function plannerAdvisorQuestionCard(item, idx) {
@@ -609,7 +680,7 @@ function plannerAdvisorQuestionsHtml(items) {
       <div class="planner-questions-head">
         <div>
           <h3>Advisor Questions</h3>
-          <span>${items.length} questions generated from checklist risks, requirements, and picked sections</span>
+          <span>${items.length} questions generated from readiness, checklist risks, requirements, and picked sections</span>
         </div>
         <button class="btn small" type="button" data-planner-copy-questions>Select questions</button>
       </div>
