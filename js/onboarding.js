@@ -755,6 +755,16 @@ function onboardCourseStateSnapshot(code) {
   return { key, had, value: had ? onboardClonePlain(courses[key]) : null };
 }
 
+function onboardEnsurePassedState(code) {
+  const key = typeof courseStateKey === 'function' ? courseStateKey(code) : String(code || '').trim();
+  if (!key) return null;
+  state.courses = state.courses || {};
+  if (!Object.prototype.hasOwnProperty.call(state.courses, key)) {
+    state.courses[key] = { status: 'passed', grade: '' };
+  }
+  return key;
+}
+
 function onboardRefreshPriorCreditSummary() {
   const summary = document.getElementById('ob-prior-summary');
   if (!summary) return;
@@ -1125,7 +1135,7 @@ async function finishOnboarding() {
     const semsToMark = sems.slice(0, (setup.currentYear - 1) * 2);
     semsToMark.forEach(sem => {
       (sem.courses || []).forEach(c => {
-        if (!state.courses[c.code]) state.courses[c.code] = { status: 'passed', grade: '' };
+        onboardEnsurePassedState(c.code);
       });
     });
   }

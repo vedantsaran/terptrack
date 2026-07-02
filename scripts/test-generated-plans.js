@@ -5034,6 +5034,26 @@ async function testOnboardingPersonalizedSetup(context) {
       const sems = getAllSemesters();
       const first = sems[0];
       const firstPrefs = state.schedulePrefs[first.id];
+      const savedSchedule = state.activeSchedule;
+      state.activeSchedule = [{
+        id: 'F26',
+        name: 'Fall 2026',
+        courses: [{
+          code: 'CMSC 131',
+          title: 'Object-Oriented Programming I',
+          cr: 4,
+          category: 'major-support',
+          kind: 'core'
+        }]
+      }];
+      state.courses = { CMSC131: { status: 'passed', grade: 'B' } };
+      const existingSeedKey = onboardEnsurePassedState('CMSC 131');
+      const existingSeedState = state.courses.CMSC131;
+      const hasDuplicateDisplayState = Object.prototype.hasOwnProperty.call(state.courses, 'CMSC 131');
+      state.courses = {};
+      const newSeedKey = onboardEnsurePassedState('CMSC 131');
+      const newSeedState = state.courses['CMSC 131'];
+      state.activeSchedule = savedSchedule;
       return {
         standardTerms,
         fastTerms,
@@ -5048,6 +5068,11 @@ async function testOnboardingPersonalizedSetup(context) {
         curatedFirstName: first.name,
         curatedEyebrow: state.settings.eyebrow,
         firstPrefs,
+        existingSeedKey,
+        hasDuplicateDisplayState,
+        existingSeedState,
+        newSeedKey,
+        newSeedState,
       };
     })()
   `, context));
@@ -5067,6 +5092,10 @@ async function testOnboardingPersonalizedSetup(context) {
   assert(result.firstPrefs.earliest === '10:00' && result.firstPrefs.latest === '17:00', 'onboarding: applied schedule prefs should persist on semesters');
   assert(result.firstPrefs.minBreak === 30 && result.firstPrefs.mode === 'compact', 'onboarding: applied schedule prefs should include mode and breaks');
   assert(result.firstPrefs.term === '202808', 'onboarding: applied schedule prefs should include inferred UMD term');
+  assert(result.existingSeedKey === 'CMSC131', 'onboarding: prior-year passed seeding should reuse existing normalized course-state keys');
+  assert(!result.hasDuplicateDisplayState, 'onboarding: prior-year passed seeding should not duplicate display-spaced course-state keys');
+  assert(result.existingSeedState.status === 'passed' && result.existingSeedState.grade === 'B', 'onboarding: prior-year passed seeding should preserve existing normalized state');
+  assert(result.newSeedKey === 'CMSC 131' && result.newSeedState.status === 'passed', 'onboarding: prior-year passed seeding should create display planned-row state when no normalized state exists');
 
   return {
     id: 'ONBOARDING-PERSONALIZED',

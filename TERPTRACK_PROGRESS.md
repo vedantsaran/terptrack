@@ -14,6 +14,7 @@ This file tracks each implementation pass toward making TerpTrack a polished, in
 - Individualization: onboarding, interests, preferred departments, career goals, prior credit, saved searches, recommendations, and smart class replacement should shape plans without hiding requirements.
 - Accounts and collaboration: local-first profiles, Vercel/Supabase readiness, friend invites, shared plans, shared free time, meeting planning, and clear setup checks.
 - Beautiful simple UI: mobile-first workflows, no accidental overflow, dense but readable operational screens, and consistent cache-verified assets.
+- Major-gap discipline: prioritize core correctness, real-course grounding, scheduling/account workflows, and release blockers over cosmetic or tiny isolated tweaks.
 - Release discipline: every pass updates this file, runs focused tests plus full release checks, runs random live PlanetTerp validation, keeps `README.md` untouched, commits, and pushes `main`.
 
 ## 2026-06-29 Pass 1
@@ -9842,5 +9843,63 @@ Verification:
   - It randomly verified `ANTH`, `CINE`, `SCM`, `GEOG`, `KNES`, and `MATH` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+## 2026-07-02 Pass 177
+
+Focus: make onboarding current-year setup seed earlier-year passed progress through normalized course-state keys, so transfer/current students do not get duplicate hidden progress rows when plans and saved state format course codes differently.
+
+Planned changes:
+- Inspect the remaining onboarding exact-key course progress write after the normalized state cleanup passes.
+- Reuse the shared normalized course-state resolver when onboarding marks earlier years passed.
+- Strengthen personalized onboarding coverage with a compact saved-state key and display-spaced planned course row.
+- Cache-bust the onboarding asset and assert the versioned script in rendered workflow checks.
+- Do a major-gap scan before shipping, per the updated goal, and avoid chasing cosmetic-only work.
+- Verify focused fixtures, rendered workflows, release checks, and an expanded random live PlanetTerp sample.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `js/onboarding.js`.
+  - Added `onboardEnsurePassedState(code)`, which resolves `courseStateKey(code)` before seeding passed state.
+  - `finishOnboarding()` now uses that helper when marking earlier years as passed for students starting after year 1.
+  - Existing normalized progress such as `CMSC131` is preserved instead of duplicating `CMSC 131`.
+- Strengthened `ONBOARDING-PERSONALIZED` in `scripts/test-generated-plans.js`.
+  - The fixture now seeds a display-spaced planned `CMSC 131` row with compact `CMSC131` progress.
+  - It verifies onboarding passed-state seeding reuses the compact key, does not create a display-key duplicate, preserves the existing grade, and creates display planned-row state only when no normalized state exists.
+- Bumped and asserted the onboarding asset:
+  - `index.html` now loads `js/onboarding.js?v=19`.
+  - `scripts/verify-rendered-workflows.js` now asserts `js/onboarding.js?v=19`.
+- Ran a major-gap scan before shipping.
+  - Confirmed there are no core `TODO`, `FIXME`, `not implemented`, `coming soon`, fake, or stub product surfaces in `js/`, `index.html`, or `scripts/`.
+  - Confirmed account/cloud setup remains covered by local-first Vercel/Supabase readiness, schema/RLS checks, friend invites, shared plans, and rendered mobile workflow tests.
+  - Added the long-term `Major-gap discipline` goal to keep future passes focused on core correctness and release blockers.
+
+Verification:
+- Ran `node --check js/onboarding.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the strengthened `ONBOARDING-PERSONALIZED` fixture.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule seat-risk, schedule ready backups, drag/drop section cleanup, custom delete cleanup, course edit cleanup, course code collision guard, recommendation move action, recommendation section pick, planner checklist, planner questions, planner term-section guards, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding prior credit, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, calendar omission auto-fill, clear-picks undo, calendar omission action, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the strengthened normalized onboarding seeding coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass177-onboarding-normalized-state`.
+  - It randomly verified `WMST`, `AREC`, `IS`, `BIOE`, `JOUR`, `PHIL`, `ARTH`, `SPAN`, `ENGL`, `ENFP`, `ANSC`, and `HIST` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `node scripts/verify-random-schedules.js --help`.
+  - It correctly failed with `Unknown argument: --help`; the verifier has explicit documented flags in code but no help mode.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
