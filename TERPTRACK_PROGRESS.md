@@ -8473,3 +8473,60 @@ Verification:
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 153
+
+Focus: make the Smart next picks `Move here` action reversible and section-safe, matching the undo discipline already added for `Pick best`.
+
+Planned changes:
+- Record a safe term-move undo payload when Smart next picks moves a ready course into the active registration term.
+- Clear stale selected sections from both source and target terms when the move occurs.
+- Restore the source section pick if the move is undone.
+- Block unsafe undo when target/source section state changes after the recommendation move.
+- Extend generated-plan regression coverage for Smart next pick move undo and stale section recovery.
+- Bump cache tags and verify focused fixtures, rendered workflows, release checks, and seeded random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Updated `recoMoveToSemester()` in `js/recommendations.js`.
+  - It now snapshots source and target selected-section state before moving.
+  - It clears stale source and target section picks after moving the course.
+  - It records a standard `term-move` undo payload with source/target term ids, names, source/target indexes, custom-course flag, and expected selected-section state.
+- Tightened recommendation selected-section cleanup.
+  - `recoClearSelectedSection()` now removes empty selected-section buckets after clearing a course pick.
+- Extended the `RECO-MOVE` generated-plan fixture.
+  - It verifies `Move here` records an undoable term-move payload.
+  - It verifies moving clears stale source and target section picks.
+  - It verifies target section edits block undo and expose Schedule plus target-term recovery.
+  - It verifies undo restores `CMSC 132` to the source term at the original index.
+  - It verifies undo restores the source pinned section pick, leaves the target term free of stale section picks, records a restore change, and marks the original undo payload applied.
+- Bumped cache tags:
+  - `js/recommendations.js?v=17`.
+  - Updated rendered workflow cache assertions for `js/recommendations.js?v=17`.
+
+Verification:
+- Ran `node --check js/recommendations.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the strengthened `RECO-MOVE` fixture with Smart next pick move undo coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendation section pick, planner checklist, planner questions, planner availability seat pressure, planner term-move undo, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with readiness map, blocker view, registration readiness, credit-load gate, prerequisite gate, corequisite gate, eligibility gate, final registration checklist, workload balance, registration appointment, seat freshness, waitlist strategy, calendar readiness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, waitlist backup warning, ready backup apply action, seat refresh action, export action, and no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the strengthened recommendation move undo fixture.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=6 --seed=pass153-reco-move-undo`.
+  - It randomly verified `FMSC`, `MUSC`, `ENEE`, `AREC`, `ENCH`, and `ENGL` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.

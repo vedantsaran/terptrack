@@ -394,7 +394,14 @@ function recoMoveToSemester(code, targetSemId) {
     recoOpenSchedule(targetSemId);
     return false;
   }
-  const { sourceName } = recoMovePlacementToTarget(placement, target, targetSemId);
+  const sourceSemId = placement.semId || '';
+  const fromSection = recoSelectedSectionSnapshot(sourceSemId, placement.course.code);
+  const beforeTargetSection = recoSelectedSectionSnapshot(targetSemId, placement.course.code);
+  const { sourceName, sourceIndex, targetIndex } = recoMovePlacementToTarget(placement, target, targetSemId);
+  if (sourceSemId) recoClearSelectedSection(sourceSemId, placement.course.code);
+  recoClearSelectedSection(targetSemId, placement.course.code);
+  const expectedFromSection = recoSelectedSectionSnapshot(sourceSemId, placement.course.code);
+  const expectedToSection = recoSelectedSectionSnapshot(targetSemId, placement.course.code);
   recordPlanChange({
     type: 'recommendation-move',
     source: 'Smart next picks',
@@ -405,6 +412,25 @@ function recoMoveToSemester(code, targetSemId) {
       'Course is prerequisite-ready for the current registration term.',
       'Open Schedule to choose a real posted section.',
     ],
+    undo: {
+      kind: 'term-move',
+      custom: !!placement.custom,
+      code: placement.course.code,
+      fromSemId: sourceSemId,
+      toSemId: targetSemId,
+      fromName: sourceName,
+      toName: target.name || targetSemId,
+      fromIndex: sourceIndex,
+      toIndex: targetIndex,
+      hadFromSelectedSection: fromSection.had,
+      fromSelectedSection: fromSection.value,
+      hadTargetSelectedSection: beforeTargetSection.had,
+      targetSelectedSection: beforeTargetSection.value,
+      hadExpectedFromSelectedSection: expectedFromSection.had,
+      expectedFromSelectedSection: expectedFromSection.value,
+      hadExpectedToSelectedSection: expectedToSection.had,
+      expectedToSelectedSection: expectedToSection.value,
+    },
   }, { save: false });
   saveState();
   render();
@@ -422,10 +448,12 @@ function recoClearSelectedSection(semId, code) {
   if (!semId || !code) return;
   if (typeof setSelectedSection === 'function') {
     setSelectedSection(semId, code, null);
-    return;
+  } else {
+    const bucket = state.selectedSections && state.selectedSections[semId];
+    if (bucket) delete bucket[normalizeCode(code)];
   }
   const bucket = state.selectedSections && state.selectedSections[semId];
-  if (bucket) delete bucket[normalizeCode(code)];
+  if (bucket && !Object.keys(bucket).length) delete state.selectedSections[semId];
 }
 
 function recoSectionLabel(section) {

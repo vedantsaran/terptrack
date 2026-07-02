@@ -1776,6 +1776,27 @@ function testRecommendationMoveAction(context) {
       state.customCourses = [];
       state.courses = { 'CMSC 131': { status: 'passed', grade: 'A' } };
       state.schedulePrefs = { PASS100F: { term: '202608' } };
+      state.selectedSections = {
+        PASS100S: {
+          CMSC132: {
+            course: 'CMSC132',
+            section_id: 'CMSC132-0999',
+            semester: '202609',
+            number: '0999',
+            meetings: [],
+            pinned: true,
+          }
+        },
+        PASS100F: {
+          CMSC132: {
+            course: 'CMSC132',
+            section_id: 'CMSC132-STALE',
+            semester: '202608',
+            number: 'STALE',
+            meetings: [],
+          }
+        }
+      };
       state.recentChanges = [];
       const ctx = { semId: 'PASS100F', term: '202608', termLabel: 'Fall 2026' };
       const candidate = recoBaseCandidates().find(item => normalizeCode(item.course.code) === 'CMSC132');
@@ -1783,16 +1804,56 @@ function testRecommendationMoveAction(context) {
       const moved = recoMoveToSemester('CMSC 132', 'PASS100F');
       const freshCandidate = recoBaseCandidates().find(item => normalizeCode(item.course.code) === 'CMSC132');
       const htmlAfter = freshCandidate ? recoRenderPick(freshCandidate, 0, ctx) : '';
+      const change = state.recentChanges[0] || null;
+      const canUndoBefore = plannerChangeCanUndo(change);
+      const afterMoveFallCodes = state.activeSchedule[0].courses.map(course => course.code);
+      const afterMoveSpringCodes = state.activeSchedule[1].courses.map(course => course.code);
+      const afterMoveSourceSelected = (state.selectedSections.PASS100S || {}).CMSC132 || null;
+      const afterMoveTargetSelected = (state.selectedSections.PASS100F || {}).CMSC132 || null;
+      const afterMoveSelectedSections = JSON.parse(JSON.stringify(state.selectedSections || {}));
+      state.selectedSections = {
+        PASS100F: {
+          CMSC132: {
+            course: 'CMSC132',
+            section_id: 'CMSC132-NEW',
+            semester: '202608',
+            number: 'NEW',
+            meetings: [],
+          }
+        }
+      };
+      const staleCanUndo = plannerChangeCanUndo(change);
+      const staleScheduleTarget = plannerChangeScheduleTarget(change);
+      const staleTermTarget = plannerChangeTermTarget(change);
+      state.selectedSections = JSON.parse(JSON.stringify(afterMoveSelectedSections));
+      const undoApplied = undoPlanChange(change.id);
+      const undoChange = state.recentChanges[0] || null;
+      const originalChangeAfterUndo = state.recentChanges.find(item => item.id === change.id) || null;
+      const afterUndoSourceSelected = (state.selectedSections.PASS100S || {}).CMSC132 || null;
+      const afterUndoTargetSelected = (state.selectedSections.PASS100F || {}).CMSC132 || null;
       render = originalRender;
       return {
         candidateCode: candidate?.course?.code || '',
         candidateTerm: candidate?.course?.semId || '',
         moved,
-        fallCodes: state.activeSchedule[0].courses.map(course => course.code),
-        springCodes: state.activeSchedule[1].courses.map(course => course.code),
+        fallCodes: afterMoveFallCodes,
+        springCodes: afterMoveSpringCodes,
         htmlBefore,
         htmlAfter,
-        change: state.recentChanges[0] || null,
+        afterMoveSourceSelected,
+        afterMoveTargetSelected,
+        change,
+        canUndoBefore,
+        staleCanUndo,
+        staleScheduleTarget,
+        staleTermTarget,
+        undoApplied,
+        afterUndoFallCodes: state.activeSchedule[0].courses.map(course => course.code),
+        afterUndoSpringCodes: state.activeSchedule[1].courses.map(course => course.code),
+        afterUndoSourceSelected,
+        afterUndoTargetSelected,
+        undoChange,
+        originalChangeAfterUndo,
         renderCalls,
       };
     })()
@@ -1804,8 +1865,17 @@ function testRecommendationMoveAction(context) {
   assert(result.fallCodes.includes('CMSC 132') && !result.springCodes.includes('CMSC 132'), 'recommendation move: course should move from future term to current term');
   assert(/In this term/.test(result.htmlAfter), 'recommendation move: moved pick should render as already in current term');
   assert(result.change?.type === 'recommendation-move' && /Moved CMSC 132/.test(result.change.title || ''), 'recommendation move: should record a recent plan change');
+  assert(result.change?.undo?.kind === 'term-move' && result.canUndoBefore === true, 'recommendation move: should record an undoable term-move payload');
   assert((result.change?.highlights || []).some(item => /posted section/i.test(item)), 'recommendation move: change should nudge student to choose a real section');
-  assert(result.renderCalls === 1, 'recommendation move: should rerender the app once after moving');
+  assert(!result.afterMoveSourceSelected && !result.afterMoveTargetSelected, 'recommendation move: moving here should clear stale source and target section picks');
+  assert(result.staleCanUndo === false && result.staleScheduleTarget?.semId === 'PASS100F' && result.staleScheduleTarget?.code === 'CMSC 132', 'recommendation move: edited target section should block undo and offer Schedule recovery');
+  assert(result.staleTermTarget?.semId === 'PASS100F' && result.staleTermTarget?.label === 'Show target term', 'recommendation move: stale target section should label the target Plan recovery');
+  assert(result.undoApplied === true, 'recommendation move: undo should apply when move state is unchanged');
+  assert(!result.afterUndoFallCodes.includes('CMSC 132') && result.afterUndoSpringCodes[0] === 'CMSC 132', 'recommendation move: undo should restore the course to its source term and original index');
+  assert(result.afterUndoSourceSelected?.section_id === 'CMSC132-0999' && result.afterUndoSourceSelected?.pinned === true, 'recommendation move: undo should restore the source pinned section');
+  assert(!result.afterUndoTargetSelected, 'recommendation move: undo should leave target term free of stale course picks');
+  assert(result.undoChange?.type === 'term-move-undo' && result.originalChangeAfterUndo?.undo?.appliedAt, 'recommendation move: undo should record a restore change and mark the original applied');
+  assert(result.renderCalls === 2, 'recommendation move: should rerender after moving and undoing');
 
   return {
     id: 'RECO-MOVE',
