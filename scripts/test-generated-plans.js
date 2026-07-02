@@ -374,6 +374,7 @@ function testAccountAndShareState(context) {
       profilePrefs: { interests: ['business'], careerGoal: 'finance analytics', genEdDepts: ['ECON'] },
       settings: { theme: 'light' }
     }, { confirm: false, sourceLabel: 'friend plan' });
+    const importedSelected = getSelectedSection('F26', 'MATH 140');
     const advisorImportHash = scheduleAdvisorPlanImportHash();
     const advisorImportUrl = scheduleAdvisorPlanImportUrl();
     ({
@@ -387,7 +388,9 @@ function testAccountAndShareState(context) {
       inviteStatus: prefs.friendInvites[0].status,
       inviteUserId: prefs.friendInvites[0].userId,
       stateHasMath: Boolean(state.courses['MATH 140']),
-      selectedSection: state.selectedSections['MATH 140'],
+      selectedSection: importedSelected,
+      selectedSectionSemIds: Object.keys(state.selectedSections || {}),
+      legacySelectedSection: state.selectedSections['MATH 140'] || null,
       profileInterest: state.profilePrefs.interests[0],
       roadmapFilter: state.roadmapPrefs.filter,
       browseSearchCount: state.browseSavedSearches.length,
@@ -426,7 +429,8 @@ function testAccountAndShareState(context) {
   assert(result.inviteUserId === 'user-pal-1', 'account prefs: invite user id should persist');
   assert(result.applied, 'shared plan: friend plan payload should apply');
   assert(result.stateHasMath, 'shared plan: course state should be replaced');
-  assert(result.selectedSection === '0101', 'shared plan: selected section should persist');
+  assert(result.selectedSection?.number === '0101' && result.selectedSection?.section_id === 'MATH140-0101', 'shared plan: legacy selected section should normalize into the matching semester');
+  assert(result.selectedSectionSemIds.includes('F26') && !result.legacySelectedSection, 'shared plan: legacy flat section picks should not remain orphaned at top level');
   assert(result.profileInterest === 'business', 'shared plan: profile prefs should normalize');
   assert(result.roadmapFilter === 'gened', 'shared plan: roadmap prefs should persist');
   assert(result.browseSearchCount === 1, 'shared plan: invalid saved browse searches should be removed');

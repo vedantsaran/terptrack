@@ -62,6 +62,117 @@ function _b64UrlToBytes(b64) {
   return out;
 }
 
+function shareNormalizeCode(code) {
+  return typeof normalizeCode === 'function'
+    ? normalizeCode(code)
+    : String(code || '').toUpperCase().replace(/\s+/g, '');
+}
+
+function shareDisplayCode(code) {
+  return typeof displayCode === 'function' ? displayCode(code) : String(code || '').trim();
+}
+
+function shareCloneValue(value) {
+  if (!value || typeof value !== 'object') return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return { ...value };
+  }
+}
+
+function shareSelectedSectionLike(value) {
+  return typeof value === 'string'
+    || !!(value && typeof value === 'object' && (
+      value.section_id
+      || value.number
+      || value.course
+      || Array.isArray(value.meetings)
+    ));
+}
+
+function shareNormalizeSectionValue(rawSection, code) {
+  const norm = shareNormalizeCode(code);
+  const course = shareDisplayCode(code || norm);
+  if (typeof rawSection === 'string') {
+    const number = rawSection.trim();
+    return {
+      course,
+      section_id: number && !number.includes('-') ? `${norm}-${number}` : number,
+      number,
+      meetings: [],
+    };
+  }
+  const section = shareCloneValue(rawSection) || {};
+  const number = String(section.number || section.section || section.section_number || '').trim();
+  return {
+    ...section,
+    course: shareDisplayCode(section.course || course || norm),
+    section_id: section.section_id || (number ? `${norm}-${number}` : ''),
+    number: section.number || number,
+    meetings: Array.isArray(section.meetings) ? section.meetings : [],
+  };
+}
+
+function sharePlanSemesters(planState = {}) {
+  return [
+    ...(Array.isArray(planState.activeSchedule) ? planState.activeSchedule : []),
+    ...(Array.isArray(planState.customSemesters) ? planState.customSemesters : []),
+  ].filter(sem => sem && sem.id && Array.isArray(sem.courses));
+}
+
+function shareSemesterTerm(sem, planState = {}) {
+  return String(
+    (planState.schedulePrefs || {})[sem.id]?.term
+    || sem.term
+    || sem.semester
+    || ''
+  ).trim();
+}
+
+function shareSemIdForSelectedCourse(code, section, planState = {}) {
+  const norm = shareNormalizeCode(code || section?.course || '');
+  if (!norm) return '';
+  const semesters = sharePlanSemesters(planState);
+  const matches = semesters.filter(sem => (sem.courses || []).some(course => shareNormalizeCode(course.code) === norm));
+  if (!matches.length) return '';
+  const sectionTerm = String(section?.semester || '').trim();
+  if (sectionTerm) {
+    const termMatch = matches.find(sem => shareSemesterTerm(sem, planState) === sectionTerm);
+    if (termMatch) return termMatch.id;
+  }
+  return matches[0].id;
+}
+
+function shareAddSelectedSection(bucket, semId, code, section) {
+  const norm = shareNormalizeCode(code || section?.course || '');
+  if (!semId || !norm || !section) return false;
+  bucket[semId] = bucket[semId] || {};
+  bucket[semId][norm] = shareNormalizeSectionValue(section, code || section.course || norm);
+  return true;
+}
+
+function normalizeSharedSelectedSections(selectedSections, planState = {}) {
+  const source = selectedSections && typeof selectedSections === 'object' ? selectedSections : {};
+  const normalized = {};
+  const unplaced = {};
+  Object.entries(source).forEach(([semOrCode, value]) => {
+    if (!value) return;
+    if (shareSelectedSectionLike(value)) {
+      const section = shareNormalizeSectionValue(value, semOrCode);
+      const semId = shareSemIdForSelectedCourse(semOrCode, section, planState);
+      if (!shareAddSelectedSection(normalized, semId, semOrCode, section)) unplaced[semOrCode] = value;
+      return;
+    }
+    Object.entries(value || {}).forEach(([code, rawSection]) => {
+      if (!rawSection) return;
+      const section = shareNormalizeSectionValue(rawSection, code);
+      shareAddSelectedSection(normalized, semOrCode, code, section);
+    });
+  });
+  return Object.keys(unplaced).length ? { ...normalized, ...unplaced } : normalized;
+}
+
 async function generateShareUrl() {
   const json = JSON.stringify(_planSharePayload());
   const encoded = await _gzipBase64(json);
@@ -95,11 +206,12 @@ function applySharedPlanData(data, options = {}) {
     ? `Open this ${label}? It will replace your current plan (your local data will be overwritten).`
     : `Open this ${label}?`;
   if (options.confirm !== false && !confirm(msg)) return false;
+  const nextState = { ...state, ...payload };
   state = {
     ...state,
     ...payload,
     settings: typeof normalizeSettings === 'function' ? normalizeSettings({ ...DEFAULT_SETTINGS, ...(payload.settings || {}) }) : { ...DEFAULT_SETTINGS, ...(payload.settings || {}) },
-    selectedSections: payload.selectedSections || {},
+    selectedSections: normalizeSharedSelectedSections(payload.selectedSections || {}, nextState),
     schedulePrefs: payload.schedulePrefs || {},
     scheduleAdvisorFilter: ['all', 'remaining', 'gened', 'blockers'].includes(payload.scheduleAdvisorFilter) ? payload.scheduleAdvisorFilter : 'all',
     scheduleOutputPreset: ['personal', 'advisor', 'registrar', 'custom'].includes(payload.scheduleOutputPreset) ? payload.scheduleOutputPreset : 'personal',

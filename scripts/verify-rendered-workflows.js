@@ -181,6 +181,7 @@ async function openFreshApp(page, url, opts, suffix) {
   assert(snapshot.scripts.includes('js/recommendations.js?v=17'), 'workflow app did not load js/recommendations.js?v=17');
   assert(snapshot.scripts.includes('js/onboarding.js?v=16'), 'workflow app did not load js/onboarding.js?v=16');
   assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
+  assert(snapshot.scripts.includes('js/share.js?v=13'), 'workflow app did not load js/share.js?v=13');
   assert(snapshot.scripts.includes('js/account.js?v=14'), 'workflow app did not load js/account.js?v=14');
   return snapshot;
 }
