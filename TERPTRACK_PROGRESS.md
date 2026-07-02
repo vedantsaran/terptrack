@@ -9903,3 +9903,84 @@ Verification:
   - It correctly failed with `Unknown argument: --help`; the verifier has explicit documented flags in code but no help mode.
 - Ran `git diff --check`.
   - It reported no whitespace errors.
+
+## 2026-07-02 Pass 178
+
+Focus: make live-backed Browse directly attack generated-plan placeholder debt, and close the accepted-friend revocation gap in shared-plan privacy.
+
+Planned changes:
+- Use the pass-start gap scan to target real course-completion and account-collaboration issues instead of cosmetic work.
+- Add a Browse replacement queue that maps current live-backed catalog results to unresolved GenEd, major-elective, language, support, and free-elective placeholders already in the student's plan.
+- Give each matched slot direct replacement actions plus a targeted saved search for unmatched or alternate slots.
+- Make accepted friends removable by either participant in Supabase RLS and clarify the local UI/status copy.
+- Cover the new behavior in generated fixtures, rendered mobile workflows, release gates, and random live PlanetTerp validation.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added `browseReplacementQueue`, slot search config, slot search launch, and replacement queue HTML in `js/browse.js`.
+  - Browse now shows a plan-level `Replacement queue` between highlights and full results whenever the current plan has unresolved placeholder slots.
+  - Current live-backed results are ranked against every unresolved slot, excluding courses already planned elsewhere.
+  - Matched candidates can replace the slot directly; every row also exposes `Search slot` to open a profile-aware targeted Browse search.
+- Added responsive queue styling in `styles.css`.
+  - Desktop shows slot, candidate, and action columns.
+  - Mobile collapses each replacement row to one readable column with full-width actions and no overflow.
+- Bumped cache-checked assets:
+  - `index.html` now loads `styles.css?v=114`.
+  - `index.html` now loads `js/browse.js?v=15`.
+  - Rendered workflow and rendered generated-plan verifiers now assert the new CSS/Browse versions.
+- Updated accepted-friend removal in `js/account.js`.
+  - Accepted rows now label the destructive action `Remove friend`.
+  - Successful accepted-friend removal now reports `Friend removed. Shared-plan visibility revoked.`
+  - Pending outgoing and incoming rows keep invite/request-specific labels.
+- Updated `supabase/schema.sql`.
+  - Replaced requester-only friend request delete policy with `friend_requests_delete_participant`.
+  - The delete policy now permits the requester, linked recipient, or matching recipient email to revoke the row.
+  - Shared-plan visibility remains gated to accepted friend rows.
+- Strengthened `scripts/test-generated-plans.js`.
+  - Added `BROWSE-REPLACEMENT-QUEUE`, covering four unresolved slots matched by current rows, planned-course exclusion, generated HTML, and targeted saved-search launch.
+  - Expanded `ACCOUNT-CLOUD-SETUP` to validate the participant delete policy, accepted-friend button copy, cloud row deletion, local removal, revocation status, and rerender behavior.
+- Strengthened `scripts/verify-rendered-workflows.js`.
+  - Mobile Browse replacement now seeds unresolved plan placeholders and verifies the replacement queue renders alongside the focused replacement banner.
+  - Mobile Account setup now fakes a signed-in recipient, clicks `Remove friend`, verifies the cloud friend request row delete, and confirms the accepted friend is removed while local invites and meeting planner behavior remain intact.
+
+Major-gap notes:
+- Live-course grounding remains the largest next correctness target: generated plans are credit-complete, but many majors still contain placeholder credits that need automatic live-course resolution.
+- Scheduling still needs a bounded multi-course section solver instead of greedy auto-pick for hard conflict/preference cases.
+- Account privacy is improved this pass: accepted friendship rows can now be revoked by either side at the RLS and UI levels.
+
+Verification:
+- Ran `node --check js/browse.js`.
+- Ran `node --check js/account.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed `BROWSE-REPLACEMENT-QUEUE` with 4/4 unresolved slots matched.
+  - It passed `ACCOUNT-CLOUD-SETUP` with accepted-friend cloud deletion leaving 0 friend rows.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with the replacement queue.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - First run exposed a stale `styles.css?v=113` assertion in `scripts/verify-rendered-generated-plans.js`.
+  - After updating that verifier, the rerun passed.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including Browse replacement queue and accepted-friend revocation coverage.
+  - It passed 12 rendered generated-plan viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass178-replacement-queue-real-slots`.
+  - It randomly verified `SPAN`, `STAT`, `SOCY`, `SCM`, `THET`, `AMST`, `AAST`, `LING`, `CHEM`, `NEUR`, `MUSC`, and `ARTT` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Build the automatic placeholder resolver that can convert the replacement queue into a guided or bulk "fill my remaining slots" flow with live catalog evidence.
+- Replace greedy schedule auto-pick with a bounded solver for multi-course section combinations, conflicts, breaks, and preference tradeoffs.
+- Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.

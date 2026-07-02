@@ -120,6 +120,7 @@ drop policy if exists "friend_requests_insert_own" on public.friend_requests;
 drop policy if exists "friend_requests_update_pending_by_requester" on public.friend_requests;
 drop policy if exists "friend_requests_update_by_recipient" on public.friend_requests;
 drop policy if exists "friend_requests_delete_requester" on public.friend_requests;
+drop policy if exists "friend_requests_delete_participant" on public.friend_requests;
 
 create policy "friend_requests_select_visible"
   on public.friend_requests for select
@@ -157,9 +158,13 @@ create policy "friend_requests_update_by_recipient"
     and status in ('accepted', 'declined')
   );
 
-create policy "friend_requests_delete_requester"
+create policy "friend_requests_delete_participant"
   on public.friend_requests for delete
-  using (auth.uid() = requester_id);
+  using (
+    auth.uid() = requester_id
+    or auth.uid() = recipient_id
+    or lower(recipient_email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
 
 drop policy if exists "shared_plans_select_visible" on public.shared_plans;
 drop policy if exists "shared_plans_insert_own" on public.shared_plans;

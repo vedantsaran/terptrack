@@ -948,6 +948,144 @@ function browseSlotCandidatesFor(item, limit = 5) {
     .slice(0, limit);
 }
 
+function browseReplacementQueueCandidates(items, slot, limit = 3) {
+  const planned = new Set((typeof flatCourses === 'function' ? flatCourses() : [])
+    .filter(course => browseIsCatalogCourseCode(course.code))
+    .map(course => normalizeCode(course.code)));
+  return (items || [])
+    .map(item => {
+      if (!item || item.inPlan || planned.has(item.norm) || !browseIsCatalogCourseCode(item.code || item.row?.course_id || '')) return null;
+      const match = browseSlotMatchDetail(item, slot);
+      if (!match) return null;
+      const availability = item.availability || {};
+      const sectionCount = Number(availability.sectionCount) || 0;
+      const openSeats = Number(availability.openSeats) || 0;
+      return {
+        item,
+        ...match,
+        totalScore: Math.round((Number(item.score) || 0) + match.score + sectionCount * 12 + Math.min(80, openSeats * 2)),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.totalScore - a.totalScore || String(a.item.code || '').localeCompare(String(b.item.code || '')))
+    .slice(0, limit);
+}
+
+function browseReplacementQueue(items, opts = {}) {
+  const slots = browsePlaceholderSlots();
+  const candidateLimit = Number(opts.candidateLimit) || 3;
+  const rows = slots.map(slot => ({
+    slot,
+    candidates: browseReplacementQueueCandidates(items, slot, candidateLimit),
+  }));
+  return {
+    total: rows.length,
+    matched: rows.filter(row => row.candidates.length).length,
+    rows: rows
+      .sort((a, b) => {
+        if (!!a.candidates.length !== !!b.candidates.length) return b.candidates.length - a.candidates.length;
+        return String(a.slot.semName || '').localeCompare(String(b.slot.semName || '')) || a.slot.index - b.slot.index;
+      })
+      .slice(0, Number(opts.limit) || 8),
+  };
+}
+
+function browseSlotRequirementText(slot) {
+  const parts = [
+    browseSlotKindLabel(slot.kind),
+    (slot.tags || []).join(' + '),
+    slot.requiredDept ? `${slot.requiredDept} department` : '',
+    slot.requiredLevel ? `${slot.requiredLevel}+ level` : '',
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
+
+function browseSlotSearchConfig(slot) {
+  let profileActive = false;
+  if (typeof getProfilePrefs === 'function') {
+    const prefs = getProfilePrefs();
+    profileActive = !!((prefs.interests || []).length || prefs.careerGoal || (prefs.genEdDepts || []).length);
+  }
+  const primaryTag = (slot.tags || [])[0] || '';
+  let dept = slot.requiredDept || '';
+  let genEd = primaryTag;
+  let search = '';
+  if (!dept && primaryTag) dept = profileActive ? BROWSE_PROFILE_DEPTS_VALUE : BROWSE_ALL_DEPTS_VALUE;
+  if (!dept && slot.kind === 'free-elective') {
+    dept = profileActive ? BROWSE_PROFILE_DEPTS_VALUE : BROWSE_ALL_DEPTS_VALUE;
+    genEd = profileActive ? '' : BROWSE_ALL_GENEDS_VALUE;
+  }
+  if (!dept && slot.kind === 'language') {
+    dept = profileActive ? BROWSE_PROFILE_DEPTS_VALUE : '';
+    search = '101';
+  }
+  if (!dept && !genEd && !search) dept = profileActive ? BROWSE_PROFILE_DEPTS_VALUE : BROWSE_ALL_DEPTS_VALUE;
+  return {
+    dept,
+    genEd,
+    search,
+    label: `Replace ${slot.course.code || 'placeholder'} · ${browseSlotRequirementText(slot) || 'course search'}`,
+  };
+}
+
+function browseOpenSlotSearch(slotKey) {
+  const slot = browsePlaceholderSlots().find(item => item.key === slotKey);
+  if (!slot || typeof browseOpenSearch !== 'function') {
+    toastError('That placeholder slot is no longer available.');
+    return;
+  }
+  browseOpenSearch({ ...browseSlotSearchConfig(slot), save: true });
+}
+
+function browseReplacementQueueHtml(items, nextTerm = browseNextTermContext()) {
+  const queue = browseReplacementQueue(items);
+  if (!queue.total) return '';
+  const rows = queue.rows || [];
+  if (!rows.length) return '';
+  return `
+    <section class="browse-replacement-queue">
+      <div class="browse-replacement-queue-head">
+        <div>
+          <strong>Replacement queue</strong>
+          <span>${browseEscape(queue.matched)} of ${browseEscape(queue.total)} unresolved slot${queue.total === 1 ? '' : 's'} matched by this search${nextTerm.termLabel ? ` · ${browseEscape(nextTerm.termLabel)}` : ''}</span>
+        </div>
+        <b>${browseEscape(queue.total - queue.matched)} left</b>
+      </div>
+      <div class="browse-replacement-queue-list">
+        ${rows.map(row => {
+          const slot = row.slot;
+          const candidates = row.candidates || [];
+          return `
+            <div class="browse-replacement-row ${candidates.length ? 'matched' : 'unmatched'}">
+              <div class="browse-replacement-slot">
+                <strong>${browseEscape(slot.course.code || 'Placeholder')}</strong>
+                <span>${browseEscape([slot.semName, browseSlotRequirementText(slot), slot.course.title || ''].filter(Boolean).join(' · '))}</span>
+              </div>
+              <div class="browse-replacement-candidates">
+                ${candidates.length ? candidates.map(candidate => {
+                  const item = candidate.item;
+                  const row = item.row || {};
+                  const availability = item.availability || {};
+                  const sectionText = availability.sectionCount
+                    ? `${availability.sectionCount} posted${availability.openSeats ? ` · ${availability.openSeats} open` : ''}`
+                    : '';
+                  return `
+                    <button class="browse-replacement-candidate" type="button" onclick="browseReplaceIntoSlot('${browseEscape(normalizeCode(item.code || row.course_id || ''))}', '${browseEscape(slot.key)}')">
+                      <strong>${browseEscape(displayCode(item.code || row.course_id || ''))}</strong>
+                      <span>${browseEscape([row.name || '', candidate.label, sectionText].filter(Boolean).join(' · '))}</span>
+                    </button>
+                  `;
+                }).join('') : '<span class="browse-replacement-empty">No match in current results</span>'}
+              </div>
+              <button class="btn small" type="button" onclick="browseOpenSlotSearch('${browseEscape(slot.key)}')">Search slot</button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
 function browseToggleSlotPicker(code, key = '') {
   const norm = normalizeCode(code);
   if (!norm) return;
@@ -1467,6 +1605,7 @@ async function renderBrowse() {
   grid.innerHTML = `
     ${browseReplacementBannerHtml()}
     ${browseHighlightsHtml(sections, nextTerm)}
+    ${browseReplacementQueueHtml(decoratedRows, nextTerm)}
     <div class="browse-results-head">
       <strong>Full results</strong>
       <span>${browseEscape(decoratedRows.length)} match${decoratedRows.length === 1 ? '' : 'es'} shown by plan fit</span>

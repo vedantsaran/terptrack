@@ -176,14 +176,14 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=113'), 'workflow app did not load styles.css?v=113');
+  assert(snapshot.styles.includes('styles.css?v=114'), 'workflow app did not load styles.css?v=114');
   assert(snapshot.scripts.includes('js/schedule.js?v=70'), 'workflow app did not load js/schedule.js?v=70');
   assert(snapshot.scripts.includes('js/timeline.js?v=27'), 'workflow app did not load js/timeline.js?v=27');
   assert(snapshot.scripts.includes('js/io.js?v=13'), 'workflow app did not load js/io.js?v=13');
   assert(snapshot.scripts.includes('js/recommendations.js?v=18'), 'workflow app did not load js/recommendations.js?v=18');
   assert(snapshot.scripts.includes('js/courses.js?v=5'), 'workflow app did not load js/courses.js?v=5');
   assert(snapshot.scripts.includes('js/onboarding.js?v=19'), 'workflow app did not load js/onboarding.js?v=19');
-  assert(snapshot.scripts.includes('js/browse.js?v=14'), 'workflow app did not load js/browse.js?v=14');
+  assert(snapshot.scripts.includes('js/browse.js?v=15'), 'workflow app did not load js/browse.js?v=15');
   assert(snapshot.scripts.includes('js/dnd.js?v=2'), 'workflow app did not load js/dnd.js?v=2');
   assert(snapshot.scripts.includes('js/state.js?v=23'), 'workflow app did not load js/state.js?v=23');
   assert(snapshot.scripts.includes('js/render.js?v=3'), 'workflow app did not load js/render.js?v=3');
@@ -250,6 +250,28 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
       careerGoal: 'public policy analytics',
       genEdDepts: ['GVPT', 'INST'],
     };
+    state.activeSchedule = [{
+      id: 'F28',
+      name: 'Fall 2028',
+      year: 'Year 3',
+      courses: [{
+        code: 'GenEd HS-1',
+        title: 'History/Social Sciences #1',
+        cr: 3,
+        semId: 'F28',
+        category: 'gened-dshs',
+        categories: ['gened-dshs'],
+        note: 'DSHS #1',
+      }, {
+        code: 'Free Elective #1',
+        title: 'Free Elective 1',
+        cr: 3,
+        kind: 'tech',
+        category: 'elective',
+        note: 'Profile elective placeholder',
+      }],
+    }];
+    state.customCourses = [];
     if (document.querySelector('#onboard-modal.open')) document.querySelector('#onboard-modal.open').classList.remove('open');
     browseHydrateAvailability = async () => {};
     placeholderSearchTarget = {
@@ -284,7 +306,9 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   await page.waitForFunction(() => {
     const text = document.querySelector('#br-grid')?.textContent?.replace(/\s+/g, ' ') || '';
     return text.includes('Replacing GenEd HS-1')
+      && text.includes('Replacement queue')
       && text.includes('GVPT 200')
+      && text.includes('GenEd HS-1')
       && text.includes('Replace GenEd HS-1')
       && text.includes('Preview')
       && text.includes('Why');
@@ -292,6 +316,7 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.browseText.includes('Full results'), 'browse: missing full results section');
   assert(snapshot.browseText.includes('Fills gap'), 'browse: missing GenEd gap evidence');
+  assert(snapshot.browseText.includes('Replacement queue'), 'browse: missing replacement queue');
   assertNoOverflow('browse replacement mobile', snapshot);
 
   await page.evaluate(async () => {
@@ -336,7 +361,7 @@ async function verifyBrowseReplacementMobile(page, url, opts) {
   assert(allDeptResult.text.includes('HIST 210'), 'browse all departments: broad GenEd search should render global results');
   const allDeptSnapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('browse all departments mobile', allDeptSnapshot);
-  console.log('Browse replacement [mobile]: rendered replacement banner, result card, all-department GenEd search, actions, and no overflow.');
+  console.log('Browse replacement [mobile]: rendered replacement banner, replacement queue, result card, all-department GenEd search, actions, and no overflow.');
 }
 
 async function verifyRecommendationsSectionMobile(page, url, opts) {
@@ -569,6 +594,40 @@ async function verifyAccountSetupMobile(page, url, opts) {
         },
       },
     }];
+    window.__accountDeletedFriendRow = '';
+    accountSession = { user: { id: 'recipient-1', email: 'recipient@umd.edu' } };
+    accountEnsureClient = async () => ({
+      from(table) {
+        return {
+          delete() {
+            return {
+              eq(field, value) {
+                window.__accountDeletedFriendRow = `${table}:${field}:${value}`;
+                return { error: null };
+              },
+            };
+          },
+        };
+      },
+    });
+    state.accountPrefs = normalizeAccountPrefs({
+      ...getAccountPrefs(),
+      friendInvites: [
+        ...(getAccountPrefs().friendInvites || []),
+        {
+          id: 'local-accepted',
+          cloudId: 'cloud-accepted',
+          email: 'requester@umd.edu',
+          userId: 'friend-pal',
+          note: 'shared schedule',
+          status: 'accepted',
+          direction: 'received',
+          source: 'cloud',
+          createdAt: '2026-07-02T12:00:00.000Z',
+          updatedAt: '2026-07-02T12:30:00.000Z',
+        },
+      ],
+    });
     saveState();
     renderAccountModal();
   });
@@ -585,7 +644,17 @@ async function verifyAccountSetupMobile(page, url, opts) {
       && modalText.includes('Mon 8:00am-10:00am')
       && modalText.includes('Meeting planner')
       && modalText.includes('Mon 12:00pm-1:15pm')
-      && modalText.includes('Copy meeting note');
+      && modalText.includes('Copy meeting note')
+      && modalText.includes('Remove friend');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('button:has-text("Remove friend")').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const modalText = document.querySelector('#account-modal.open')?.textContent?.replace(/\s+/g, ' ') || '';
+    const status = document.querySelector('#account-status')?.textContent || '';
+    return window.__accountDeletedFriendRow === 'friend_requests:id:cloud-accepted'
+      && status.includes('Friend removed')
+      && status.includes('revoked')
+      && !modalText.includes('requester@umd.edu');
   }, null, { timeout: opts.timeoutMs });
   await page.locator('button:has-text("Copy meeting note")').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
@@ -595,8 +664,11 @@ async function verifyAccountSetupMobile(page, url, opts) {
 
   const snapshot = await page.evaluate(snapshotScript());
   const prefs = await page.evaluate(() => getAccountPrefs());
+  const deletedFriendRow = await page.evaluate(() => window.__accountDeletedFriendRow || '');
   assert(prefs.displayName === 'Pass 98 Student', 'account setup: profile display name should persist locally');
   assert((prefs.friendInvites || []).some(invite => invite.email === 'roommate@umd.edu'), 'account setup: friend invite should persist locally');
+  assert(!(prefs.friendInvites || []).some(invite => invite.cloudId === 'cloud-accepted'), 'account setup: accepted cloud friend should be removed after revocation');
+  assert(deletedFriendRow === 'friend_requests:id:cloud-accepted', 'account setup: accepted friend removal should delete the cloud friend request row');
   assert(snapshot.accountText.includes('Local only'), 'account setup: modal should identify local-only config');
   assert(snapshot.accountText.includes('Schema objects') && snapshot.accountText.includes('RLS policies'), 'account setup: modal should show schema checklist');
   assert(snapshot.accountText.includes('Friend invite') && snapshot.accountText.includes('roommate@umd.edu'), 'account setup: modal should preserve local invite row');
@@ -606,7 +678,7 @@ async function verifyAccountSetupMobile(page, url, opts) {
   assert(snapshot.accountText.includes('Meeting planner') && snapshot.accountText.includes('Mon 12:00pm-1:15pm'), 'account setup: modal should show meeting planner recommendation');
   assert(snapshot.accountText.includes('Meeting note'), 'account setup: modal should expose copied meeting note status');
   assertNoOverflow('account setup mobile', snapshot);
-  console.log('Account setup [mobile]: rendered local-first cloud checklist, profile save, friend invite, friend-plan meeting planner, and no overflow.');
+  console.log('Account setup [mobile]: rendered local-first cloud checklist, profile save, friend invite, accepted-friend revocation, friend-plan meeting planner, and no overflow.');
 }
 
 async function verifyAdvisorPacketMobile(page, url, opts) {

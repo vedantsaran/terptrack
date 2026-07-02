@@ -658,6 +658,7 @@ async function accountCreateFriendInvite() {
 async function accountRemoveFriendInvite(id) {
   const prefs = getAccountPrefs();
   const invite = (prefs.friendInvites || []).find(item => item.id === id || item.cloudId === id);
+  const wasFriend = invite?.status === 'accepted';
   try {
     if (invite?.cloudId && accountSession?.user) {
       const client = await accountEnsureClient();
@@ -671,10 +672,10 @@ async function accountRemoveFriendInvite(id) {
       friendInvites: (prefs.friendInvites || []).filter(item => item.id !== id && item.cloudId !== id),
     };
     saveState();
-    accountSetStatus('Friend invite removed.', 'ok');
+    accountSetStatus(wasFriend ? 'Friend removed. Shared-plan visibility revoked.' : 'Friend invite removed.', 'ok');
     renderAccountModal();
   } catch (err) {
-    accountSetStatus(err.message || 'Could not remove friend invite.', 'warn');
+    accountSetStatus(err.message || (wasFriend ? 'Could not remove friend.' : 'Could not remove friend invite.'), 'warn');
   }
 }
 
@@ -1333,6 +1334,12 @@ function accountFriendStatusText(invite) {
   return `${direction} ${person} · ${invite.status} · ${source}`;
 }
 
+function accountFriendRemoveLabel(invite) {
+  if (invite?.status === 'accepted') return 'Remove friend';
+  if (invite?.direction === 'received') return 'Remove request';
+  return 'Remove invite';
+}
+
 function accountFriendInvitesHtml() {
   const invites = getAccountPrefs().friendInvites || [];
   if (!invites.length) {
@@ -1356,7 +1363,7 @@ function accountFriendInvitesHtml() {
                 <button class="btn small" type="button" onclick="accountRespondToFriendInvite('${accountEscape(invite.cloudId)}','accepted')">Accept</button>
                 <button class="btn small" type="button" onclick="accountRespondToFriendInvite('${accountEscape(invite.cloudId)}','declined')">Decline</button>
               ` : ''}
-              <button class="btn small" type="button" onclick="accountRemoveFriendInvite('${accountEscape(invite.cloudId || invite.id)}')">Remove</button>
+              <button class="btn small" type="button" onclick="accountRemoveFriendInvite('${accountEscape(invite.cloudId || invite.id)}')">${accountEscape(accountFriendRemoveLabel(invite))}</button>
             </div>
           </div>
         `;

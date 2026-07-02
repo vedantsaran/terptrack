@@ -3141,7 +3141,7 @@ function testRecommendationBestSectionAction(context) {
   };
 }
 
-function testAccountCloudSetup(context) {
+async function testAccountCloudSetup(context) {
   const result = clone(vm.runInContext(`
     (() => {
       const missing = accountCloudSetupChecks({ source: 'none', supabaseUrl: '', supabaseAnonKey: '' }, false, 'https://terptrack.vercel.app');
@@ -3203,6 +3203,62 @@ function testAccountCloudSetup(context) {
       };
     })()
   `, context));
+  const removal = clone(await vm.runInContext(`
+    (async () => {
+      let deletedId = '';
+      let renderCount = 0;
+      const statusEl = { textContent: '', className: '' };
+      const originalGetElementById = document.getElementById;
+      document.getElementById = id => id === 'account-status' ? statusEl : originalGetElementById(id);
+      accountSession = { user: { id: 'recipient-1', email: 'recipient@umd.edu' } };
+      accountEnsureClient = async () => ({
+        from(table) {
+          return {
+            delete() {
+              return {
+                eq(field, value) {
+                  deletedId = table + ':' + field + ':' + value;
+                  return { error: null };
+                }
+              };
+            }
+          };
+        }
+      });
+      renderAccountModal = () => { renderCount += 1; };
+      state.accountPrefs = normalizeAccountPrefs({
+        ...defaultAccountPrefs(),
+        friendInvites: [{
+          id: 'local-accepted',
+          cloudId: 'cloud-accepted',
+          email: 'requester@umd.edu',
+          userId: 'requester-1',
+          note: 'shared schedule',
+          status: 'accepted',
+          direction: 'received',
+          source: 'cloud',
+          createdAt: '2026-07-02T12:00:00.000Z',
+          updatedAt: '2026-07-02T12:30:00.000Z'
+        }]
+      });
+      const beforeHtml = accountFriendInvitesHtml();
+      try {
+        await accountRemoveFriendInvite('cloud-accepted');
+      } finally {
+        document.getElementById = originalGetElementById;
+      }
+      const remaining = (state.accountPrefs.friendInvites || []).length;
+      return {
+        beforeHtml,
+        deletedId,
+        remaining,
+        statusText: statusEl.textContent,
+        statusClass: statusEl.className,
+        renderCount
+      };
+    })()
+  `, context));
+  const schemaSql = read('supabase/schema.sql');
 
   assert(result.missingStatuses.split(',').every(status => status === 'missing'), 'account setup: missing config should mark every setup check missing');
   assert(result.manualDeployment === 'warn', 'account setup: manual config should warn for deployment');
@@ -3215,11 +3271,20 @@ function testAccountCloudSetup(context) {
   assert(/Schema objects/.test(result.schemaHtml) && /friend_requests/.test(result.schemaHtml) && /shared_plans/.test(result.schemaHtml) && /RLS policies/.test(result.schemaHtml), 'account setup: schema checklist HTML should render required Supabase objects');
   assert(result.cloudRestore.activeIds.includes('cloud-spring') && result.cloudRestore.semIds.includes('cloud-spring') && !result.cloudRestore.legacySection, 'account cloud restore: stale selected-section buckets should normalize to the active schedule term');
   assert(result.cloudRestore.springSection?.section_id === 'MATH140-0601' && result.cloudRestore.springSection?.semester === '202701', 'account cloud restore: rerouted section should preserve the posted UMD term');
+  assert(/create policy "friend_requests_delete_participant"/.test(schemaSql), 'account setup: schema should create participant-owned friend-request delete policy');
+  assert(/auth\.uid\(\) = requester_id/.test(schemaSql) && /auth\.uid\(\) = recipient_id/.test(schemaSql) && /lower\(recipient_email\) = lower/.test(schemaSql), 'account setup: delete policy should allow requester, recipient, and recipient email to revoke friendship');
+  assert(/fr\.status = 'accepted'/.test(schemaSql) && /public\.shared_plans\.owner_id/.test(schemaSql), 'account setup: shared plans should remain visible only through accepted friend rows');
+  assert(/Remove friend/.test(removal.beforeHtml), 'account friend removal: accepted cloud rows should label the action as friend removal');
+  assert(removal.deletedId === 'friend_requests:id:cloud-accepted', 'account friend removal: should delete the cloud friend request row');
+  assert(removal.remaining === 0, 'account friend removal: accepted friend should be removed locally after cloud delete');
+  assert(/Friend removed/.test(removal.statusText) && /revoked/.test(removal.statusText), 'account friend removal: status should explain shared-plan revocation');
+  assert(/ok/.test(removal.statusClass) && removal.renderCount === 1, 'account friend removal: should render success status once');
 
   return {
     id: 'ACCOUNT-CLOUD-SETUP',
     missing: result.missingStatuses,
     vercel: [result.vercelDeployment, result.vercelCredentials, result.vercelClient].join('/'),
+    removal: removal.remaining,
   };
 }
 
@@ -4641,6 +4706,128 @@ async function testBrowseSlotSelection(context) {
   };
 }
 
+function testBrowseReplacementQueue(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      state.activeSchedule = [{
+        id: 'PASS178F',
+        name: 'Pass 178 Fall',
+        year: 'Year 1',
+        courses: [{
+          code: 'GenEd DSHS',
+          title: 'History and Social Sciences placeholder',
+          cr: 3,
+          kind: 'gened',
+          category: 'gened-dshs',
+          categories: ['gened-dshs'],
+          note: 'Auto-generated DSHS placeholder'
+        }, {
+          code: 'GenEd DSHU',
+          title: 'Humanities placeholder',
+          cr: 3,
+          kind: 'gened',
+          category: 'gened-dshu',
+          categories: ['gened-dshu'],
+          note: 'Auto-generated DSHU placeholder'
+        }, {
+          code: 'GVPT 3xx Elective A',
+          title: 'Upper-Division GVPT Elective',
+          cr: 3,
+          category: 'major-upper'
+        }, {
+          code: 'Free Elective #1',
+          title: 'Free Elective 1',
+          cr: 3,
+          kind: 'tech',
+          category: 'elective',
+          note: 'Auto-generated credit placeholder'
+        }]
+      }];
+      state.customCourses = [];
+      state.courses = {};
+      state.profilePrefs = normalizeProfilePrefs({
+        interests: ['policy-society'],
+        careerGoal: 'public policy',
+        genEdDepts: 'GVPT'
+      });
+      placeholderSearchTarget = null;
+      browseDept = 'GVPT';
+      browseGenEd = 'DSHS';
+      browseSearch = '';
+      const rows = [{
+        course_id: 'GVPT200',
+        name: 'International Political Relations',
+        credits: '3',
+        description: 'A public policy and international relations course.',
+        gen_ed: ['DSHS', 'DVUP']
+      }, {
+        course_id: 'HIST210',
+        name: 'Global Humanities',
+        credits: '3',
+        description: 'History and culture course.',
+        gen_ed: ['DSHU']
+      }, {
+        course_id: 'GVPT356',
+        name: 'Politics of the Developing World',
+        credits: '3',
+        description: 'Comparative politics and policy.',
+        gen_ed: []
+      }, {
+        course_id: 'ENGL101',
+        name: 'Academic Writing',
+        credits: '3',
+        description: 'Writing course already planned elsewhere.',
+        gen_ed: ['FSAW']
+      }];
+      state.customCourses = [{ code: 'ENGL 101', title: 'Academic Writing', cr: 3, semId: 'PASS178F' }];
+      const decorated = browseDecorateRows(rows, {
+        nextTerm: { term: '202608', termLabel: 'Fall 2026' },
+        availability: {
+          '202608:GVPT200': { term: '202608', termLabel: 'Fall 2026', sectionCount: 2, openSeats: 18 },
+          '202608:HIST210': { term: '202608', termLabel: 'Fall 2026', sectionCount: 1, openSeats: 9 },
+          '202608:GVPT356': { term: '202608', termLabel: 'Fall 2026', sectionCount: 1, openSeats: 4 }
+        }
+      }).sort(browseCompareRows);
+      const queue = browseReplacementQueue(decorated, { candidateLimit: 2, limit: 8 });
+      const html = browseReplacementQueueHtml(decorated, { term: '202608', termLabel: 'Fall 2026' });
+      const dshs = queue.rows.find(row => row.slot.course.code === 'GenEd DSHS');
+      const dshu = queue.rows.find(row => row.slot.course.code === 'GenEd DSHU');
+      const upper = queue.rows.find(row => row.slot.course.code === 'GVPT 3xx Elective A');
+      const free = queue.rows.find(row => row.slot.course.code === 'Free Elective #1');
+      browseOpenSlotSearch(dshu.slot.key);
+      return {
+        total: queue.total,
+        matched: queue.matched,
+        dshsFirst: dshs?.candidates[0]?.item?.code || '',
+        dshsLabel: dshs?.candidates[0]?.label || '',
+        dshuFirst: dshu?.candidates[0]?.item?.code || '',
+        upperFirst: upper?.candidates[0]?.item?.code || '',
+        freeCodes: (free?.candidates || []).map(candidate => candidate.item.code),
+        html,
+        openedDept: browseDept,
+        openedGenEd: browseGenEd,
+        savedSearch: state.browseSavedSearches[0]?.label || ''
+      };
+    })()
+  `, context));
+
+  assert(result.total === 4, 'browse replacement queue: should list every unresolved placeholder slot');
+  assert(result.matched === 4, 'browse replacement queue: current results should match every slot in the fixture');
+  assert(result.dshsFirst === 'GVPT200' && /DSHS match/.test(result.dshsLabel), 'browse replacement queue: DSHS slot should use matching GenEd course first');
+  assert(result.dshuFirst === 'HIST210', 'browse replacement queue: DSHU slot should use matching humanities course');
+  assert(result.upperFirst === 'GVPT356', 'browse replacement queue: GVPT 300-level course should match the upper elective slot');
+  assert(!result.freeCodes.includes('ENGL101'), 'browse replacement queue: candidates already in the plan should be excluded');
+  assert(/Replacement queue/.test(result.html) && /GenEd DSHS/.test(result.html) && /GVPT 200/.test(result.html) && /Use here|Search slot/.test(result.html), 'browse replacement queue: html should render slot rows and candidate actions');
+  assert(result.openedDept === '__PROFILE_DEPTS__' && result.openedGenEd === 'DSHU', 'browse replacement queue: search action should open a targeted saved search for the slot');
+  assert(/Replace GenEd DSHU/.test(result.savedSearch), 'browse replacement queue: slot search should save a useful replacement label');
+
+  return {
+    id: 'BROWSE-REPLACEMENT-QUEUE',
+    matched: `${result.matched}/${result.total}`,
+    first: `${result.dshsFirst}/${result.upperFirst}`,
+  };
+}
+
 async function testBrowseTypedSlotMatching(context) {
   const result = clone(await vm.runInContext(`
     (() => {
@@ -5571,7 +5758,7 @@ async function main() {
   const allGroups = await testAllGeneratedRequirementGroups(context);
   const catalogYear = await testCatalogYearTargeting(context);
   const account = testAccountAndShareState(context);
-  const accountSetup = testAccountCloudSetup(context);
+  const accountSetup = await testAccountCloudSetup(context);
   const releaseJson = testReleaseJsonReport();
   const canonicalTitles = testCanonicalCourseTitles(context);
   const timing = testScheduleTimingFit(context);
@@ -5600,6 +5787,7 @@ async function main() {
   const placeholderSections = await testPlaceholderSectionPreview(context);
   const browseReplacement = await testBrowsePlaceholderReplacement(context);
   const browseSlot = await testBrowseSlotSelection(context);
+  const browseQueue = testBrowseReplacementQueue(context);
   const browseTypedSlots = await testBrowseTypedSlotMatching(context);
   const auditIssues = testAuditIssueDrawer(context);
   const priorCredit = await testOnboardingPriorCredit(context);
@@ -5614,7 +5802,7 @@ async function main() {
   console.log(`All generated requirement groups fixture ${allGroups.id}: ${allGroups.majors} majors; ${allGroups.requirements} grouped requirements.`);
   console.log(`Catalog year fixture ${catalogYear.id}: target ${catalogYear.target}; source ${catalogYear.source}.`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
-  console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}.`);
+  console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}; friend rows after removal ${accountSetup.removal}.`);
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Canonical title fixture ${canonicalTitles.id}: AMST 205 -> ${canonicalTitles.amst205}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
@@ -5643,12 +5831,13 @@ async function main() {
   console.log(`Placeholder sections fixture ${placeholderSections.id}: first ${placeholderSections.first}; pinned ${placeholderSections.pinned}; undo ${placeholderSections.undo}; load ${placeholderSections.load}; progress ${placeholderSections.progress}.`);
   console.log(`Browse replacement fixture ${browseReplacement.id}: ${browseReplacement.search}; replaced ${browseReplacement.replaced}.`);
   console.log(`Browse slot fixture ${browseSlot.id}: first ${browseSlot.firstSlot}; replaced ${browseSlot.replaced}.`);
+  console.log(`Browse replacement queue fixture ${browseQueue.id}: matched ${browseQueue.matched}; first ${browseQueue.first}.`);
   console.log(`Browse typed slots fixture ${browseTypedSlots.id}: ${browseTypedSlots.gvpt}; ${browseTypedSlots.language}; ${browseTypedSlots.support}.`);
   console.log(`Audit issue fixture ${auditIssues.id}: ${auditIssues.count} issues; opened ${auditIssues.opened}; browse ${auditIssues.browse}.`);
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
