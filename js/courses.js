@@ -101,6 +101,19 @@ function courseCodeCollisionMessage(inputCode, collision) {
   return `A course with code "${inputCode}" already exists.`;
 }
 
+function migrateEditedCourseProgress(oldCode, newCode) {
+  if (!oldCode || !newCode || oldCode === newCode) return;
+  state.courses = state.courses || {};
+  const oldKey = typeof courseStateKey === 'function' ? courseStateKey(oldCode) : oldCode;
+  if (!oldKey || !Object.prototype.hasOwnProperty.call(state.courses, oldKey)) return;
+  const newKey = normalizeCode(oldCode) === normalizeCode(newCode)
+    ? newCode
+    : (typeof courseStateKey === 'function' ? courseStateKey(newCode) : newCode);
+  if (!newKey || oldKey === newKey) return;
+  state.courses[newKey] = state.courses[oldKey];
+  delete state.courses[oldKey];
+}
+
 async function lookupCourseFromPlanetTerp() {
   const codeRaw = document.getElementById('ac-code').value.trim();
   const status = document.getElementById('ac-lookup-status');
@@ -187,10 +200,7 @@ async function saveCustomCourse() {
       if (!found) { toastError('Could not locate course to edit.'); return; }
     }
     // Migrate any progress entry to the new code
-    if (codeChanged && state.courses[editingCourseCode]) {
-      state.courses[codeInput] = state.courses[editingCourseCode];
-      delete state.courses[editingCourseCode];
-    }
+    if (codeChanged) migrateEditedCourseProgress(editingCourseCode, codeInput);
     if (normalizedCodeChanged && typeof clearSelectedSectionsForCourse === 'function') {
       clearSelectedSectionsForCourse(editingCourseCode);
     }
