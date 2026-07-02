@@ -77,6 +77,30 @@ function closeAddCourse() {
   editingCourseCode = null;
 }
 
+function findCourseCodeCollision(code, excludeCode = '') {
+  const target = normalizeCode(code);
+  if (!target) return null;
+  const excludeExact = String(excludeCode || '').trim();
+  let skippedExcluded = false;
+  return flatCourses().find(course => {
+    const existing = String(course?.code || '').trim();
+    if (!existing || normalizeCode(existing) !== target) return false;
+    if (excludeExact && existing === excludeExact && !skippedExcluded) {
+      skippedExcluded = true;
+      return false;
+    }
+    return true;
+  }) || null;
+}
+
+function courseCodeCollisionMessage(inputCode, collision) {
+  const existing = String(collision?.code || '').trim();
+  if (existing && existing !== inputCode) {
+    return `A course matching "${inputCode}" already exists as "${existing}".`;
+  }
+  return `A course with code "${inputCode}" already exists.`;
+}
+
 async function lookupCourseFromPlanetTerp() {
   const codeRaw = document.getElementById('ac-code').value.trim();
   const status = document.getElementById('ac-lookup-status');
@@ -130,8 +154,9 @@ async function saveCustomCourse() {
     const normalizedCodeChanged = normalizeCode(codeInput) !== normalizeCode(editingCourseCode);
     const movedSelectionSemIds = [];
     // Block code collisions with another course in the plan
-    if (codeChanged && findCourse(codeInput)) {
-      toastError(`A course with code "${codeInput}" already exists.`);
+    const collision = codeChanged ? findCourseCodeCollision(codeInput, editingCourseCode) : null;
+    if (collision) {
+      toastError(courseCodeCollisionMessage(codeInput, collision));
       return;
     }
     // EDIT path: find course in customCourses or activeSchedule, mutate in place
@@ -184,7 +209,8 @@ async function saveCustomCourse() {
   }
 
   // ADD path
-  if (findCourse(codeInput)) { toastError('A course with that code already exists.'); return; }
+  const collision = findCourseCodeCollision(codeInput);
+  if (collision) { toastError(courseCodeCollisionMessage(codeInput, collision)); return; }
 
   state.customCourses.push({
     code: codeInput, title, cr,

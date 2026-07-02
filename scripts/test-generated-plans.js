@@ -2526,6 +2526,136 @@ async function testCourseEditSelectionCleanup(context) {
   };
 }
 
+async function testCourseCodeCollisionGuard(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const originalGetElementById = document.getElementById;
+      const originalRender = render;
+      const originalToastSuccess = typeof toastSuccess === 'function' ? toastSuccess : null;
+      const originalToastError = typeof toastError === 'function' ? toastError : null;
+      const errors = [];
+      const successes = [];
+      const renders = [];
+      const fields = {};
+      const elementFor = id => fields[id] || { value: '', checked: false, textContent: '', style: {}, classList: { add() {}, remove() {} } };
+      document.getElementById = id => {
+        if (id === 'save-indicator' || id === 'add-course-modal') return { classList: { add() {}, remove() {} } };
+        return elementFor(id);
+      };
+      render = () => { renders.push('render'); };
+      toastSuccess = message => { successes.push(message); };
+      toastError = message => { errors.push(message); };
+
+      const setFields = ({ code, title, semester, category = 'major-core', credits = '4', note = '', prereqs = '', goal = false }) => {
+        Object.assign(fields, {
+          'ac-code': { value: code },
+          'ac-title': { value: title },
+          'ac-credits': { value: credits },
+          'ac-note': { value: note },
+          'ac-semester': { value: semester },
+          'ac-category': { value: category },
+          'ac-goal': { checked: goal },
+          'ac-prereqs': { value: prereqs },
+          'ac-auto-prereqs': { checked: false },
+        });
+      };
+      const take = () => {
+        const output = { errors: [...errors], successes: [...successes], renders: renders.length };
+        errors.length = 0;
+        successes.length = 0;
+        renders.length = 0;
+        return output;
+      };
+
+      try {
+        state.activeSchedule = [{
+          id: 'COLL-F',
+          name: 'Fall 2026',
+          courses: [
+            { code: 'CMSC131', title: 'Object-Oriented Programming I', cr: 4 },
+            { code: 'ENGL 101', title: 'Academic Writing', cr: 3 }
+          ]
+        }, {
+          id: 'COLL-S',
+          name: 'Spring 2027',
+          courses: []
+        }];
+        state.customSemesters = [];
+        state.customCourses = [{ code: 'GenEd DSHS', title: 'Social science placeholder', cr: 3, semId: 'COLL-F' }];
+        state.courses = {
+          CMSC131: { status: 'not-started', grade: '' },
+          'GenEd DSHS': { status: 'not-started', grade: '' },
+        };
+        state.selectedSections = {
+          'COLL-F': {
+            CMSC131: { course: 'CMSC 131', section_id: 'CMSC131-0101', number: '0101', semester: '202608', meetings: [] },
+            GENEDDSHS: { course: 'GenEd DSHS', section_id: 'GENEDDSHS-0101', number: '0101', semester: '202608', meetings: [] }
+          }
+        };
+        state.schedulePrefs = { 'COLL-F': { term: '202608' } };
+
+        editingCourseCode = null;
+        addCourseSemId = 'COLL-F';
+        setFields({ code: 'CMSC 131', title: 'Duplicate CMSC', semester: 'COLL-F' });
+        await saveCustomCourse();
+        const afterAddCollision = {
+          ...take(),
+          customCodes: (state.customCourses || []).map(course => course.code),
+          fallCodes: state.activeSchedule[0].courses.map(course => course.code),
+        };
+
+        editingCourseCode = 'GenEd DSHS';
+        setFields({ code: 'CMSC 131', title: 'Duplicate replacement', semester: 'COLL-F' });
+        await saveCustomCourse();
+        const afterEditCollision = {
+          ...take(),
+          customCodes: (state.customCourses || []).map(course => course.code),
+          placeholderSemId: (state.customCourses || []).find(course => course.code === 'GenEd DSHS')?.semId || '',
+          placeholderPick: state.selectedSections['COLL-F']?.GENEDDSHS?.section_id || '',
+        };
+
+        editingCourseCode = 'CMSC131';
+        setFields({ code: 'CMSC 131', title: 'Object-Oriented Programming I', semester: 'COLL-F' });
+        await saveCustomCourse();
+        const afterSelfFormat = {
+          ...take(),
+          fallCodes: state.activeSchedule[0].courses.map(course => course.code),
+          customCodes: (state.customCourses || []).map(course => course.code),
+          cmscPick: state.selectedSections['COLL-F']?.CMSC131?.section_id || '',
+          oldProgress: state.courses.CMSC131 || null,
+          newProgress: state.courses['CMSC 131'] || null,
+        };
+
+        return { afterAddCollision, afterEditCollision, afterSelfFormat };
+      } finally {
+        document.getElementById = originalGetElementById;
+        render = originalRender;
+        if (originalToastSuccess) toastSuccess = originalToastSuccess;
+        else delete globalThis.toastSuccess;
+        if (originalToastError) toastError = originalToastError;
+        else delete globalThis.toastError;
+        editingCourseCode = null;
+        addCourseSemId = null;
+      }
+    })()
+  `, context));
+
+  assert(/already exists as "CMSC131"/.test(result.afterAddCollision.errors[0] || ''), 'course code collision: add path should reject normalized duplicates with the existing code');
+  assert(!result.afterAddCollision.customCodes.includes('CMSC 131') && result.afterAddCollision.customCodes.includes('GenEd DSHS'), 'course code collision: rejected add should not create a duplicate custom course');
+  assert(/already exists as "CMSC131"/.test(result.afterEditCollision.errors[0] || ''), 'course code collision: edit path should reject normalized duplicate replacement codes');
+  assert(result.afterEditCollision.customCodes.includes('GenEd DSHS') && result.afterEditCollision.placeholderSemId === 'COLL-F', 'course code collision: rejected edit should leave the placeholder row in place');
+  assert(result.afterEditCollision.placeholderPick === 'GENEDDSHS-0101', 'course code collision: rejected edit should not clear existing placeholder section picks');
+  assert(result.afterSelfFormat.errors.length === 0 && result.afterSelfFormat.fallCodes.includes('CMSC 131'), 'course code collision: formatting-only self edit should remain allowed');
+  assert(!result.afterSelfFormat.fallCodes.includes('CMSC131') && result.afterSelfFormat.cmscPick === 'CMSC131-0101', 'course code collision: formatting-only self edit should preserve the normalized section pick');
+  assert(!result.afterSelfFormat.oldProgress && result.afterSelfFormat.newProgress?.status === 'not-started', 'course code collision: formatting-only self edit should migrate progress to the display code');
+
+  return {
+    id: 'COURSE-CODE-COLLISION',
+    blocked: result.afterAddCollision.errors.length + result.afterEditCollision.errors.length,
+    formatted: result.afterSelfFormat.fallCodes.includes('CMSC 131') ? 'CMSC 131' : '',
+  };
+}
+
 function testRecommendationMoveAction(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -5231,6 +5361,7 @@ async function main() {
   const dndCleanup = testDragDropSelectionCleanup(context);
   const customDeleteCleanup = testCustomDeleteSelectionCleanup(context);
   const courseEditCleanup = await testCourseEditSelectionCleanup(context);
+  const courseCodeCollision = await testCourseCodeCollisionGuard(context);
   const recoMove = testRecommendationMoveAction(context);
   const recoSection = testRecommendationBestSectionAction(context);
   const planner = testPlannerRegistrationChecklist(context);
@@ -5271,6 +5402,7 @@ async function main() {
   console.log(`Drag/drop cleanup fixture ${dndCleanup.id}: required ${dndCleanup.required}; custom ${dndCleanup.custom}.`);
   console.log(`Custom delete cleanup fixture ${customDeleteCleanup.id}: semester courses ${customDeleteCleanup.semesterRemoved}; course rows ${customDeleteCleanup.courseRemoved}.`);
   console.log(`Course edit cleanup fixture ${courseEditCleanup.id}: semantic ${courseEditCleanup.semantic}; formatting ${courseEditCleanup.formatted}; moved ${courseEditCleanup.moved}.`);
+  console.log(`Course code collision fixture ${courseCodeCollision.id}: blocked ${courseCodeCollision.blocked}; formatted ${courseCodeCollision.formatted}.`);
   console.log(`Recommendation move fixture ${recoMove.id}: moved ${recoMove.moved} from ${recoMove.from}.`);
   console.log(`Recommendation section fixture ${recoSection.id}: picked ${recoSection.picked} for ${recoSection.moved}.`);
   console.log(`Planner checklist fixture ${planner.id}: ${planner.count} items; levels ${planner.levels}.`);
@@ -5290,7 +5422,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {
