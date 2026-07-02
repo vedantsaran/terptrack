@@ -159,9 +159,16 @@ function recoSelectedItemsForContext(ctx) {
   const byNorm = {};
   flatCourses().forEach(course => { byNorm[normalizeCode(course.code)] = course; });
   return Object.entries(selected)
-    .filter(([, section]) => !ctx.term || String(section.semester || '') === String(ctx.term))
-    .map(([norm, section]) => ({ course: byNorm[norm] || { code: displayCode(norm), title: displayCode(norm) }, section }))
-    .filter(item => item.section);
+    .map(([norm, rawSection]) => {
+      const section = typeof getSelectedSectionForTerm === 'function'
+        ? getSelectedSectionForTerm(ctx.semId, norm, ctx.term)
+        : rawSection;
+      if (!section) return null;
+      const sectionTerm = String(section.semester || '').trim();
+      if (typeof getSelectedSectionForTerm !== 'function' && sectionTerm && ctx.term && sectionTerm !== String(ctx.term)) return null;
+      return { course: byNorm[norm] || { code: displayCode(norm), title: displayCode(norm) }, section };
+    })
+    .filter(item => item && item.section);
 }
 
 function recoTermCoursesWithCandidate(ctx, candidateCourse) {

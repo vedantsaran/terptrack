@@ -355,6 +355,70 @@ function testAccountAndShareState(context) {
     const springOnlySummary = accountFriendPlanSummary(springOnlyPlan);
     const springOnlyHtml = accountFriendMeetingPlanHtml(springOnlySummary, springOnlyPlan);
     const springOnlyNote = accountFriendMeetingPlanText(springOnlyPlan, springOnlySummary);
+    const aliasNoSemesterPlan = {
+      id: 'alias-fall-pal',
+      owner_id: 'user-pal-1',
+      name: 'Pal imported fall plan',
+      payload: {
+        state: {
+          v: 1,
+          activeSchedule: [{
+            id: 'PAL-FALL-ID',
+            name: 'Imported Fall Bucket',
+            courses: [{ code: 'ENGL 101', title: 'Academic Writing', cr: 3 }]
+          }],
+          customCourses: [],
+          customSemesters: [],
+          schedulePrefs: { 'PAL-FALL-ID': { term: '202608' } },
+          selectedSections: {
+            'PAL-FALL-ID': {
+              ENGL101: {
+                course: 'ENGL 101',
+                section_id: 'ENGL101-0999',
+                number: '0999',
+                meetings: [{ days: 'Tu', start_time: '1:00pm', end_time: '2:15pm', building: 'TWS', room: '1200' }]
+              }
+            }
+          },
+          settings: { ...DEFAULT_SETTINGS, programName: 'Mathematics' },
+          profilePrefs: defaultProfilePrefs()
+        }
+      }
+    };
+    const aliasNoSemesterSummary = accountFriendPlanSummary(aliasNoSemesterPlan);
+    const aliasNoSemesterNote = accountFriendMeetingPlanText(aliasNoSemesterPlan, aliasNoSemesterSummary);
+    const explicitMismatchPlan = {
+      id: 'explicit-mismatch-pal',
+      owner_id: 'user-pal-1',
+      name: 'Pal stale fall plan',
+      payload: {
+        state: {
+          v: 1,
+          activeSchedule: [{
+            id: 'PAL-FALL-ID',
+            name: 'Imported Fall Bucket',
+            courses: [{ code: 'ENGL 101', title: 'Academic Writing', cr: 3 }]
+          }],
+          customCourses: [],
+          customSemesters: [],
+          schedulePrefs: { 'PAL-FALL-ID': { term: '202608' } },
+          selectedSections: {
+            'PAL-FALL-ID': {
+              ENGL101: {
+                course: 'ENGL 101',
+                section_id: 'ENGL101-0999',
+                number: '0999',
+                semester: '202701',
+                meetings: [{ days: 'Tu', start_time: '1:00pm', end_time: '2:15pm', building: 'TWS', room: '1200' }]
+              }
+            }
+          },
+          settings: { ...DEFAULT_SETTINGS, programName: 'Mathematics' },
+          profilePrefs: defaultProfilePrefs()
+        }
+      }
+    };
+    const explicitMismatchSummary = accountFriendPlanSummary(explicitMismatchPlan);
     const applied = applySharedPlanData({
       v: 1,
       courses: { 'MATH 140': { status: 'passed' } },
@@ -416,6 +480,20 @@ function testAccountAndShareState(context) {
         html: springOnlyHtml,
         note: springOnlyNote,
       },
+      aliasNoSemester: {
+        termKey: aliasNoSemesterSummary.meetingTermKey,
+        termLabel: aliasNoSemesterSummary.meetingTermLabel,
+        sharedTermCount: aliasNoSemesterSummary.sharedMeetingTermCount,
+        meetingFriendSelectedCount: aliasNoSemesterSummary.meetingFriendSelectedCount,
+        meetingCurrentSelectedCount: aliasNoSemesterSummary.meetingCurrentSelectedCount,
+        sharedFreeWindowCount: aliasNoSemesterSummary.sharedFreeWindows.length,
+        note: aliasNoSemesterNote,
+      },
+      explicitMismatch: {
+        termKey: explicitMismatchSummary.meetingTermKey,
+        sharedTermCount: explicitMismatchSummary.sharedMeetingTermCount,
+        sharedFreeWindowCount: explicitMismatchSummary.sharedFreeWindows.length,
+      },
     })
   `, context));
 
@@ -465,6 +543,13 @@ function testAccountAndShareState(context) {
   assert(result.springOnly.termKey === '' && result.springOnly.sharedTermCount === 0, 'friend meeting planner: should not compare picked sections from unmatched terms');
   assert(result.springOnly.sharedFreeWindowCount === 0 && result.springOnly.recommendedMeetingWindowCount === 0, 'friend meeting planner: should not create windows for unmatched terms');
   assert(/same UMD term/.test(result.springOnly.html) && /same UMD term/.test(result.springOnly.note), 'friend meeting planner: should guide users to pick matching terms');
+  assert(result.aliasNoSemester.termKey === '202608' && result.aliasNoSemester.termLabel === 'Fall 2026', 'friend meeting planner: should infer UMD term for no-semester imported picks');
+  assert(result.aliasNoSemester.sharedTermCount === 1, 'friend meeting planner: no-semester imported picks should share the matched UMD term');
+  assert(result.aliasNoSemester.meetingFriendSelectedCount === 1 && result.aliasNoSemester.meetingCurrentSelectedCount === 1, 'friend meeting planner: inferred-term picks should participate in meeting comparisons');
+  assert(result.aliasNoSemester.sharedFreeWindowCount > 0, 'friend meeting planner: inferred-term picks should produce shared free windows');
+  assert(/best shared slot in Fall 2026/.test(result.aliasNoSemester.note), 'friend meeting planner: inferred-term copy note should name the UMD term');
+  assert(result.explicitMismatch.termKey === '' && result.explicitMismatch.sharedTermCount === 0, 'friend meeting planner: explicit section semester should override schedulePrefs term');
+  assert(result.explicitMismatch.sharedFreeWindowCount === 0, 'friend meeting planner: explicit wrong-term picks should not create free windows');
 
   return {
     id: 'ACCOUNT-FRIENDS',
@@ -2127,6 +2212,13 @@ function testRecommendationBestSectionAction(context) {
           prereqs: [],
           kind: 'core',
           category: 'major-core'
+        }, {
+          code: 'ENGL 101',
+          title: 'Academic Writing',
+          cr: 3,
+          prereqs: [],
+          kind: 'gened',
+          category: 'gened-fspw'
         }]
       }, {
         id: 'PASS101S',
@@ -2146,6 +2238,27 @@ function testRecommendationBestSectionAction(context) {
       state.courses = { 'CMSC 131': { status: 'passed', grade: 'A' } };
       state.schedulePrefs = { PASS101F: { term: '202608', minBreak: 15, mode: 'balanced', avoidDays: [] } };
       state.selectedSections = {
+        PASS101F: {
+          ENGL101: {
+            course: 'ENGL 101',
+            section_id: 'ENGL101-0101',
+            number: '0101',
+            meetings: [{ days: 'TuTh', start_time: '9:30am', end_time: '10:45am', building: 'TWS', room: '1200' }],
+            open_seats: '18',
+            seats: '24',
+            waitlist: '0',
+          },
+          HIST201: {
+            course: 'HIST 201',
+            section_id: 'HIST201-0101',
+            semester: '202701',
+            number: '0101',
+            meetings: [{ days: 'F', start_time: '12:00pm', end_time: '12:50pm', building: 'TWS', room: '1101' }],
+            open_seats: '6',
+            seats: '30',
+            waitlist: '0',
+          }
+        },
         PASS101S: {
           CMSC132: {
             course: 'CMSC132',
@@ -2183,7 +2296,8 @@ function testRecommendationBestSectionAction(context) {
       candidate.bestSection = candidate.sections[0];
       candidate.bestSectionSafe = true;
       candidate.seatRisk = sectionSeatRisk(candidate.bestSection);
-      candidate.readinessImpact = recoCandidateReadinessImpact(candidate, ctx, recoSelectedItemsForContext(ctx), getSchedulePrefs(ctx.semId));
+      const selectedItemsForCtx = recoSelectedItemsForContext(ctx);
+      candidate.readinessImpact = recoCandidateReadinessImpact(candidate, ctx, selectedItemsForCtx, getSchedulePrefs(ctx.semId));
       const htmlBefore = recoRenderPick(candidate, 0, ctx);
       const picked = recoPickBestSection('CMSC 132', 'PASS101F', '202608', 'CMSC132-0101');
       const selected = getSelectedSection('PASS101F', 'CMSC 132');
@@ -2232,6 +2346,8 @@ function testRecommendationBestSectionAction(context) {
         undoChange,
         originalChangeAfterUndo,
         readinessImpact: candidate.readinessImpact,
+        selectedItemsForCtxCodes: selectedItemsForCtx.map(item => item.course.code),
+        selectedItemsForCtxSectionIds: selectedItemsForCtx.map(item => item.section.section_id),
         renderCalls,
       };
     })()
@@ -2241,6 +2357,8 @@ function testRecommendationBestSectionAction(context) {
   assert(/Pick best/.test(result.htmlBefore) && /Schedule/.test(result.htmlBefore), 'recommendation section: live best pick should render pick and schedule actions');
   assert(/Term impact/.test(result.htmlBefore) && /Registration ready/.test(result.htmlBefore), 'recommendation section: live best pick should render registration-readiness impact');
   assert(!/Move here/.test(result.htmlBefore), 'recommendation section: best section action should replace move-only action');
+  assert(result.selectedItemsForCtxCodes.includes('ENGL 101'), 'recommendation section: legacy no-term target pick should count toward readiness');
+  assert(!result.selectedItemsForCtxSectionIds.includes('HIST201-0101'), 'recommendation section: explicit wrong-term target pick should not count toward readiness');
   assert(result.readinessImpact?.level === 'ok' && result.readinessImpact?.label === 'Registration ready', 'recommendation section: readiness impact should classify a complete safe pick as ready');
   assert(result.picked === true, 'recommendation section: action should report successful pick');
   assert(result.fallCodes.includes('CMSC 132') && !result.springCodes.includes('CMSC 132'), 'recommendation section: course should move into target term');

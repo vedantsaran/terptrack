@@ -890,7 +890,26 @@ function accountPlanCourseCodes(payload) {
   return Array.from(seen);
 }
 
-function accountSelectedSectionItems(selectedSections) {
+function accountPlanSemesters(payload) {
+  const plan = accountPlanPayload(payload);
+  return [
+    ...(plan.activeSchedule || []),
+    ...(plan.customSemesters || []),
+  ];
+}
+
+function accountTermForSemId(payload, semId) {
+  const id = String(semId || '').trim();
+  if (!id) return '';
+  const plan = accountPlanPayload(payload);
+  const savedTerm = (plan.schedulePrefs || {})[id]?.term;
+  if (savedTerm) return String(savedTerm);
+  const sem = accountPlanSemesters(plan).find(item => String(item.id || '') === id);
+  return sem && typeof scheduleInferTermCode === 'function' ? scheduleInferTermCode(sem) : '';
+}
+
+function accountSelectedSectionItems(selectedSections, payload = null) {
+  const plan = payload ? accountPlanPayload(payload) : null;
   const items = [];
   const push = (semId, codeKey, rawSection) => {
     if (!rawSection) return;
@@ -899,8 +918,10 @@ function accountSelectedSectionItems(selectedSections) {
       : rawSection;
     const code = displayCode(section.course || codeKey || '');
     if (!normalizeCode(code)) return;
+    const explicitTerm = String(section.semester || '').trim();
     items.push({
-      semId: semId || String(section.semester || ''),
+      semId: semId || explicitTerm,
+      termKey: explicitTerm || (plan ? accountTermForSemId(plan, semId) : ''),
       code,
       course: { code, title: code },
       section,
@@ -922,6 +943,8 @@ const ACCOUNT_UNKNOWN_MEETING_TERM = '__unknown_meeting_term__';
 function accountSelectedSectionTermKey(item) {
   const term = String(item?.section?.semester || '').trim();
   if (term) return term;
+  const inferredTerm = String(item?.termKey || '').trim();
+  if (inferredTerm) return inferredTerm;
   const semId = String(item?.semId || '').trim();
   return semId || ACCOUNT_UNKNOWN_MEETING_TERM;
 }
@@ -1143,8 +1166,8 @@ function accountFriendPlanSummary(plan) {
   const current = accountCurrentPlanPayload();
   const friendCodes = accountPlanCourseCodes(payload);
   const currentCodes = new Set(accountPlanCourseCodes(current));
-  const friendItems = accountSelectedSectionItems(payload.selectedSections || {});
-  const currentItems = accountSelectedSectionItems(current.selectedSections || {});
+  const friendItems = accountSelectedSectionItems(payload.selectedSections || {}, payload);
+  const currentItems = accountSelectedSectionItems(current.selectedSections || {}, current);
   const meetingContext = accountSharedMeetingContext(friendItems, currentItems);
   const overlaps = accountMeetingOverlapSummary(meetingContext.friendItems, meetingContext.currentItems);
   const sharedFreeWindows = accountSharedFreeWindows(meetingContext.friendItems, meetingContext.currentItems, { limit: 8 });
