@@ -10127,3 +10127,86 @@ Next pass candidates:
 - Replace greedy schedule auto-pick with a bounded solver for multi-course section combinations, conflicts, breaks, seats, and timing preferences.
 - Promote the auto-resolver into an initial-plan review workflow so students can resolve remaining placeholders without first opening Browse.
 - Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.
+
+## 2026-07-02 Pass 181
+
+Focus: replace greedy schedule auto-pick with a bounded section-combination solver so section choices are ranked as whole schedules instead of isolated best local picks.
+
+Planned changes:
+- Inspect the existing schedule auto-pick and calendar omission fill paths.
+- Preserve pinned/current chosen sections as fixed inputs to solver scoring.
+- Add a bounded solver that explores multiple section options per course, keeps the best partial schedules, and ranks completed candidates by conflicts, warnings, score, seats, and coverage.
+- Route `buildScheduleCandidate()` through the solver so readiness maps, alternatives, and auto-pick share the same ranking model.
+- Reuse the solver when filling schedule calendar omissions instead of greedily picking each target course in sequence.
+- Add a generated-plan fixture proving a lower-seat section can win when it unlocks the better global no-conflict schedule.
+- Bump the schedule cache key and rendered workflow assertion.
+- Verify with syntax checks, generated fixtures, rendered workflows, release checks, and random live PlanetTerp schedules.
+
+Completed:
+- Updated `js/schedule.js`.
+  - Added bounded solver constants plus candidate sorting helpers.
+  - Added `scheduleSectionOptionsForSolver()` to rank and limit viable section options per course.
+  - Added `solveScheduleCandidates()` with bounded beam expansion across course section combinations.
+  - Replaced greedy `buildScheduleCandidate()` behavior with ranked solver candidates while keeping the same public call shape.
+  - Updated `autoFillScheduleCalendarOmissions()` to solve target-course combinations while preserving existing non-target chosen sections as fixed pinned inputs.
+  - Kept calendar omission auto-fill strict about conflict-free timed picks by skipping solver choices that still overlap pinned/accepted sections or blocked time windows.
+- Updated `scripts/test-generated-plans.js`.
+  - Added `SCHEDULE-BOUNDED-SOLVER`.
+  - The fixture verifies the first ranked candidate avoids a cross-course conflict even when that requires choosing a lower-seat section for one course.
+  - It verifies the second ranked no-conflict alternative remains available behind the best global combination.
+  - Added `SCHEDULE-CALENDAR-CONFLICT-GUARD` to verify calendar omission auto-fill does not apply the only conflicting timed section.
+- Updated `index.html`.
+  - Bumped `js/schedule.js` to `v=71`.
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Updated the schedule asset assertion to `js/schedule.js?v=71`.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Raised the default rendered generated-plan timeout to 120 seconds to match the live metadata workload.
+- Updated `scripts/run-release-checks.js`.
+  - Raised the default generated-plan rendered timeout to 240 seconds.
+  - Split default generated-plan rendered release verification into separate desktop and mobile verifier commands so each viewport gets a fresh browser/server lifecycle.
+
+Major-gap notes:
+- The central schedule auto-pick path now evaluates bounded whole-schedule combinations instead of making isolated greedy section choices.
+- Release verification is less brittle around large live metadata matrices because desktop and mobile rendered generated-plan checks now run independently by default.
+- Remaining improvements could expose solver rationale/alternatives in the UI, add adjustable search breadth for very large plans, promote the initial-plan placeholder resolver outside Browse, and add a Supabase migration/version note for deployed users.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed `SCHEDULE-BOUNDED-SOLVER` with first pick `CMSC131-0201/MATH140-0101` and 0 conflicts.
+  - It passed `SCHEDULE-CALENDAR-CONFLICT-GUARD` by skipping the only conflicting timed `MATH 140` section.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule term guards, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=120000`.
+  - It passed 12 rendered generated template viewport runs for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` across desktop and mobile.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --viewports=mobile`.
+  - It passed the 6-major mobile generated-plan matrix after the release startup failure reproduced as a long-run verifier lifecycle issue rather than an app issue.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with replacement queue, queue fill, and auto-resolver fill.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including the new schedule bounded solver and calendar conflict guard coverage.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass181-bounded-section-solver`.
+  - It randomly verified `KNES`, `SCM`, `ARCH`, `PHIL`, `JOUR`, `THET`, `HIST`, `SPAN`, `AMST`, `ENEE`, `ENST`, and `NEUR` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Surface schedule solver rationale and ranked alternatives in the UI so students can understand why a section set was chosen.
+- Add bounded-search breadth controls or diagnostics for very large section sets.
+- Promote the auto-resolver into an initial-plan review workflow so students can resolve remaining placeholders without first opening Browse.
+- Add a Supabase migration/version note for deployed users so existing requester-only delete policies are visibly upgraded.

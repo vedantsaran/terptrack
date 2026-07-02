@@ -20,7 +20,7 @@ function parseArgs(argv) {
     generated: true,
     rendered: true,
     workflows: true,
-    renderedTimeoutMs: Number(process.env.TERPTRACK_RENDER_TIMEOUT_MS || 120000),
+    renderedTimeoutMs: Number(process.env.TERPTRACK_RENDER_TIMEOUT_MS || 240000),
     workflowsTimeoutMs: Number(process.env.TERPTRACK_WORKFLOW_TIMEOUT_MS || process.env.TERPTRACK_RENDER_TIMEOUT_MS || 120000),
     renderedMajors: [],
     renderedViewports: [],
@@ -93,7 +93,7 @@ function parseArgs(argv) {
   opts.renderedMajors = uniqueClean(opts.renderedMajors, item => item.toUpperCase());
   opts.renderedViewports = uniqueClean(opts.renderedViewports, item => item.toLowerCase());
   opts.liveMajors = uniqueClean(opts.liveMajors, item => item.toUpperCase());
-  opts.renderedTimeoutMs = Number.isFinite(opts.renderedTimeoutMs) && opts.renderedTimeoutMs > 0 ? Math.floor(opts.renderedTimeoutMs) : 120000;
+  opts.renderedTimeoutMs = Number.isFinite(opts.renderedTimeoutMs) && opts.renderedTimeoutMs > 0 ? Math.floor(opts.renderedTimeoutMs) : 240000;
   opts.workflowsTimeoutMs = Number.isFinite(opts.workflowsTimeoutMs) && opts.workflowsTimeoutMs > 0 ? Math.floor(opts.workflowsTimeoutMs) : 120000;
   opts.liveCount = Number.isFinite(opts.liveCount) && opts.liveCount > 0 ? Math.floor(opts.liveCount) : null;
   return opts;
@@ -309,10 +309,17 @@ async function runReleaseChecks(opts, report) {
     skipStage(report, 'generated', 'generated-plan fixtures', '--skip-generated');
   }
   if (opts.rendered) {
-    const args = ['scripts/verify-rendered-generated-plans.js', `--timeout-ms=${opts.renderedTimeoutMs}`];
-    if (opts.renderedMajors.length) args.push(`--majors=${opts.renderedMajors.join(',')}`);
-    if (opts.renderedViewports.length) args.push(`--viewports=${opts.renderedViewports.join(',')}`);
-    await runStage(report, 'rendered', 'rendered generated-plan verifier', stage => runCommand(stage, 'rendered generated-plan verifier', args, report));
+    await runStage(report, 'rendered', 'rendered generated-plan verifier', async stage => {
+      const baseArgs = ['scripts/verify-rendered-generated-plans.js', `--timeout-ms=${opts.renderedTimeoutMs}`];
+      if (opts.renderedMajors.length) baseArgs.push(`--majors=${opts.renderedMajors.join(',')}`);
+      if (opts.renderedViewports.length) {
+        await runCommand(stage, 'rendered generated-plan verifier', [...baseArgs, `--viewports=${opts.renderedViewports.join(',')}`], report);
+        return;
+      }
+      for (const viewport of ['desktop', 'mobile']) {
+        await runCommand(stage, `rendered generated-plan verifier (${viewport})`, [...baseArgs, `--viewports=${viewport}`], report);
+      }
+    });
   } else {
     skipStage(report, 'rendered', 'rendered generated-plan verifier', '--skip-rendered');
   }

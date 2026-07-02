@@ -1909,43 +1909,96 @@ function evaluateScheduleCandidate(items, prefs) {
   return { conflicts, warnings, openSeats, score, locationIssues: locationReport.alertCount, timing };
 }
 
-function buildScheduleCandidate(courses, sectionsByCode, prefs, variant = 0, currentItems = []) {
-  const chosen = currentItems
+const SCHEDULE_SOLVER_SECTION_LIMIT = 7;
+const SCHEDULE_SOLVER_BEAM_WIDTH = 96;
+
+function scheduleCandidateSortValue(candidate) {
+  return [
+    -(candidate.conflicts?.length || 0),
+    -(candidate.warnings?.length || 0),
+    Number(candidate.score) || 0,
+    Number(candidate.openSeats) || 0,
+    candidate.items?.length || 0,
+  ];
+}
+
+function scheduleCompareCandidates(a, b) {
+  const av = scheduleCandidateSortValue(a);
+  const bv = scheduleCandidateSortValue(b);
+  for (let i = 0; i < av.length; i += 1) {
+    if (bv[i] !== av[i]) return bv[i] - av[i];
+  }
+  return String(a.signature || '').localeCompare(String(b.signature || ''));
+}
+
+function scheduleSectionOptionsForSolver(course, sectionsByCode, prefs, chosen, limit = SCHEDULE_SOLVER_SECTION_LIMIT) {
+  return (sectionsByCode[normalizeCode(course.code)] || [])
+    .slice()
+    .sort((a, b) => sectionScore(b, prefs, course, chosen) - sectionScore(a, prefs, course, chosen))
+    .slice(0, limit);
+}
+
+function solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems = [], opts = {}) {
+  const limit = Math.max(1, Number(opts.limit) || 1);
+  const sectionLimit = Math.max(1, Number(opts.sectionLimit) || SCHEDULE_SOLVER_SECTION_LIMIT);
+  const beamWidth = Math.max(8, Number(opts.beamWidth) || SCHEDULE_SOLVER_BEAM_WIDTH);
+  const pinned = (currentItems || [])
     .filter(item => item.section && item.section.pinned)
     .map(item => ({ course: item.course, section: item.section }));
-  const pinnedCodes = new Set(chosen.map(item => normalizeCode(item.course.code)));
+  const pinnedCodes = new Set(pinned.map(item => normalizeCode(item.course.code)));
   const skipped = [];
-  const sortedCourses = courses
+  const solvable = [];
+  (courses || [])
     .filter(course => !pinnedCodes.has(normalizeCode(course.code)))
-    .sort((a, b) => {
-      const sa = (sectionsByCode[normalizeCode(a.code)] || []).length;
-      const sb = (sectionsByCode[normalizeCode(b.code)] || []).length;
-      return sa - sb || a.code.localeCompare(b.code);
+    .forEach(course => {
+      const count = (sectionsByCode[normalizeCode(course.code)] || []).length;
+      if (!count) skipped.push(course.code);
+      else solvable.push({ course, count });
     });
+  solvable.sort((a, b) => a.count - b.count || a.course.code.localeCompare(b.course.code));
 
-  sortedCourses.forEach((course, courseIdx) => {
-    const sections = (sectionsByCode[normalizeCode(course.code)] || [])
-      .slice()
-      .sort((a, b) => sectionScore(b, prefs, course, chosen) - sectionScore(a, prefs, course, chosen));
-    if (!sections.length) { skipped.push(course.code); return; }
-    const viable = sections.filter(section => {
-      const candidateBlocks = sectionBlocks(section, course);
-      const existingBlocks = chosen.flatMap(item => sectionBlocks(item.section, item.course));
-      const blockedOverlap = sectionBlockedOverlaps(section, prefs, course).length > 0;
-      return !blockedOverlap && !candidateBlocks.some(a => existingBlocks.some(b => blocksConflict(a, b)));
+  let beam = [{
+    items: pinned,
+    skipped,
+    signature: scheduleCandidateSignature(pinned),
+    ...evaluateScheduleCandidate(pinned, prefs),
+  }];
+
+  solvable.forEach(({ course }) => {
+    const next = new Map();
+    beam.forEach(partial => {
+      const options = scheduleSectionOptionsForSolver(course, sectionsByCode, prefs, partial.items, sectionLimit);
+      options.forEach(section => {
+        const items = [...partial.items, { course, section }];
+        const signature = scheduleCandidateSignature(items);
+        const candidate = {
+          items,
+          skipped,
+          signature,
+          ...evaluateScheduleCandidate(items, prefs),
+        };
+        const existing = next.get(signature);
+        if (!existing || scheduleCompareCandidates(candidate, existing) < 0) next.set(signature, candidate);
+      });
     });
-    const pool = viable.length ? viable : sections;
-    const windowSize = Math.min(pool.length, 4);
-    const pickIdx = windowSize ? ((variant + courseIdx) % windowSize) : 0;
-    chosen.push({ course, section: pool[pickIdx] });
+    beam = Array.from(next.values())
+      .sort(scheduleCompareCandidates)
+      .slice(0, beamWidth);
   });
 
-  const evaluation = evaluateScheduleCandidate(chosen, prefs);
-  return {
-    items: chosen,
-    skipped,
-    signature: scheduleCandidateSignature(chosen),
-    ...evaluation,
+  return beam
+    .sort(scheduleCompareCandidates)
+    .slice(0, limit);
+}
+
+function buildScheduleCandidate(courses, sectionsByCode, prefs, variant = 0, currentItems = []) {
+  const target = Math.max(0, Number(variant) || 0);
+  const candidates = solveScheduleCandidates(courses, sectionsByCode, prefs, currentItems, { limit: target + 1 });
+  return candidates[target] || candidates[0] || {
+    items: [],
+    skipped: (courses || []).map(course => course.code),
+    signature: '',
+    ...evaluateScheduleCandidate([], prefs),
   };
 }
 
@@ -5940,25 +5993,34 @@ async function autoFillScheduleCalendarOmissions() {
       return sa - sb || a.code.localeCompare(b.code);
     });
   const changes = [];
-  const skipped = [];
+  const timedSectionsByCode = { ...sectionsByCode };
   targetCourses.forEach(course => {
     const norm = normalizeCode(course.code);
-    const sections = (sectionsByCode[norm] || [])
-      .filter(sectionHasTimedMeetings)
-      .sort((a, b) => sectionScore(b, prefs, course, chosen) - sectionScore(a, prefs, course, chosen));
-    const viable = sections.filter(section => {
-      const candidateBlocks = sectionBlocks(section, course);
-      const existingBlocks = chosen.flatMap(item => sectionBlocks(item.section, item.course));
-      const blockedOverlap = sectionBlockedOverlaps(section, prefs, course).length > 0;
-      return !blockedOverlap && !candidateBlocks.some(a => existingBlocks.some(b => blocksConflict(a, b)));
-    });
-    const pick = viable[0] || null;
+    timedSectionsByCode[norm] = (sectionsByCode[norm] || []).filter(sectionHasTimedMeetings);
+  });
+  const preserved = chosen.map(item => ({ course: item.course, section: { ...item.section, pinned: true } }));
+  const candidate = buildScheduleCandidate(targetCourses, timedSectionsByCode, prefs, 0, preserved);
+  const skipped = new Set(candidate.skipped || []);
+  const candidateByCode = new Map(candidate.items
+    .filter(item => targetCodes.has(normalizeCode(item.course.code)))
+    .map(item => [normalizeCode(item.course.code), item]));
+  const accepted = chosen.slice();
+  targetCourses.forEach(course => {
+    const norm = normalizeCode(course.code);
+    const pick = candidateByCode.get(norm)?.section || null;
     if (!pick) {
-      skipped.push(course.code);
+      skipped.add(course.code);
       return;
     }
+    const candidateBlocks = sectionBlocks(pick, course);
+    const existingBlocks = accepted.flatMap(item => sectionBlocks(item.section, item.course));
+    const blockedOverlap = sectionBlockedOverlaps(pick, prefs, course).length > 0;
+    if (blockedOverlap || candidateBlocks.some(a => existingBlocks.some(b => blocksConflict(a, b)))) {
+      skipped.add(course.code);
+      return;
+    }
+    accepted.push({ course, section: pick });
     const previous = getSelectedSection(semId, course.code);
-    chosen.push({ course, section: pick });
     changes.push({
       semId,
       code: course.code,
@@ -5967,8 +6029,9 @@ async function autoFillScheduleCalendarOmissions() {
       nextSection: scheduleCloneSection(pick),
     });
   });
+  const skippedCourses = Array.from(skipped);
   if (!changes.length) {
-    toastInfo(skipped.length ? `No conflict-free timed sections found for ${skipped.join(', ')}.` : 'No calendar omissions could be auto-filled.');
+    toastInfo(skippedCourses.length ? `No conflict-free timed sections found for ${skippedCourses.join(', ')}.` : 'No calendar omissions could be auto-filled.');
     return;
   }
   changes.forEach(change => setSelectedSection(change.semId, change.code, change.nextSection));
@@ -5989,12 +6052,12 @@ async function autoFillScheduleCalendarOmissions() {
     source: 'Schedule',
     title: `Auto-filled ${changes.length} calendar omitted section${changes.length === 1 ? '' : 's'}`,
     detail: changes.map(change => `${change.code} ${scheduleSectionShortLabel(change.nextSection)}`).join(' · '),
-    meta: `${scheduleTermLabel(term)}${skipped.length ? ` · skipped ${skipped.join(', ')}` : ''}`,
+    meta: `${scheduleTermLabel(term)}${skippedCourses.length ? ` · skipped ${skippedCourses.join(', ')}` : ''}`,
   }, { save: false });
   saveState();
   renderSchedule();
   renderSemesters();
-  if (skipped.length) toastInfo(`Filled ${changes.length}; no conflict-free timed sections found for ${skipped.join(', ')}.`);
+  if (skippedCourses.length) toastInfo(`Filled ${changes.length}; no conflict-free timed sections found for ${skippedCourses.join(', ')}.`);
   else toastSuccess(`Filled ${changes.length} omitted calendar section${changes.length === 1 ? '' : 's'}.`);
 }
 

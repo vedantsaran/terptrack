@@ -1935,6 +1935,86 @@ async function testScheduleActionUndo(context) {
   };
 }
 
+function testScheduleBoundedSectionSolver(context) {
+  const result = clone(vm.runInContext(`
+    (() => {
+      const courses = [
+        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4 },
+        { code: 'MATH 140', title: 'Calculus I', cr: 4 },
+      ];
+      const cmscHigh = {
+        course: 'CMSC131',
+        section_id: 'CMSC131-0101',
+        semester: '202608',
+        number: '0101',
+        meetings: [{ days: 'M', start_time: '9:00am', end_time: '10:00am', building: 'IRB', room: '1101' }],
+        open_seats: '50',
+        seats: '60',
+        waitlist: '0',
+      };
+      const cmscFit = {
+        course: 'CMSC131',
+        section_id: 'CMSC131-0201',
+        semester: '202608',
+        number: '0201',
+        meetings: [{ days: 'Tu', start_time: '9:00am', end_time: '10:00am', building: 'IRB', room: '1101' }],
+        open_seats: '20',
+        seats: '40',
+        waitlist: '0',
+      };
+      const mathHigh = {
+        course: 'MATH140',
+        section_id: 'MATH140-0101',
+        semester: '202608',
+        number: '0101',
+        meetings: [{ days: 'M', start_time: '9:30am', end_time: '10:30am', building: 'MTH', room: '0101' }],
+        open_seats: '50',
+        seats: '60',
+        waitlist: '0',
+      };
+      const mathFallback = {
+        course: 'MATH140',
+        section_id: 'MATH140-0201',
+        semester: '202608',
+        number: '0201',
+        meetings: [{ days: 'W', start_time: '4:00pm', end_time: '5:15pm', building: 'MTH', room: '0101' }],
+        open_seats: '1',
+        seats: '30',
+        waitlist: '0',
+      };
+      const prefs = { ...DEFAULT_SCHEDULE_PREFS, term: '202608', mode: 'open-seats', earliest: '08:00', latest: '17:30', avoidDays: [] };
+      const sectionsByCode = {
+        CMSC131: [cmscHigh, cmscFit],
+        MATH140: [mathHigh, mathFallback],
+      };
+      const first = buildScheduleCandidate(courses, sectionsByCode, prefs, 0, []);
+      const second = buildScheduleCandidate(courses, sectionsByCode, prefs, 1, []);
+      const firstIds = Object.fromEntries(first.items.map(item => [normalizeCode(item.course.code), item.section.section_id]));
+      const secondIds = Object.fromEntries(second.items.map(item => [normalizeCode(item.course.code), item.section.section_id]));
+      return {
+        firstIds,
+        secondIds,
+        firstConflicts: first.conflicts.length,
+        firstWarnings: first.warnings.length,
+        firstScore: first.score,
+        secondConflicts: second.conflicts.length,
+        secondScore: second.score,
+      };
+    })()
+  `, context));
+
+  assert(result.firstIds.CMSC131 === 'CMSC131-0201' && result.firstIds.MATH140 === 'MATH140-0101', 'schedule bounded solver: should prefer the best global conflict-free section combination');
+  assert(result.firstConflicts === 0, 'schedule bounded solver: first candidate should be conflict-free');
+  assert(result.secondIds.CMSC131 === 'CMSC131-0101' && result.secondIds.MATH140 === 'MATH140-0201', 'schedule bounded solver: second candidate should preserve useful alternate combinations');
+  assert(result.firstScore > result.secondScore && result.secondConflicts === 0, 'schedule bounded solver: first candidate should outrank the fallback no-conflict combination');
+
+  return {
+    id: 'SCHEDULE-BOUNDED-SOLVER',
+    first: `${result.firstIds.CMSC131}/${result.firstIds.MATH140}`,
+    conflicts: result.firstConflicts,
+  };
+}
+
 function testScheduleCourseChip(context) {
   const result = clone(vm.runInContext(`
     (() => {
@@ -2110,6 +2190,79 @@ async function testScheduleTermMismatchGuards(context) {
     id: 'SCHEDULE-TERM-GUARDS',
     replaced: result.afterAutoFill?.section_id || '',
     stale: 'wrong term flagged',
+  };
+}
+
+async function testScheduleCalendarOmissionConflictGuard(context) {
+  const result = clone(await vm.runInContext(`
+    (async () => {
+      const originalFetchSections = scheduleFetchSectionsFor;
+      const originalToastInfo = typeof toastInfo === 'function' ? toastInfo : null;
+      const originalRenderSchedule = renderSchedule;
+      const originalRenderSemesters = typeof renderSemesters === 'function' ? renderSemesters : null;
+      try {
+        const cmsc = { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4 };
+        const math = { code: 'MATH 140', title: 'Calculus I', cr: 4 };
+        const cmscSection = {
+          course: 'CMSC131',
+          section_id: 'CMSC131-0101',
+          semester: '202608',
+          number: '0101',
+          meetings: [{ days: 'M', start_time: '9:00am', end_time: '10:00am', building: 'IRB', room: '1101' }],
+          open_seats: '20',
+          waitlist: '0',
+          seats: '40',
+        };
+        const mathConflict = {
+          course: 'MATH140',
+          section_id: 'MATH140-0101',
+          semester: '202608',
+          number: '0101',
+          meetings: [{ days: 'M', start_time: '9:30am', end_time: '10:30am', building: 'MTH', room: '0101' }],
+          open_seats: '25',
+          waitlist: '0',
+          seats: '50',
+        };
+        state.activeSchedule = [{ id: 'TERMC', name: 'Fall 2026', courses: [cmsc, math] }];
+        scheduleCurrentSemId = 'TERMC';
+        state.customCourses = [];
+        state.courses = {};
+        state.schedulePrefs = { TERMC: { ...DEFAULT_SCHEDULE_PREFS, term: '202608' } };
+        state.selectedSections = { TERMC: { CMSC131: cmscSection } };
+        state.recentChanges = [];
+        window.__calendarGuardToasts = [];
+        toastInfo = message => { window.__calendarGuardToasts.push(message); };
+        renderSchedule = async () => {};
+        renderSemesters = () => {};
+        scheduleFetchSectionsFor = async () => ({
+          CMSC131: [cmscSection],
+          MATH140: [mathConflict],
+        });
+        await autoFillScheduleCalendarOmissions();
+        return {
+          mathSelected: !!getSelectedSection('TERMC', 'MATH 140'),
+          cmscSelected: getSelectedSection('TERMC', 'CMSC 131')?.section_id || '',
+          toasts: window.__calendarGuardToasts.join(' | '),
+        };
+      } finally {
+        scheduleFetchSectionsFor = originalFetchSections;
+        if (originalToastInfo) toastInfo = originalToastInfo;
+        else delete globalThis.toastInfo;
+        renderSchedule = originalRenderSchedule;
+        if (originalRenderSemesters) renderSemesters = originalRenderSemesters;
+        else delete globalThis.renderSemesters;
+        delete window.__calendarGuardToasts;
+      }
+    })()
+  `, context));
+
+  assert(!result.mathSelected, 'schedule calendar conflict guard: auto-fill should not apply the only conflicting timed section');
+  assert(result.cmscSelected === 'CMSC131-0101', 'schedule calendar conflict guard: existing timed pick should remain selected');
+  assert(/No conflict-free timed sections found for MATH 140/.test(result.toasts), 'schedule calendar conflict guard: should explain skipped conflicting omission');
+
+  return {
+    id: 'SCHEDULE-CALENDAR-CONFLICT-GUARD',
+    skipped: 'MATH 140',
   };
 }
 
@@ -5901,8 +6054,10 @@ async function main() {
   const readiness = testScheduleRegistrationReadiness(context);
   const mapUndo = testScheduleReadinessMapUndo(context);
   const actionUndo = await testScheduleActionUndo(context);
+  const boundedSolver = testScheduleBoundedSectionSolver(context);
   const chip = testScheduleCourseChip(context);
   const termGuards = await testScheduleTermMismatchGuards(context);
+  const calendarConflictGuard = await testScheduleCalendarOmissionConflictGuard(context);
   const seatRisk = testScheduleSeatRiskBackups(context);
   const readyBackups = await testScheduleReadyBackupBulkAction(context);
   const dndCleanup = testDragDropSelectionCleanup(context);
@@ -5946,8 +6101,10 @@ async function main() {
   console.log(`Schedule readiness fixture ${readiness.id}: ${readiness.label}; gates ${readiness.gates}.`);
   console.log(`Schedule map undo fixture ${mapUndo.id}: restored ${mapUndo.restored}.`);
   console.log(`Schedule action undo fixture ${actionUndo.id}: clear ${actionUndo.clear}, auto ${actionUndo.auto}, alternate ${actionUndo.alternate}.`);
+  console.log(`Schedule bounded solver fixture ${boundedSolver.id}: first ${boundedSolver.first}; conflicts ${boundedSolver.conflicts}.`);
   console.log(`Schedule chip fixture ${chip.id}: ${chip.risk}, ${chip.closed}, ${chip.ok}.`);
   console.log(`Schedule term guards fixture ${termGuards.id}: replaced ${termGuards.replaced}; ${termGuards.stale}.`);
+  console.log(`Schedule calendar conflict fixture ${calendarConflictGuard.id}: skipped ${calendarConflictGuard.skipped}.`);
   console.log(`Schedule seat-risk fixture ${seatRisk.id}: ${seatRisk.warnings} warnings with ${seatRisk.checklist} and ${seatRisk.questions}.`);
   console.log(`Schedule ready backups fixture ${readyBackups.id}: applied ${readyBackups.applied}; restored ${readyBackups.restored}.`);
   console.log(`Drag/drop cleanup fixture ${dndCleanup.id}: required ${dndCleanup.required}; custom ${dndCleanup.custom}.`);
@@ -5975,7 +6132,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule course chips + schedule term guards + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

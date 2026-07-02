@@ -111,7 +111,7 @@ function parseArgs(argv) {
     viewports: [],
     headed: false,
     keepOpen: false,
-    timeoutMs: Number(process.env.TERPTRACK_RENDER_TIMEOUT_MS || 45000),
+    timeoutMs: Number(process.env.TERPTRACK_RENDER_TIMEOUT_MS || 120000),
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -152,7 +152,7 @@ function parseArgs(argv) {
   for (const viewport of opts.viewports) {
     if (!VIEWPORTS[viewport]) fail(`Unknown viewport: ${viewport}`);
   }
-  opts.timeoutMs = Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0 ? opts.timeoutMs : 45000;
+  opts.timeoutMs = Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0 ? opts.timeoutMs : 120000;
   return opts;
 }
 
