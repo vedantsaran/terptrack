@@ -127,6 +127,7 @@ async function saveCustomCourse() {
 
   if (editingCourseCode) {
     const codeChanged = codeInput !== editingCourseCode;
+    const normalizedCodeChanged = normalizeCode(codeInput) !== normalizeCode(editingCourseCode);
     // Block code collisions with another course in the plan
     if (codeChanged && findCourse(codeInput)) {
       toastError(`A course with code "${codeInput}" already exists.`);
@@ -160,6 +161,9 @@ async function saveCustomCourse() {
     if (codeChanged && state.courses[editingCourseCode]) {
       state.courses[codeInput] = state.courses[editingCourseCode];
       delete state.courses[editingCourseCode];
+    }
+    if (normalizedCodeChanged && typeof clearSelectedSectionsForCourse === 'function') {
+      clearSelectedSectionsForCourse(editingCourseCode);
     }
     saveState();
     closeAddCourse();
