@@ -7861,3 +7861,69 @@ Verification:
   - It randomly verified `HLTH`, `GEOG`, `ACCOUNTING`, `ASTR`, `HESP`, and `ANSC` against PlanetTerp.
   - Every generated required course reported a matching live title/credit pair.
   - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+## 2026-07-01 Pass 143
+
+Focus: add prerequisite readiness to real registration handoff so a section with seats, no conflicts, and valid eligibility still cannot be treated as Testudo-ready when the course prerequisite is missing or only pending.
+
+Planned changes:
+- Reuse the existing prerequisite model instead of adding a separate parser.
+- Add a first-class `Prereqs` registration readiness gate.
+- Carry prerequisite blockers into enrollment order, Testudo entry queue, schedule text, registration-list text, and advisor packet exports.
+- Keep prior-term/in-progress prerequisites as review items rather than silently treating them as complete.
+- Verify focused fixtures, rendered browser workflows, release checks, and deterministic plus random live PlanetTerp samples.
+- Keep `README.md` untouched and unstaged.
+
+Completed:
+- Added shared prerequisite readiness helpers in `js/schedule.js`.
+  - `scheduleCoursePrereqStatus()` wraps the existing `prereqsMet()` result and classifies courses as ready, pending review, or blocked.
+  - Missing prerequisites are danger-level blockers.
+  - In-progress or earlier-planned prerequisites are warning-level pending items that must be confirmed before Testudo submission.
+  - Failed, same-term, later-term, or absent prerequisites stay blocked.
+- Added a first-class `Prereqs` gate to `scheduleRegistrationReadiness()`.
+  - The gate appears beside sections, conflicts, seats, eligibility, timing, and preferences.
+  - Recommended fixes now explicitly tell the student to mark completed credit or move locked courses after prerequisites.
+  - Quick actions still guide students into section/advisor review without adding an unsupported new action handler.
+- Added prerequisite status to registration handoff surfaces.
+  - Enrollment order now scores prerequisite blockers and labels clean cases as `Prereq first` or `Confirm prereq`.
+  - Testudo entry queue marks prerequisite-blocked rows as blocked and uses `Resolve prerequisites before entering`.
+  - Schedule output text, registration-list text, advisor HTML/text, advisor document HTML, and the picked-section table include prerequisite notes.
+- Fixed readiness-map status fallthrough.
+  - Any danger gate beyond sections/conflicts/seats, including prerequisites and eligibility, now prevents a term from showing as `Ready`.
+  - Future terms with earlier planned but unconfirmed prerequisites now show `Review` after auto-pick instead of overclaiming readiness.
+- Bumped cache tags:
+  - `styles.css?v=109`.
+  - `js/schedule.js?v=63`.
+- Extended tests:
+  - `SCHEDULE-READINESS` now fixtures `MATH 140` with missing `MATH 115` prerequisite evidence.
+  - The fixture asserts the `prereqs:danger` readiness gate, prerequisite fix guidance, Testudo queue prereq detail, registration-list text, schedule output, advisor HTML/text, and exported advisor document markup.
+  - The rendered mobile advisor packet workflow now waits for the prerequisite gate, checks missing `MATH 115`, verifies prerequisite detail in exports/cache, and expects future auto-picked terms with pending prereqs to show `Review`.
+  - Rendered workflow logs now name `prerequisite gate` coverage.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the expanded `SCHEDULE-READINESS` fixture with `prereqs:danger` coverage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, auto-plan diagnostics, all generated requirement groups, catalog-year targeting, account/share, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule chips, schedule seat-risk, schedule ready backups, recommendations, planner questions/checklist, Browse, audit, onboarding, and prior-credit tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms 120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup.
+  - It passed mobile advisor packet workflow with prerequisite gate, eligibility gate, workload balance, final registration checklist, ready backup apply, calendar omission auto-fill, clear-picks undo, calendar omission review, readiness map, blocker view, registration readiness, registration appointment, seat freshness, Testudo queue, enrollment order, backup plan, registration export, calendar export, catalog warning, low-seat backup warning, seat refresh action, export action, and no overflow.
+- Ran `node scripts/verify-rendered-generated-plans.js --major=ARTT --viewport=mobile --timeout-ms=120000`.
+  - It verified the rendered mobile generated-plan preview at full `12/12 live course records` with the updated cache tags.
+- Ran `node scripts/run-release-checks.js --live --live-seed=pass143-prereq-readiness-live`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures, including prerequisite gate coverage.
+  - It passed 12 rendered generated-plan viewport runs with full live metadata counts and clean browser console output.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows with prerequisite gate coverage.
+  - It live-verified `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE` against PlanetTerp with every generated required course reporting a matching live title/credit pair.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-count 6 --live-seed pass143-prereq-readiness-random-live`.
+  - It randomly verified `WMST`, `PLSC`, `THET`, `GEOG`, `ARTT`, and `ENCH` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.

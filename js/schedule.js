@@ -1820,6 +1820,8 @@ function scheduleReadinessMapStatus(row) {
   if (row.conflicts.length) return { label: 'Conflicts', detail: `${row.conflicts.length} time overlap${row.conflicts.length === 1 ? '' : 's'} to resolve.` };
   const risky = row.selectedItems.filter(item => ['closed', 'risk'].includes(sectionSeatRisk(item.section).level));
   if (risky.length) return { label: 'Seat risk', detail: `${risky.length} picked section${risky.length === 1 ? '' : 's'} with low or closed seats.` };
+  const dangerGate = (row.readiness.gates || []).find(gate => gate.level === 'danger');
+  if (dangerGate) return { label: dangerGate.label, detail: dangerGate.detail };
   if (row.readiness.warnCount) return { label: 'Review', detail: row.readiness.fixes[0] || row.readiness.detail };
   return { label: 'Ready', detail: 'Picked sections clear core registration checks.' };
 }
@@ -1838,7 +1840,7 @@ function scheduleReadinessMapRows(activeSemId, activeTerm, activeCourses, active
       : scheduleSelectedItemsFor(sem.id, term, courses, sectionsByCode);
     const conflicts = isActive ? activeConflicts : detectScheduleConflicts(selectedItems).conflicts;
     const warnings = isActive ? activeWarnings : selectedScheduleWarnings(selectedItems, prefs);
-    const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs);
+    const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, null, sem.id);
     const loadedCount = scheduleReadinessMapLoadedCount(sem.id, term, courses, sectionsByCode, activeSemId);
     const postedCount = Object.values(sectionsByCode).reduce((sum, sections) => sum + ((sections || []).length), 0);
     const row = {
@@ -2221,13 +2223,111 @@ function scheduleRegistrationGate(id, label, level, value, detail) {
   return { id, label, level, value, detail };
 }
 
-function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = []) {
+function scheduleSemesterIndex(semId = '') {
+  if (!semId) return -1;
+  return getAllSemesters().findIndex(sem => sem.id === semId);
+}
+
+function schedulePlannedCourseIndex(code) {
+  const target = normalizeCode(code);
+  if (!target) return -1;
+  const sems = getAllSemesters();
+  for (let idx = 0; idx < sems.length; idx++) {
+    const courses = [
+      ...(sems[idx].courses || []),
+      ...(state.customCourses || []).filter(course => course.semId === sems[idx].id),
+    ];
+    if (courses.some(course => normalizeCode(course.code || '') === target)) return idx;
+  }
+  return -1;
+}
+
+function schedulePrereqPendingStatus(code, semId = '') {
+  const display = displayCode(code || '');
+  const status = getCourseState(display);
+  if (status.status === 'passed' || status.status === 'transfer') return { met: true, label: 'complete' };
+  if (status.status === 'failed') return { met: false, pending: false, label: 'failed' };
+  if (status.status === 'in-progress') return { met: false, pending: true, label: 'in progress' };
+  const currentIdx = scheduleSemesterIndex(semId);
+  const plannedIdx = schedulePlannedCourseIndex(display);
+  if (currentIdx >= 0 && plannedIdx >= 0 && plannedIdx < currentIdx) {
+    return { met: false, pending: true, label: 'planned earlier' };
+  }
+  return { met: false, pending: false, label: plannedIdx >= 0 ? 'planned later or same term' : 'not in completed record' };
+}
+
+function scheduleCoursePrereqStatus(course, semId = '') {
+  const status = prereqsMet(course || {});
+  if (status.met) {
+    return {
+      level: 'ok',
+      label: 'Prereqs ready',
+      missing: '',
+      detail: 'Prerequisites are marked passed or transferred.',
+      options: [],
+    };
+  }
+  const options = (Array.isArray(status.missingGroup) && status.missingGroup.length
+    ? status.missingGroup
+    : [status.missing || 'prereq needed'])
+    .map(displayCode)
+    .filter(Boolean);
+  const optionText = options.join(' or ') || 'prereq needed';
+  const pending = options
+    .map(code => ({ code, ...schedulePrereqPendingStatus(code, semId) }))
+    .filter(row => row.pending);
+  if (pending.length) {
+    const pendingText = pending.map(row => `${row.code} ${row.label}`).join(' or ');
+    return {
+      level: 'warn',
+      label: 'Prereq pending',
+      missing: optionText,
+      detail: `${course?.code || 'Course'}: ${pendingText}; confirm completion before Testudo allows registration.`,
+      options,
+      pending,
+    };
+  }
+  return {
+    level: 'danger',
+    label: 'Prereq blocked',
+    missing: optionText,
+    detail: `${course?.code || 'Course'}: missing ${optionText}. Mark it passed/transfer or move this course after the prerequisite.`,
+    options,
+    pending,
+  };
+}
+
+function schedulePrereqRows(courses = [], semId = '') {
+  return (courses || [])
+    .map(course => {
+      const prereq = scheduleCoursePrereqStatus(course, semId);
+      if (prereq.level === 'ok') return null;
+      return {
+        course,
+        code: course?.code || '',
+        label: course?.code || 'Course',
+        prereq,
+        level: prereq.level,
+        detail: prereq.detail,
+      };
+    })
+    .filter(Boolean);
+}
+
+function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = [], prereqRows = []) {
   if (!courseList.length) return ['No registration fixes are needed for this semester.'];
   const fixes = [];
   const gateById = Object.fromEntries((gates || []).map(gate => [gate.id, gate]));
   if (gateById.sections?.level === 'danger') {
     const names = (unscheduled || []).slice(0, 4).map(course => course.code).join(', ');
     fixes.push(`Pick sections for ${names || 'all remaining courses'}; use Auto-pick first, then choose manually for courses without posted sections.`);
+  }
+  if (gateById.prereqs?.level === 'danger') {
+    const names = (prereqRows || []).filter(row => row.level === 'danger').slice(0, 3).map(row => row.label).join(', ');
+    fixes.push(`Resolve missing prerequisites for ${names || 'locked courses'} by marking completed credit or moving the course after its prerequisite.`);
+  } else if (gateById.prereqs?.level === 'warn') {
+    const names = (prereqRows || []).slice(0, 3).map(row => row.label).join(', ');
+    fixes.push(`Confirm pending prerequisite completion for ${names || 'courses with in-progress prerequisites'} before submitting in Testudo.`);
   }
   if (gateById.conflicts?.level === 'danger') {
     fixes.push('Generate alternatives or switch one overlapping section until the weekly grid has 0 conflicts.');
@@ -2258,10 +2358,10 @@ function scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats
       : 'Review saved schedule preferences before registration.');
   }
   if (!fixes.length) fixes.push('No readiness fixes needed after normal advisor and Testudo review.');
-  return Array.from(new Set(fixes)).slice(0, 5);
+  return Array.from(new Set(fixes)).slice(0, 6);
 }
 
-function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = []) {
+function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows = [], prereqRows = []) {
   if (!courseList.length) return [];
   const gateById = Object.fromEntries((gates || []).map(gate => [gate.id, gate]));
   const actions = [];
@@ -2285,6 +2385,18 @@ function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSe
       label: 'Review section picks',
       detail: 'Open the section list to choose missing sections or apply backups.',
       kind: 'secondary',
+    });
+  }
+
+  if (gateById.prereqs?.level === 'danger' || gateById.prereqs?.level === 'warn') {
+    const names = (prereqRows || []).slice(0, 2).map(row => row.label).join(', ');
+    addAction({
+      id: 'review-sections',
+      label: 'Review section picks',
+      detail: names
+        ? `Review ${names} with advisor context before registering.`
+        : 'Review courses with prerequisite blockers before registering.',
+      kind: actions.length ? 'secondary' : 'primary',
     });
   }
 
@@ -2345,7 +2457,7 @@ function scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSe
   return actions.slice(0, 3);
 }
 
-function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflicts = [], warnings = [], prefs = DEFAULT_SCHEDULE_PREFS, unscheduledOverride = null) {
+function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflicts = [], warnings = [], prefs = DEFAULT_SCHEDULE_PREFS, unscheduledOverride = null, semId = '') {
   const courseList = Array.isArray(courses) ? courses : [];
   const selectedList = Array.isArray(selectedItems) ? selectedItems : [];
   const selectedCodes = new Set(selectedList.map(item => normalizeCode(item.course?.code || item.section?.course || '')));
@@ -2366,6 +2478,9 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
   }));
   const urgentSeats = seatRows.filter(row => row.risk.level === 'closed' || row.risk.level === 'risk');
   const watchSeats = seatRows.filter(row => row.risk.level === 'watch' || row.risk.level === 'unknown');
+  const prereqRows = schedulePrereqRows(courseList, semId);
+  const urgentPrereqs = prereqRows.filter(row => row.level === 'danger');
+  const watchPrereqs = prereqRows.filter(row => row.level === 'warn');
   const urgentEligibility = eligibilityRows.filter(row => row.eligibility.level === 'danger');
   const watchEligibility = eligibilityRows.filter(row => row.eligibility.level === 'warn');
   const untimedCount = timing.metrics?.untimedCount || 0;
@@ -2381,6 +2496,20 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
       : unscheduled.length
         ? `Pick sections for ${unscheduled.slice(0, 4).map(course => course.code).join(', ')}${unscheduled.length > 4 ? ` and ${unscheduled.length - 4} more` : ''}.`
         : 'Every current-term course has a picked section.'
+  ));
+
+  gates.push(scheduleRegistrationGate(
+    'prereqs',
+    'Prereqs',
+    !courseList.length ? 'ok' : urgentPrereqs.length ? 'danger' : watchPrereqs.length ? 'warn' : 'ok',
+    courseList.length ? `${courseList.length - prereqRows.length}/${courseList.length}` : 'n/a',
+    !courseList.length
+      ? 'No prerequisites need review for this semester.'
+      : urgentPrereqs.length
+        ? `Prereq blocker: ${urgentPrereqs.slice(0, 3).map(row => row.detail).join(' · ')}${urgentPrereqs.length > 3 ? ` · +${urgentPrereqs.length - 3} more` : ''}`
+        : watchPrereqs.length
+          ? `Prereq review: ${watchPrereqs.slice(0, 3).map(row => row.detail).join(' · ')}${watchPrereqs.length > 3 ? ` · +${watchPrereqs.length - 3} more` : ''}`
+          : 'Prerequisites are marked passed, transferred, or not required.'
   ));
 
   gates.push(scheduleRegistrationGate(
@@ -2460,8 +2589,8 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
     : dangerCount ? `${dangerCount} blocker${dangerCount === 1 ? '' : 's'} need action before registration.`
       : warnCount ? `${warnCount} item${warnCount === 1 ? '' : 's'} should be reviewed before registering.`
         : 'All picked sections clear core registration checks.';
-  const fixes = scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows);
-  const actions = scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows);
+  const fixes = scheduleRegistrationFixList(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows, prereqRows);
+  const actions = scheduleRegistrationFixActions(gates, courseList, unscheduled, urgentSeats, watchSeats, timing, nonSeatWarnings, eligibilityRows, prereqRows);
 
   return {
     level,
@@ -2472,6 +2601,7 @@ function scheduleRegistrationReadiness(courses = [], selectedItems = [], conflic
     actions,
     unscheduled,
     timing,
+    prereqRows,
     eligibilityRows,
     warningCount: warningList.length,
     dangerCount,
@@ -2596,6 +2726,7 @@ function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
     .map((item, index) => {
       const risk = sectionSeatRisk(item.section);
       const eligibility = sectionEligibilityStatus(item.section);
+      const prereq = scheduleCoursePrereqStatus(item.course, semId);
       const conflictCount = scheduleRegistrationConflictCount(item, conflicts);
       const unlockCount = scheduleFutureUnlockCount(item.course, semId);
       const priority = scheduleRegistrationCoursePriority(item.course, unlockCount);
@@ -2605,6 +2736,7 @@ function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
       if (risk.level === 'closed') reasons.push(risk.wait ? `${risk.wait} waitlisted` : 'closed section');
       else if (risk.level === 'risk') reasons.push(risk.detail);
       else if (risk.level === 'watch' || risk.level === 'unknown') reasons.push(risk.detail);
+      if (prereq.level !== 'ok') reasons.push(prereq.detail);
       if (eligibility.notes.length) reasons.push(eligibility.detail);
       if (priority.label) reasons.push(priority.label);
       if (!sectionHasTimedMeetings(item.section)) reasons.push('time TBA');
@@ -2613,12 +2745,15 @@ function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
         + openBonus
         + priority.score
         + (conflictCount * 260)
+        + (prereq.level === 'danger' ? 980 : prereq.level === 'warn' ? 360 : 0)
         + (eligibility.level === 'danger' ? 700 : eligibility.level === 'warn' ? 260 : 0)
         + (item.section?.pinned ? 25 : 0);
       const label = conflictCount ? 'Resolve first'
         : risk.level === 'closed' ? 'Backup/waitlist first'
+          : prereq.level === 'danger' ? 'Prereq first'
           : risk.level === 'risk' ? 'Enroll first'
             : risk.level === 'watch' || risk.level === 'unknown' ? 'Enroll early'
+              : prereq.level === 'warn' ? 'Confirm prereq'
               : eligibility.level === 'danger' ? 'Eligibility first'
                 : eligibility.level === 'warn' ? 'Review eligibility'
               : unlockCount || priority.score >= 70 ? 'High priority'
@@ -2633,6 +2768,9 @@ function scheduleRegistrationOrder(semId, selectedItems = [], conflicts = []) {
         sectionId: item.section?.section_id || '',
         seatDetail: risk.detail,
         riskLevel: risk.level,
+        prereqLevel: prereq.level,
+        prereqDetail: prereq.level === 'ok' ? '' : prereq.detail,
+        prereqMissing: prereq.missing || '',
         eligibilityLevel: eligibility.level,
         eligibilityDetail: eligibility.notes.length ? eligibility.detail : '',
         eligibilityNotes: eligibility.notes,
@@ -2664,6 +2802,7 @@ function renderScheduleRegistrationOrderHtml(rows, heading = 'Enrollment Order')
               <div>
                 <strong>${scheduleEscape(row.courseCode)} ${scheduleEscape(row.sectionLabel)}</strong>
                 <span>${scheduleEscape(row.label)} · ${scheduleEscape(row.seatDetail)}</span>
+                ${row.prereqDetail ? `<span>Prereqs: ${scheduleEscape(row.prereqDetail)}</span>` : ''}
                 ${row.eligibilityDetail ? `<span>Eligibility: ${scheduleEscape(row.eligibilityDetail)}</span>` : ''}
                 <em>${scheduleEscape(row.reasons.join(' · ') || 'Confirm in Testudo before submitting.')}</em>
               </div>
@@ -2684,6 +2823,7 @@ function scheduleRegistrationOrderText(rows) {
   }
   ordered.forEach(row => {
     lines.push(`${row.order}. ${row.courseCode} ${row.sectionLabel} - ${row.label}; ${row.seatDetail}${row.sectionId ? `; Section ID ${row.sectionId}` : ''}.`);
+    if (row.prereqDetail) lines.push(`   Prereqs: ${row.prereqDetail}`);
     if (row.eligibilityDetail) lines.push(`   Eligibility: ${row.eligibilityDetail}`);
     if (row.reasons.length) lines.push(`   Why: ${row.reasons.join(' / ')}`);
   });
@@ -2697,15 +2837,18 @@ function scheduleRegistrationHandoff(orderRows = [], backupRows = []) {
     const backup = backupsByCourse.get(normalizeCode(row.courseCode || '')) || null;
     const missingId = !row.sectionId;
     const status = missingId ? 'missing'
-      : row.conflictCount || row.riskLevel === 'closed' || row.eligibilityLevel === 'danger' ? 'blocked'
+      : row.conflictCount || row.riskLevel === 'closed' || row.prereqLevel === 'danger' || row.eligibilityLevel === 'danger' ? 'blocked'
         : row.riskLevel === 'risk' || row.riskLevel === 'watch' || row.riskLevel === 'unknown' ? 'review'
+          : row.prereqLevel === 'warn' ? 'review'
           : row.eligibilityLevel === 'warn' ? 'review'
           : 'ready';
     const action = missingId ? 'Find exact section ID before registration'
       : row.conflictCount ? 'Resolve conflict before entering'
         : row.riskLevel === 'closed' ? 'Use backup, waitlist, or alternate'
+          : row.prereqLevel === 'danger' ? 'Resolve prerequisites before entering'
           : row.riskLevel === 'risk' ? 'Enter early and keep backup ready'
             : row.riskLevel === 'watch' || row.riskLevel === 'unknown' ? 'Confirm seats shortly before submitting'
+              : row.prereqLevel === 'warn' ? 'Confirm prerequisite completion before submitting'
               : row.eligibilityLevel === 'danger' ? 'Confirm eligibility or permission before entering'
                 : row.eligibilityLevel === 'warn' ? 'Review posted eligibility before submitting'
               : 'Ready to enter in Testudo';
@@ -2718,6 +2861,9 @@ function scheduleRegistrationHandoff(orderRows = [], backupRows = []) {
       sectionLabel: row.sectionLabel,
       sectionId: row.sectionId || '',
       seatDetail: row.seatDetail,
+      prereqLevel: row.prereqLevel || 'ok',
+      prereqDetail: row.prereqDetail || '',
+      prereqMissing: row.prereqMissing || '',
       eligibilityLevel: row.eligibilityLevel || 'ok',
       eligibilityDetail: row.eligibilityDetail || '',
       label: row.label,
@@ -2751,6 +2897,7 @@ function renderScheduleRegistrationHandoffHtml(rows, heading = 'Testudo Entry Qu
                 <strong>${scheduleEscape(row.courseCode)} ${scheduleEscape(row.sectionLabel)}</strong>
                 <code>${row.sectionId ? `Section ID ${scheduleEscape(row.sectionId)}` : 'Section ID missing'}</code>
                 <span>${scheduleEscape(row.action)} · ${scheduleEscape(row.seatDetail)}</span>
+                ${row.prereqDetail ? `<em>Prereqs: ${scheduleEscape(row.prereqDetail)}</em>` : ''}
                 ${row.eligibilityDetail ? `<em>Eligibility: ${scheduleEscape(row.eligibilityDetail)}</em>` : ''}
                 ${row.backupId ? `<em>Backup ID ${scheduleEscape(row.backupId)} (${scheduleEscape(row.backupLabel)} · ${scheduleEscape(row.backupSeatDetail)})</em>` : ''}
               </div>
@@ -2771,6 +2918,7 @@ function scheduleRegistrationHandoffText(rows) {
   }
   handoff.forEach(row => {
     lines.push(`${row.order}. ${row.courseCode} ${row.sectionLabel} | Section ID: ${row.sectionId || 'missing'} | ${row.action}; ${row.seatDetail}.`);
+    if (row.prereqDetail) lines.push(`   Prereqs: ${row.prereqDetail}`);
     if (row.eligibilityDetail) lines.push(`   Eligibility: ${row.eligibilityDetail}`);
     if (row.backupId) lines.push(`   Backup ID: ${row.backupId}; ${row.backupLabel}; ${row.backupSeatDetail}.`);
   });
@@ -4234,7 +4382,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   const outputOptions = normalizeScheduleOutputOptions(options);
   const auditIssues = outputOptions.auditIssues ? scheduleAdvisorAuditIssues(6) : [];
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
-  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled, sem?.id || '');
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
   const checklist = finalChecklist || scheduleFinalRegistrationChecklist(readiness, appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows), freshness, backupRows, registrationHandoff, calendarSummary);
@@ -4543,7 +4691,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
   const plan = scheduleAdvisorPlanHtml(sem?.id || '', selectedItems, filterContext);
   const generated = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
-  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled, sem?.id || '');
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
@@ -4637,7 +4785,7 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
   const selectedCodes = new Set(selectedItems.map(item => normalizeCode(item.course.code)));
   const unscheduled = courses.filter(course => !selectedCodes.has(normalizeCode(course.code)));
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
-  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled, sem?.id || '');
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedItems, conflicts);
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
@@ -4672,12 +4820,14 @@ function buildScheduleOutputText(sem, term, courses, selectedItems, conflicts, w
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
     .forEach(item => {
       const risk = sectionSeatRisk(item.section);
+      const prereq = scheduleCoursePrereqStatus(item.course, sem?.id || '');
       const eligibility = sectionEligibilityStatus(item.section);
       lines.push(`- ${item.course.code} ${item.course.title || ''}`);
       lines.push(`  Section: ${item.section.number || item.section.section_id || 'TBA'}`);
       lines.push(`  Instructors: ${scheduleInstructorLine(item.section)}`);
       lines.push(`  Meetings: ${scheduleSectionMeetingLines(item.section).join('; ')}`);
       lines.push(`  Seats: ${risk.detail}`);
+      if (prereq.level !== 'ok') lines.push(`  Prereqs: ${prereq.detail}`);
       if (eligibility.notes.length) lines.push(`  Eligibility: ${eligibility.detail}`);
     });
 
@@ -4704,7 +4854,7 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
   const unscheduled = Array.isArray(unscheduledOverride)
     ? unscheduledOverride
     : courseList.filter(course => !selectedCodes.has(normalizeCode(course.code)));
-  const readiness = scheduleRegistrationReadiness(courseList, selectedList, conflicts, warnings, prefs, unscheduled);
+  const readiness = scheduleRegistrationReadiness(courseList, selectedList, conflicts, warnings, prefs, unscheduled, sem?.id || '');
   const registrationOrder = scheduleRegistrationOrder(sem?.id || '', selectedList, conflicts);
   const registrationAppointment = appointment || scheduleRegistrationAppointment(prefs, readiness, backupRows);
   const registrationHandoff = scheduleRegistrationHandoff(registrationOrder, backupRows);
@@ -4728,12 +4878,14 @@ function buildScheduleRegistrationText(sem, term, courses, selectedItems, confli
     .forEach(item => {
       const sectionLabel = item.section.number || item.section.section_id || 'TBA';
       const risk = sectionSeatRisk(item.section);
+      const prereq = scheduleCoursePrereqStatus(item.course, sem?.id || '');
       const eligibility = sectionEligibilityStatus(item.section);
       lines.push(`- ${item.course.code} | Section ${sectionLabel} | Section ID ${item.section.section_id || 'not posted'} | ${Number(item.course.cr) || 0} cr`);
       if (item.course.title) lines.push(`  Title: ${item.course.title}`);
       lines.push(`  Meetings: ${scheduleSectionMeetingLines(item.section).join('; ')}`);
       lines.push(`  Instructor: ${scheduleInstructorLine(item.section)}`);
       lines.push(`  Seats: ${risk.detail}`);
+      if (prereq.level !== 'ok') lines.push(`  Prereqs: ${prereq.detail}`);
       if (eligibility.notes.length) lines.push(`  Eligibility: ${eligibility.detail}`);
     });
 
@@ -4831,7 +4983,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     ...selectedItems.flatMap(item => sectionBlocks(item.section, item.course)),
   ];
   const timing = scheduleTimingFit(selectedItems, prefs, conflicts);
-  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled);
+  const readiness = scheduleRegistrationReadiness(courses, selectedItems, conflicts, warnings, prefs, unscheduled, sem?.id || semId);
   const registrationOrder = scheduleRegistrationOrder(sem?.id || semId, selectedItems, conflicts);
   const registrationBackupPlan = scheduleRegistrationBackupPlan(selectedItems, sectionsByCode, prefs, conflicts);
   const registrationAppointment = scheduleRegistrationAppointment(prefs, readiness, registrationBackupPlan);
@@ -4850,6 +5002,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
     .sort((a, b) => a.course.code.localeCompare(b.course.code))
     .map(item => {
       const risk = sectionSeatRisk(item.section);
+      const prereq = scheduleCoursePrereqStatus(item.course, sem?.id || semId);
       const eligibility = sectionEligibilityStatus(item.section);
       return `
         <tr>
@@ -4858,6 +5011,7 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
           <td>${scheduleEscape(scheduleSectionMeetingLines(item.section).join(' / '))}</td>
           <td>${scheduleEscape(scheduleInstructorLine(item.section))}</td>
           <td>${scheduleEscape(risk.detail)}</td>
+          <td>${prereq.level === 'ok' ? '<span>Ready</span>' : scheduleEscape(prereq.detail)}</td>
           <td>${eligibility.notes.length ? scheduleEscape(eligibility.detail) : '<span>No posted restriction</span>'}</td>
         </tr>
       `;
@@ -4889,8 +5043,8 @@ function buildScheduleOutput(semId, term, courses, selectedItems, conflicts, war
       ${renderScheduleRegistrationBackupsHtml(registrationBackupPlan)}
       ${renderScheduleOutputWeek(blocks)}
       <table class="schedule-output-table">
-        <thead><tr><th>Course</th><th>Section</th><th>Meetings</th><th>Instructor</th><th>Seats</th><th>Eligibility</th></tr></thead>
-        <tbody>${courseRows || '<tr><td colspan="6">No picked sections yet.</td></tr>'}</tbody>
+        <thead><tr><th>Course</th><th>Section</th><th>Meetings</th><th>Instructor</th><th>Seats</th><th>Prereqs</th><th>Eligibility</th></tr></thead>
+        <tbody>${courseRows || '<tr><td colspan="7">No picked sections yet.</td></tr>'}</tbody>
       </table>
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list"><strong>Unscheduled</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} ${scheduleEscape(course.title || '')}</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Warnings</strong>${warnings.slice(0, 8).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
