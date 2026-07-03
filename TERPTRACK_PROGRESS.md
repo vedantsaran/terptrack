@@ -10670,3 +10670,78 @@ Next pass candidates:
 - Add the full catalog-sweep result to the in-app release checklist so users can see the stronger unique-course grounding gate.
 - Harden the rendered generated-plan verifier against a single transient live-course replacement miss by rechecking the affected major before failing, while still failing real metadata drift.
 - Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
+
+## 2026-07-03 Pass 188
+
+Focus: surface the all-generated-course catalog sweep inside Settings release readiness and harden the rendered generated-plan verifier against one transient live metadata miss.
+
+Planned changes:
+- Add the Pass 187 `574/574` generated required-course catalog sweep result to the in-app release checklist.
+- Make the local Settings release readiness state show the stronger generated catalog evidence while preserving the cloud setup warning.
+- Retry the rendered auto-plan review with a forced live metadata refresh before failing on a missing live-course replacement.
+- Bump the `settings.js` cache tag and rendered verifier assertion.
+- Run generated fixtures, rendered checks, release checks, catalog smoke, random live schedules, and whitespace checks.
+
+Completed:
+- Updated `js/settings.js`.
+  - Added `GENERATED_CATALOG_SWEEP` with the July 3, 2026 `pass187-catalog-sweep` result.
+  - Added a `Generated course catalog sweep` release checklist row.
+  - The row reports `574/574` unique generated required courses matched against app live metadata and PlanetTerp for presence and credits.
+  - The row records `50` generated majors, `843` requirement rows, and `23` advisory PlanetTerp title drift notes.
+  - Local release readiness now shows `4/5 launch checks ready`; the remaining default warning is still cloud account setup when `/api/config` has no live Supabase/Vercel credentials.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Added a forced `buildAutoPlanPreview(..., { force: true })` retry when the review panel does not reach the expected live coverage before timeout.
+  - The retry preserves profile preferences and selected catalog year.
+  - Failure output now reports that the forced live metadata retry was attempted before showing the current review text.
+  - The rendered initial Settings assertions now require `4/5 launch checks ready`, `Generated course catalog sweep`, and `574/574 unique generated required courses`.
+  - Updated the settings asset assertion to `js/settings.js?v=31`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added release checklist fixture coverage for the generated catalog sweep evidence in catalog-year targeting.
+- Updated `index.html`.
+  - Bumped `js/settings.js` from `v=30` to `v=31`.
+
+Major-gap notes:
+- Students can now see the broad generated-course grounding evidence directly in Settings instead of only in the progress log or CLI verifier output.
+- The rendered generated-plan verifier now treats a single transient live replacement miss as retryable while still failing if the forced refresh cannot produce the expected coverage.
+- This pass did not make the catalog sweep a default release-runner stage because it is network-backed and intentionally opt-in; the in-app row records the last full successful sweep.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new release checklist evidence assertion.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - It passed `PHYS [mobile]` with `20/20 live course records`.
+  - It verified the rendered app loaded `js/settings.js?v=31`.
+  - It verified the Settings release checklist shows `4/5 launch checks ready` and the generated catalog sweep row.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with replacement queue, queue fill, and auto-resolver fill.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed mobile Schedule alternatives.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --catalog-limit=40 --seed=pass188-release-checklist-catalog-smoke`.
+  - It matched `40/40` unique generated required courses against app live metadata and PlanetTerp.
+  - It noted one advisory PlanetTerp title drift for `ARTT 428`.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass188-release-checklist`.
+  - It randomly verified `ASTR`, `AAST`, `ACCOUNTING`, `PLSC`, `MARKETING`, `HLTH`, `BIOE`, `ENEE`, `PHSC`, `SPAN`, `AMST`, and `ARTT` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the new release checklist evidence assertion.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+  - Live schedule verification and live catalog sweep were skipped by the default release runner unless their explicit flags are passed.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a one-click Settings action or release-check helper that can refresh the catalog sweep snapshot when maintainers intentionally run the live catalog sweep.
+- Expand official UMD title-source comparison for the `23` advisory PlanetTerp title drifts from the full sweep.
+- Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.

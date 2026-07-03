@@ -86,6 +86,19 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
     scope: 'All generated templates for the initial Settings freshness panel.',
   },
 ]);
+const GENERATED_CATALOG_SWEEP = Object.freeze({
+  checkedAt: 'July 3, 2026',
+  seed: 'pass187-catalog-sweep',
+  source: 'app live metadata + PlanetTerp',
+  uniqueCourses: 574,
+  generatedMajors: 50,
+  requirementRows: 843,
+  matchedCourses: 574,
+  missingCourses: 0,
+  creditMismatches: 0,
+  titleDrifts: 23,
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass187-catalog-sweep',
+});
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
   pass: 'Pass 95',
@@ -344,6 +357,10 @@ function releaseChecklistItems(config, clientReady) {
   const audit = GENERATED_TEMPLATE_AUDIT;
   const auditHistory = GENERATED_TEMPLATE_AUDIT_HISTORY || [];
   const auditOk = audit.failedSchedules === 0 && auditHistory.length > 0;
+  const sweep = GENERATED_CATALOG_SWEEP;
+  const sweepOk = sweep.missingCourses === 0
+    && sweep.creditMismatches === 0
+    && sweep.matchedCourses >= sweep.uniqueCourses;
   const cloudChecks = releaseChecklistCloudChecks(config, clientReady);
   const cloudOk = cloudChecks.filter(check => check.status === 'ok').length;
   const cloudMissing = cloudChecks.some(check => check.status === 'missing');
@@ -368,6 +385,13 @@ function releaseChecklistItems(config, clientReady) {
       title: 'Live generated-template audit',
       detail: `${audit.verifiedSchedules} generated templates verified against ${audit.source}; ${audit.failedSchedules} issue${audit.failedSchedules === 1 ? '' : 's'} recorded.`,
       meta: `${audit.checkedAt} · ${audit.seed} · ${auditHistory.length} saved runs`,
+    },
+    {
+      id: 'catalog-sweep',
+      status: sweepOk ? 'ok' : 'warn',
+      title: 'Generated course catalog sweep',
+      detail: `${sweep.matchedCourses}/${sweep.uniqueCourses} unique generated required courses matched ${sweep.source} for presence and credits.`,
+      meta: `${sweep.checkedAt} · ${sweep.seed} · ${sweep.generatedMajors} majors · ${sweep.requirementRows} requirement rows · ${sweep.titleDrifts} title drift notes`,
     },
     {
       id: 'release',

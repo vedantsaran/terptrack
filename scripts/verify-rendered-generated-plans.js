@@ -342,23 +342,53 @@ function cardSnapshotScript() {
 }
 
 async function waitForReview(page, target, timeoutMs) {
+  const waitForReady = () => page.waitForFunction(
+    ({ name, coverage, targetCredits }) => {
+      const review = document.querySelector('#set-auto-plan-review');
+      const text = review ? review.textContent.replace(/\s+/g, ' ') : '';
+      return text.includes(name)
+        && text.includes(coverage)
+        && text.includes(`/${targetCredits} planned credits`)
+        && text.includes('Generated Catalog Freshness')
+        && text.includes('pass87-all');
+    },
+    { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
+    { timeout: timeoutMs },
+  );
   try {
-    await page.waitForFunction(
-      ({ name, coverage, targetCredits }) => {
-        const review = document.querySelector('#set-auto-plan-review');
-        const text = review ? review.textContent.replace(/\s+/g, ' ') : '';
-        return text.includes(name)
-          && text.includes(coverage)
-          && text.includes(`/${targetCredits} planned credits`)
-          && text.includes('Generated Catalog Freshness')
-          && text.includes('pass87-all');
-      },
-      { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
-      { timeout: timeoutMs },
-    );
+    await waitForReady();
   } catch (error) {
-    const text = await page.locator('#set-auto-plan-review').textContent({ timeout: 2000 }).catch(() => '');
-    fail(`${target.major}: review did not reach ${target.coverage} and /${target.targetCredits} planned credits. Current text: ${String(text || '').replace(/\s+/g, ' ').trim().slice(0, 900)}`);
+    const before = await page.locator('#set-auto-plan-review').textContent({ timeout: 2000 }).catch(() => '');
+    await page.evaluate(async majorId => {
+      const root = document.querySelector('#set-auto-plan-review');
+      if (!root || typeof buildAutoPlanPreview !== 'function') return;
+      const tpl = getMajorTemplate(majorId);
+      if (!tpl) return;
+      root.hidden = false;
+      root.className = 'auto-plan-review loading';
+      root.innerHTML = `
+        <div class="auto-plan-review-head">
+          <div>
+            <strong>Retrying ${settingsHtml(tpl.name)}</strong>
+            <span>Refreshing live course metadata...</span>
+          </div>
+        </div>
+      `;
+      const review = await buildAutoPlanPreview(majorId, {
+        force: true,
+        profilePrefs: readProfileForm('set'),
+        catalogYear: settingsCatalogYearValue(),
+      });
+      root.className = `auto-plan-review ${review.kind === 'curated' ? 'curated' : 'generated'}`;
+      root.innerHTML = autoPlanReviewHtml(review);
+    }, target.major).catch(() => {});
+    try {
+      await waitForReady();
+    } catch (retryError) {
+      const after = await page.locator('#set-auto-plan-review').textContent({ timeout: 2000 }).catch(() => '');
+      const current = String(after || before || '').replace(/\s+/g, ' ').trim().slice(0, 900);
+      fail(`${target.major}: review did not reach ${target.coverage} and /${target.targetCredits} planned credits after forced live metadata retry. Current text: ${current}`);
+    }
   }
 }
 
@@ -458,11 +488,13 @@ async function runViewport(browser, url, viewport, selected, opts) {
     assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=8'), `${viewport.label}: rendered app did not load js/api.js?v=8`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=30'), `${viewport.label}: rendered app did not load js/settings.js?v=30`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=31'), `${viewport.label}: rendered app did not load js/settings.js?v=31`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
-    assert(initialSnapshot.releaseText.includes('3/4 launch checks ready'), `${viewport.label}: release checklist did not show 3/4 ready status`);
+    assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
+    assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
+    assert(initialSnapshot.releaseText.includes('574/574 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
     assert(initialSnapshot.releaseText.includes('Default release gate'), `${viewport.label}: release checklist missing release gate row`);
     assert(initialSnapshot.releaseText.includes('Pass 95'), `${viewport.label}: release checklist missing Pass 95 snapshot`);
     assert(initialSnapshot.releaseText.includes('Cloud account setup'), `${viewport.label}: release checklist missing cloud setup row`);
