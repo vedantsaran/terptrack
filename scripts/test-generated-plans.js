@@ -3664,6 +3664,58 @@ async function testAccountCloudSetup(context) {
   };
 }
 
+function testSupabaseLiveVerifierHelpers() {
+  const verifier = require(path.join(ROOT, 'scripts/verify-supabase-live.js'));
+  const config = verifier.configFromEnv({
+    NEXT_PUBLIC_SUPABASE_URL: 'https://demo.supabase.co/',
+    SUPABASE_PUBLISHABLE_KEY: `sb_publishable_${'a'.repeat(48)}`,
+  });
+  const legacyPayload = Buffer.from(JSON.stringify({ role: 'anon' })).toString('base64url');
+  const servicePayload = Buffer.from(JSON.stringify({ role: 'service_role' })).toString('base64url');
+  const legacyKey = `x.${legacyPayload}.y`;
+  const serviceKey = `x.${servicePayload}.y`;
+  const denied = verifier.classifyTableResponse({
+    ok: false,
+    status: 403,
+    body: { code: '42501', message: 'permission denied for table plans' },
+    text: '',
+  });
+  const missing = verifier.classifyTableResponse({
+    ok: false,
+    status: 404,
+    body: { code: 'PGRST205', message: 'Could not find the table public.plans in the schema cache' },
+    text: '',
+  });
+  const invalid = verifier.classifyTableResponse({
+    ok: false,
+    status: 401,
+    body: { message: 'Invalid API key' },
+    text: '',
+  });
+  const readable = verifier.classifyTableResponse({ ok: true, status: 200, body: [], text: '[]' });
+  const serviceConfig = verifier.normalizeSupabaseConfig({
+    supabaseUrl: 'https://demo.supabase.co',
+    supabaseAnonKey: serviceKey,
+  });
+  const url = verifier.restUrl(config, 'profiles', { select: 'user_id,email', limit: 0 });
+  assert(config.supabaseUrl === 'https://demo.supabase.co', 'supabase live verifier: should normalize project URL');
+  assert(config.keyType === 'publishable', 'supabase live verifier: should prefer publishable keys from env');
+  assert(verifier.publicKeyType(legacyKey) === 'legacy-anon', 'supabase live verifier: should recognize legacy anon JWT keys');
+  assert(serviceConfig.errors.some(error => /service-role/.test(error)), 'supabase live verifier: should reject service-role keys');
+  assert(denied.kind === 'denied', 'supabase live verifier: should classify RLS/grant denial');
+  assert(missing.kind === 'missing-table', 'supabase live verifier: should classify missing Data API tables');
+  assert(invalid.kind === 'invalid-key', 'supabase live verifier: should classify invalid public keys');
+  assert(readable.kind === 'readable', 'supabase live verifier: should classify public table reads');
+  assert(/\/rest\/v1\/profiles\?/.test(url) && /select=user_id%2Cemail/.test(url) && /limit=0/.test(url), 'supabase live verifier: should build table REST URLs');
+  assert(verifier.redactKey(`sb_publishable_${'b'.repeat(48)}`) === 'sb_publi...bbbb', 'supabase live verifier: should redact public keys');
+  return {
+    id: 'SUPABASE-LIVE-HELPERS',
+    keyType: config.keyType,
+    denied: denied.kind,
+    url: url.includes('/rest/v1/profiles'),
+  };
+}
+
 function testReleaseJsonReport() {
   const stdout = execFileSync(process.execPath, [
     'scripts/run-release-checks.js',
@@ -3689,6 +3741,7 @@ function testReleaseJsonReport() {
   assert(stageStatus.workflows === 'skipped', 'release report: workflows stage should be represented as skipped');
   assert(stageStatus.live === 'skipped', 'release report: live stage should be represented as skipped when not requested');
   assert(stageStatus['live-catalog'] === 'skipped', 'release report: live catalog sweep stage should be represented as skipped when not requested');
+  assert(stageStatus['live-cloud'] === 'skipped', 'release report: live cloud stage should be represented as skipped when not requested');
   const proxyStage = (report.stages || []).find(stage => stage.id === 'proxy');
   assert(proxyStage?.commands?.[0]?.status === 'passed', 'release report: proxy command should be represented as passed');
   assert(/UMD proxy offline fixtures passed/.test(proxyStage?.commands?.[0]?.stdout || ''), 'release report: proxy stdout should be captured in JSON mode');
@@ -6351,6 +6404,7 @@ async function main() {
   const catalogYear = await testCatalogYearTargeting(context);
   const account = testAccountAndShareState(context);
   const accountSetup = await testAccountCloudSetup(context);
+  const supabaseLive = testSupabaseLiveVerifierHelpers();
   const releaseJson = testReleaseJsonReport();
   const canonicalTitles = testCanonicalCourseTitles(context);
   const officialCatalogTitles = testOfficialCatalogTitleParser();
@@ -6400,6 +6454,7 @@ async function main() {
   console.log(`Catalog year fixture ${catalogYear.id}: target ${catalogYear.target}; source ${catalogYear.source}.`);
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}; friend rows after removal ${accountSetup.removal}.`);
+  console.log(`Supabase live verifier fixture ${supabaseLive.id}: ${supabaseLive.keyType}; ${supabaseLive.denied}; REST URL ${supabaseLive.url ? 'ok' : 'missing'}.`);
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Canonical title fixture ${canonicalTitles.id}: AMST 205 -> ${canonicalTitles.amst205}.`);
   console.log(`Official catalog title fixture ${officialCatalogTitles.id}: BMGT 301 -> ${officialCatalogTitles.bmgt301}; ARTT 428 -> ${officialCatalogTitles.artt428}; variable ${officialCatalogTitles.variable}.`);
@@ -6438,7 +6493,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + auto-plan initial resolver + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + official catalog title parser + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + auto-plan initial resolver + all generated requirement groups + catalog-year targeting + account/share state + account setup + Supabase live verifier helpers + release JSON report + canonical titles + official catalog title parser + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

@@ -28,6 +28,10 @@ function parseArgs(argv) {
     liveAll: false,
     liveCatalogSweep: false,
     liveCatalogLimit: null,
+    liveCloud: false,
+    liveCloudRequireAuth: false,
+    liveCloudWriteSmoke: false,
+    liveCloudTimeoutMs: Number(process.env.TERPTRACK_SUPABASE_TIMEOUT_MS || 15000),
     liveMajors: DEFAULT_LIVE_MAJORS.slice(),
     liveCount: null,
     liveSeed: process.env.TERPTRACK_RELEASE_LIVE_SEED || 'release-check-live',
@@ -76,6 +80,21 @@ function parseArgs(argv) {
       opts.liveCatalogLimit = Number(argv[++i] || 0);
     } else if (arg.startsWith('--live-catalog-limit=')) {
       opts.liveCatalogLimit = Number(arg.slice('--live-catalog-limit='.length) || 0);
+    } else if (arg === '--live-cloud' || arg === '--live-supabase') {
+      opts.liveCloud = true;
+    } else if (arg === '--live-cloud-require-auth' || arg === '--live-supabase-require-auth') {
+      opts.liveCloud = true;
+      opts.liveCloudRequireAuth = true;
+    } else if (arg === '--live-cloud-write-smoke' || arg === '--live-supabase-write-smoke') {
+      opts.liveCloud = true;
+      opts.liveCloudRequireAuth = true;
+      opts.liveCloudWriteSmoke = true;
+    } else if (arg === '--live-cloud-timeout-ms' || arg === '--live-supabase-timeout-ms') {
+      opts.liveCloudTimeoutMs = Number(argv[++i] || opts.liveCloudTimeoutMs);
+    } else if (arg.startsWith('--live-cloud-timeout-ms=')) {
+      opts.liveCloudTimeoutMs = Number(arg.slice('--live-cloud-timeout-ms='.length) || opts.liveCloudTimeoutMs);
+    } else if (arg.startsWith('--live-supabase-timeout-ms=')) {
+      opts.liveCloudTimeoutMs = Number(arg.slice('--live-supabase-timeout-ms='.length) || opts.liveCloudTimeoutMs);
     } else if (arg === '--live-majors') {
       opts.live = true;
       opts.liveMajors = String(argv[++i] || '').split(',');
@@ -105,6 +124,7 @@ function parseArgs(argv) {
   opts.workflowsTimeoutMs = Number.isFinite(opts.workflowsTimeoutMs) && opts.workflowsTimeoutMs > 0 ? Math.floor(opts.workflowsTimeoutMs) : 120000;
   opts.liveCount = Number.isFinite(opts.liveCount) && opts.liveCount > 0 ? Math.floor(opts.liveCount) : null;
   opts.liveCatalogLimit = Number.isFinite(opts.liveCatalogLimit) && opts.liveCatalogLimit > 0 ? Math.floor(opts.liveCatalogLimit) : null;
+  opts.liveCloudTimeoutMs = Number.isFinite(opts.liveCloudTimeoutMs) && opts.liveCloudTimeoutMs > 0 ? Math.floor(opts.liveCloudTimeoutMs) : 15000;
   return opts;
 }
 
@@ -127,6 +147,10 @@ function usage() {
     '  --live-all                     Run live verification for every generated major',
     '  --live-catalog-sweep           Live-check every unique generated required course once',
     '  --live-catalog-limit N         Limit catalog sweep to N seeded unique courses',
+    '  --live-cloud                   Verify configured Supabase project table access and RLS',
+    '  --live-cloud-require-auth      Require Supabase test-user credentials for authenticated checks',
+    '  --live-cloud-write-smoke       Upsert/delete Supabase verifier rows after authenticated checks',
+    '  --live-cloud-timeout-ms N      Supabase verifier per-request timeout',
     '  --live-majors A,B,C            Live-verify selected generated majors',
     '  --live-count N                 Live-verify N random generated majors',
     '  --live-seed SEED               Seed for live verification',
@@ -182,6 +206,10 @@ function publicOptions(opts) {
     liveAll: opts.liveAll,
     liveCatalogSweep: opts.liveCatalogSweep,
     liveCatalogLimit: opts.liveCatalogLimit,
+    liveCloud: opts.liveCloud,
+    liveCloudRequireAuth: opts.liveCloudRequireAuth,
+    liveCloudWriteSmoke: opts.liveCloudWriteSmoke,
+    liveCloudTimeoutMs: opts.liveCloudTimeoutMs,
     liveMajors: opts.liveMajors,
     liveCount: opts.liveCount,
     liveSeed: opts.liveSeed,
@@ -358,6 +386,15 @@ async function runReleaseChecks(opts, report) {
   } else {
     skipStage(report, 'live-catalog', 'live generated required-course catalog sweep', 'Pass --live-catalog-sweep to include it.');
     reportLog(report, '\n[release] Live generated course catalog sweep skipped. Pass --live-catalog-sweep to include it.');
+  }
+  if (opts.liveCloud) {
+    const args = ['scripts/verify-supabase-live.js', `--timeout-ms=${opts.liveCloudTimeoutMs}`];
+    if (opts.liveCloudRequireAuth) args.push('--require-auth');
+    if (opts.liveCloudWriteSmoke) args.push('--write-smoke');
+    await runStage(report, 'live-cloud', 'live Supabase account verifier', stage => runCommand(stage, 'live Supabase account verifier', args, report));
+  } else {
+    skipStage(report, 'live-cloud', 'live Supabase account verifier', 'Pass --live-cloud to include it.');
+    reportLog(report, '\n[release] Live Supabase account verifier skipped. Pass --live-cloud to include it.');
   }
 }
 

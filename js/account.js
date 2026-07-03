@@ -126,7 +126,7 @@ function accountReadManualConfig() {
 
 function accountNormalizeConfig(value, source) {
   const supabaseUrl = String(value?.supabaseUrl || value?.url || '').trim();
-  const supabaseAnonKey = String(value?.supabaseAnonKey || value?.anonKey || '').trim();
+  const supabaseAnonKey = String(value?.supabaseAnonKey || value?.supabasePublishableKey || value?.publishableKey || value?.anonKey || '').trim();
   if (!supabaseUrl || !supabaseAnonKey) return null;
   return { source, supabaseUrl, supabaseAnonKey };
 }
@@ -162,7 +162,7 @@ async function accountLoadConfig() {
   accountConfigPromise = (async () => {
     const globalConfig = accountNormalizeConfig({
       supabaseUrl: window.TERPTRACK_SUPABASE_URL,
-      supabaseAnonKey: window.TERPTRACK_SUPABASE_ANON_KEY,
+      supabaseAnonKey: window.TERPTRACK_SUPABASE_PUBLISHABLE_KEY || window.TERPTRACK_SUPABASE_ANON_KEY,
     }, 'window');
     if (globalConfig) return globalConfig;
 
@@ -218,20 +218,20 @@ function accountCloudSetupChecks(config, clientReady = false, origin = '') {
       detail: source === 'vercel'
         ? 'Vercel env vars are serving /api/config.'
         : source === 'window'
-          ? 'Runtime window config is present.'
-          : source === 'manual'
-            ? 'Manual browser config works for local testing; add Vercel env vars before launch.'
-            : 'Add SUPABASE_URL and SUPABASE_ANON_KEY in Vercel.',
+        ? 'Runtime window config is present.'
+        : source === 'manual'
+          ? 'Manual browser config works for local testing; add Vercel env vars before launch.'
+          : 'Add SUPABASE_URL and a public Supabase key in Vercel.',
     },
     {
       id: 'credentials',
       status: configured && quality.urlLooksValid && quality.keyLooksValid ? 'ok' : configured ? 'warn' : 'missing',
       label: 'Supabase credentials',
       detail: !configured
-        ? 'Project URL and public anon key are required.'
+        ? 'Project URL and public anon or publishable key are required.'
         : quality.urlLooksValid && quality.keyLooksValid
-          ? 'URL and anon key shape look ready.'
-          : 'Check the project URL and anon key formatting.',
+          ? 'URL and public key shape look ready.'
+          : 'Check the project URL and public key formatting.',
     },
     {
       id: 'client',

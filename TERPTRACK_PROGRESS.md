@@ -10977,3 +10977,87 @@ Next pass candidates:
 - Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
 - Add a Testudo term-title release option to `scripts/run-release-checks.js` so maintainers can pass future posted terms through the release wrapper.
 - Add a small Settings maintenance note that shows the exact snapshot refresh command for maintainers without exposing it as student-facing UI clutter.
+
+## 2026-07-03 Pass 192
+
+Focus: add an opt-in live Supabase account/schema verifier so maintainers can prove cloud setup, table exposure, RLS posture, and authenticated account access before launch.
+
+Planned changes:
+- Add a standalone live Supabase verifier that uses only public Supabase keys, never service-role keys.
+- Support current publishable-key env names while keeping legacy anon-key compatibility.
+- Wire the verifier into the release runner as a skipped-by-default live cloud stage.
+- Add offline regression coverage for config parsing, service-role rejection, REST URL building, and Supabase response classification.
+- Run release checks, random live schedule verification, and whitespace checks.
+
+Completed:
+- Added `scripts/verify-supabase-live.js`.
+  - Reads `SUPABASE_URL` / public key env vars, including `SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and legacy anon-key names.
+  - Rejects `sb_secret_...` and JWT service-role keys so the live verifier cannot normalize unsafe frontend credentials.
+  - Verifies that unauthenticated Data API reads are blocked for `profiles`, `plans`, `friend_requests`, and `shared_plans`.
+  - Supports optional authenticated checks with `TERPTRACK_SUPABASE_TEST_EMAIL` and `TERPTRACK_SUPABASE_TEST_PASSWORD`.
+  - Supports an explicit `--write-smoke` mode that upserts and cleans up verifier rows for `plans`, `shared_plans`, and `friend_requests`.
+  - Emits human-readable output by default and machine-readable JSON with `--json`.
+- Updated `scripts/run-release-checks.js`.
+  - Added `--live-cloud` / `--live-supabase`.
+  - Added `--live-cloud-require-auth` / `--live-supabase-require-auth`.
+  - Added `--live-cloud-write-smoke` / `--live-supabase-write-smoke`.
+  - Added `--live-cloud-timeout-ms` / `--live-supabase-timeout-ms`.
+  - Default release checks now include `live-cloud` as a skipped stage unless explicitly requested.
+- Updated `api/config.js`.
+  - Vercel config now serves publishable-key env aliases before falling back to legacy anon-key aliases.
+  - Added `VITE_SUPABASE_URL` and `VITE_*` key aliases for local/static deployment flexibility.
+- Updated `js/account.js`.
+  - Runtime window config now accepts `TERPTRACK_SUPABASE_PUBLISHABLE_KEY`.
+  - Manual config accepts `publishableKey` / `supabasePublishableKey` in addition to the legacy anon-key fields.
+  - Account setup wording now says public anon or publishable key instead of only anon key.
+- Updated `.env.example`.
+  - Added publishable-key aliases and optional Supabase test-user credentials for the live verifier.
+- Updated `scripts/test-generated-plans.js`.
+  - Added `SUPABASE-LIVE-HELPERS` offline coverage for publishable-key preference, legacy anon JWT detection, service-role rejection, RLS/grant denial classification, missing-table classification, invalid-key classification, public-read classification, REST URL generation, and key redaction.
+  - Extended the release JSON fixture to assert the skipped `live-cloud` stage.
+
+Major-gap notes:
+- Maintainers now have a concrete live cloud gate:
+  `node scripts/run-release-checks.js --live-cloud`
+- Stronger launch gate with a real test user:
+  `TERPTRACK_SUPABASE_TEST_EMAIL=... TERPTRACK_SUPABASE_TEST_PASSWORD=... node scripts/run-release-checks.js --live-cloud-require-auth`
+- Full write-path smoke test after schema application:
+  `TERPTRACK_SUPABASE_TEST_EMAIL=... TERPTRACK_SUPABASE_TEST_PASSWORD=... node scripts/run-release-checks.js --live-cloud-write-smoke`
+- The default release runner intentionally does not require live Supabase credentials, so ordinary offline/browser release checks remain deterministic.
+
+Verification:
+- Checked current Supabase official guidance before implementation.
+  - Supabase Data API security docs still describe the two-layer grant + RLS model.
+  - Supabase API key docs now emphasize public publishable keys, so the pass added publishable-key aliases while retaining anon-key compatibility.
+  - Supabase changelog includes the recent Data API default-grant change, matching the existing schema's explicit grants.
+- Ran `node --check scripts/verify-supabase-live.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check api/config.js`.
+- Ran `node --check js/account.js`.
+- Ran `node scripts/verify-supabase-live.js --help`.
+  - It printed the expected env vars and options.
+- Ran `node scripts/run-release-checks.js --json --skip-syntax --skip-generated --skip-rendered --skip-workflows`.
+  - It passed and included `live-cloud` as a skipped stage.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `SUPABASE-LIVE-HELPERS` fixture.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files, including the new Supabase verifier.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the new Supabase helper fixture.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+  - Live schedule verification, live catalog sweep, and live Supabase verification were skipped by default unless their explicit flags are passed.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass192-supabase-live-verifier-random`.
+  - It randomly verified `MUSC`, `ENST`, `SCM`, `HLTH`, `AMST`, `SPAN`, `PHIL`, `BCHM`, `AOSC`, `PHSC`, `BIOE`, and `ARTT` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a release-runner option for passing future Testudo term codes through the catalog sweep wrapper.
+- Add a small maintainer-facing Settings note for the catalog snapshot refresh command without exposing operational clutter to students.
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
