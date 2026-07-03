@@ -11128,3 +11128,74 @@ Next pass candidates:
 - Add a small maintainer-facing Settings note for the exact release-wrapper catalog snapshot refresh command without exposing operational clutter to student users.
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
 - Add one more full catalog smoke route for future Testudo terms that can compare two posted term codes side by side when UMD publishes a new schedule.
+
+## 2026-07-03 Pass 194
+
+Focus: expose the exact catalog snapshot refresh command inside Settings release readiness so maintainers can keep the in-app evidence current without digging through commit history or notes.
+
+Planned changes:
+- Add a compact, collapsed maintainer command block under the Settings release checklist.
+- Build the command from the stored generated catalog sweep seed, Testudo term list, and snapshot date.
+- Keep the launch-check count unchanged and avoid student-facing clutter.
+- Style long commands so they wrap cleanly on mobile.
+- Extend offline and rendered verifiers so the command remains present and non-overflowing.
+- Run release checks, random live schedules, and whitespace checks.
+
+Completed:
+- Updated `js/settings.js`.
+  - Added `releaseCatalogSnapshotCommand()` to generate the release-wrapper snapshot refresh command from `GENERATED_CATALOG_SWEEP`.
+  - Added a collapsed `Maintainer commands` block under Release Readiness.
+  - Shows the release-wrapper command:
+    `node scripts/run-release-checks.js --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-testudo-terms=202608 --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 3, 2026" --live-seed=pass191-refresh-helper-full`
+  - Also shows the last direct catalog sweep command for traceability.
+- Updated `styles.css`.
+  - Added compact release-maintenance styles.
+  - Long command strings now wrap with `overflow-wrap`, `word-break`, and `pre-wrap`.
+- Updated `index.html`.
+  - Bumped `styles.css` from `v=118` to `v=119`.
+- Updated rendered verifiers.
+  - `scripts/verify-rendered-generated-plans.js` now expects `styles.css?v=119`.
+  - It asserts that Settings release readiness includes `Maintainer commands` and `--live-catalog-write-settings-snapshot`.
+  - `scripts/verify-rendered-workflows.js` now expects `styles.css?v=119`.
+- Updated `scripts/test-generated-plans.js`.
+  - The catalog-year release fixture now asserts that the Settings release checklist exposes the maintainer snapshot command.
+  - It asserts that the generated command uses the stored sweep term `202608` and seed `pass191-refresh-helper-full`.
+
+Major-gap notes:
+- Release evidence maintenance is now visible at the point of use: Settings -> Release Readiness -> Maintainer commands.
+- This turns the previous release-runner flags into an in-app operational path without changing student planning workflows.
+- The command is collapsed by default and does not change the existing 4/5 launch readiness count when cloud config is missing.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new maintainer command assertions.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows with `styles.css?v=119`.
+- Ran `node scripts/run-release-checks.js`.
+  - The first run surfaced the workflow verifier cache-tag assertion still expecting `styles.css?v=118`.
+  - After updating `scripts/verify-rendered-workflows.js`, the rerun passed.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the new Settings maintainer command assertions.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - It passed `PHYS [mobile]` with `20/20 live course records`.
+  - It verified the final HTML/CSS cache tag and the Settings release command block in the rendered mobile UI.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass194-settings-maintenance-random`.
+  - It randomly verified `IS`, `WMST`, `JOUR`, `ENST`, `CHEM`, `HIST`, `NFSC`, `FMSC`, `PHYS`, `MGMT`, `ANSC`, and `MARKETING` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+- Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
+- Broaden curated fixed schedules for the largest non-STEM majors that still rely entirely on generated placement.

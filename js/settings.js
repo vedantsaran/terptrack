@@ -340,6 +340,46 @@ function releaseChecklistSourceLinksHtml(links) {
   `;
 }
 
+function releaseShellQuoted(value) {
+  return `"${String(value || '').replace(/(["\\$`])/g, '\\$1')}"`;
+}
+
+function releaseCatalogSnapshotCommand(sweep = GENERATED_CATALOG_SWEEP) {
+  const terms = String(sweep?.testudoTerms || '202608').trim() || '202608';
+  const seed = String(sweep?.seed || 'release-catalog-sweep').trim() || 'release-catalog-sweep';
+  const date = String(sweep?.checkedAt || 'release date').trim() || 'release date';
+  return [
+    'node scripts/run-release-checks.js',
+    '--skip-rendered',
+    '--skip-workflows',
+    '--live-catalog-sweep',
+    `--live-catalog-testudo-terms=${terms}`,
+    '--live-catalog-write-settings-snapshot',
+    `--live-catalog-snapshot-date=${releaseShellQuoted(date)}`,
+    `--live-seed=${seed}`,
+  ].join(' ');
+}
+
+function releaseMaintenanceHtml() {
+  const snapshotCommand = releaseCatalogSnapshotCommand(GENERATED_CATALOG_SWEEP);
+  const directCommand = GENERATED_CATALOG_SWEEP.command || 'node scripts/verify-random-schedules.js --catalog-sweep';
+  return `
+    <details class="release-maintenance">
+      <summary>Maintainer commands</summary>
+      <div>
+        <strong>Refresh catalog evidence</strong>
+        <code>${settingsHtml(snapshotCommand)}</code>
+        <span>Runs the full live catalog sweep through the release wrapper and updates this Settings evidence only after the verifier passes.</span>
+      </div>
+      <div>
+        <strong>Last direct sweep</strong>
+        <code>${settingsHtml(directCommand)}</code>
+        <span>Use the release-wrapper command above for future posted Testudo terms; limited catalog smokes cannot refresh this snapshot.</span>
+      </div>
+    </details>
+  `;
+}
+
 function releaseChecklistCloudChecks(config, clientReady) {
   if (typeof accountCloudSetupChecks === 'function') {
     try {
@@ -452,6 +492,7 @@ function releaseChecklistHtml(config, clientReady, opts = {}) {
           </div>
         `).join('')}
       </div>
+      ${releaseMaintenanceHtml()}
     </div>
   `;
 }

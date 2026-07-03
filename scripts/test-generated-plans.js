@@ -1214,6 +1214,7 @@ async function testCatalogYearTargeting(context) {
       const links = majorOfficialSources('CS', { includeGeneral: true, catalogYear: normalized });
       const sourceHtml = autoPlanOfficialSourceLinksHtml({ majorId: 'CS', catalogYear: normalized }, { includeGeneral: true });
       const releaseHtml = releaseChecklistHtml({ source: 'none', supabaseUrl: '', supabaseAnonKey: '' }, false);
+      const releaseCommand = releaseCatalogSnapshotCommand();
       const preview = await buildAutoPlanPreview('STAT', {
         noFetch: true,
         force: true,
@@ -1258,6 +1259,7 @@ async function testCatalogYearTargeting(context) {
         firstLink: links[0],
         sourceHtml,
         releaseHtml,
+        releaseCommand,
         previewCatalogYear: preview.catalogYear,
         previewSource: preview.officialSources[0],
         reviewHtml,
@@ -1280,6 +1282,8 @@ async function testCatalogYearTargeting(context) {
   assert(/Generated course catalog sweep/.test(result.releaseHtml) && /574\/574 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
   assert(/23\/23 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
   assert(/1\/1 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
+  assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
+  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass191-refresh-helper-full'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');

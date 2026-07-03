@@ -489,7 +489,7 @@ async function runViewport(browser, url, viewport, selected, opts) {
     }, null, { timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.styles.includes('styles.css?v=118'), `${viewport.label}: rendered app did not load styles.css?v=118`);
+    assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=8'), `${viewport.label}: rendered app did not load js/api.js?v=8`);
@@ -502,6 +502,8 @@ async function runViewport(browser, url, viewport, selected, opts) {
     assert(initialSnapshot.releaseText.includes('574/574 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
     assert(initialSnapshot.releaseText.includes('23/23 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('1/1 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
+    assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
+    assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);
     assert(initialSnapshot.releaseText.includes('Default release gate'), `${viewport.label}: release checklist missing release gate row`);
     assert(initialSnapshot.releaseText.includes('Pass 95'), `${viewport.label}: release checklist missing Pass 95 snapshot`);
     assert(initialSnapshot.releaseText.includes('Cloud account setup'), `${viewport.label}: release checklist missing cloud setup row`);

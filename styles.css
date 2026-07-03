@@ -2680,6 +2680,56 @@ h1.hero-title em {
   border-color: rgba(47,92,139,.34);
   background: rgba(47,92,139,.07);
 }
+.release-maintenance {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 8px 9px;
+}
+.release-maintenance summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.release-maintenance div {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.release-maintenance strong,
+.release-maintenance span,
+.release-maintenance code {
+  display: block;
+  min-width: 0;
+}
+.release-maintenance strong {
+  color: var(--ink);
+  font-size: .68rem;
+  line-height: 1.25;
+}
+.release-maintenance span {
+  color: var(--slate);
+  font-size: .66rem;
+  line-height: 1.35;
+  margin-top: 5px;
+}
+.release-maintenance code {
+  margin-top: 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--cream);
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  padding: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .auto-plan-review {
   margin-top: 10px;
   padding: 12px;
