@@ -21,12 +21,13 @@ const TARGETS = [
     ],
   },
   {
-    major: 'ARTT',
-    name: 'Studio Art',
-    coverage: '12/12 live course records',
+    major: 'GEOL',
+    name: 'Geology',
+    coverage: '19/19 live course records',
     targetCredits: 120,
     cards: [
-      { code: 'ARTT489C', credits: 3, title: 'Markets and Collecting' },
+      { code: 'GEOL453', credits: 3, title: 'Ecosystem Restoration' },
+      { code: 'GEOL460', credits: 4, title: 'Field Geophysics' },
     ],
   },
   {
@@ -146,6 +147,46 @@ const CURATED_TARGETS = [
     cards: [
       { code: 'LING444', credits: 3, title: 'Child Language Acquisition' },
       { code: 'LING311', credits: 3, title: 'Syntax I' },
+    ],
+  },
+  {
+    major: 'THET',
+    name: 'Theatre',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'THET489P', credits: 3, title: 'History of Shakespeare in Performance' },
+      { code: 'THET371', credits: 3, title: 'Scenic Design I' },
+    ],
+  },
+  {
+    major: 'MUSC',
+    name: 'Music',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'MUSC450', credits: 3, title: 'Musical Form' },
+      { code: 'MUSC251', credits: 4, title: 'Advanced Theory of Music II' },
+    ],
+  },
+  {
+    major: 'ARTT',
+    name: 'Studio Art',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'ARTT489C', credits: 3, title: 'Markets and Collecting' },
+      { code: 'ARTT428', credits: 3, title: 'Advanced Painting' },
+    ],
+  },
+  {
+    major: 'CINE',
+    name: 'Cinema & Media Studies',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'CINE469M', credits: 3, title: 'Methods and Issues' },
+      { code: 'CINE411', credits: 3, title: 'Experimental Film' },
     ],
   },
 ];
@@ -442,7 +483,7 @@ async function waitForReview(page, target, timeoutMs) {
           && text.includes('Curated plan ready')
           && text.includes(`${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass197-curated-arhu-all');
+          && text.includes('pass198-curated-arts-all');
       },
       { name: target.name, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
@@ -459,7 +500,7 @@ async function waitForReview(page, target, timeoutMs) {
         && text.includes(coverage)
         && text.includes(`/${targetCredits} planned credits`)
         && text.includes('Generated Catalog Freshness')
-        && text.includes('pass197-curated-arhu-all');
+        && text.includes('pass198-curated-arts-all');
     },
     { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
     { timeout: timeoutMs },
@@ -608,18 +649,18 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=6'), `${viewport.label}: rendered app did not load js/majors.js?v=6`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=7'), `${viewport.label}: rendered app did not load js/majors.js?v=7`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
-    assert(initialSnapshot.scripts.includes('js/api.js?v=8'), `${viewport.label}: rendered app did not load js/api.js?v=8`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=38'), `${viewport.label}: rendered app did not load js/settings.js?v=38`);
+    assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=39'), `${viewport.label}: rendered app did not load js/settings.js?v=39`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('493/493 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('15/15 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
-    assert(initialSnapshot.releaseText.includes('1/1 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
+    assert(initialSnapshot.releaseText.includes('451/451 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('13/13 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);
     assert(initialSnapshot.releaseText.includes('Default release gate'), `${viewport.label}: release checklist missing release gate row`);

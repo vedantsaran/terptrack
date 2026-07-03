@@ -856,6 +856,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Theatre',
     eyebrow: 'UMD · Theatre · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_THET !== 'undefined' ? SCHEDULE_THET : null,
     coreCodes: [
       'THET110','THET120','THET116','THET222','THET223','THET274','THET330','THET371','THET489P',
     ],
@@ -870,6 +871,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Music',
     eyebrow: 'UMD · Music · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_MUSC !== 'undefined' ? SCHEDULE_MUSC : null,
     coreCodes: [
       'MUSC210','MUSC150','MUSC151','MUSC250','MUSC251','MUSC330','MUSC310','MUSC450',
     ],
@@ -884,6 +886,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Studio Art',
     eyebrow: 'UMD · Studio Art · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_ARTT !== 'undefined' ? SCHEDULE_ARTT : null,
     coreCodes: [
       'ARTT100','ARTT110','ARTT150','ARTT200','ARTT210','ARTT255','ARTT320','ARTT489C',
     ],
@@ -898,10 +901,11 @@ const MAJOR_TEMPLATES = {
     programName: 'Cinema & Media Studies',
     eyebrow: 'UMD · Cinema & Media Studies · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_CINE !== 'undefined' ? SCHEDULE_CINE : null,
     coreCodes: [
       'CINE245','CINE280','CINE301','CINE302','CINE411','CINE469M',
     ],
-    upperElectiveCodes: ['CINE344','CINE385'],
+    upperElectiveCodes: ['CINE344','CINE385','CINE335','CINE461'],
     supportCodes: ['ENGL101'],
     goals: ['CINE469M'],
     notes: 'BA Cinema & Media Studies. Critical / production hybrid; less focused on filmmaking than peer programs.',

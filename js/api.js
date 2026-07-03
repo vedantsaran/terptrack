@@ -370,7 +370,11 @@ async function fetchCourseFull(code) {
 
 async function fetchCourseFullForBatch(code, timeoutMs = 20000) {
   let timer = null;
-  const request = fetchCourseFull(code).catch(() => null);
+  const request = (async () => {
+    const first = await fetchCourseFull(code).catch(() => null);
+    if (first) return first;
+    return fetchCourseFull(code).catch(() => null);
+  })();
   try {
     return await Promise.race([
       request,

@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass197-curated-arhu-all',
+  seed: 'pass198-curated-arts-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 42,
+  verifiedSchedules: 38,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass197-curated-arhu-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass198-curated-arts-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 3, 2026',
+    seed: 'pass198-curated-arts-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 38,
+    generatedCount: 38,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving Theatre, Music, Studio Art, and Cinema to curated schedules.',
+  },
   {
     checkedAt: 'July 3, 2026',
     seed: 'pass197-curated-arhu-all',
@@ -119,22 +128,22 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass197-curated-arhu-catalog',
+  seed: 'pass198-curated-arts-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 493,
-  generatedMajors: 42,
-  requirementRows: 751,
-  matchedCourses: 493,
+  uniqueCourses: 451,
+  generatedMajors: 38,
+  requirementRows: 706,
+  matchedCourses: 451,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 15,
-  officialTitleChecks: 15,
+  titleDrifts: 13,
+  officialTitleChecks: 13,
   officialTitleMismatches: 0,
-  testudoTermTitleCandidates: 1,
-  testudoTermTitleChecks: 1,
+  testudoTermTitleCandidates: 0,
+  testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass197-curated-arhu-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass198-curated-arts-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',

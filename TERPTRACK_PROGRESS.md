@@ -11458,3 +11458,100 @@ Next pass candidates:
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
 - Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
 - Continue converting high-demand generated-only majors into curated schedules, with Theatre, Music, Studio Art, and Cinema as likely next ARHU candidates.
+
+## 2026-07-03 Pass 198
+
+Focus: continue replacing generated-only arts/humanities plans with curated four-year schedules, starting with Theatre, Music, Studio Art, and Cinema & Media Studies.
+
+Planned changes:
+- Add fixed eight-semester schedules for `THET`, `MUSC`, `ARTT`, and `CINE`.
+- Keep each plan at exactly 120 credits with complete GenEd coverage, real intro-to-senior sequencing, and senior-year goal courses.
+- Replace Studio Art in the default generated rendered-check matrix because `ARTT` becomes curated.
+- Harden live batch metadata fetching after a catalog sweep transient showed valid ANTH courses missing in one large app-live batch.
+- Refresh generated/curated fixtures, Settings evidence, rendered browser checks, live catalog evidence, and random live audits after the generated-major pool drops from `42` to `38`.
+
+Completed:
+- Updated `js/major-schedules.js`.
+  - Added `SCHEDULE_THET`, a 120-credit Theatre BA path with theatre intro, acting, theatrical design, stage management, directing, scenic/lighting design, performance theory, and senior `THET 489P`.
+  - Added `SCHEDULE_MUSC`, a 120-credit Music BA path with theory I/II, advanced theory I/II, music history, solo vocal literature, analysis, and senior `MUSC 450`.
+  - Added `SCHEDULE_ARTT`, a 120-credit Studio Art BA path with design/drawing foundations, digital art, art history support, painting/drawing/design upper studio work, and senior `ARTT 489C`.
+  - Added `SCHEDULE_CINE`, a 120-credit Cinema & Media Studies BA path with film form/global film, cinema history, genre/global cinema, experimental/political cinema, and senior `CINE 469M`.
+- Updated `js/majors.js`.
+  - Wired `THET`, `MUSC`, `ARTT`, and `CINE` to their fixed schedules.
+  - Added live `CINE335` and `CINE461` to Cinema upper electives so the curated plan has a more concrete upper-level path.
+- Updated `js/api.js`.
+  - Added a retry inside `fetchCourseFullForBatch` when the first batch metadata request returns null.
+  - This fixed a real catalog-sweep transient where `ANTH 415`, `ANTH 447`, `ANTH 462`, and `ANTH 498Y` were valid in PlanetTerp and single-major verification but missing from one large app-live batch.
+- Updated Settings/release evidence.
+  - Refreshed generated-template audit evidence to `38/38` using `pass198-curated-arts-all`.
+  - Refreshed catalog-sweep evidence to `451/451` unique generated required courses across `38` generated majors and `706` requirement rows.
+  - Recorded `13/13` official UMD catalog title-drift confirmations.
+  - Recorded `0/0` Testudo term-specific title checks because moving Studio Art to curated removed the generated `ARTT 428` term-specific title candidate from the generated catalog sweep.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks 12 curated schedules: ENGL, JOUR, HIST, SOCY, SPAN, PHIL, ARTH, LING, THET, MUSC, ARTT, and CINE.
+  - Generated-count expectations now use `38` majors and `706` requirement rows.
+  - Release checklist assertions now expect `451/451` generated required courses, `13/13` official title-drift confirmations, and `0/0` Testudo title-suffix checks.
+  - `scripts/verify-rendered-generated-plans.js` now checks curated rendered targets for THET, MUSC, ARTT, and CINE.
+  - It replaced generated `ARTT` with generated `GEOL` in the default rendered generated-plan matrix.
+  - `scripts/run-release-checks.js` now uses `GEOL` instead of `ARTT` in the default live generated-major set.
+- Updated `index.html`.
+  - Bumped `js/majors.js` from `v=6` to `v=7`.
+  - Bumped `js/api.js` from `v=8` to `v=9`.
+  - Bumped `js/settings.js` from `v=38` to `v=39` after the catalog snapshot writer refreshed Settings evidence.
+
+Major-gap notes:
+- Theatre, Music, Studio Art, and Cinema & Media Studies now appear as curated four-year schedules instead of generated drafts.
+- The remaining generated pool is now `38` majors, `706` generated requirement rows, and `451` unique generated required courses.
+- The new arts schedules all place their goal course in senior year, after the fixture caught Music, Studio Art, and Cinema goal rows that were initially one term too early.
+- `GEOL` is now the default rendered generated-plan arts-matrix replacement for `ARTT`, with `GEOL 453` and `GEOL 460` rendered card checks.
+- No `README.md` changes were made or staged.
+
+Verification:
+- Queried live PlanetTerp metadata for THET/MUSC/ARTT/CINE rows before placing them.
+  - Confirmed Theatre rows including `THET 110`, `THET 120`, `THET 116`, `THET 222`, `THET 223`, `THET 274`, `THET 330`, `THET 371`, `THET 408W`, `THET 447`, `THET 477`, and `THET 489P`.
+  - Confirmed Music rows including `MUSC 150`, `MUSC 151`, `MUSC 210`, `MUSC 250`, `MUSC 251`, `MUSC 310`, `MUSC 330`, `MUSC 443`, `MUSC 448C`, and `MUSC 450`.
+  - Confirmed Studio Art rows including `ARTT 100`, `ARTT 110`, `ARTT 150`, `ARTT 200`, `ARTT 210`, `ARTT 255`, `ARTT 320`, `ARTT 418`, `ARTT 428`, `ARTT 458`, and `ARTT 489C`.
+  - Confirmed Cinema rows including `CINE 245`, `CINE 280`, `CINE 301`, `CINE 302`, `CINE 335`, `CINE 344`, `CINE 385`, `CINE 411`, `CINE 461`, and `CINE 469M`.
+  - Confirmed replacement rendered generated target rows `GEOL 453` and `GEOL 460`.
+- Ran `node --check js/api.js`.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 3, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass198-curated-arts-catalog`.
+  - First run exposed the transient app-live batch miss for four valid ANTH rows.
+  - After adding the batch retry, rerunning the same command matched `451/451` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `13/13` PlanetTerp title drifts against the official UMD catalog.
+  - It found `0/0` Testudo term-specific title candidates after Studio Art moved to curated.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v39`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed 12 curated schedule fixtures.
+  - It reported `THET 120/120`, max `16` credits, `13/13` GenEd coverage, `17` real courses, and goal term `Fall 2029`.
+  - It reported `MUSC 120/120`, max `17` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It reported `ARTT 120/120`, max `16` credits, `13/13` GenEd coverage, `17` real courses, and goal term `Fall 2029`.
+  - It reported `CINE 120/120`, max `16` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, term guards, calendar conflict guard, ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=ENGL,JOUR,HIST,SOCY,SPAN,PHIL,ARTH,LING,THET,MUSC,ARTT,CINE --viewports=all`.
+  - It passed all 12 curated majors on desktop and mobile.
+  - Rendered cards included `THET489P:3cr`, `THET371:3cr`, `MUSC450:3cr`, `MUSC251:4cr`, `ARTT489C:3cr`, `ARTT428:3cr`, `CINE469M:3cr`, and `CINE411:3cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass198-curated-arts-all`.
+  - It verified all `38/38` remaining generated schedules against PlanetTerp.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with 12 curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `GEOL`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `GEOL`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass198-curated-arts-random`.
+  - It randomly verified `KNES`, `ENCE`, `PLSC`, `ENMA`, `ASTR`, `WMST`, `ANTH`, `ACCOUNTING`, `AOSC`, `HESP`, `MATH`, and `NEUR` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+- Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
+- Continue converting high-demand generated-only humanities/social-science majors into curated schedules, with Women, Gender, & Sexuality Studies, American Studies, African American & Africana Studies, and Anthropology as likely next candidates.
