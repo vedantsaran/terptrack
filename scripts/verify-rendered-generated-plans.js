@@ -302,6 +302,10 @@ function isIgnoredConsoleError(text) {
     || value.startsWith('Failed to load resource: the server responded with a status of 404');
 }
 
+function isTransientBrowserResourceError(text) {
+  return String(text || '').startsWith('Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED');
+}
+
 function cardSnapshotScript() {
   return `(() => {
     const cards = Array.from(document.querySelectorAll('.course')).map(card => {
@@ -462,6 +466,7 @@ async function runViewport(browser, url, viewport, selected, opts) {
     page.on('console', msg => {
       if (msg.type() !== 'error') return;
       const text = msg.text();
+      if (isTransientBrowserResourceError(text)) return;
       if (isIgnoredConsoleError(text)) ignoredConsoleErrors.push(text);
       else consoleErrors.push(text);
     });
@@ -488,7 +493,7 @@ async function runViewport(browser, url, viewport, selected, opts) {
     assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=8'), `${viewport.label}: rendered app did not load js/api.js?v=8`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=32'), `${viewport.label}: rendered app did not load js/settings.js?v=32`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=33'), `${viewport.label}: rendered app did not load js/settings.js?v=33`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
@@ -496,6 +501,7 @@ async function runViewport(browser, url, viewport, selected, opts) {
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
     assert(initialSnapshot.releaseText.includes('574/574 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
     assert(initialSnapshot.releaseText.includes('23/23 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('1/1 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Default release gate'), `${viewport.label}: release checklist missing release gate row`);
     assert(initialSnapshot.releaseText.includes('Pass 95'), `${viewport.label}: release checklist missing Pass 95 snapshot`);
     assert(initialSnapshot.releaseText.includes('Cloud account setup'), `${viewport.label}: release checklist missing cloud setup row`);

@@ -7,6 +7,8 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const OFFICIAL_CATALOG_COURSE_BASE = 'https://academiccatalog.umd.edu/undergraduate/approved-courses';
+const TESTUDO_SOC_BASE = 'https://app.testudo.umd.edu/soc';
+const DEFAULT_TESTUDO_TITLE_TERMS = ['202608'];
 
 function read(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -28,6 +30,8 @@ function parseArgs(argv) {
     catalogSweep: false,
     catalogLimit: null,
     skipOfficialTitleCheck: false,
+    skipTestudoTitleCheck: false,
+    testudoTerms: DEFAULT_TESTUDO_TITLE_TERMS.slice(),
     keepGoing: false,
     majors: [],
   };
@@ -43,6 +47,12 @@ function parseArgs(argv) {
       opts.catalogLimit = Number(arg.slice('--catalog-limit='.length) || 0);
     } else if (arg === '--skip-official-title-check') {
       opts.skipOfficialTitleCheck = true;
+    } else if (arg === '--skip-testudo-title-check') {
+      opts.skipTestudoTitleCheck = true;
+    } else if (arg === '--testudo-terms') {
+      opts.testudoTerms = String(argv[++i] || '').split(',');
+    } else if (arg.startsWith('--testudo-terms=')) {
+      opts.testudoTerms = arg.slice('--testudo-terms='.length).split(',');
     } else if (arg === '--keep-going') {
       opts.keepGoing = true;
     } else if (arg === '--major') {
@@ -70,6 +80,8 @@ function parseArgs(argv) {
   opts.count = Number.isFinite(opts.count) && opts.count > 0 ? Math.floor(opts.count) : 6;
   opts.catalogLimit = Number.isFinite(opts.catalogLimit) && opts.catalogLimit > 0 ? Math.floor(opts.catalogLimit) : null;
   opts.majors = Array.from(new Set(opts.majors.map(item => String(item || '').trim().toUpperCase()).filter(Boolean)));
+  opts.testudoTerms = Array.from(new Set(opts.testudoTerms.map(item => String(item || '').trim()).filter(Boolean)));
+  if (!opts.testudoTerms.length) opts.testudoTerms = DEFAULT_TESTUDO_TITLE_TERMS.slice();
   return opts;
 }
 
@@ -184,6 +196,13 @@ function titlesCompatible(appTitle, planetTerpTitle) {
   return app === live || app.includes(live) || live.includes(app);
 }
 
+function titleNeedsTermSpecificCheck(appTitle, officialTitle) {
+  const app = normalizeTitle(appTitle);
+  const official = normalizeTitle(officialTitle);
+  if (!app || !official || app === official) return false;
+  return app.includes(official) || official.includes(app);
+}
+
 function creditValue(value) {
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : null;
@@ -261,6 +280,21 @@ function extractOfficialCatalogCourse(html, code) {
   return null;
 }
 
+function extractTestudoCourse(html, code) {
+  const id = normalizeCode(code);
+  const titleMatch = String(html || '').match(/<span[^>]*class=["'][^"']*course-title[^"']*["'][^>]*>([\s\S]*?)<\/span>/i);
+  if (!titleMatch) return null;
+  const title = htmlToText(titleMatch[1]);
+  if (!title) return null;
+  const text = htmlToText(html);
+  const creditMatch = text.match(/\bCredits:\s*([0-9]+(?:\s*-\s*[0-9]+)?)/i);
+  return {
+    code: id,
+    title,
+    credits: creditMatch ? parseOfficialCreditText(`${creditMatch[1]} Credits`) : null,
+  };
+}
+
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -308,6 +342,7 @@ function profileFromRoll(rand) {
 
 const planetTerpVerifyCache = new Map();
 const officialCatalogDeptCache = new Map();
+const testudoCourseCache = new Map();
 
 async function fetchPlanetTerpCourse(code) {
   const id = normalizeCode(code);
@@ -421,6 +456,56 @@ async function fetchOfficialCatalogCourse(code) {
     credits: course.credits,
     url: deptPage.url,
   };
+}
+
+async function fetchTestudoCourse(code, term) {
+  const id = normalizeCode(code);
+  const cleanTerm = String(term || '').trim();
+  const match = id.match(/^([A-Z]{3,4})(\d{3}[A-Z]?)$/);
+  if (!match || !cleanTerm) return { ok: false, code: id, term: cleanTerm, detail: 'invalid course code or term' };
+  const cacheKey = `${cleanTerm}:${id}`;
+  if (testudoCourseCache.has(cacheKey)) return testudoCourseCache.get(cacheKey);
+  const dept = match[1];
+  const url = `${TESTUDO_SOC_BASE}/${encodeURIComponent(cleanTerm)}/${encodeURIComponent(dept)}/${encodeURIComponent(id)}`;
+  let lastResult = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let resp;
+    try {
+      resp = await fetch(url, {
+        headers: {
+          accept: 'text/html,application/xhtml+xml',
+          'user-agent': 'TerpTrack/testudo-title-verifier',
+        },
+      });
+    } catch (error) {
+      lastResult = { ok: false, code: id, term: cleanTerm, url, detail: error?.message || String(error) };
+      if (attempt < 3) await wait(250 * attempt);
+      continue;
+    }
+    if (!resp.ok) {
+      lastResult = { ok: false, code: id, term: cleanTerm, url, detail: `HTTP ${resp.status}` };
+      if (resp.status >= 500 && attempt < 3) {
+        await wait(250 * attempt);
+        continue;
+      }
+      testudoCourseCache.set(cacheKey, lastResult);
+      return lastResult;
+    }
+    const html = await resp.text();
+    const course = extractTestudoCourse(html, id);
+    const result = course
+      ? { ok: true, code: id, term: cleanTerm, url, title: course.title, credits: course.credits }
+      : { ok: false, code: id, term: cleanTerm, url, detail: 'course title not posted in Testudo term page' };
+    testudoCourseCache.set(cacheKey, result);
+    return result;
+  }
+  testudoCourseCache.set(cacheKey, lastResult);
+  return lastResult;
+}
+
+async function fetchTestudoCourseAcrossTerms(code, terms) {
+  const rows = await mapLimit(terms || [], 2, term => fetchTestudoCourse(code, term));
+  return rows.filter(Boolean);
 }
 
 async function verifyMajor(context, major, rand) {
@@ -666,6 +751,7 @@ async function verifyCatalogSweep(context, opts) {
   const officialResolved = [];
   const officialUnverified = [];
   const officialMismatches = [];
+  const testudoCandidates = [];
   if (titleDrifts.length && !opts.skipOfficialTitleCheck) {
     const officialRows = await mapLimit(titleDrifts, 3, async drift => ({
       drift,
@@ -684,11 +770,41 @@ async function verifyCatalogSweep(context, opts) {
         return;
       }
       officialResolved.push(`${displayCode(drift.code)} official "${official.title}" vs PlanetTerp "${drift.planetTitle}"`);
+      if (titleNeedsTermSpecificCheck(drift.appTitle, official.title)) {
+        testudoCandidates.push({ ...drift, officialTitle: official.title });
+      }
     });
   }
   assert(
     !officialMismatches.length,
     `Catalog sweep official UMD title/credit mismatches ${officialMismatches.length}/${titleDrifts.length}: ${officialMismatches.slice(0, 20).join('; ')}${officialMismatches.length > 20 ? `; +${officialMismatches.length - 20} more` : ''}`,
+  );
+  const testudoResolved = [];
+  const testudoUnavailable = [];
+  const testudoMismatches = [];
+  if (testudoCandidates.length && !opts.skipTestudoTitleCheck) {
+    const testudoRows = await mapLimit(testudoCandidates, 2, async candidate => ({
+      candidate,
+      rows: await fetchTestudoCourseAcrossTerms(candidate.code, opts.testudoTerms),
+    }));
+    testudoRows.forEach(({ candidate, rows }) => {
+      const posted = (rows || []).filter(row => row?.ok);
+      if (!posted.length) {
+        const details = (rows || []).map(row => `${row.term || 'term'} ${row?.detail || 'unavailable'}`).join(', ');
+        testudoUnavailable.push(`${displayCode(candidate.code)} (${details || 'no configured Testudo terms posted a title'})`);
+        return;
+      }
+      const compatible = posted.filter(row => titlesCompatible(candidate.appTitle, row.title));
+      if (!compatible.length) {
+        testudoMismatches.push(`${displayCode(candidate.code)} app "${candidate.appTitle}" != Testudo ${posted.map(row => `${row.term} "${row.title}"`).join(', ')}`);
+        return;
+      }
+      testudoResolved.push(`${displayCode(candidate.code)} ${compatible.map(row => `${row.term} "${row.title}"`).join(', ')}`);
+    });
+  }
+  assert(
+    !testudoMismatches.length,
+    `Catalog sweep Testudo term-title mismatches ${testudoMismatches.length}/${testudoCandidates.length}: ${testudoMismatches.slice(0, 20).join('; ')}${testudoMismatches.length > 20 ? `; +${testudoMismatches.length - 20} more` : ''}`,
   );
 
   const reused = coverageRows
@@ -708,6 +824,16 @@ async function verifyCatalogSweep(context, opts) {
     }
   } else {
     console.log('Catalog sweep found no PlanetTerp title drifts.');
+  }
+  if (testudoCandidates.length && opts.skipTestudoTitleCheck) {
+    console.log(`Testudo term-title check skipped for ${testudoCandidates.length} official base-title drift${testudoCandidates.length === 1 ? '' : 's'} across ${opts.testudoTerms.join(', ')}.`);
+  } else if (testudoCandidates.length) {
+    console.log(`Testudo confirmed term-specific app titles for ${testudoResolved.length}/${testudoCandidates.length} official base-title drift${testudoCandidates.length === 1 ? '' : 's'} across ${opts.testudoTerms.join(', ')}: ${testudoResolved.slice(0, 10).join('; ')}${testudoResolved.length > 10 ? `; +${testudoResolved.length - 10} more` : ''}.`);
+    if (testudoUnavailable.length) {
+      console.log(`Testudo term-title check could not verify ${testudoUnavailable.length}/${testudoCandidates.length} base-title drift${testudoUnavailable.length === 1 ? '' : 's'} in configured terms: ${testudoUnavailable.slice(0, 10).join('; ')}${testudoUnavailable.length > 10 ? `; +${testudoUnavailable.length - 10} more` : ''}.`);
+    }
+  } else if (titleDrifts.length && !opts.skipOfficialTitleCheck) {
+    console.log('Testudo term-title check found no official base-title drifts requiring term-specific confirmation.');
   }
   console.log(`Most reused generated requirements: ${reused || 'none'}.`);
 }
@@ -755,9 +881,11 @@ if (require.main === module) {
   module.exports = {
     decodeHtmlEntities,
     extractOfficialCatalogCourse,
+    extractTestudoCourse,
     htmlToText,
     officialCreditsCompatible,
     parseOfficialCreditText,
+    titleNeedsTermSpecificCheck,
     titlesCompatible,
   };
 }

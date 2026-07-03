@@ -99,7 +99,11 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
   titleDrifts: 23,
   officialTitleChecks: 23,
   officialTitleMismatches: 0,
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass189-official-title-full',
+  testudoTermTitleCandidates: 1,
+  testudoTermTitleChecks: 1,
+  testudoTermTitleMismatches: 0,
+  testudoTerms: '202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass190-testudo-title-full',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -363,6 +367,7 @@ function releaseChecklistItems(config, clientReady) {
   const sweepOk = sweep.missingCourses === 0
     && sweep.creditMismatches === 0
     && sweep.officialTitleMismatches === 0
+    && sweep.testudoTermTitleMismatches === 0
     && sweep.matchedCourses >= sweep.uniqueCourses;
   const cloudChecks = releaseChecklistCloudChecks(config, clientReady);
   const cloudOk = cloudChecks.filter(check => check.status === 'ok').length;
@@ -393,8 +398,8 @@ function releaseChecklistItems(config, clientReady) {
       id: 'catalog-sweep',
       status: sweepOk ? 'ok' : 'warn',
       title: 'Generated course catalog sweep',
-      detail: `${sweep.matchedCourses}/${sweep.uniqueCourses} unique generated required courses matched ${sweep.source} for presence and credits; ${sweep.officialTitleChecks}/${sweep.titleDrifts} title drifts were confirmed app-compatible by the official UMD catalog.`,
-      meta: `${sweep.checkedAt} · ${sweep.seed} · ${sweep.generatedMajors} majors · ${sweep.requirementRows} requirement rows · ${sweep.officialTitleMismatches} official title mismatches`,
+      detail: `${sweep.matchedCourses}/${sweep.uniqueCourses} unique generated required courses matched ${sweep.source} for presence and credits; ${sweep.officialTitleChecks}/${sweep.titleDrifts} title drifts were confirmed app-compatible by the official UMD catalog; ${sweep.testudoTermTitleChecks}/${sweep.testudoTermTitleCandidates} term-specific title suffixes were confirmed in Testudo.`,
+      meta: `${sweep.checkedAt} · ${sweep.seed} · ${sweep.generatedMajors} majors · ${sweep.requirementRows} requirement rows · ${sweep.officialTitleMismatches} official title mismatches · ${sweep.testudoTermTitleMismatches} Testudo title mismatches · ${sweep.testudoTerms}`,
     },
     {
       id: 'release',

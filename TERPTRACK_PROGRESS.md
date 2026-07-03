@@ -10822,3 +10822,85 @@ Next pass candidates:
 - Add Testudo term-page title checks for title drifts where the official catalog base title is intentionally less specific than the scheduled term title.
 - Add a one-click Settings or release helper that refreshes the stored catalog sweep snapshot after maintainers run a full live sweep.
 - Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
+
+## 2026-07-03 Pass 190
+
+Focus: add Testudo term-page title checks for official catalog base-title drifts, so generated schedules verify both the official catalog base title and the term-specific title students see in Schedule of Classes.
+
+Planned changes:
+- Add Testudo Schedule of Classes title parsing to the live catalog sweep.
+- Run Testudo checks only when the official catalog title is compatible but less specific than the app title.
+- Default the Testudo check to Fall 2026 (`202608`), with a CLI override for other terms.
+- Fail if a posted Testudo term title contradicts the app title.
+- Surface the Testudo title-suffix confirmation in Settings release readiness.
+- Run generated fixtures, full live catalog sweep, random live schedules, rendered checks, release checks, and whitespace checks.
+
+Completed:
+- Updated `scripts/verify-random-schedules.js`.
+  - Added `TESTUDO_SOC_BASE` and default Testudo title term `202608`.
+  - Added `--testudo-terms=...` and `--skip-testudo-title-check`.
+  - Added `extractTestudoCourse()` for Testudo pages that expose `<span class="course-title">...`.
+  - Added `titleNeedsTermSpecificCheck()` so exact official/app title matches do not do unnecessary Testudo fetches.
+  - Added cached Testudo course fetching across configured terms.
+  - The catalog sweep now fails on Testudo term-title mismatches when a term page is posted.
+  - The sweep reports Testudo-confirmed term-specific title suffixes separately from official catalog confirmations.
+- Updated `scripts/test-generated-plans.js`.
+  - Extended `OFFICIAL-CATALOG-TITLES` to assert Testudo title extraction and base-title detection.
+  - Extended Settings release checklist fixture coverage to require `1/1 term-specific title suffixes` and `Testudo`.
+- Updated `js/settings.js`.
+  - Refreshed the generated catalog sweep snapshot to `pass190-testudo-title-full`.
+  - Added `testudoTermTitleCandidates: 1`, `testudoTermTitleChecks: 1`, `testudoTermTitleMismatches: 0`, and `testudoTerms: 202608`.
+  - The Settings Release Readiness row now includes `1/1` Testudo term-specific title suffix confirmation.
+- Updated `index.html` and `scripts/verify-rendered-generated-plans.js`.
+  - Bumped `js/settings.js` from `v=32` to `v=33`.
+  - Added rendered Settings assertions for the Testudo title-suffix evidence.
+  - Split transient Chromium `net::ERR_NETWORK_IO_SUSPENDED` resource messages out of the proxy-noise bucket so the verifier still fails real api/CORS/404 proxy leaks but tolerates that browser transport artifact.
+
+Major-gap notes:
+- The only official base-title drift in the full generated required-course catalog was `ARTT 428`: official catalog title `Advanced Painting Studio`, app/Testudo Fall 2026 title `Advanced Painting Studio; Painting`.
+- The full sweep now proves the layered title chain for generated required courses: app live metadata and PlanetTerp for existence/credits, official UMD catalog for title drift grounding, and Testudo Fall 2026 for the term-specific suffix case.
+- The Testudo term list is configurable because Schedule of Classes term availability changes; the stored release-readiness snapshot records the Fall 2026 evidence used.
+
+Verification:
+- Ran `node --check scripts/verify-random-schedules.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the extended `OFFICIAL-CATALOG-TITLES` fixture for official catalog parsing, Testudo title extraction, and base-title suffix detection.
+  - It passed the release checklist assertions for `574/574` generated required courses, `23/23` official UMD title confirmations, and `1/1` Testudo term-specific title confirmation.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --catalog-limit=40 --seed=pass190-testudo-title-smoke`.
+  - It matched `40/40` sampled generated required courses.
+  - It confirmed `1/1` PlanetTerp title drift against official UMD catalog evidence.
+  - The sample had no official base-title drift requiring Testudo confirmation.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --seed=pass190-testudo-title-full`.
+  - It matched `574/574` unique generated required courses across `50` generated majors and `843` requirement rows.
+  - It confirmed app-compatible official UMD catalog titles for `23/23` PlanetTerp title drifts.
+  - It confirmed `1/1` official base-title drift in Testudo Fall 2026: `ARTT 428 202608 "Advanced Painting Studio; Painting"`.
+  - The most reused generated requirements were `MATH 140`, `MATH 141`, `CHEM 131`, `STAT 100`, `CHEM 132`, `MATH 240`, `MATH 246`, and `PHYS 161`.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - The first run rendered `PHYS [mobile]` with `20/20 live course records` but failed because transient `net::ERR_NETWORK_IO_SUSPENDED` resource messages were treated as proxy noise.
+  - After splitting that transient browser artifact out of the proxy-noise bucket, the rerun passed with `PHYS [mobile]` at `20/20 live course records` and clean proxy-backed console.
+  - It verified the rendered app loaded `js/settings.js?v=33` and showed the updated Settings release readiness evidence.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass190-testudo-title-random`.
+  - It randomly verified `GEOL`, `NFSC`, `ENST`, `HIST`, `AOSC`, `ENCE`, `LING`, `KNES`, `ENGL`, `CINE`, `ANTH`, and `CHEM` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `node scripts/run-release-checks.js`.
+  - The first run failed only at the rendered mobile generated-plan stage because transient `net::ERR_NETWORK_IO_SUSPENDED` messages were counted as ignored proxy noise after all six mobile majors rendered with full live coverage.
+  - The rerun passed the full release suite after the verifier filter split.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the Testudo parser and release checklist evidence.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+  - Live schedule verification and live catalog sweep were skipped by the default release runner unless their explicit flags are passed.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a one-click Settings or release helper that refreshes the stored catalog sweep snapshot after maintainers run a full live sweep.
+- Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
+- Add a Testudo term-title release option for maintainers to run the full sweep against a newly posted term as UMD publishes future schedules.

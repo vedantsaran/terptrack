@@ -1279,6 +1279,7 @@ async function testCatalogYearTargeting(context) {
   assert(/Catalog target 2024-2025/.test(result.releaseHtml), 'catalog year: release checklist should show selected target year');
   assert(/Generated course catalog sweep/.test(result.releaseHtml) && /574\/574 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
   assert(/23\/23 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
+  assert(/1\/1 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
@@ -3722,7 +3723,9 @@ function testCanonicalCourseTitles(context) {
 function testOfficialCatalogTitleParser() {
   const {
     extractOfficialCatalogCourse,
+    extractTestudoCourse,
     officialCreditsCompatible,
+    titleNeedsTermSpecificCheck,
     titlesCompatible,
   } = require('./verify-random-schedules.js');
   const html = `
@@ -3745,16 +3748,21 @@ function testOfficialCatalogTitleParser() {
   const bmgt = extractOfficialCatalogCourse(html, 'BMGT 301');
   const artt = extractOfficialCatalogCourse(html, 'ARTT428');
   const variable = extractOfficialCatalogCourse(html, 'ARTT 498');
+  const testudo = extractTestudoCourse('<div><span class="course-title">Advanced Painting Studio; Painting</span><span>Credits: 3</span></div>', 'ARTT428');
   assert(bmgt?.title === 'Information Systems, AI, and Digital Transformation', 'official catalog parser: should extract comma title');
   assert(bmgt?.credits?.exact === 3 && officialCreditsCompatible(bmgt.credits, 3), 'official catalog parser: should extract exact credits');
   assert(artt?.title === 'Advanced Painting Studio', 'official catalog parser: should extract base studio title');
   assert(titlesCompatible('Advanced Painting Studio; Painting', artt.title), 'official catalog parser: term-specific title suffix should be compatible with catalog base title');
+  assert(titleNeedsTermSpecificCheck('Advanced Painting Studio; Painting', artt.title), 'official catalog parser: base-title compatibility should request Testudo confirmation');
+  assert(!titleNeedsTermSpecificCheck(bmgt.title, bmgt.title), 'official catalog parser: exact official titles should not request Testudo confirmation');
   assert(variable?.credits?.min === 1 && variable?.credits?.max === 3, 'official catalog parser: should extract variable credit range');
   assert(officialCreditsCompatible(variable.credits, 2) && !officialCreditsCompatible(variable.credits, 4), 'official catalog parser: should enforce variable credit range');
+  assert(testudo?.title === 'Advanced Painting Studio; Painting' && testudo?.credits?.exact === 3, 'official catalog parser: should extract Testudo term title and credits');
   return {
     id: 'OFFICIAL-CATALOG-TITLES',
     bmgt301: bmgt.title,
     artt428: artt.title,
+    testudo: testudo.title,
     variable: variable.credits.raw,
   };
 }
