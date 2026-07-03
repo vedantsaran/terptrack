@@ -493,10 +493,11 @@ const MAJOR_TEMPLATES = {
     programName: 'Philosophy',
     eyebrow: 'UMD · Philosophy · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_PHIL !== 'undefined' ? SCHEDULE_PHIL : null,
     coreCodes: [
       'PHIL170','PHIL250','PHIL310','PHIL320','PHIL332','PHIL370','PHIL408R',
     ],
-    upperElectiveCodes: ['PHIL360','PHIL428A','PHIL456'],
+    upperElectiveCodes: ['PHIL360','PHIL428A','PHIL445','PHIL443'],
     supportCodes: [],
     goals: ['PHIL408R'],
     notes: 'BA Philosophy. Logic + ancient + modern + ethics is the typical core sweep.',
@@ -522,6 +523,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Art History',
     eyebrow: 'UMD · Art History · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_ARTH !== 'undefined' ? SCHEDULE_ARTH : null,
     coreCodes: [
       'ARTH221','ARTH200','ARTH201','ARTH250','ARTH320','ARTH488K','ARTH489K',
     ],
@@ -824,6 +826,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Linguistics',
     eyebrow: 'UMD · Linguistics · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_LING !== 'undefined' ? SCHEDULE_LING : null,
     coreCodes: [
       'LING200','LING240','LING311','LING321','LING322','LING330','LING420','LING444',
     ],

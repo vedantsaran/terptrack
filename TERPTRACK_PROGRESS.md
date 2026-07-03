@@ -11371,3 +11371,90 @@ Next pass candidates:
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
 - Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
 - Continue converting high-demand generated-only majors into curated schedules, with `PHIL`, `ARTH`, and `LING` as the next ARHU candidates.
+
+## 2026-07-03 Pass 197
+
+Focus: continue replacing generated-only ARHU plans with curated four-year schedules, starting with Philosophy, Art History, and Linguistics.
+
+Planned changes:
+- Add fixed eight-semester schedules for `PHIL`, `ARTH`, and `LING`.
+- Keep all three at exactly 120 credits with complete GenEd coverage, real senior-year major work, and editable free-elective space.
+- Replace stale Philosophy elective metadata while wiring the curated plan.
+- Refresh generated/curated fixtures, Settings evidence, rendered browser checks, live catalog evidence, and random live audits after the generated-major pool drops from `45` to `42`.
+
+Completed:
+- Updated `js/major-schedules.js`.
+  - Added `SCHEDULE_PHIL`, a 120-credit Philosophy BA path with symbolic logic, philosophy of science, ancient/modern philosophy, aesthetics, logic theory, language, political philosophy, moral psychology, and senior `PHIL 408R`.
+  - Added `SCHEDULE_ARTH`, a 120-credit Art History BA path with western/non-western survey work, upper art history seminars, museum-world colloquium/special topic rows, and senior `ARTH 489K`.
+  - Added `SCHEDULE_LING`, a 120-credit Linguistics BA path with intro linguistics, language and mind, syntax, phonology, historical linguistics, semantics/word formation, cognitive grammar, and senior `LING 444`.
+- Updated `js/majors.js`.
+  - Wired `PHIL`, `ARTH`, and `LING` to their fixed schedules.
+  - Replaced stale generated-only `PHIL456` with live `PHIL445`.
+  - Added concrete `PHIL443` to the Philosophy upper-elective set so the curated plan has 15 real course rows instead of relying on a generic senior elective.
+- Updated `js/settings.js`.
+  - Refreshed generated-template audit evidence to `42/42` using `pass197-curated-arhu-all`.
+  - Refreshed catalog-sweep evidence to `493/493` unique generated required courses across `42` generated majors and `751` requirement rows.
+  - Recorded `15/15` official UMD catalog title-drift confirmations and `1/1` Testudo term-specific title confirmation.
+  - Kept older `45/45`, `48/48`, and `50/50` audit rows with their own denominators.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks ENGL, JOUR, HIST, SOCY, SPAN, PHIL, ARTH, and LING curated schedules.
+  - It replaced the generated-only Philosophy fixture with generated `AMST`.
+  - Generated-count expectations now use `42` majors and `751` requirement rows.
+  - Release checklist assertions now expect `493/493` generated required courses and `15/15` official title-drift confirmations.
+  - `scripts/verify-rendered-generated-plans.js` now includes curated rendered targets for PHIL, ARTH, and LING.
+  - It treats Chrome `ERR_SOCKET_NOT_CONNECTED` resource logs as the same narrow local-browser transient class as `ERR_NETWORK_IO_SUSPENDED`; this prevents a completed rendered-card pass from failing on socket teardown noise.
+- Updated `index.html`.
+  - Bumped `js/majors.js` from `v=5` to `v=6`.
+  - Bumped `js/settings.js` from `v=37` to `v=38` after the catalog snapshot writer refreshed Settings evidence.
+
+Major-gap notes:
+- Philosophy, Art History, and Linguistics now appear as curated four-year schedules instead of generated drafts.
+- The remaining generated pool is now `42` majors, `751` generated requirement rows, and `493` unique generated required courses.
+- Philosophy needed extra care because PlanetTerp has blank/stale coverage for some rows; the fixed schedule uses official current titles for `PHIL 250`, `PHIL 310`, and `PHIL 320`, keeps app-compatible `PHIL 408R`, replaces stale `PHIL456` with `PHIL445`, and uses live `PHIL443` as the concrete senior elective.
+- No `README.md` changes were made or staged.
+
+Verification:
+- Queried live PlanetTerp metadata for PHIL/ARTH/LING rows before placing them.
+  - Confirmed Philosophy rows including `PHIL 170`, `PHIL 370`, `PHIL 408R`, `PHIL 428A`, `PHIL 443`, and `PHIL 445`.
+  - Used the official UMD Philosophy catalog for `PHIL 250`, `PHIL 310`, and `PHIL 320` titles where PlanetTerp was blank or stale.
+  - Confirmed Art History rows including `ARTH 200`, `ARTH 201`, `ARTH 250`, `ARTH 320`, `ARTH 488K`, and `ARTH 489K`.
+  - Confirmed Linguistics rows including `LING 200`, `LING 311`, `LING 321`, `LING 322`, `LING 420`, `LING 440`, and `LING 444`.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 3, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass197-curated-arhu-catalog`.
+  - It matched `493/493` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `15/15` PlanetTerp title drifts against the official UMD catalog.
+  - It confirmed `1/1` Testudo term-specific title suffix for `ARTT 428` in `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v38`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed eight curated schedule fixtures.
+  - It reported `PHIL 120/120`, max `16` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It reported `ARTH 120/120`, max `16` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It reported `LING 120/120`, max `16` credits, `13/13` GenEd coverage, `17` real courses, and goal term `Fall 2029`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, term guards, calendar conflict guard, ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=ENGL,JOUR,HIST,SOCY,SPAN,PHIL,ARTH,LING --viewports=all`.
+  - It passed all eight curated majors on desktop and mobile.
+  - Rendered cards included `PHIL408R:3cr`, `PHIL370:3cr`, `ARTH489K:3cr`, `ARTH488K:3cr`, `LING444:3cr`, and `LING311:3cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass197-curated-arhu-all`.
+  - It verified all `42/42` remaining generated schedules against PlanetTerp.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with eight curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass197-curated-arhu-random`.
+  - It randomly verified `MGMT`, `CINE`, `AAST`, `ACCOUNTING`, `GEOL`, `AMST`, `NEUR`, `PHYS`, `ENEE`, `GEOG`, `BIOE`, and `ANSC` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+- Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
+- Continue converting high-demand generated-only majors into curated schedules, with Theatre, Music, Studio Art, and Cinema as likely next ARHU candidates.

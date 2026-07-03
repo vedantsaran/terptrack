@@ -952,3 +952,189 @@ const SCHEDULE_SPAN = [
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
+
+// ============================================================
+// PHIL — Philosophy (BA, 120 cr)
+// ============================================================
+const SCHEDULE_PHIL = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('PHIL 170', 'Introduction to Symbolic Logic', 3, { category: 'major-core', note: 'Satisfies FSAR' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('PHIL 250', 'Philosophy of Science I', 3, { category: 'major-core' }),
+    _c('PHIL 310', 'Ancient Greek and Roman Philosophy', 3, { category: 'major-core' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('PHIL 320', 'Knowing Oneself and Knowing the World: Early Modern Philosophy from Descartes to Kant', 3, { prereqs: ['PHIL 310'], category: 'major-core' }),
+    _c('PHIL 332', 'Philosophy of Beauty', 3, { category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('PHIL 370', 'Logical Theory I: Metatheory', 3, { prereqs: ['PHIL 170'], category: 'major-core' }),
+    _c('PHIL 360', 'Philosophy of Language', 3, { prereqs: ['PHIL 170'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('PHIL 428A', 'Topics in the History of Philosophy; Postcolonialism', 3, { prereqs: ['PHIL 310','PHIL 320'], category: 'major-upper' }),
+    _c('PHIL 445', 'Contemporary Political Philosophy', 3, { category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('PHIL 408R', 'The Practice of Philosophy: How To Develop Your Own Work', 3, { prereqs: ['PHIL 360','PHIL 428A'], category: 'major-upper', isGoal: true }),
+    _c('PHIL 443', 'Moral Psychology', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ARTH — Art History (BA, 120 cr)
+// ============================================================
+const SCHEDULE_ARTH = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ARTH 200', 'Art and Society in Ancient and Medieval Europe and the Mediterranean', 3, { category: 'major-core' }),
+    _c('ARTH 221', 'Color: Art, Science, and Culture', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ARTH 201', 'Art and Society in the West from the Renaissance to the Present', 3, { category: 'major-core' }),
+    _c('ARTH 250', 'Art and Society in the Ancient American World', 3, { category: 'major-core' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ARTH 320', 'Fourteenth and Fifteenth-Century Northern European Art', 3, { category: 'major-core' }),
+    _c('ARTH 351', 'Picturing Contemporary Life: Art Since 1945', 3, { category: 'major-upper' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ARTH 418', 'Special Problems in Italian Renaissance Art', 3, { prereqs: ['ARTH 201'], category: 'major-upper' }),
+    _c('ARTH 465', 'The Landscape in Modern and Contemporary Art', 3, { prereqs: ['ARTH 201'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ARTH 488K', 'Colloquium in Art History; Art History in the Museum World', 3, { prereqs: ['ARTH 320'], category: 'major-core' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ARTH 489K', 'Special Topics in Art History; Art and the Museum World', 3, { prereqs: ['ARTH 488K'], category: 'major-upper', isGoal: true }),
+    _c('ARTH 4xx Elective', 'Upper-Division ARTH Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// LING — Linguistics (BA, 120 cr)
+// ============================================================
+const SCHEDULE_LING = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('LING 200', 'Introductory Linguistics', 3, { category: 'major-core' }),
+    _c('LING 240', 'Language and Mind', 3, { category: 'major-core' }),
+    _c('PHIL 170', 'Introduction to Symbolic Logic', 3, { category: 'major-support', note: 'Satisfies FSAR' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('LING 311', 'Syntax I', 3, { prereqs: ['LING 200'], category: 'major-core' }),
+    _c('LING 321', 'Phonology I', 3, { prereqs: ['LING 200'], category: 'major-core' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'major-support' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('LING 322', 'Phonology II', 3, { prereqs: ['LING 321'], category: 'major-core' }),
+    _c('LING 330', 'Historical Linguistics', 3, { prereqs: ['LING 200'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('LING 410', 'Grammar and Meaning', 3, { prereqs: ['LING 311'], category: 'major-upper' }),
+    _c('LING 420', 'Word Formation', 3, { prereqs: ['LING 311'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('LING 419B', 'Topics in Syntax; The Syntax of Silence', 3, { prereqs: ['LING 311'], category: 'major-upper' }),
+    _c('LING 440', 'Grammars and Cognition', 3, { prereqs: ['LING 311'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('LING 444', 'Child Language Acquisition', 3, { prereqs: ['LING 311'], category: 'major-upper', isGoal: true }),
+    _c('LING 4xx Elective', 'Upper-Division LING Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
