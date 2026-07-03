@@ -732,6 +732,223 @@ async function verifyAccountSetupMobile(page, url, opts) {
   console.log('Account setup [mobile]: rendered local-first cloud checklist, profile save, friend invite, accepted-friend revocation, friend-plan meeting planner, and no overflow.');
 }
 
+async function verifyScheduleAlternativesMobile(page, url, opts) {
+  await openFreshApp(page, url, opts, 'schedule-alternatives');
+  await page.evaluate(async () => {
+    const cmsc0101 = {
+      course: 'CMSC 131',
+      section_id: 'CMSC131-0101',
+      semester: '202608',
+      number: '0101',
+      instructors: ['Ada Lovelace'],
+      meetings: [{ days: 'MWF', start_time: '9:00am', end_time: '9:50am', building: 'IRB', room: '1101' }],
+      open_seats: '8',
+      seats: '24',
+      waitlist: '0',
+    };
+    const cmsc0201 = {
+      course: 'CMSC 131',
+      section_id: 'CMSC131-0201',
+      semester: '202608',
+      number: '0201',
+      instructors: ['Grace Hopper'],
+      meetings: [{ days: 'TuTh', start_time: '11:00am', end_time: '12:15pm', building: 'IRB', room: '1201' }],
+      open_seats: '20',
+      seats: '32',
+      waitlist: '0',
+    };
+    const math0101 = {
+      course: 'MATH 140',
+      section_id: 'MATH140-0101',
+      semester: '202608',
+      number: '0101',
+      instructors: ['Katherine Johnson'],
+      meetings: [{ days: 'MWF', start_time: '9:30am', end_time: '10:20am', building: 'MTH', room: '0101' }],
+      open_seats: '4',
+      seats: '30',
+      waitlist: '0',
+    };
+    const math0201 = {
+      course: 'MATH 140',
+      section_id: 'MATH140-0201',
+      semester: '202608',
+      number: '0201',
+      instructors: ['Sofya Kovalevskaya'],
+      meetings: [{ days: 'TuTh', start_time: '9:30am', end_time: '10:45am', building: 'MTH', room: '0201' }],
+      open_seats: '18',
+      seats: '30',
+      waitlist: '0',
+    };
+    const engl0101 = {
+      course: 'ENGL 101',
+      section_id: 'ENGL101-0101',
+      semester: '202608',
+      number: '0101',
+      instructors: ['Juan Felipe'],
+      meetings: [{ days: 'MWF', start_time: '10:00am', end_time: '10:50am', building: 'TWS', room: '0201' }],
+      open_seats: '6',
+      seats: '20',
+      waitlist: '0',
+    };
+    const engl0201 = {
+      course: 'ENGL 101',
+      section_id: 'ENGL101-0201',
+      semester: '202608',
+      number: '0201',
+      instructors: ['Pauli Murray'],
+      meetings: [{ days: 'MWF', start_time: '12:00pm', end_time: '12:50pm', building: 'TWS', room: '1200' }],
+      open_seats: '14',
+      seats: '20',
+      waitlist: '0',
+    };
+    document.querySelector('#onboard-modal')?.classList.remove('open');
+    state.onboardingComplete = true;
+    state.majorId = 'CMSC';
+    state.settings = normalizeSettings({
+      ...DEFAULT_SETTINGS,
+      programName: 'Schedule Alternatives Fixture',
+      totalCredits: 120,
+    });
+    state.activeSchedule = [{
+      id: 'ALTF',
+      name: 'Fall 2026',
+      year: 'Year 1',
+      courses: [
+        { code: 'CMSC 131', title: 'Object-Oriented Programming I', cr: 4, kind: 'core', category: 'major-core' },
+        { code: 'MATH 140', title: 'Calculus I', cr: 4, kind: 'core', category: 'gened-fsma' },
+        { code: 'ENGL 101', title: 'Academic Writing', cr: 3, kind: 'gened', category: 'gened-fspw' },
+      ],
+    }];
+    state.customSemesters = [];
+    state.customCourses = [];
+    state.courses = {};
+    state.selectedSections = {
+      ALTF: {
+        CMSC131: cmsc0101,
+        MATH140: math0101,
+        ENGL101: engl0101,
+      },
+    };
+    state.schedulePrefs = {
+      ALTF: {
+        ...DEFAULT_SCHEDULE_PREFS,
+        term: '202608',
+        earliest: '08:00',
+        latest: '17:00',
+        minBreak: 15,
+        mode: 'balanced',
+        solverBreadth: 'standard',
+        calendarStart: '2026-09-02',
+        calendarEnd: '2026-12-14',
+      },
+    };
+    state.recentChanges = [];
+    state.scheduleOutputOptions = { preferences: true, warnings: true, unscheduled: true, recentChanges: true, auditIssues: true };
+    schedulePostedTerms = ['202608'];
+    scheduleCurrentSemId = 'ALTF';
+    scheduleSectionsCache[scheduleSectionCacheKey('ALTF', '202608', 'CMSC 131')] = [cmsc0101, cmsc0201];
+    scheduleSectionsCache[scheduleSectionCacheKey('ALTF', '202608', 'MATH 140')] = [math0101, math0201];
+    scheduleSectionsCache[scheduleSectionCacheKey('ALTF', '202608', 'ENGL 101')] = [engl0101, engl0201];
+    const fetchedAt = new Date(Date.now() - (2 * 60 * 1000)).toISOString();
+    scheduleSectionsMeta[scheduleSectionCacheKey('ALTF', '202608', 'CMSC 131')] = { fetchedAt, source: 'fixture', count: 2 };
+    scheduleSectionsMeta[scheduleSectionCacheKey('ALTF', '202608', 'MATH 140')] = { fetchedAt, source: 'fixture', count: 2 };
+    scheduleSectionsMeta[scheduleSectionCacheKey('ALTF', '202608', 'ENGL 101')] = { fetchedAt, source: 'fixture', count: 2 };
+    currentTab = 'schedule';
+    document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === 'view-schedule'));
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === 'schedule'));
+    await renderSchedule();
+  });
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ') || '';
+    const listText = document.querySelector('#schedule-section-list')?.textContent?.replace(/\s+/g, ' ') || '';
+    return text.includes('Schedule Output')
+      && text.includes('Registration Readiness')
+      && text.includes('Generate alternatives')
+      && text.includes('3/3 picked')
+      && text.includes('conflict')
+      && listText.includes('CMSC 131')
+      && listText.includes('MATH 140')
+      && listText.includes('ENGL 101');
+  }, null, { timeout: opts.timeoutMs });
+  await page.locator('#schedule-alternatives-btn').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#schedule-alternatives')?.textContent?.replace(/\s+/g, ' ') || '';
+    const status = document.querySelector('#schedule-status')?.textContent?.replace(/\s+/g, ' ') || '';
+    return document.querySelectorAll('.alt-card').length >= 2
+      && text.includes('Alternate schedules')
+      && text.includes('Option 1')
+      && text.includes('Rank #1')
+      && text.includes('Why this option')
+      && text.includes('Solver trace')
+      && text.includes('Standard breadth')
+      && text.includes('section option')
+      && text.includes('96-schedule beam cap')
+      && status.includes('6 sections loaded')
+      && status.includes('Standard breadth');
+  }, null, { timeout: opts.timeoutMs });
+  const generated = await page.evaluate(() => ({
+    cardCount: document.querySelectorAll('.alt-card').length,
+    text: document.querySelector('#schedule-alternatives')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+    status: document.querySelector('#schedule-status')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+    firstMeta: scheduleAlternatives?.[0]?.solverMeta || null,
+    firstSignature: scheduleAlternatives?.[0]?.signature || '',
+  }));
+  assert(generated.cardCount >= 2, 'schedule alternatives: should render multiple ranked option cards');
+  assert(generated.firstMeta?.rank === 1 && generated.firstMeta?.breadthLabel === 'Standard', 'schedule alternatives: first candidate should expose rank and Standard breadth metadata');
+  assert(generated.firstMeta?.consideredSectionTotal === 6 && generated.firstMeta?.beamWidth === 96, 'schedule alternatives: solver metadata should expose section count and beam cap');
+  assert(/Ranked #1/.test(generated.text) && /Searched 3 courses across 6 section options/.test(generated.text), 'schedule alternatives: visible card should explain ranked solver search breadth');
+  assert(/Examined/.test(generated.text) && /96-schedule beam cap/.test(generated.text), 'schedule alternatives: visible card should explain placement count and beam cap');
+  assert(generated.status.includes('6 section options checked'), 'schedule alternatives: status line should summarize solver trace');
+  const generatedSnapshot = await page.evaluate(snapshotScript());
+  assertNoOverflow('schedule alternatives mobile', generatedSnapshot);
+
+  await page.locator('.alt-card').first().locator('.alt-apply').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const picked = [
+      getSelectedSection('ALTF', 'CMSC 131')?.section_id || '',
+      getSelectedSection('ALTF', 'MATH 140')?.section_id || '',
+      getSelectedSection('ALTF', 'ENGL 101')?.section_id || '',
+    ];
+    const change = (state.recentChanges || [])[0] || {};
+    const undo = document.querySelector('#schedule-undo')?.textContent?.replace(/\s+/g, ' ') || '';
+    return picked.every(Boolean)
+      && picked.join('|') !== 'CMSC131-0101|MATH140-0101|ENGL101-0101'
+      && /Applied alternate schedule 1/.test(change.title || '')
+      && undo.includes('Applied alternate schedule 1')
+      && undo.includes('Undo restores');
+  }, null, { timeout: opts.timeoutMs });
+  const applied = await page.evaluate(() => ({
+    picked: [
+      getSelectedSection('ALTF', 'CMSC 131')?.section_id || '',
+      getSelectedSection('ALTF', 'MATH 140')?.section_id || '',
+      getSelectedSection('ALTF', 'ENGL 101')?.section_id || '',
+    ],
+    change: (state.recentChanges || [])[0] || null,
+    undo: document.querySelector('#schedule-undo')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+    outputText: document.querySelector('#schedule-output')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+  }));
+  assert(applied.picked.length === 3 && applied.picked.every(Boolean), 'schedule alternatives: applying an option should save all three section picks');
+  assert(applied.change?.type === 'auto-pick' && applied.change?.source === 'Schedule', 'schedule alternatives: applying an option should record a Schedule change');
+  assert(/Applied alternate schedule 1/.test(applied.undo), 'schedule alternatives: applying an option should expose undo controls');
+  assert(/Sections:/.test((applied.change?.highlights || []).join(' ')), 'schedule alternatives: recorded change should include applied section IDs');
+  assert(/Registration Readiness/.test(applied.outputText), 'schedule alternatives: rendered output should refresh after applying an option');
+
+  await page.locator('[data-schedule-undo]').click({ timeout: opts.timeoutMs });
+  await page.waitForFunction(() => {
+    const picked = [
+      getSelectedSection('ALTF', 'CMSC 131')?.section_id || '',
+      getSelectedSection('ALTF', 'MATH 140')?.section_id || '',
+      getSelectedSection('ALTF', 'ENGL 101')?.section_id || '',
+    ];
+    const change = (state.recentChanges || [])[0] || {};
+    return picked.join('|') === 'CMSC131-0101|MATH140-0101|ENGL101-0101'
+      && /Undid alternate schedule 1/.test(change.title || '');
+  }, null, { timeout: opts.timeoutMs });
+  const undoSnapshot = await page.evaluate(snapshotScript());
+  assertNoOverflow('schedule alternatives undo mobile', undoSnapshot);
+  console.log('Schedule alternatives [mobile]: rendered ranked solver trace cards, applied a generated option, restored prior picks with undo, and no overflow.');
+}
+
 async function verifyAdvisorPacketMobile(page, url, opts) {
   await openFreshApp(page, url, opts, 'advisor-packet');
   await page.evaluate(async () => {
@@ -1296,10 +1513,11 @@ async function main() {
     await verifyBrowseReplacementMobile(page, url, opts);
     await verifyRecommendationsSectionMobile(page, url, opts);
     await verifyAccountSetupMobile(page, url, opts);
+    await verifyScheduleAlternativesMobile(page, url, opts);
     await verifyAdvisorPacketMobile(page, url, opts);
     assert(!pageErrors.length, `Workflow page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
     assert(!consoleErrors.length, `Workflow console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
-    console.log('Verified rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, and advisor packet workflows.');
+    console.log('Verified rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.');
     if (opts.keepOpen) await page.waitForTimeout(60_000);
   } finally {
     await browser.close().catch(() => {});

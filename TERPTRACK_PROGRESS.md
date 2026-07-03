@@ -10533,3 +10533,68 @@ Next pass candidates:
 - Add a dedicated rendered workflow that opens Schedule alternatives and checks visible solver rank/trace cards in a browser viewport.
 - Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
 - Add a broader live title-drift sweep for all generated required courses now that random verification has caught multiple 2026 catalog title changes.
+
+## 2026-07-02 Pass 186
+
+Focus: add authoritative mobile browser coverage for the Schedule alternate-schedule experience so students can trust the visible solver rank/trace cards, apply a generated option, and undo back to their prior picks.
+
+Planned changes:
+- Build a rendered workflow fixture that uses the real Schedule tab controls instead of testing solver helpers directly.
+- Seed a three-course Fall 2026 schedule with posted sections that produce multiple ranked alternatives.
+- Click `Generate alternatives` in the browser and assert visible `Option`, `Rank`, `Why this option`, and `Solver trace` text.
+- Assert the status line exposes the active breadth profile, section-option count, and beam cap.
+- Apply a generated alternate, verify saved section picks and recent-change metadata, then undo the action.
+- Run generated fixtures, rendered workflow checks, release checks, random live PlanetTerp schedules, and whitespace checks.
+
+Completed:
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Added `verifyScheduleAlternativesMobile()`.
+  - The new fixture seeds `CMSC 131`, `MATH 140`, and `ENGL 101` with two posted Fall 2026 sections each.
+  - It opens the Schedule tab on mobile, clicks `Generate alternatives`, and waits for multiple `.alt-card` options.
+  - It asserts visible ranked solver trace content including `Rank #1`, `Standard breadth`, `Searched 3 courses across 6 section options`, and `96-schedule beam cap`.
+  - It asserts the solver metadata behind the first card reports rank `1`, Standard breadth, `6` considered section options, and a `96` beam width.
+  - It asserts the Schedule status line summarizes `6 section options checked`.
+  - It applies the first alternate schedule through the real `Apply` button, verifies all three section picks changed, confirms the recent change is sourced from Schedule, and checks the change highlights include section IDs.
+  - It clicks the real Schedule undo control and verifies the original section picks are restored.
+  - It runs no-overflow checks after generation and after undo.
+  - Wired the new workflow into the rendered workflow suite and release summary.
+
+Major-gap notes:
+- The Schedule alternatives UI is now covered by a real browser workflow instead of only lower-level solver fixtures.
+- This pass did not change app runtime code; it protects behavior already built in earlier passes.
+- The first full release run hit a transient live-backed PHYS mobile rendered check at `19/20 live course records`; an immediate focused PHYS mobile rerun passed `20/20`, and the full release suite passed on rerun.
+
+Verification:
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed mobile onboarding.
+  - It passed mobile Browse replacement with replacement queue, queue fill, and auto-resolver fill.
+  - It passed mobile Recommendations section pick.
+  - It passed mobile Account setup with accepted-friend revocation.
+  - It passed the new mobile Schedule alternatives workflow with ranked solver trace cards, apply, undo, and no overflow.
+  - It passed mobile advisor packet workflow with no overflow.
+- Ran `node scripts/test-generated-plans.js`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass186-schedule-alternatives-rendered`.
+  - It randomly verified `ENAE`, `ENCH`, `IS`, `HIST`, `HLTH`, `STAT`, `ASTR`, `ENGL`, `MATH`, `ARCH`, `PHIL`, and `ACCOUNTING` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - It passed `PHYS [mobile]` with `20/20 live course records` after the first full release run saw a transient `19/20`.
+- Ran `node scripts/run-release-checks.js`.
+  - The first run failed during the live-backed mobile rendered generated-plan stage because PHYS reached `19/20 live course records`.
+  - The rerun passed the full release suite.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+  - Live verification was skipped by the release runner as expected because no live flag was provided.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Harden the rendered generated-plan verifier against a single transient live-course replacement miss by rechecking the affected major before failing, while still failing real metadata drift.
+- Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
+- Add a broader live title-drift sweep for all generated required courses now that random verification has caught multiple 2026 catalog title changes.
