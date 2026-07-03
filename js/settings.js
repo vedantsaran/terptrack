@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass195-curated-humanities-all',
+  seed: 'pass196-curated-arhu-bsos-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 48,
+  verifiedSchedules: 45,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass195-curated-humanities-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass196-curated-arhu-bsos-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 3, 2026',
+    seed: 'pass196-curated-arhu-bsos-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 45,
+    generatedCount: 45,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving History, Sociology, and Spanish to curated schedules.',
+  },
   {
     checkedAt: 'July 3, 2026',
     seed: 'pass195-curated-humanities-all',
@@ -101,22 +110,22 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass195-curated-humanities-catalog',
+  seed: 'pass196-curated-arhu-bsos-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 550,
-  generatedMajors: 48,
-  requirementRows: 816,
-  matchedCourses: 550,
+  uniqueCourses: 522,
+  generatedMajors: 45,
+  requirementRows: 784,
+  matchedCourses: 522,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 20,
-  officialTitleChecks: 20,
+  titleDrifts: 16,
+  officialTitleChecks: 16,
   officialTitleMismatches: 0,
   testudoTermTitleCandidates: 1,
   testudoTermTitleChecks: 1,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass195-curated-humanities-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass196-curated-arhu-bsos-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',

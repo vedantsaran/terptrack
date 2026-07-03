@@ -88,6 +88,36 @@ const CURATED_TARGETS = [
       { code: 'JOUR480', credits: 1, title: 'Capstone Colloquium' },
     ],
   },
+  {
+    major: 'HIST',
+    name: 'History',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'HIST408B', credits: 3, title: 'Senior Seminar' },
+      { code: 'HIST407', credits: 3, title: 'Technology and Social Change' },
+    ],
+  },
+  {
+    major: 'SOCY',
+    name: 'Sociology',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'SOCY202', credits: 4, title: 'Research Methods' },
+      { code: 'SOCY498C', credits: 3, title: 'Sociology of Culture' },
+    ],
+  },
+  {
+    major: 'SPAN',
+    name: 'Spanish Language & Cultures',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'SPAN408K', credits: 3, title: 'Women Writers' },
+      { code: 'SPAN401', credits: 3, title: 'Advanced Composition I' },
+    ],
+  },
 ];
 
 const ALL_TARGETS = [...TARGETS, ...CURATED_TARGETS];
@@ -380,7 +410,7 @@ async function waitForReview(page, target, timeoutMs) {
           && text.includes('Curated plan ready')
           && text.includes(`${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass195-curated-humanities-all');
+          && text.includes('pass196-curated-arhu-bsos-all');
       },
       { name: target.name, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
@@ -397,7 +427,7 @@ async function waitForReview(page, target, timeoutMs) {
         && text.includes(coverage)
         && text.includes(`/${targetCredits} planned credits`)
         && text.includes('Generated Catalog Freshness')
-        && text.includes('pass195-curated-humanities-all');
+        && text.includes('pass196-curated-arhu-bsos-all');
     },
     { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
     { timeout: timeoutMs },
@@ -546,17 +576,17 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=4'), `${viewport.label}: rendered app did not load js/majors.js?v=4`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=5'), `${viewport.label}: rendered app did not load js/majors.js?v=5`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=8'), `${viewport.label}: rendered app did not load js/api.js?v=8`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=36'), `${viewport.label}: rendered app did not load js/settings.js?v=36`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=37'), `${viewport.label}: rendered app did not load js/settings.js?v=37`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('550/550 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('20/20 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('522/522 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('16/16 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('1/1 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);

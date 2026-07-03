@@ -432,6 +432,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Sociology',
     eyebrow: 'UMD · Sociology · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_SOCY !== 'undefined' ? SCHEDULE_SOCY : null,
     coreCodes: [
       'SOCY100','SOCY105','SOCY201','SOCY202','SOCY441','SOCY498C',
     ],
@@ -477,6 +478,7 @@ const MAJOR_TEMPLATES = {
     programName: 'History',
     eyebrow: 'UMD · History · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_HIST !== 'undefined' ? SCHEDULE_HIST : null,
     coreCodes: [
       'HIST200','HIST201','HIST208B','HIST205','HIST407','HIST408B',
     ],
@@ -836,6 +838,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Spanish',
     eyebrow: 'UMD · Spanish · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_SPAN !== 'undefined' ? SCHEDULE_SPAN : null,
     coreCodes: [
       'SPAN203','SPAN204','SPAN301','SPAN303','SPAN325','SPAN401','SPAN408K',
     ],

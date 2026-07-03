@@ -767,3 +767,188 @@ const SCHEDULE_JOUR = [
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
+
+// ============================================================
+// HIST — History (BA, 120 cr)
+// ============================================================
+const SCHEDULE_HIST = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('HIST 200', 'Interpreting American History: Beginnings to 1877', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('HIST 201', 'Interpreting American History: From 1865 to the Present', 3, { category: 'major-core' }),
+    _c('HIST 205', 'Environmental History', 3, { category: 'major-core' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('HIST 208B', 'Historical Research and Methods Seminar; "How to Rule the World": Political Theory and Governance in the Ancient Mediterranean', 3, { prereqs: ['HIST 200','HIST 201'], category: 'major-core' }),
+    _c('HIST 319L', 'Special Topics in History; Islam: Learning, Piety, and Practice', 3, { category: 'major-upper' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('HIST 407', 'Technology and Social Change in History', 3, { prereqs: ['HIST 208B'], category: 'major-core' }),
+    _c('HIST 405', 'Environmental History', 3, { prereqs: ['HIST 208B'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('HIST 429F', 'Special Topics in History; MAC to Millennium: History of the University of Maryland', 3, { prereqs: ['HIST 208B'], category: 'major-upper' }),
+    _c('HIST 462', 'Slavery, Sectionalism, and the U.S. Civil War', 3, { prereqs: ['HIST 208B'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('HIST 408B', 'Senior Seminar; What Does Government Do? The State in American History', 3, { prereqs: ['HIST 208B'], category: 'major-upper', isGoal: true }),
+    _c('HIST 4xx Elective', 'Upper-Division HIST Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// SOCY — Sociology (BA, 120 cr)
+// ============================================================
+const SCHEDULE_SOCY = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('SOCY 100', 'Introduction to Sociology', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'major-support', note: 'Satisfies FSAR' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('SOCY 105', 'Introduction to Contemporary Social Problems', 3, { category: 'major-core' }),
+    _c('SOCY 201', 'Introductory Statistics for Sociology', 4, { prereqs: ['SOCY 100'], category: 'major-core' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('SOCY 202', 'Introduction to Research Methods in Sociology', 4, { prereqs: ['SOCY 201'], category: 'major-core' }),
+    _c('SOCY 410', 'Social Demography', 3, { prereqs: ['SOCY 201'], category: 'major-upper' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('SOCY 441', 'Social Stratification and Inequality', 3, { prereqs: ['SOCY 201'], category: 'major-core' }),
+    _c('SOCY 424', 'Sociology of Race Relations', 3, { prereqs: ['SOCY 201'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('SOCY 428', 'Research in Inequality', 3, { prereqs: ['SOCY 202'], category: 'major-upper' }),
+    _c('SOCY 465', 'The Sociology of War', 3, { prereqs: ['SOCY 201'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('SOCY 498C', 'Selected Topics in Sociology; Sociology of Culture', 3, { prereqs: ['SOCY 202'], category: 'major-upper', isGoal: true }),
+    _c('SOCY 4xx Elective', 'Upper-Division SOCY Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// SPAN — Spanish Language & Cultures (BA, 120 cr)
+// ============================================================
+const SCHEDULE_SPAN = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('SPAN 203', 'Intensive Intermediate Spanish', 4, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('SPAN 204', 'Spanish Grammar Review', 3, { prereqs: ['SPAN 203'], category: 'major-core' }),
+    _c('SPAN 301', 'Advanced Grammar and Composition I', 3, { prereqs: ['SPAN 204'], category: 'major-core' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('SPAN 303', 'Approaches to Cultural Materials in the Hispanic World', 3, { prereqs: ['SPAN 301'], category: 'major-core' }),
+    _c('SPAN 325', 'Hispanic Linguistics I: Phonetics and Phonology', 3, { prereqs: ['SPAN 301'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('SPAN 363', 'Latin American Literatures and Cultures III: From Modernism to Neo-Liberalism', 3, { prereqs: ['SPAN 303'], category: 'major-upper' }),
+    _c('SPAN 401', 'Advanced Composition I', 3, { prereqs: ['SPAN 301'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('SPAN 450', 'The Hispanic Caribbean: What is a Beach?', 3, { prereqs: ['SPAN 303'], category: 'major-upper' }),
+    _c('SPAN 470', 'Spanish for Business II', 3, { prereqs: ['SPAN 401'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('SPAN 408K', 'Special Topics in Iberian and Latin American Studies; Speaking Up/Out: Women Writers and Feminist Social Movements in Contemporary Latin America', 3, { prereqs: ['SPAN 363'], category: 'major-upper', isGoal: true }),
+    _c('SPAN 4xx Elective', 'Upper-Division SPAN Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];

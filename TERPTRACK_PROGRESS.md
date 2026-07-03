@@ -11283,3 +11283,91 @@ Next pass candidates:
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
 - Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
 - Continue converting high-demand generated-only humanities/social-science majors into curated schedules, starting with History, Sociology, and Spanish.
+
+## 2026-07-03 Pass 196
+
+Focus: continue replacing generated-only humanities/social-science plans with curated four-year schedules, starting with History, Sociology, and Spanish.
+
+Planned changes:
+- Add fixed eight-semester schedules for `HIST`, `SOCY`, and `SPAN`.
+- Keep all three at exactly 120 credits with complete GenEd coverage, realistic intro-to-senior sequencing, and editable elective slots.
+- Place each major's goal/capstone course in senior year.
+- Update generated/curated fixtures and rendered browser checks.
+- Refresh release evidence after the generated-major pool drops from `48` to `45`.
+- Run full live generated audits, random live schedules, release checks, and whitespace checks.
+
+Completed:
+- Updated `js/major-schedules.js`.
+  - Added `SCHEDULE_HIST`, a 120-credit History BA path with `HIST 200/201`, methods seminar `HIST 208B`, upper electives, and senior seminar `HIST 408B`.
+  - Added `SCHEDULE_SOCY`, a 120-credit Sociology BA path with `SOCY 100/105`, `SOCY 201/202`, inequality/stratification work, upper sociology electives, and `SOCY 498C`.
+  - Added `SCHEDULE_SPAN`, a 120-credit Spanish BA path with `SPAN 203/204`, `SPAN 301/303/325/401`, upper Spanish electives, and `SPAN 408K`.
+- Updated `js/majors.js`.
+  - Wired `HIST` to `SCHEDULE_HIST`.
+  - Wired `SOCY` to `SCHEDULE_SOCY`.
+  - Wired `SPAN` to `SCHEDULE_SPAN`.
+- Updated `js/settings.js`.
+  - Refreshed generated-template audit evidence to `45/45` using `pass196-curated-arhu-bsos-all`.
+  - Refreshed catalog-sweep evidence to `522/522` unique generated required courses across `45` generated majors and `784` requirement rows.
+  - Recorded `16/16` official UMD catalog title-drift confirmations and `1/1` Testudo term-specific title confirmation.
+  - Kept older `48/48` and `50/50` audit rows with their own denominators.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks ENGL, JOUR, HIST, SOCY, and SPAN curated schedules.
+  - It replaced the generated-only Spanish fixture with generated `PHIL`.
+  - Generated-count expectations now use `45` majors and `784` requirement rows.
+  - `scripts/verify-rendered-generated-plans.js` now includes curated rendered targets for HIST, SOCY, and SPAN.
+  - Release checklist assertions now expect `522/522` generated required courses, `16/16` title drifts, `majors.js?v=5`, and `settings.js?v=37`.
+- Updated `index.html`.
+  - Bumped `js/majors.js` from `v=4` to `v=5`.
+  - Bumped `js/settings.js` from `v=36` to `v=37`.
+
+Major-gap notes:
+- HIST, SOCY, and SPAN now appear as curated four-year schedules instead of generated drafts.
+- The remaining generated pool is now `45` majors, `784` generated requirement rows, and `522` unique generated required courses.
+- Spanish needed extra care because PlanetTerp returns blank titles for `SPAN 401` and `SPAN 450`; the fixed schedule uses official UMD catalog titles for those rows.
+- This pass moves the app closer to the long-term target: common non-STEM majors should start from real, human-curated freshman-to-senior plans, while generated templates remain live-audited for the long tail.
+
+Verification:
+- Queried live PlanetTerp metadata for HIST/SOCY/SPAN required rows before placing them.
+  - Confirmed History rows including `HIST 200`, `HIST 208B`, `HIST 407`, and `HIST 408B`.
+  - Confirmed Sociology rows including `SOCY 201` and `SOCY 202` as 4 credits, plus `SOCY 498C`.
+  - Confirmed Spanish rows where PlanetTerp has titles, including `SPAN 203`, `SPAN 204`, `SPAN 301`, `SPAN 303`, `SPAN 325`, `SPAN 363`, `SPAN 408K`, and `SPAN 470`.
+  - Used the official UMD course catalog for `SPAN 401` and `SPAN 450` titles where PlanetTerp returned blank titles.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 3, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass196-curated-arhu-bsos-catalog`.
+  - It matched `522/522` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `16/16` PlanetTerp title drifts against the official UMD catalog.
+  - It confirmed `1/1` Testudo term-specific title suffix for `ARTT 428` in `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v37`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed five curated schedule fixtures.
+  - It reported `HIST 120/120`, max `16` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It reported `SOCY 120/120`, max `16` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It reported `SPAN 120/120`, max `17` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, term guards, calendar conflict guard, ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=ENGL,JOUR,HIST,SOCY,SPAN --viewports=all`.
+  - It passed all five curated majors on desktop and mobile.
+  - Rendered cards included `HIST408B:3cr`, `HIST407:3cr`, `SOCY202:4cr`, `SOCY498C:3cr`, `SPAN408K:3cr`, and `SPAN401:3cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass196-curated-arhu-bsos-all`.
+  - It verified all `45/45` remaining generated schedules against PlanetTerp.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with five curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass196-curated-arhu-bsos-random`.
+  - It randomly verified `ENAE`, `KNES`, `ARCH`, `CINE`, `ASTR`, `HLTH`, `ARTT`, `ANTH`, `ARTH`, `PLSC`, `HESP`, and `AMST` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+- Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
+- Continue converting high-demand generated-only majors into curated schedules, with `PHIL`, `ARTH`, and `LING` as the next ARHU candidates.
