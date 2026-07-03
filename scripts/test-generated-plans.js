@@ -3717,6 +3717,46 @@ function testSupabaseLiveVerifierHelpers() {
 }
 
 function testReleaseJsonReport() {
+  const releaseRunner = require(path.join(ROOT, 'scripts/run-release-checks.js'));
+  const previousReleaseTestudoTerms = process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
+  const previousReleaseSnapshotDate = process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE;
+  delete process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
+  delete process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE;
+  const assertThrows = (fn, pattern, message) => {
+    let thrown = null;
+    try {
+      fn();
+    } catch (error) {
+      thrown = error;
+    }
+    assert(thrown && pattern.test(thrown.message || String(thrown)), message);
+  };
+  const catalogOpts = releaseRunner.parseArgs([
+    'node',
+    'scripts/run-release-checks.js',
+    '--live-seed=fixture-release-sweep',
+    '--live-catalog-testudo-terms=202608,202701,202608',
+    '--live-catalog-write-settings-snapshot',
+    '--live-catalog-snapshot-date=July 3, 2026',
+  ]);
+  const catalogArgs = releaseRunner.buildLiveCatalogArgs(catalogOpts);
+  const skippedOpts = releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js']);
+  assert(catalogOpts.liveCatalogSweep === true, 'release report: Testudo term option should enable live catalog sweep');
+  assert(catalogOpts.liveCatalogTestudoTerms.join(',') === '202608,202701', 'release report: should normalize catalog Testudo terms');
+  assert(catalogArgs.includes('--testudo-terms=202608,202701'), 'release report: catalog sweep args should include Testudo terms');
+  assert(catalogArgs.includes('--write-settings-snapshot'), 'release report: catalog sweep args should include Settings snapshot writer');
+  assert(catalogArgs.includes('--snapshot-date=July 3, 2026'), 'release report: catalog sweep args should include snapshot date');
+  assert(!releaseRunner.buildLiveCatalogArgs(skippedOpts).some(arg => arg.startsWith('--testudo-terms=')), 'release report: default catalog args should let verifier use its default Testudo term');
+  assertThrows(
+    () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-limit=1', '--live-catalog-write-settings-snapshot']),
+    /Snapshot refresh requires a full catalog sweep/,
+    'release report: should refuse snapshot writes from limited catalog sweeps',
+  );
+  assertThrows(
+    () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-skip-testudo-title-check', '--live-catalog-write-settings-snapshot']),
+    /requires full Testudo title evidence/,
+    'release report: should refuse snapshot writes without Testudo title checks',
+  );
   const stdout = execFileSync(process.execPath, [
     'scripts/run-release-checks.js',
     '--json',
@@ -3726,6 +3766,11 @@ function testReleaseJsonReport() {
     '--skip-workflows',
   ], {
     cwd: ROOT,
+    env: {
+      ...process.env,
+      TERPTRACK_RELEASE_TESTUDO_TERMS: '',
+      TERPTRACK_RELEASE_SNAPSHOT_DATE: '',
+    },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -3734,6 +3779,8 @@ function testReleaseJsonReport() {
   assert(report.schema === 'terptrack-release-report/v1', 'release report: should include schema version');
   assert(report.status === 'passed', 'release report: JSON-mode run should pass');
   assert(report.options?.syntax === false && report.options?.generated === false, 'release report: options should reflect skipped gates');
+  assert(Array.isArray(report.options?.liveCatalogTestudoTerms) && report.options.liveCatalogTestudoTerms.length === 0, 'release report: default JSON options should expose empty release-level Testudo terms');
+  assert(report.options?.liveCatalogWriteSettingsSnapshot === false, 'release report: default JSON options should not request Settings snapshot writes');
   assert(stageStatus.syntax === 'skipped', 'release report: syntax stage should be represented as skipped');
   assert(stageStatus.proxy === 'passed', 'release report: proxy stage should pass when run under JSON mode');
   assert(stageStatus.generated === 'skipped', 'release report: generated stage should be represented as skipped');
@@ -3747,10 +3794,15 @@ function testReleaseJsonReport() {
   assert(/UMD proxy offline fixtures passed/.test(proxyStage?.commands?.[0]?.stdout || ''), 'release report: proxy stdout should be captured in JSON mode');
   assert(Number.isFinite(report.durationMs), 'release report: duration should be numeric');
   assert(!stdout.trim().startsWith('[release]'), 'release report: stdout should be clean JSON without console preamble');
+  if (previousReleaseTestudoTerms === undefined) delete process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
+  else process.env.TERPTRACK_RELEASE_TESTUDO_TERMS = previousReleaseTestudoTerms;
+  if (previousReleaseSnapshotDate === undefined) delete process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE;
+  else process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE = previousReleaseSnapshotDate;
   return {
     id: 'RELEASE-JSON',
     status: report.status,
     stages: Object.keys(stageStatus).join(','),
+    catalogArgs: catalogArgs.filter(arg => /^--(?:testudo|write|snapshot)/.test(arg)).join(' '),
   };
 }
 
@@ -6455,7 +6507,7 @@ async function main() {
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}; friend rows after removal ${accountSetup.removal}.`);
   console.log(`Supabase live verifier fixture ${supabaseLive.id}: ${supabaseLive.keyType}; ${supabaseLive.denied}; REST URL ${supabaseLive.url ? 'ok' : 'missing'}.`);
-  console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
+  console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}; catalog ${releaseJson.catalogArgs}.`);
   console.log(`Canonical title fixture ${canonicalTitles.id}: AMST 205 -> ${canonicalTitles.amst205}.`);
   console.log(`Official catalog title fixture ${officialCatalogTitles.id}: BMGT 301 -> ${officialCatalogTitles.bmgt301}; ARTT 428 -> ${officialCatalogTitles.artt428}; variable ${officialCatalogTitles.variable}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);

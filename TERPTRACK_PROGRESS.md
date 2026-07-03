@@ -11061,3 +11061,70 @@ Next pass candidates:
 - Add a release-runner option for passing future Testudo term codes through the catalog sweep wrapper.
 - Add a small maintainer-facing Settings note for the catalog snapshot refresh command without exposing operational clutter to students.
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+
+## 2026-07-03 Pass 193
+
+Focus: make the release runner the single maintained path for future Testudo term-title catalog sweeps and guarded Settings snapshot refreshes.
+
+Planned changes:
+- Add release-runner flags for catalog-sweep Testudo term codes.
+- Add release-runner flags for the existing guarded Settings snapshot writer.
+- Refuse unsafe snapshot-refresh combinations before a long live sweep starts.
+- Add offline fixture coverage for parsing, argument forwarding, and refusal cases.
+- Run a live catalog smoke through the release wrapper, full release checks, random live schedules, and whitespace checks.
+
+Completed:
+- Updated `scripts/run-release-checks.js`.
+  - Added `--live-catalog-testudo-terms A,B`.
+  - Added `--live-catalog-skip-testudo-title-check`.
+  - Added `--live-catalog-write-settings-snapshot`.
+  - Added `--live-catalog-snapshot-date DATE`.
+  - Added `--live-catalog-no-bump-settings-asset`.
+  - Added `TERPTRACK_RELEASE_TESTUDO_TERMS` and `TERPTRACK_RELEASE_SNAPSHOT_DATE` env support.
+  - Added `buildLiveCatalogArgs()` so the release wrapper has one tested path for forwarding catalog-sweep options.
+  - Exported release-runner helpers for offline fixtures without executing the CLI.
+  - Refuses `--live-catalog-write-settings-snapshot` when paired with `--live-catalog-limit`.
+  - Refuses `--live-catalog-write-settings-snapshot` when paired with `--live-catalog-skip-testudo-title-check`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added release-runner helper assertions for deduped Testudo terms, automatic catalog-sweep enabling, forwarded `--testudo-terms`, forwarded `--write-settings-snapshot`, forwarded `--snapshot-date`, default verifier-owned Testudo terms, and both snapshot refusal cases.
+  - Extended the release fixture output to report the catalog wrapper command fragment.
+
+Major-gap notes:
+- Maintainers can now run a future posted Testudo term through the release wrapper:
+  `node scripts/run-release-checks.js --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-testudo-terms=202701 --live-seed=<seed>`
+- Maintainers can refresh the in-app Settings evidence through the release wrapper after a full live sweep:
+  `node scripts/run-release-checks.js --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-testudo-terms=<term> --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="<date>" --live-seed=<seed>`
+- The snapshot writer still refuses limited sweeps, and the release wrapper now blocks that mistake before spawning the catalog verifier.
+
+Verification:
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/run-release-checks.js --help`.
+  - It printed the new live catalog Testudo and Settings snapshot options.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new release-runner catalog wrapper assertions.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/run-release-checks.js --json --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-limit=5 --live-catalog-testudo-terms=202608 --live-seed=pass193-testudo-terms-smoke`.
+  - It passed.
+  - The JSON report showed the forwarded command:
+    `node scripts/verify-random-schedules.js --catalog-sweep --seed=pass193-testudo-terms-smoke --catalog-limit=5 --testudo-terms=202608`
+  - It matched `5/5` sampled generated required courses against app live metadata and PlanetTerp.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the new catalog-wrapper release fixture.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+  - Live schedule verification, live catalog sweep, and live Supabase verification were skipped by default unless their explicit flags are passed.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass193-release-catalog-wrapper-random`.
+  - It randomly verified `AAST`, `SPAN`, `ENCH`, `MARKETING`, `FMSC`, `THET`, `ARTT`, `PHIL`, `AOSC`, `GEOG`, `PHSC`, and `ASTR` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a small maintainer-facing Settings note for the exact release-wrapper catalog snapshot refresh command without exposing operational clutter to student users.
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+- Add one more full catalog smoke route for future Testudo terms that can compare two posted term codes side by side when UMD publishes a new schedule.

@@ -28,6 +28,11 @@ function parseArgs(argv) {
     liveAll: false,
     liveCatalogSweep: false,
     liveCatalogLimit: null,
+    liveCatalogTestudoTerms: String(process.env.TERPTRACK_RELEASE_TESTUDO_TERMS || '').split(','),
+    liveCatalogSkipTestudoTitleCheck: false,
+    liveCatalogWriteSettingsSnapshot: false,
+    liveCatalogNoBumpSettingsAsset: false,
+    liveCatalogSnapshotDate: process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE || '',
     liveCloud: false,
     liveCloudRequireAuth: false,
     liveCloudWriteSmoke: false,
@@ -80,6 +85,27 @@ function parseArgs(argv) {
       opts.liveCatalogLimit = Number(argv[++i] || 0);
     } else if (arg.startsWith('--live-catalog-limit=')) {
       opts.liveCatalogLimit = Number(arg.slice('--live-catalog-limit='.length) || 0);
+    } else if (arg === '--live-catalog-testudo-terms') {
+      opts.liveCatalogSweep = true;
+      opts.liveCatalogTestudoTerms.push(...String(argv[++i] || '').split(','));
+    } else if (arg.startsWith('--live-catalog-testudo-terms=')) {
+      opts.liveCatalogSweep = true;
+      opts.liveCatalogTestudoTerms.push(...arg.slice('--live-catalog-testudo-terms='.length).split(','));
+    } else if (arg === '--live-catalog-skip-testudo-title-check') {
+      opts.liveCatalogSweep = true;
+      opts.liveCatalogSkipTestudoTitleCheck = true;
+    } else if (arg === '--live-catalog-write-settings-snapshot') {
+      opts.liveCatalogSweep = true;
+      opts.liveCatalogWriteSettingsSnapshot = true;
+    } else if (arg === '--live-catalog-no-bump-settings-asset') {
+      opts.liveCatalogSweep = true;
+      opts.liveCatalogNoBumpSettingsAsset = true;
+    } else if (arg === '--live-catalog-snapshot-date') {
+      opts.liveCatalogSweep = true;
+      opts.liveCatalogSnapshotDate = argv[++i] || opts.liveCatalogSnapshotDate;
+    } else if (arg.startsWith('--live-catalog-snapshot-date=')) {
+      opts.liveCatalogSweep = true;
+      opts.liveCatalogSnapshotDate = arg.slice('--live-catalog-snapshot-date='.length) || opts.liveCatalogSnapshotDate;
     } else if (arg === '--live-cloud' || arg === '--live-supabase') {
       opts.liveCloud = true;
     } else if (arg === '--live-cloud-require-auth' || arg === '--live-supabase-require-auth') {
@@ -124,7 +150,15 @@ function parseArgs(argv) {
   opts.workflowsTimeoutMs = Number.isFinite(opts.workflowsTimeoutMs) && opts.workflowsTimeoutMs > 0 ? Math.floor(opts.workflowsTimeoutMs) : 120000;
   opts.liveCount = Number.isFinite(opts.liveCount) && opts.liveCount > 0 ? Math.floor(opts.liveCount) : null;
   opts.liveCatalogLimit = Number.isFinite(opts.liveCatalogLimit) && opts.liveCatalogLimit > 0 ? Math.floor(opts.liveCatalogLimit) : null;
+  opts.liveCatalogTestudoTerms = uniqueClean(opts.liveCatalogTestudoTerms);
+  opts.liveCatalogSnapshotDate = String(opts.liveCatalogSnapshotDate || '').trim();
   opts.liveCloudTimeoutMs = Number.isFinite(opts.liveCloudTimeoutMs) && opts.liveCloudTimeoutMs > 0 ? Math.floor(opts.liveCloudTimeoutMs) : 15000;
+  if (opts.liveCatalogWriteSettingsSnapshot && opts.liveCatalogLimit) {
+    fail('Refusing --live-catalog-write-settings-snapshot with --live-catalog-limit. Snapshot refresh requires a full catalog sweep.');
+  }
+  if (opts.liveCatalogWriteSettingsSnapshot && opts.liveCatalogSkipTestudoTitleCheck) {
+    fail('Refusing --live-catalog-write-settings-snapshot with --live-catalog-skip-testudo-title-check. Snapshot refresh requires full Testudo title evidence.');
+  }
   return opts;
 }
 
@@ -147,6 +181,11 @@ function usage() {
     '  --live-all                     Run live verification for every generated major',
     '  --live-catalog-sweep           Live-check every unique generated required course once',
     '  --live-catalog-limit N         Limit catalog sweep to N seeded unique courses',
+    '  --live-catalog-testudo-terms A,B  Testudo term codes for term-specific title checks',
+    '  --live-catalog-skip-testudo-title-check  Skip Testudo title confirmation',
+    '  --live-catalog-write-settings-snapshot  Refresh Settings evidence after full catalog sweep',
+    '  --live-catalog-snapshot-date DATE  Date label for refreshed Settings evidence',
+    '  --live-catalog-no-bump-settings-asset  Do not bump settings.js asset tag after snapshot write',
     '  --live-cloud                   Verify configured Supabase project table access and RLS',
     '  --live-cloud-require-auth      Require Supabase test-user credentials for authenticated checks',
     '  --live-cloud-write-smoke       Upsert/delete Supabase verifier rows after authenticated checks',
@@ -206,6 +245,11 @@ function publicOptions(opts) {
     liveAll: opts.liveAll,
     liveCatalogSweep: opts.liveCatalogSweep,
     liveCatalogLimit: opts.liveCatalogLimit,
+    liveCatalogTestudoTerms: opts.liveCatalogTestudoTerms,
+    liveCatalogSkipTestudoTitleCheck: opts.liveCatalogSkipTestudoTitleCheck,
+    liveCatalogWriteSettingsSnapshot: opts.liveCatalogWriteSettingsSnapshot,
+    liveCatalogNoBumpSettingsAsset: opts.liveCatalogNoBumpSettingsAsset,
+    liveCatalogSnapshotDate: opts.liveCatalogSnapshotDate,
     liveCloud: opts.liveCloud,
     liveCloudRequireAuth: opts.liveCloudRequireAuth,
     liveCloudWriteSmoke: opts.liveCloudWriteSmoke,
@@ -214,6 +258,17 @@ function publicOptions(opts) {
     liveCount: opts.liveCount,
     liveSeed: opts.liveSeed,
   };
+}
+
+function buildLiveCatalogArgs(opts) {
+  const args = ['scripts/verify-random-schedules.js', '--catalog-sweep', `--seed=${opts.liveSeed}`];
+  if (opts.liveCatalogLimit) args.push(`--catalog-limit=${opts.liveCatalogLimit}`);
+  if (opts.liveCatalogTestudoTerms.length) args.push(`--testudo-terms=${opts.liveCatalogTestudoTerms.join(',')}`);
+  if (opts.liveCatalogSkipTestudoTitleCheck) args.push('--skip-testudo-title-check');
+  if (opts.liveCatalogWriteSettingsSnapshot) args.push('--write-settings-snapshot');
+  if (opts.liveCatalogNoBumpSettingsAsset) args.push('--no-bump-settings-asset');
+  if (opts.liveCatalogSnapshotDate) args.push(`--snapshot-date=${opts.liveCatalogSnapshotDate}`);
+  return args;
 }
 
 function createReport(opts) {
@@ -380,8 +435,7 @@ async function runReleaseChecks(opts, report) {
     reportLog(report, '\n[release] Live PlanetTerp verifier skipped. Pass --live, --live-majors, --live-count, or --live-all to include it.');
   }
   if (opts.liveCatalogSweep) {
-    const args = ['scripts/verify-random-schedules.js', '--catalog-sweep', `--seed=${opts.liveSeed}`];
-    if (opts.liveCatalogLimit) args.push(`--catalog-limit=${opts.liveCatalogLimit}`);
+    const args = buildLiveCatalogArgs(opts);
     await runStage(report, 'live-catalog', 'live generated required-course catalog sweep', stage => runCommand(stage, 'live generated required-course catalog sweep', args, report));
   } else {
     skipStage(report, 'live-catalog', 'live generated required-course catalog sweep', 'Pass --live-catalog-sweep to include it.');
@@ -426,7 +480,16 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  console.error(error && error.stack ? error.stack : error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error && error.stack ? error.stack : error);
+    process.exit(1);
+  });
+} else {
+  module.exports = {
+    buildLiveCatalogArgs,
+    parseArgs,
+    publicOptions,
+    usage,
+  };
+}
