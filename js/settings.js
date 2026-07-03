@@ -45,19 +45,29 @@ let autoPlanReviewSeq = 0;
 let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
-  checkedAt: 'June 30, 2026',
-  seed: 'pass87-all',
+  checkedAt: 'July 3, 2026',
+  seed: 'pass195-curated-humanities-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 50,
+  verifiedSchedules: 48,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass87-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass195-curated-humanities-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 3, 2026',
+    seed: 'pass195-curated-humanities-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 48,
+    generatedCount: 48,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving English and Journalism to curated schedules.',
+  },
   {
     checkedAt: 'June 30, 2026',
     seed: 'pass87-all',
     source: 'PlanetTerp',
     verifiedSchedules: 50,
+    generatedCount: 50,
     failedSchedules: 0,
     scope: 'All generated templates after adding the same-origin umd.io proxy.',
   },
@@ -66,6 +76,7 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
     seed: 'pass86-all',
     source: 'PlanetTerp',
     verifiedSchedules: 50,
+    generatedCount: 50,
     failedSchedules: 0,
     scope: 'All generated templates after adding rendered browser card verification.',
   },
@@ -74,6 +85,7 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
     seed: 'pass85-all-final',
     source: 'PlanetTerp',
     verifiedSchedules: 50,
+    generatedCount: 50,
     failedSchedules: 0,
     scope: 'All generated templates after live metadata drift cleanup.',
   },
@@ -82,28 +94,29 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
     seed: 'pass84-all',
     source: 'PlanetTerp',
     verifiedSchedules: 50,
+    generatedCount: 50,
     failedSchedules: 0,
     scope: 'All generated templates for the initial Settings freshness panel.',
   },
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass191-refresh-helper-full',
+  seed: 'pass195-curated-humanities-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 574,
-  generatedMajors: 50,
-  requirementRows: 843,
-  matchedCourses: 574,
+  uniqueCourses: 550,
+  generatedMajors: 48,
+  requirementRows: 816,
+  matchedCourses: 550,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 23,
-  officialTitleChecks: 23,
+  titleDrifts: 20,
+  officialTitleChecks: 20,
   officialTitleMismatches: 0,
   testudoTermTitleCandidates: 1,
   testudoTermTitleChecks: 1,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass191-refresh-helper-full --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass195-curated-humanities-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -269,6 +282,7 @@ function generatedTemplateAuditHistoryHtml(summary) {
   const generatedCount = summary?.generatedCount || GENERATED_TEMPLATE_AUDIT.verifiedSchedules || 50;
   const rows = history.map(item => {
     const failures = item.failedSchedules || 0;
+    const itemGeneratedCount = item.generatedCount || generatedCount;
     const result = failures
       ? `${failures} issue${failures === 1 ? '' : 's'}`
       : '0 issues';
@@ -278,7 +292,7 @@ function generatedTemplateAuditHistoryHtml(summary) {
           <strong>${settingsHtml(item.seed)}</strong>
           <em>${settingsHtml(item.checkedAt)} · ${settingsHtml(item.source || 'live source')}</em>
         </span>
-        <b>${settingsHtml(item.verifiedSchedules)}/${settingsHtml(generatedCount)} · ${settingsHtml(result)}</b>
+        <b>${settingsHtml(item.verifiedSchedules)}/${settingsHtml(itemGeneratedCount)} · ${settingsHtml(result)}</b>
         <p>${settingsHtml(item.scope || 'Generated catalog live verification.')}</p>
       </div>
     `;
@@ -1041,6 +1055,12 @@ function autoPlanReviewHtml(review, opts = {}) {
         ${autoPlanReviewStat('courses', review.courseCount || 'ready', 'progress is preserved')}
       </div>
       ${review.termLoads ? `<div class="auto-plan-loads">${autoPlanTermList(review.termLoads)}</div>` : ''}
+      ${review.genEdSummary ? `
+        <div class="auto-plan-review-block">
+          <span class="auto-plan-review-label">GenEd / I-Series Coverage</span>
+          <div class="auto-plan-geneds">${autoPlanGenEdList(review.genEdSummary)}</div>
+        </div>
+      ` : ''}
       ${autoPlanRealityHtml(review, opts)}
       ${autoPlanDiagnosticsHtml(review)}
       ${generatedTemplateFreshnessHtml(review)}

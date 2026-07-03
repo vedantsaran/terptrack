@@ -18,6 +18,7 @@ function _c(code, title, cr, opts) {
     kind: o.kind || 'core',
     category: o.category || 'major-core',
     note: o.note || '',
+    ...(o.isGoal ? { isGoal: true } : {}),
   };
 }
 
@@ -638,6 +639,130 @@ const SCHEDULE_ECON = [
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('ECON 422', 'Econometrics II', 3, { prereqs: ['ECON 321'], category: 'major-upper', isGoal: true }),
     _c('ECON 4xx Elective E', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ENGL — English (BA, 120 cr)
+// ============================================================
+const SCHEDULE_ENGL = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('ENGL 201', 'Inventing Western Literature: Ancient and Medieval Traditions', 3, { category: 'major-core' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ENGL 301', 'This is English: Fields and Methods', 3, { prereqs: ['ENGL 101'], category: 'major-core' }),
+    _c('ENGL 311', 'British Literature from 1600 to 1800', 3, { prereqs: ['ENGL 201'], category: 'major-core' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ENGL 312', 'Romantic to Modern British Literature', 3, { prereqs: ['ENGL 201'], category: 'major-core' }),
+    _c('ENGL 313', 'American Literature', 3, { prereqs: ['ENGL 201'], category: 'major-core' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ENGL 402', 'Chaucer', 3, { prereqs: ['ENGL 301'], category: 'major-core' }),
+    _c('ENGL 379M', 'Special Topics in Literature; British Plays in Performance', 3, { prereqs: ['ENGL 301'], category: 'major-upper' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('ENGL 433', 'American Literature: 1914 to the Present, the Modern Period', 3, { prereqs: ['ENGL 301'], category: 'major-upper' }),
+    _c('ENGL 437', 'Contemporary American Literature', 3, { prereqs: ['ENGL 301'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ENGL 489P', 'Special Topics in Language and Rhetoric; The Language of Political Persuasion', 3, { prereqs: ['ENGL 301'], category: 'major-upper' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ENGL 498', 'Advanced Fiction Workshop', 3, { prereqs: ['ENGL 301'], category: 'major-upper', isGoal: true }),
+    _c('ENGL 4xx Elective', 'Upper-Division ENGL Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// JOUR — Journalism (BA, 120 cr)
+// ============================================================
+const SCHEDULE_JOUR = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('JOUR 175', 'Media Literacy', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'major-support', note: 'Satisfies FSAR' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('JOUR 200', 'Journalism History, Roles and Structures', 3, { category: 'major-core' }),
+    _c('JOUR 201', 'News Writing and Reporting I', 3, { prereqs: ['JOUR 175'], category: 'major-core' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('JOUR 202', 'News Editing', 3, { prereqs: ['JOUR 201'], category: 'major-core' }),
+    _c('JOUR 320', 'News Writing and Reporting II: Multiplatform', 3, { prereqs: ['JOUR 201'], category: 'major-core' }),
+    _c('JOUR 352', 'Interactive Design and Development', 3, { prereqs: ['JOUR 201'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('JOUR 353', 'News Bureau: Multimedia Reporting', 6, { prereqs: ['JOUR 320'], category: 'major-core' }),
+    _c('JOUR 402', 'Journalism Law and Ethics', 3, { prereqs: ['JOUR 201'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('JOUR 456', 'Literature in Journalism', 3, { prereqs: ['JOUR 201'], category: 'major-core' }),
+    _c('JOUR 453', 'News Coverage of Racial Issues', 3, { prereqs: ['JOUR 201'], category: 'major-upper' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('JOUR 451', 'Advertising and Society', 3, { prereqs: ['JOUR 201'], category: 'major-upper' }),
+    _c('JOUR 458B', 'Special Topics in Journalism; Sports Media Today', 3, { prereqs: ['JOUR 201'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('JOUR 480', 'Capstone Colloquium: The Business of News', 1, { prereqs: ['JOUR 353'], category: 'major-upper', isGoal: true }),
+    _c('JOUR 4xx Elective', 'Upper-Division JOUR Elective', 3, { category: 'major-upper' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},

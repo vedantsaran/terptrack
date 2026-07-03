@@ -175,6 +175,76 @@ async function testMajorFixture(context, fixture) {
   };
 }
 
+function normalizeCourseCodeForFixture(code) {
+  return String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function curatedRealCourses(courses) {
+  return courses.filter(course => /^[A-Z]{2,5}\d{3}[A-Z]?$/.test(normalizeCourseCodeForFixture(course.code)));
+}
+
+async function testCuratedScheduleFixtures(context) {
+  const fixtures = [
+    {
+      id: 'ENGL',
+      required: ['ENGL101', 'ENGL201', 'ENGL301', 'ENGL311', 'ENGL312', 'ENGL313', 'ENGL402', 'ENGL498', 'ENGL379M', 'ENGL433', 'ENGL437', 'ENGL489P'],
+      goal: 'ENGL498',
+      minRealCourses: 14,
+    },
+    {
+      id: 'JOUR',
+      required: ['JOUR175', 'JOUR200', 'JOUR201', 'JOUR202', 'JOUR320', 'JOUR352', 'JOUR353', 'JOUR402', 'JOUR456', 'JOUR480', 'JOUR453', 'JOUR451', 'JOUR458B', 'ENGL101', 'STAT100'],
+      goal: 'JOUR480',
+      minRealCourses: 16,
+    },
+  ];
+  const rows = [];
+
+  for (const fixture of fixtures) {
+    const review = await buildPreview(context, fixture.id);
+    const courses = flatCourses(review.semesters);
+    const realCourses = curatedRealCourses(courses);
+    const realCodes = new Set(realCourses.map(course => normalizeCourseCodeForFixture(course.code)));
+    const maxCredits = Math.max(...review.termLoads.map(term => term.credits));
+    const goalCourse = courses.find(course => normalizeCourseCodeForFixture(course.code) === fixture.goal);
+    const duplicates = [];
+    const seen = new Set();
+
+    realCourses.forEach(course => {
+      const key = normalizeCourseCodeForFixture(course.code);
+      if (seen.has(key)) duplicates.push(course.code);
+      seen.add(key);
+    });
+
+    assert(review.kind === 'curated', `${fixture.id}: expected curated preview, saw ${review.kind}`);
+    assert(review.termLoads.length === 8, `${fixture.id}: expected 8 curated terms, saw ${review.termLoads.length}`);
+    assert(review.totalCredits === review.targetCredits, `${fixture.id}: expected exactly ${review.targetCredits} curated credits, saw ${review.totalCredits}`);
+    assert(maxCredits <= 18, `${fixture.id}: curated term load exceeds 18 credits (${maxCredits})`);
+    assert(review.genEdSummary.every(req => req.complete), `${fixture.id}: incomplete curated GenEd coverage`);
+    assert(review.levelProgression?.hasEarlyIntro, `${fixture.id}: curated plan missing early 100/200-level real courses`);
+    assert(review.levelProgression?.hasLateAdvanced, `${fixture.id}: curated plan missing later 300/400-level real courses`);
+    assert(review.levelProgression?.hasUpper400, `${fixture.id}: curated plan missing 400-level senior work`);
+    assert(realCourses.length >= fixture.minRealCourses, `${fixture.id}: expected at least ${fixture.minRealCourses} real curated courses, saw ${realCourses.length}`);
+    fixture.required.forEach(code => {
+      assert(realCodes.has(normalizeCourseCodeForFixture(code)), `${fixture.id}: curated plan missing ${code}`);
+    });
+    assert(goalCourse?.isGoal, `${fixture.id}: curated capstone ${fixture.goal} should be marked as a goal course`);
+    assert(goalCourse.semIndex >= 6, `${fixture.id}: curated capstone ${fixture.goal} should be in senior year`);
+    assert(!duplicates.length, `${fixture.id}: duplicate real curated courses ${duplicates.join(', ')}`);
+
+    rows.push({
+      id: fixture.id,
+      credits: `${review.totalCredits}/${review.targetCredits}`,
+      maxLoad: maxCredits,
+      genEd: `${review.genEdCompleteCount}/${review.genEdRequirementCount}`,
+      realCourses: realCourses.length,
+      goalTerm: goalCourse.semName,
+    });
+  }
+
+  return rows;
+}
+
 function findCourseTerm(semesters, code) {
   const normalized = String(code || '').toUpperCase().replace(/\s+/g, '');
   for (let semIndex = 0; semIndex < semesters.length; semIndex++) {
@@ -985,12 +1055,12 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
-  assert(result.templateFreshnessSummary.generatedCount === 50, 'auto plan diagnostics: freshness report should count generated templates');
-  assert(result.templateFreshnessSummary.requirementRows === 843, 'auto plan diagnostics: freshness report should count generated requirement rows');
+  assert(result.templateFreshnessSummary.generatedCount === 48, 'auto plan diagnostics: freshness report should count generated templates');
+  assert(result.templateFreshnessSummary.requirementRows === 816, 'auto plan diagnostics: freshness report should count generated requirement rows');
   assert(/Generated Catalog Freshness/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render a title');
-  assert(/50\/50/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
+  assert(/48\/48/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
   assert(/PlanetTerp/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should name the live source');
-  assert(/pass87-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
+  assert(/pass195-curated-humanities-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
   assert(/Official sources/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render official source links');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/programs/'), 'auto plan diagnostics: freshness report should link the UMD catalog program index');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/approved-courses/'), 'auto plan diagnostics: freshness report should link the UMD course catalog');
@@ -1188,7 +1258,7 @@ async function testAllGeneratedRequirementGroups(context) {
       return out;
     })()
   `, context));
-  assert(rows.length >= 50, `all generated requirement groups: expected at least 50 generated majors, saw ${rows.length}`);
+  assert(rows.length >= 48, `all generated requirement groups: expected at least 48 generated majors, saw ${rows.length}`);
   rows.forEach(row => {
     const groupTotal = row.groups.reduce((sum, group) => sum + group.total, 0);
     const groupScheduled = row.groups.reduce((sum, group) => sum + group.scheduled, 0);
@@ -1279,11 +1349,11 @@ async function testCatalogYearTargeting(context) {
   assert(result.firstLink.isCurrentCatalog === false, 'catalog year: older target should be marked non-current');
   assert(/Catalog target 2024-2025/.test(result.sourceHtml) && /linked source 2026-2027/.test(result.sourceHtml), 'catalog year: source HTML should compare target and linked source years');
   assert(/Catalog target 2024-2025/.test(result.releaseHtml), 'catalog year: release checklist should show selected target year');
-  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /574\/574 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
-  assert(/23\/23 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
+  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /550\/550 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
+  assert(/20\/20 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
   assert(/1\/1 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
-  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass191-refresh-helper-full'), 'catalog year: release snapshot command should use stored sweep terms and seed');
+  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass195-curated-humanities-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
@@ -6451,6 +6521,7 @@ async function main() {
   for (const fixture of fixtures) {
     rows.push(await testMajorFixture(context, fixture));
   }
+  const curated = await testCuratedScheduleFixtures(context);
   const prereq = testSyntheticPrerequisites(context);
   const prereqResolver = testPrereqResolverNormalizedState(context);
   const bulkState = testBulkCourseStateNormalization(context);
@@ -6501,6 +6572,8 @@ async function main() {
   const onboarding = await testOnboardingPersonalizedSetup(context);
 
   console.table(rows);
+  console.table(curated);
+  console.log(`Curated schedule fixtures passed (${curated.map(row => `${row.id} ${row.credits}, max ${row.maxLoad}cr, goal ${row.goalTerm}`).join('; ')}).`);
   console.log(`Prerequisite fixture ${prereq.id}: terms ${prereq.terms}; loads ${prereq.loads}`);
   console.log(`Prerequisite resolver fixture ${prereqResolver.id}: completed ${prereqResolver.completed}; planned ${prereqResolver.planned}; missing ${prereqResolver.missing}.`);
   console.log(`Bulk state fixture ${bulkState.id}: transfer ${bulkState.transfer}; reset ${bulkState.reset}; progress ${bulkState.progress}.`);
@@ -6549,7 +6622,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + auto-plan initial resolver + all generated requirement groups + catalog-year targeting + account/share state + account setup + Supabase live verifier helpers + release JSON report + canonical titles + official catalog title parser + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} generated majors + ${curated.length} curated schedules + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + auto-plan initial resolver + all generated requirement groups + catalog-year targeting + account/share state + account setup + Supabase live verifier helpers + release JSON report + canonical titles + official catalog title parser + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

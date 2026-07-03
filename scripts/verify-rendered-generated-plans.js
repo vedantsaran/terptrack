@@ -67,6 +67,31 @@ const TARGETS = [
   },
 ];
 
+const CURATED_TARGETS = [
+  {
+    major: 'ENGL',
+    name: 'English',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'ENGL498', credits: 3, title: 'Advanced Fiction Workshop' },
+      { code: 'ENGL402', credits: 3, title: 'Chaucer' },
+    ],
+  },
+  {
+    major: 'JOUR',
+    name: 'Journalism',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'JOUR353', credits: 6, title: 'News Bureau' },
+      { code: 'JOUR480', credits: 1, title: 'Capstone Colloquium' },
+    ],
+  },
+];
+
+const ALL_TARGETS = [...TARGETS, ...CURATED_TARGETS];
+
 const VIEWPORTS = {
   desktop: {
     id: 'desktop',
@@ -346,6 +371,24 @@ function cardSnapshotScript() {
 }
 
 async function waitForReview(page, target, timeoutMs) {
+  if (target.kind === 'curated') {
+    const waitForCuratedReady = () => page.waitForFunction(
+      ({ name, targetCredits }) => {
+        const review = document.querySelector('#set-auto-plan-review');
+        const text = review ? review.textContent.replace(/\s+/g, ' ') : '';
+        return text.includes(name)
+          && text.includes('Curated plan ready')
+          && text.includes(`${targetCredits} planned credits`)
+          && text.includes('Generated Catalog Freshness')
+          && text.includes('pass195-curated-humanities-all');
+      },
+      { name: target.name, targetCredits: target.targetCredits },
+      { timeout: timeoutMs },
+    );
+    await waitForCuratedReady();
+    return;
+  }
+
   const waitForReady = () => page.waitForFunction(
     ({ name, coverage, targetCredits }) => {
       const review = document.querySelector('#set-auto-plan-review');
@@ -354,7 +397,7 @@ async function waitForReview(page, target, timeoutMs) {
         && text.includes(coverage)
         && text.includes(`/${targetCredits} planned credits`)
         && text.includes('Generated Catalog Freshness')
-        && text.includes('pass87-all');
+        && text.includes('pass195-curated-humanities-all');
     },
     { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
     { timeout: timeoutMs },
@@ -411,24 +454,37 @@ async function applyMajor(page, target, timeoutMs) {
   await waitForReview(page, target, timeoutMs);
   const reviewText = await page.locator('#set-auto-plan-review').textContent({ timeout: timeoutMs });
   assert(reviewText.includes(target.name), `${target.major}: review did not include major name ${target.name}`);
-  assert(!reviewText.includes('Template fallback'), `${target.major}: rendered preview still shows template fallback`);
-  assert(reviewText.includes('13/13'), `${target.major}: rendered preview missing full GenEd coverage`);
-  assert(reviewText.includes('Major Requirement Groups'), `${target.major}: rendered preview missing requirement group block`);
-  assert(reviewText.includes('Plan Reality'), `${target.major}: rendered preview missing plan reality block`);
-  assert(reviewText.includes('Live-backed requirements'), `${target.major}: rendered preview missing live-backed requirement metric`);
-  assert(reviewText.includes('Elective placement'), `${target.major}: rendered preview missing elective placement metric`);
-  if (!reviewText.includes('No open elective slots needed')) {
-    assert(reviewText.includes('Elective Roadmap'), `${target.major}: rendered preview missing elective roadmap for elective-bearing plan`);
+  if (target.kind === 'curated') {
+    assert(reviewText.includes('Curated plan ready'), `${target.major}: rendered curated preview was not ready`);
+    assert(reviewText.includes('curated local schedule'), `${target.major}: rendered curated preview missing local schedule evidence`);
+    assert(reviewText.includes('GenEd / I-Series Coverage'), `${target.major}: rendered curated preview missing GenEd coverage block`);
+    assert(reviewText.includes('FSAW') && reviewText.includes('FSPW') && reviewText.includes('SCIS'), `${target.major}: rendered curated preview missing representative GenEd tags`);
+    assert(reviewText.includes('Plan Reality'), `${target.major}: rendered curated preview missing plan reality block`);
+    assert(reviewText.includes('Live-backed requirements'), `${target.major}: rendered curated preview missing curated source metric`);
+    assert(reviewText.includes('Placeholder credits'), `${target.major}: rendered curated preview missing placeholder metric`);
+    assert(reviewText.includes('Official sources'), `${target.major}: rendered curated preview missing official source links`);
+    assert(reviewText.includes('Catalog year 2026-2027'), `${target.major}: rendered curated preview missing catalog year metadata`);
+    assert(reviewText.includes('Generated Catalog Freshness'), `${target.major}: rendered curated preview missing generated freshness panel`);
+  } else {
+    assert(!reviewText.includes('Template fallback'), `${target.major}: rendered preview still shows template fallback`);
+    assert(reviewText.includes('13/13'), `${target.major}: rendered preview missing full GenEd coverage`);
+    assert(reviewText.includes('Major Requirement Groups'), `${target.major}: rendered preview missing requirement group block`);
+    assert(reviewText.includes('Plan Reality'), `${target.major}: rendered preview missing plan reality block`);
+    assert(reviewText.includes('Live-backed requirements'), `${target.major}: rendered preview missing live-backed requirement metric`);
+    assert(reviewText.includes('Elective placement'), `${target.major}: rendered preview missing elective placement metric`);
+    if (!reviewText.includes('No open elective slots needed')) {
+      assert(reviewText.includes('Elective Roadmap'), `${target.major}: rendered preview missing elective roadmap for elective-bearing plan`);
+    }
+    assert(reviewText.includes('Next replacement actions'), `${target.major}: rendered preview missing next replacement actions`);
+    assert(reviewText.includes('Apply + resolve placeholders'), `${target.major}: rendered preview missing initial placeholder resolver action`);
+    assert(reviewText.includes('Core Requirements'), `${target.major}: rendered preview missing core requirement group`);
+    assert(reviewText.includes('Upper-Level Choices'), `${target.major}: rendered preview missing upper requirement group`);
+    assert(reviewText.includes('Official sources'), `${target.major}: rendered preview missing official source links`);
+    assert(reviewText.includes('Requirement source'), `${target.major}: rendered preview missing requirement source links`);
+    assert(reviewText.includes('Catalog year 2026-2027'), `${target.major}: rendered preview missing catalog year metadata`);
+    assert(reviewText.includes('Audit history') && reviewText.includes('pass86-all'), `${target.major}: rendered preview missing audit history`);
+    verifyReviewCredits(target, reviewText);
   }
-  assert(reviewText.includes('Next replacement actions'), `${target.major}: rendered preview missing next replacement actions`);
-  assert(reviewText.includes('Apply + resolve placeholders'), `${target.major}: rendered preview missing initial placeholder resolver action`);
-  assert(reviewText.includes('Core Requirements'), `${target.major}: rendered preview missing core requirement group`);
-  assert(reviewText.includes('Upper-Level Choices'), `${target.major}: rendered preview missing upper requirement group`);
-  assert(reviewText.includes('Official sources'), `${target.major}: rendered preview missing official source links`);
-  assert(reviewText.includes('Requirement source'), `${target.major}: rendered preview missing requirement source links`);
-  assert(reviewText.includes('Catalog year 2026-2027'), `${target.major}: rendered preview missing catalog year metadata`);
-  assert(reviewText.includes('Audit history') && reviewText.includes('pass86-all'), `${target.major}: rendered preview missing audit history`);
-  verifyReviewCredits(target, reviewText);
 
   page.once('dialog', dialog => dialog.accept());
   await page.locator('#settings-modal button[onclick="applyMajorFromSettings()"]').click({ timeout: timeoutMs });
@@ -490,17 +546,17 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=3'), `${viewport.label}: rendered app did not load js/majors.js?v=3`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=4'), `${viewport.label}: rendered app did not load js/majors.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=8'), `${viewport.label}: rendered app did not load js/api.js?v=8`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=34'), `${viewport.label}: rendered app did not load js/settings.js?v=34`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=36'), `${viewport.label}: rendered app did not load js/settings.js?v=36`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('574/574 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('23/23 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('550/550 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('20/20 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('1/1 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);
@@ -519,10 +575,10 @@ async function runViewport(browser, url, viewport, selected, opts) {
       rows.push({
         id: target.major,
         viewport: viewport.id,
-        coverage: target.coverage,
+        coverage: target.kind === 'curated' ? 'curated' : target.coverage,
         cards: target.cards.map(card => `${card.code}:${card.credits}cr`).join(','),
       });
-      console.log(`${target.major} [${viewport.label}]: rendered ${target.coverage}; cards ${rows[rows.length - 1].cards}`);
+      console.log(`${target.major} [${viewport.label}]: rendered ${rows[rows.length - 1].coverage}; cards ${rows[rows.length - 1].cards}`);
     }
 
     assert(!pageErrors.length, `${viewport.label}: browser page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
@@ -538,7 +594,7 @@ async function runViewport(browser, url, viewport, selected, opts) {
 async function main() {
   const opts = parseArgs(process.argv);
   const selected = opts.majors.length
-    ? opts.majors.map(id => TARGETS.find(target => target.major === id) || fail(`Unknown rendered verifier target: ${id}`))
+    ? opts.majors.map(id => ALL_TARGETS.find(target => target.major === id) || fail(`Unknown rendered verifier target: ${id}`))
     : TARGETS;
   const selectedViewports = opts.viewports.map(id => VIEWPORTS[id]);
   const { chromium } = loadPlaywright();
@@ -550,7 +606,7 @@ async function main() {
       rows.push(...await runViewport(browser, url, viewport, selected, opts));
     }
 
-    console.log(`Verified ${rows.length} generated template viewport runs (${selected.length} majors x ${selectedViewports.length} viewports) in rendered browser UI with clean proxy-backed console.`);
+    console.log(`Verified ${rows.length} rendered plan viewport runs (${selected.length} majors x ${selectedViewports.length} viewports) in rendered browser UI with clean proxy-backed console.`);
   } finally {
     await browser.close().catch(() => {});
     server.close();

@@ -11199,3 +11199,87 @@ Next pass candidates:
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
 - Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
 - Broaden curated fixed schedules for the largest non-STEM majors that still rely entirely on generated placement.
+
+## 2026-07-03 Pass 195
+
+Focus: move English and Journalism from generated placement into curated four-year schedules with visible GenEd coverage and refreshed release evidence.
+
+Planned changes:
+- Add fixed eight-semester schedules for `ENGL` and `JOUR`.
+- Keep both plans at exactly 120 credits with senior capstone/goal work, complete GenEd coverage, and editable placeholder slots.
+- Wire the new schedules into the major templates so the dropdown marks them as curated.
+- Add fixture coverage for curated schedules instead of only generated-template plans.
+- Refresh generated-template audit and catalog-sweep evidence after the generated pool drops from 50 to 48 majors.
+- Verify the new curated plans in rendered desktop/mobile UI.
+
+Completed:
+- Updated `js/major-schedules.js`.
+  - Added `SCHEDULE_ENGL`, a 120-credit English BA plan with `ENGL 201`, `ENGL 301`, the British/American literature sequence, upper ENGL electives, `ENGL 498`, complete GenEd placeholders, and senior-year editable elective space.
+  - Added `SCHEDULE_JOUR`, a 120-credit Journalism BA plan with media literacy, reporting/editing, interactive design, `JOUR 353`, law/ethics, upper Journalism electives, `JOUR 480`, complete GenEd placeholders, and senior-year elective space.
+  - Preserved `isGoal` from `_c(...)` options so existing and new fixed schedules actually flag goal/capstone rows.
+- Updated `js/majors.js`.
+  - Wired `ENGL` to `SCHEDULE_ENGL`.
+  - Wired `JOUR` to `SCHEDULE_JOUR`.
+- Updated `js/settings.js`.
+  - Refreshed generated-template audit evidence to `48/48` using `pass195-curated-humanities-all`.
+  - Refreshed catalog-sweep evidence to `550/550` unique generated required courses across `48` generated majors and `816` requirement rows.
+  - Recorded `20/20` official UMD catalog title-drift confirmations and the existing `1/1` Testudo term-specific title confirmation.
+  - Added per-row denominators to audit history so old `50/50` runs remain accurate after the current generated pool changed to `48`.
+  - Rendered the GenEd / I-Series coverage block for curated preview cards, not only generated previews.
+- Updated rendered and offline verifiers.
+  - `scripts/test-generated-plans.js` now checks ENGL/JOUR curated schedules for 8 terms, exact 120 credits, complete GenEd coverage, required course presence, no duplicate real course codes, and late goal courses.
+  - Generated-count expectations now use `48` majors and `816` requirement rows.
+  - `scripts/verify-rendered-generated-plans.js` can target curated majors and checks ENGL/JOUR rendered cards on desktop and mobile.
+  - Release checklist assertions now expect `550/550` generated required courses, `20/20` title drifts, `majors.js?v=4`, and `settings.js?v=36`.
+- Updated `index.html`.
+  - Bumped `js/majors.js` from `v=3` to `v=4`.
+  - Bumped `js/settings.js` from `v=34` to `v=36`.
+
+Major-gap notes:
+- ENGL and JOUR now show as curated four-year schedules rather than generated drafts.
+- The remaining generated-major pool is intentionally smaller: `48` generated majors, `816` generated requirement rows, and `550` unique generated required courses.
+- Curated previews now expose GenEd / I-Series coverage in Settings, which matters for non-generated majors because students still need to see why a hand-built plan is complete.
+- The fixed-schedule helper now honors goal-course flags that were already present in older curated schedules.
+
+Verification:
+- Queried live PlanetTerp course metadata for the ENGL/JOUR rows before placing them.
+  - Confirmed ENGL course titles/credits including `ENGL 201`, `ENGL 301`, `ENGL 402`, `ENGL 498`, and upper ENGL electives.
+  - Confirmed JOUR course titles/credits including `JOUR 175`, `JOUR 201`, `JOUR 353` as 6 credits, and `JOUR 480` as 1 credit.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new ENGL/JOUR curated schedule fixtures.
+  - It reported `ENGL 120/120`, max `16` credits, `13/13` GenEd coverage, `16` real courses, and goal term `Fall 2029`.
+  - It reported `JOUR 120/120`, max `16` credits, `13/13` GenEd coverage, `18` real courses, and goal term `Fall 2029`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, term guards, calendar conflict guard, ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 3, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass195-curated-humanities-catalog`.
+  - It matched `550/550` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `20/20` PlanetTerp title drifts against the official UMD catalog.
+  - It confirmed `1/1` Testudo term-specific title suffix for `ARTT 428` in `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` before the curated GenEd UI follow-up bump.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass195-curated-humanities-all`.
+  - It verified all `48/48` generated schedules against PlanetTerp.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=ENGL,JOUR --viewports=all`.
+  - It passed ENGL desktop and mobile with rendered cards `ENGL498:3cr` and `ENGL402:3cr`.
+  - It passed JOUR desktop and mobile with rendered cards `JOUR353:6cr` and `JOUR480:1cr`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the new curated schedule fixtures.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass195-curated-humanities-random`.
+  - It randomly verified `LING`, `MATH`, `MUSC`, `ENCH`, `NFSC`, `CINE`, `ARCH`, `AAST`, `ENEE`, `ARTT`, `ENST`, and `ASTR` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+- Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
+- Continue converting high-demand generated-only humanities/social-science majors into curated schedules, starting with History, Sociology, and Spanish.

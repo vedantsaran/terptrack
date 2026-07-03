@@ -462,6 +462,7 @@ const MAJOR_TEMPLATES = {
     programName: 'English',
     eyebrow: 'UMD · English · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_ENGL !== 'undefined' ? SCHEDULE_ENGL : null,
     coreCodes: [
       'ENGL201','ENGL301','ENGL311','ENGL312','ENGL313','ENGL402','ENGL498',
     ],
@@ -628,6 +629,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Journalism',
     eyebrow: 'UMD · Journalism · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_JOUR !== 'undefined' ? SCHEDULE_JOUR : null,
     coreCodes: [
       'JOUR175','JOUR200','JOUR201','JOUR202','JOUR320','JOUR352','JOUR353','JOUR402','JOUR456','JOUR480',
     ],
