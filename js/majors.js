@@ -572,6 +572,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Kinesiology',
     eyebrow: 'UMD · Kinesiology · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_KNES !== 'undefined' ? SCHEDULE_KNES : null,
     coreCodes: [
       'KNES157T','KNES287','KNES289','KNES293','KNES350','KNES360','KNES385','KNES450',
     ],
@@ -586,6 +587,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Family Science',
     eyebrow: 'UMD · Family Science · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_FMSC !== 'undefined' ? SCHEDULE_FMSC : null,
     coreCodes: [
       'FMSC170','FMSC110','FMSC260','FMSC290','FMSC330','FMSC332','FMSC381','FMSC487','FMSC498',
     ],
@@ -751,6 +753,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Geographical Sciences',
     eyebrow: 'UMD · Geographical Sciences · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_GEOG !== 'undefined' ? SCHEDULE_GEOG : null,
     coreCodes: [
       'GEOG201','GEOG202','GEOG211','GEOG212','GEOG301','GEOG306','GEOG372','GEOG470','GEOG498I',
     ],
@@ -797,6 +800,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Hearing & Speech Sciences',
     eyebrow: 'UMD · Hearing & Speech Sciences · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_HESP !== 'undefined' ? SCHEDULE_HESP : null,
     coreCodes: [
       'HESP120','HESP202','HESP300','HESP311','HESP400','HESP402','HESP411','HESP420','HESP489',
     ],

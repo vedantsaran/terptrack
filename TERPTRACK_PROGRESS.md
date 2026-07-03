@@ -11634,3 +11634,84 @@ Next pass candidates:
 - Continue converting generated-only student-heavy majors into curated schedules, with Family Science, Geography, Hearing & Speech Sciences, and Kinesiology as likely next candidates.
 - Add a maintainer-facing stale-course detector that flags generated templates when an official replacement like `ANTH 222` supersedes an older catalog code.
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+
+## 2026-07-03 Pass 200
+
+Focus: convert the next health, human-development, geospatial, and movement-science majors from generated drafts into exact curated four-year schedules.
+
+Completed:
+- Added `SCHEDULE_FMSC`, a 120-credit Family Science BS path with family foundations, psychology/statistics support, child/family theory, poverty, gender, law, mental-health elective work, and senior `FMSC 498`.
+- Added `SCHEDULE_GEOG`, a 120-credit Geographical Sciences BS path with environmental/human geography foundations, GIS, quantitative methods, remote sensing, spatial algorithms, regional/spatial econometrics electives, and senior `GEOG 498I`.
+- Added `SCHEDULE_HESP`, a 120-credit Hearing & Speech Sciences BA path with HESP/linguistics foundations, anatomy/physiology support, psycholinguistics, audiology, child language, disorders, clinical-methods electives, and senior `HESP 489`.
+- Added `SCHEDULE_KNES`, a 120-credit Kinesiology BS path with anatomy/physiology, chemistry/calculus/statistics support, sport history/society, exercise physiology, motor learning, public-health/activity-disease electives, and senior `KNES 450`.
+- Updated `js/majors.js`.
+  - Wired `FMSC`, `GEOG`, `HESP`, and `KNES` to fixed curated schedules.
+- Updated Settings/release evidence.
+  - Refreshed generated-template audit evidence to `30/30` using `pass200-curated-health-earth-all`.
+  - Refreshed catalog-sweep evidence to `364/364` unique generated required courses across `30` generated majors and `605` requirement rows.
+  - Recorded `9/9` official UMD catalog title-drift confirmations.
+  - Kept Testudo term-specific title evidence at `0/0` for `202608`.
+  - Updated the default live/rendered release-major set from `KNES` to generated `ENST`.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks 20 curated schedules: ENGL, JOUR, HIST, SOCY, SPAN, PHIL, ARTH, LING, THET, MUSC, ARTT, CINE, WMST, AMST, AAST, ANTH, FMSC, GEOG, HESP, and KNES.
+  - Generated fixture coverage now uses `PHSC` and `ENST` after moving `FMSC` and `GEOG` to curated schedules.
+  - Generated-count expectations now use `30` majors and `605` requirement rows.
+  - Release checklist assertions now expect `364/364` generated required courses, `9/9` official title-drift confirmations, and `0/0` Testudo title-suffix checks.
+  - `scripts/verify-rendered-generated-plans.js` now checks curated rendered targets for FMSC, GEOG, HESP, and KNES.
+  - The default rendered generated-plan matrix now uses `ENST` with `ENST 405` and `ENST 453` card checks instead of generated `KNES`.
+- Updated `index.html`.
+  - Bumped `js/majors.js` from `v=8` to `v=9`.
+  - Bumped `js/settings.js` from `v=40` to `v=42` after the catalog snapshot writer refreshed Settings evidence.
+
+Major-gap notes:
+- Family Science, Geographical Sciences, Hearing & Speech Sciences, and Kinesiology now open with curated plans instead of generated drafts.
+- The remaining generated pool is now `30` generated majors, `605` generated requirement rows, and `364` unique generated required courses.
+- `CE` is still not counted as a generated-template audit target because it uses the legacy default schedule and has no generated requirement-code catalog.
+- No `README.md` changes were made or staged.
+
+Verification:
+- Queried live PlanetTerp metadata for FMSC/GEOG/HESP/KNES rows before placing them.
+  - Confirmed Family Science rows including `FMSC 110`, `FMSC 170`, `FMSC 260`, `FMSC 290`, `FMSC 330`, `FMSC 332`, `FMSC 381`, `FMSC 430`, `FMSC 450`, `FMSC 487`, and `FMSC 498`.
+  - Confirmed Geographical Sciences rows including `GEOG 201`, `GEOG 202`, `GEOG 211`, `GEOG 212`, `GEOG 301`, `GEOG 306`, `GEOG 372`, `GEOG 373`, `GEOG 423`, `GEOG 432`, `GEOG 470`, and `GEOG 498I`.
+  - Confirmed Hearing & Speech Sciences rows including `HESP 120`, `HESP 202`, `HESP 300`, `HESP 311`, `HESP 400`, `HESP 402`, `HESP 406`, `HESP 411`, `HESP 417`, `HESP 420`, `HESP 422`, and `HESP 489`.
+  - Confirmed Kinesiology rows including `KNES 157T`, `KNES 287`, `KNES 289`, `KNES 293`, `KNES 350`, `KNES 360`, `KNES 385`, `KNES 400`, `KNES 440`, `KNES 450`, and `KNES 465`.
+  - Confirmed shared/support rows including `BSCI 201`, `BSCI 202`, `CHEM 131`, `COMM 107`, `ENGL 101`, `ENGL 393`, `LING 200`, `MATH 130`, `PSYC 100`, `STAT 100`, and `UNIV 100`.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 3, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass200-curated-health-earth-catalog`.
+  - It matched `364/364` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `9/9` PlanetTerp title drifts against the official UMD catalog.
+  - It found `0/0` Testudo term-specific title candidates for `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v42`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed 20 curated schedule fixtures.
+  - It reported `FMSC 120/120`, max `16` credits, `13/13` GenEd coverage, `17` real courses, and goal term `Fall 2029`.
+  - It reported `GEOG 120/120`, max `17` credits, `13/13` GenEd coverage, `18` real courses, and goal term `Fall 2029`.
+  - It reported `HESP 120/120`, max `16` credits, `13/13` GenEd coverage, `20` real courses, and goal term `Fall 2029`.
+  - It reported `KNES 120/120`, max `16` credits, `13/13` GenEd coverage, `20` real courses, and goal term `Fall 2029`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, term guards, calendar conflict guard, ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=FMSC,GEOG,HESP,KNES --viewports=all`.
+  - It passed all 4 new curated majors on desktop and mobile.
+  - Rendered cards included `FMSC498:1cr`, `FMSC450:3cr`, `GEOG498I:3cr`, `GEOG470:3cr`, `HESP489:1cr`, `HESP417:3cr`, `KNES450:3cr`, and `KNES360:4cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass200-curated-health-earth-all`.
+  - It verified all `30/30` remaining generated schedules against PlanetTerp.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with 20 curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `GEOL`, `PLSC`, `ENST`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `GEOL`, `PLSC`, `ENST`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass200-curated-health-earth-random`.
+  - It randomly verified `ENST`, `BIOE`, `SCM`, `MARKETING`, `ENCE`, `PHYS`, `ARCH`, `STAT`, `GEOL`, `ASTR`, `PLSC`, and `AOSC` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+Next pass candidates:
+- Continue converting generated-only health, agriculture, and public-health majors into curated schedules, with Public Health Science, Nutrition & Food Science, Community Health, and Environmental Science & Technology as likely next candidates.
+- Add a maintainer-facing stale-course detector that flags generated templates when an official replacement like `ANTH 222` supersedes an older catalog code.
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.

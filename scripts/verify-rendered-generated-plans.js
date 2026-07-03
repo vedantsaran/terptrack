@@ -40,12 +40,13 @@ const TARGETS = [
     ],
   },
   {
-    major: 'KNES',
-    name: 'Kinesiology',
-    coverage: '16/16 live course records',
+    major: 'ENST',
+    name: 'Environmental Science & Technology',
+    coverage: '17/17 live course records',
     targetCredits: 120,
     cards: [
-      { code: 'KNES385', credits: 3, title: 'Motor Control and Learning' },
+      { code: 'ENST405', credits: 3, title: 'Energy and Environment' },
+      { code: 'ENST453', credits: 3, title: 'Watershed Science' },
     ],
   },
   {
@@ -227,6 +228,46 @@ const CURATED_TARGETS = [
     cards: [
       { code: 'ANTH498Y', credits: 3, title: 'Applied Archaeological Field Research' },
       { code: 'ANTH222', credits: 4, title: 'Ecological and Evolutionary Anthropology' },
+    ],
+  },
+  {
+    major: 'FMSC',
+    name: 'Family Science',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'FMSC498', credits: 1, title: 'Family Studies' },
+      { code: 'FMSC450', credits: 3, title: 'Loneliness Epidemic' },
+    ],
+  },
+  {
+    major: 'GEOG',
+    name: 'Geographical Sciences',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'GEOG498I', credits: 3, title: 'Algorithms for Geospatial Computing' },
+      { code: 'GEOG470', credits: 3, title: 'Spatial Data Algorithms' },
+    ],
+  },
+  {
+    major: 'HESP',
+    name: 'Hearing & Speech Sciences',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'HESP489', credits: 1, title: 'Undergraduate Research Experience' },
+      { code: 'HESP417', credits: 3, title: 'Speech-Language Pathology' },
+    ],
+  },
+  {
+    major: 'KNES',
+    name: 'Kinesiology',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'KNES450', credits: 3, title: 'Mental Skills Training Applications' },
+      { code: 'KNES360', credits: 4, title: 'Physiology of Exercise' },
     ],
   },
 ];
@@ -523,7 +564,7 @@ async function waitForReview(page, target, timeoutMs) {
           && text.includes('Curated plan ready')
           && text.includes(`${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass199-curated-interdisciplinary-all');
+          && text.includes('pass200-curated-health-earth-all');
       },
       { name: target.name, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
@@ -540,7 +581,7 @@ async function waitForReview(page, target, timeoutMs) {
         && text.includes(coverage)
         && text.includes(`/${targetCredits} planned credits`)
         && text.includes('Generated Catalog Freshness')
-        && text.includes('pass199-curated-interdisciplinary-all');
+        && text.includes('pass200-curated-health-earth-all');
     },
     { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
     { timeout: timeoutMs },
@@ -689,17 +730,17 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=8'), `${viewport.label}: rendered app did not load js/majors.js?v=8`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=9'), `${viewport.label}: rendered app did not load js/majors.js?v=9`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=40'), `${viewport.label}: rendered app did not load js/settings.js?v=40`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=42'), `${viewport.label}: rendered app did not load js/settings.js?v=42`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('413/413 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('12/12 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('364/364 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('9/9 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);

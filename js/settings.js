@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass199-curated-interdisciplinary-all',
+  seed: 'pass200-curated-health-earth-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 34,
+  verifiedSchedules: 30,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass199-curated-interdisciplinary-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass200-curated-health-earth-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 3, 2026',
+    seed: 'pass200-curated-health-earth-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 30,
+    generatedCount: 30,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving Family Science, Geographical Sciences, Hearing & Speech Sciences, and Kinesiology to curated schedules.',
+  },
   {
     checkedAt: 'July 3, 2026',
     seed: 'pass199-curated-interdisciplinary-all',
@@ -137,22 +146,22 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass199-curated-interdisciplinary-catalog',
+  seed: 'pass200-curated-health-earth-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 413,
-  generatedMajors: 34,
-  requirementRows: 664,
-  matchedCourses: 413,
+  uniqueCourses: 364,
+  generatedMajors: 30,
+  requirementRows: 605,
+  matchedCourses: 364,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 12,
-  officialTitleChecks: 12,
+  titleDrifts: 9,
+  officialTitleChecks: 9,
   officialTitleMismatches: 0,
   testudoTermTitleCandidates: 0,
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass199-curated-interdisciplinary-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass200-curated-health-earth-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -160,7 +169,7 @@ const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   status: 'passed',
   command: 'node scripts/run-release-checks.js',
   liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
-  liveMajors: ['PHYS', 'ARTT', 'PLSC', 'KNES', 'ENAE', 'ENCE'],
+  liveMajors: ['PHYS', 'GEOL', 'PLSC', 'ENST', 'ENAE', 'ENCE'],
   defaultChecks: [
     'JS syntax',
     '/api/umd proxy fixture',

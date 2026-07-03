@@ -1634,3 +1634,252 @@ const SCHEDULE_ANTH = [
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
+
+// ============================================================
+// FMSC - Family Science (BS, 120 cr)
+// ============================================================
+const SCHEDULE_FMSC = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('FMSC 170', 'Modern Families', 3, { category: 'major-core' }),
+    _c('FMSC 110', 'Families and Global Health', 3, { category: 'major-core' }),
+    _c('PSYC 100', 'Introduction to Psychology', 3, { category: 'major-support' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('FMSC 260', 'Couple Relationships', 3, { category: 'major-core' }),
+    _c('FMSC 290', 'Family Economics', 3, { category: 'major-core' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('FMSC 330', 'Family Theories and Patterns', 3, { prereqs: ['FMSC 170'], category: 'major-core' }),
+    _c('FMSC 332', 'Children in Families', 3, { prereqs: ['FMSC 170'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('FMSC 381', 'Poverty, Affluence, and Families', 3, { prereqs: ['FMSC 170'], category: 'major-core' }),
+    _c('FMSC 430', 'Gender Issues in Families', 3, { prereqs: ['FMSC 170'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('FMSC 450', 'The Loneliness Epidemic and Mental Health', 3, { prereqs: ['FMSC 170'], category: 'major-upper' }),
+    _c('FMSC 487', 'Family Law', 3, { prereqs: ['FMSC 170'], category: 'major-core' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('FMSC 498', 'Special Topics: Family Science; Family Studies', 1, { prereqs: ['FMSC 330'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// GEOG - Geographical Sciences (BS, 120 cr)
+// ============================================================
+const SCHEDULE_GEOG = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('GEOG 201', 'Geography of Environmental Systems', 3, { category: 'major-core' }),
+    _c('GEOG 202', 'Introduction to Human Geography', 3, { category: 'major-core' }),
+    _c('MATH 130', 'Calculus I for the Life Sciences', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('GEOG 211', 'Geography of Environmental Systems Laboratory', 1, { prereqs: ['GEOG 201'], category: 'major-core' }),
+    _c('GEOG 212', 'Career Planning for Geographical Sciences, GIS, and ENSP Majors', 1, { category: 'major-core' }),
+    _c('GEOG 306', 'Introduction to Quantitative Methods for the Geographical Environmental Sciences', 3, { prereqs: ['GEOG 201'], category: 'major-core' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('GEOG 301', 'Advanced Geographical Environmental Systems', 3, { prereqs: ['GEOG 201'], category: 'major-core' }),
+    _c('GEOG 372', 'Remote Sensing', 3, { prereqs: ['GEOG 201'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('GEOG 373', 'Geographic Information Systems', 3, { prereqs: ['GEOG 306'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('GEOG 470', 'Spatial Data Algorithms', 3, { prereqs: ['GEOG 373'], category: 'major-core' }),
+    _c('GEOG 423', 'Latin America', 3, { category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('GEOG 432', 'Spatial Econometrics', 3, { prereqs: ['GEOG 306'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('GEOG 498I', 'Topical Investigations; Algorithms for Geospatial Computing', 3, { prereqs: ['GEOG 470'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// HESP - Hearing & Speech Sciences (BA, 120 cr)
+// ============================================================
+const SCHEDULE_HESP = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('HESP 120', 'Introduction to Linguistics', 3, { category: 'major-core' }),
+    _c('PSYC 100', 'Introduction to Psychology', 3, { category: 'major-support' }),
+    _c('LING 200', 'Introductory Linguistics', 3, { category: 'major-support' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('HESP 202', 'Introduction to Hearing and Speech Sciences', 3, { category: 'major-core' }),
+    _c('BSCI 201', 'Human Anatomy and Physiology I', 4, { category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('HESP 300', 'Introduction to Psycholinguistics', 3, { prereqs: ['HESP 120'], category: 'major-core' }),
+    _c('HESP 311', 'Anatomy, Pathology and Physiology of the Auditory System', 3, { prereqs: ['HESP 202'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('HESP 400', 'Speech and Language Development in Children', 3, { prereqs: ['HESP 202'], category: 'major-core' }),
+    _c('HESP 411', 'Introduction to Audiology', 3, { prereqs: ['HESP 311'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('HESP 402', 'Language and Phonological Disorders in Children', 3, { prereqs: ['HESP 400'], category: 'major-core' }),
+    _c('HESP 406', 'Acquired Neurogenic Communication Disorders in Adults', 3, { prereqs: ['HESP 400'], category: 'major-upper' }),
+    _c('HESP 417', 'Principles and Methods in Speech-Language Pathology and Audiology', 3, { prereqs: ['HESP 400'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('HESP 420', 'Deaf Culture and ASL for the CSD Professional', 3, { prereqs: ['HESP 202'], category: 'major-core' }),
+    _c('HESP 422', 'Neurological Bases of Human Communication', 3, { prereqs: ['HESP 311'], category: 'major-upper' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('HESP 489', 'Undergraduate Research Experience', 1, { prereqs: ['HESP 400'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// KNES - Kinesiology (BS, 120 cr)
+// ============================================================
+const SCHEDULE_KNES = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('KNES 157T', 'Physical Education Activities: Coed; Fight the 15: Introduction to Fitness and an Active Lifestyle', 1, { category: 'major-core' }),
+    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
+    _c('MATH 130', 'Calculus I for the Life Sciences', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('BSCI 201', 'Human Anatomy and Physiology I', 4, { category: 'major-support' }),
+    _c('BSCI 202', 'Human Anatomy and Physiology II', 4, { prereqs: ['BSCI 201'], category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('KNES 287', 'Sport and American Society', 3, { category: 'major-core' }),
+    _c('KNES 289', 'Topical Investigations', 1, { category: 'major-core' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('KNES 293', 'History of Sport in America', 3, { category: 'major-core' }),
+    _c('KNES 350', 'The Psychology of Sports & Exercise', 3, { prereqs: ['KNES 287'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('KNES 360', 'Physiology of Exercise', 4, { prereqs: ['BSCI 201'], category: 'major-core' }),
+    _c('KNES 385', 'Motor Control and Learning', 3, { prereqs: ['KNES 287'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('KNES 400', 'The Foundations of Public Health in Kinesiology', 3, { prereqs: ['KNES 287'], category: 'major-upper' }),
+    _c('KNES 440', 'Psychology of Athletic Performance', 3, { prereqs: ['KNES 350'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('KNES 465', 'Physical Activity and Disease Prevention and Treatment', 3, { prereqs: ['KNES 360'], category: 'major-upper' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('KNES 450', 'From the Olympics to the Rehabilitation Clinic: Mental Skills Training Applications', 3, { prereqs: ['KNES 350'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
