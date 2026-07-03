@@ -10745,3 +10745,80 @@ Next pass candidates:
 - Add a one-click Settings action or release-check helper that can refresh the catalog sweep snapshot when maintainers intentionally run the live catalog sweep.
 - Expand official UMD title-source comparison for the `23` advisory PlanetTerp title drifts from the full sweep.
 - Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
+
+## 2026-07-03 Pass 189
+
+Focus: turn PlanetTerp title-drift advisories into official UMD catalog checks so generated schedules fail on app-stale course titles instead of hand-waving title mismatches.
+
+Planned changes:
+- Add official UMD approved-course title parsing to the live catalog sweep.
+- Check only PlanetTerp title drifts against official catalog department pages to keep the sweep efficient.
+- Keep compatibility prefix-aware so official base titles can validate more specific Testudo/umd.io term titles.
+- Fail the catalog sweep if app live metadata conflicts with official UMD title or credit evidence.
+- Surface the stronger `23/23` official title confirmation in Settings release readiness.
+- Run parser fixtures, full generated fixtures, rendered checks, full catalog sweep, random live schedules, release checks, and whitespace checks.
+
+Completed:
+- Updated `scripts/verify-random-schedules.js`.
+  - Added official UMD catalog department-page fetching for `https://academiccatalog.umd.edu/undergraduate/approved-courses/{dept}/`.
+  - Added courseblock title parsing for official catalog headings like `BMGT301 Information Systems, AI, and Digital Transformation (3 Credits)`.
+  - Added variable-credit parsing and compatibility checks for headings like `1-3 Credits`.
+  - Added `--skip-official-title-check` for emergency diagnostics, while keeping official title checks enabled by default for `--catalog-sweep`.
+  - The catalog sweep now classifies PlanetTerp title drifts by checking whether app live metadata is compatible with the official UMD catalog title and credits.
+  - The sweep fails if official UMD catalog evidence contradicts the app title or app credits.
+  - The script now exports the parser helpers when required by tests, while preserving CLI behavior under `require.main === module`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added `OFFICIAL-CATALOG-TITLES`, an offline parser fixture covering comma titles, base-title compatibility, and variable credit ranges.
+  - Extended the Settings release checklist fixture to require `23/23 title drifts` and `official UMD catalog` evidence.
+- Updated `js/settings.js`.
+  - Refreshed the generated catalog sweep snapshot to `pass189-official-title-full`.
+  - Added `officialTitleChecks: 23` and `officialTitleMismatches: 0`.
+  - The Settings Release Readiness row now says `574/574` unique generated required courses matched for presence and credits and `23/23` title drifts were confirmed app-compatible by the official UMD catalog.
+- Updated `index.html` and `scripts/verify-rendered-generated-plans.js`.
+  - Bumped `js/settings.js` from `v=31` to `v=32`.
+  - Added rendered Settings assertions for the `23/23` official title-drift evidence.
+
+Major-gap notes:
+- The full live sweep now proves more than existence and credits: every known PlanetTerp title lag in generated required courses was checked against UMD's official approved-course catalog.
+- The full sweep resolved all `23/23` PlanetTerp title drifts as app-compatible with official UMD catalog titles.
+- Examples resolved by official catalog evidence include `AMST 205`, `ANTH 415`, `AOSC 123`, `ARTT 428`, `BIOE 340`, `BMGT 301`, `ENAE 283`, `ENAE 311`, `ENAE 414`, and `ENGL 201`.
+- Term-specific Testudo/umd.io titles can legitimately be more specific than the catalog base title, so compatibility remains prefix-aware instead of requiring exact string equality.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/verify-random-schedules.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new `OFFICIAL-CATALOG-TITLES` parser fixture.
+  - It passed the release checklist assertions for `574/574` generated required courses and `23/23` official UMD title confirmations.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --catalog-limit=40 --seed=pass189-official-title-smoke`.
+  - It matched `40/40` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `2/2` PlanetTerp title drifts against official UMD catalog evidence: `AOSC 123` and `PHYS 260`.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --seed=pass189-official-title-full`.
+  - It matched `574/574` unique generated required courses across `50` generated majors and `843` requirement rows.
+  - It confirmed app-compatible official UMD catalog titles for `23/23` PlanetTerp title drifts.
+  - The most reused generated requirements were `MATH 140`, `MATH 141`, `CHEM 131`, `STAT 100`, `CHEM 132`, `MATH 240`, `MATH 246`, and `PHYS 161`.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - It passed `PHYS [mobile]` with `20/20 live course records`.
+  - It verified the rendered app loaded `js/settings.js?v=32` and showed the updated Settings release readiness evidence.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass189-official-title-random`.
+  - It randomly verified `EDUC`, `ENGL`, `AREC`, `AOSC`, `ENAE`, `WMST`, `ENEE`, `ENMA`, `NFSC`, `LING`, `CINE`, and `GEOL` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the official catalog parser and release checklist evidence.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+  - Live schedule verification and live catalog sweep were skipped by the default release runner unless their explicit flags are passed.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add Testudo term-page title checks for title drifts where the official catalog base title is intentionally less specific than the scheduled term title.
+- Add a one-click Settings or release helper that refreshes the stored catalog sweep snapshot after maintainers run a full live sweep.
+- Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.

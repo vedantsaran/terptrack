@@ -1278,6 +1278,7 @@ async function testCatalogYearTargeting(context) {
   assert(/Catalog target 2024-2025/.test(result.sourceHtml) && /linked source 2026-2027/.test(result.sourceHtml), 'catalog year: source HTML should compare target and linked source years');
   assert(/Catalog target 2024-2025/.test(result.releaseHtml), 'catalog year: release checklist should show selected target year');
   assert(/Generated course catalog sweep/.test(result.releaseHtml) && /574\/574 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
+  assert(/23\/23 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
@@ -3715,6 +3716,46 @@ function testCanonicalCourseTitles(context) {
   return {
     id: 'COURSE-CANONICAL-TITLES',
     amst205: result.amst205,
+  };
+}
+
+function testOfficialCatalogTitleParser() {
+  const {
+    extractOfficialCatalogCourse,
+    officialCreditsCompatible,
+    titlesCompatible,
+  } = require('./verify-random-schedules.js');
+  const html = `
+    <div class="courseblock">
+      <p class="courseblocktitle noindent">
+        <strong>BMGT301 Information Systems, AI, and Digital Transformation (3 Credits)</strong>
+      </p>
+    </div>
+    <div class="courseblock">
+      <p class="courseblocktitle noindent">
+        <strong>ARTT428 Advanced Painting Studio (3 Credits)</strong>
+      </p>
+    </div>
+    <div class="courseblock">
+      <p class="courseblocktitle noindent">
+        <strong>ARTT498 Directed Studies in Studio Art (1-3 Credits)</strong>
+      </p>
+    </div>
+  `;
+  const bmgt = extractOfficialCatalogCourse(html, 'BMGT 301');
+  const artt = extractOfficialCatalogCourse(html, 'ARTT428');
+  const variable = extractOfficialCatalogCourse(html, 'ARTT 498');
+  assert(bmgt?.title === 'Information Systems, AI, and Digital Transformation', 'official catalog parser: should extract comma title');
+  assert(bmgt?.credits?.exact === 3 && officialCreditsCompatible(bmgt.credits, 3), 'official catalog parser: should extract exact credits');
+  assert(artt?.title === 'Advanced Painting Studio', 'official catalog parser: should extract base studio title');
+  assert(titlesCompatible('Advanced Painting Studio; Painting', artt.title), 'official catalog parser: term-specific title suffix should be compatible with catalog base title');
+  assert(variable?.credits?.min === 1 && variable?.credits?.max === 3, 'official catalog parser: should extract variable credit range');
+  assert(officialCreditsCompatible(variable.credits, 2) && !officialCreditsCompatible(variable.credits, 4), 'official catalog parser: should enforce variable credit range');
+  return {
+    id: 'OFFICIAL-CATALOG-TITLES',
+    bmgt301: bmgt.title,
+    artt428: artt.title,
+    variable: variable.credits.raw,
   };
 }
 
@@ -6277,6 +6318,7 @@ async function main() {
   const accountSetup = await testAccountCloudSetup(context);
   const releaseJson = testReleaseJsonReport();
   const canonicalTitles = testCanonicalCourseTitles(context);
+  const officialCatalogTitles = testOfficialCatalogTitleParser();
   const timing = testScheduleTimingFit(context);
   const readiness = testScheduleRegistrationReadiness(context);
   const mapUndo = testScheduleReadinessMapUndo(context);
@@ -6325,6 +6367,7 @@ async function main() {
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}; friend rows after removal ${accountSetup.removal}.`);
   console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}.`);
   console.log(`Canonical title fixture ${canonicalTitles.id}: AMST 205 -> ${canonicalTitles.amst205}.`);
+  console.log(`Official catalog title fixture ${officialCatalogTitles.id}: BMGT 301 -> ${officialCatalogTitles.bmgt301}; ARTT 428 -> ${officialCatalogTitles.artt428}; variable ${officialCatalogTitles.variable}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
   console.log(`Schedule readiness fixture ${readiness.id}: ${readiness.label}; gates ${readiness.gates}.`);
   console.log(`Schedule map undo fixture ${mapUndo.id}: restored ${mapUndo.restored}.`);
@@ -6360,7 +6403,7 @@ async function main() {
   console.log(`Onboarding prior credit fixture ${priorCredit.id}: ${priorCredit.count}; ${priorCredit.samples}.`);
   console.log(`Settings prior credit fixture ${settingsPrior.id}: ${settingsPrior.transfers} transfers; ${settingsPrior.added} outside-plan courses; undo leaves ${settingsPrior.undo}.`);
   console.log(`Onboarding fixture ${onboarding.id}: terms ${onboarding.terms}; start ${onboarding.start}; prefs ${onboarding.prefs}.`);
-  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + auto-plan initial resolver + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
+  console.log(`Generated-plan regression fixtures passed (${rows.length} majors + prerequisite chain + prerequisite resolver state + normalized bulk state + auto-plan diagnostics + auto-plan initial resolver + all generated requirement groups + catalog-year targeting + account/share state + account setup + release JSON report + canonical titles + official catalog title parser + schedule timing + registration readiness + calendar export readiness + readiness map undo + schedule action undo + schedule bounded solver + schedule course chips + schedule term guards + schedule calendar conflict guard + schedule ready backups + drag/drop section cleanup + custom delete cleanup + course edit cleanup + course code collision guard + recommendation move action + recommendation section pick + planner checklist + planner questions + planner term-section guards + planner availability seat pressure + planner term-move undo + browse profile saved searches + browse sections + browse explanations + browse impact preview + placeholder section preview + browse replacement + browse slot selection + browse replacement queue + browse auto-resolver + browse typed slot matching + audit issues + onboarding prior credit + settings prior credit + personalized onboarding).`);
 }
 
 main().catch(error => {

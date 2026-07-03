@@ -6,6 +6,7 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
+const OFFICIAL_CATALOG_COURSE_BASE = 'https://academiccatalog.umd.edu/undergraduate/approved-courses';
 
 function read(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -26,6 +27,7 @@ function parseArgs(argv) {
     all: false,
     catalogSweep: false,
     catalogLimit: null,
+    skipOfficialTitleCheck: false,
     keepGoing: false,
     majors: [],
   };
@@ -39,6 +41,8 @@ function parseArgs(argv) {
       opts.catalogLimit = Number(argv[++i] || 0);
     } else if (arg.startsWith('--catalog-limit=')) {
       opts.catalogLimit = Number(arg.slice('--catalog-limit='.length) || 0);
+    } else if (arg === '--skip-official-title-check') {
+      opts.skipOfficialTitleCheck = true;
     } else if (arg === '--keep-going') {
       opts.keepGoing = true;
     } else if (arg === '--major') {
@@ -185,6 +189,78 @@ function creditValue(value) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function decodeHtmlEntities(text) {
+  const named = {
+    amp: '&',
+    gt: '>',
+    lt: '<',
+    nbsp: ' ',
+    quot: '"',
+    apos: "'",
+  };
+  return String(text || '').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, entity) => {
+    const key = String(entity || '').toLowerCase();
+    if (key.startsWith('#x')) {
+      const value = Number.parseInt(key.slice(2), 16);
+      return Number.isFinite(value) ? String.fromCodePoint(value) : match;
+    }
+    if (key.startsWith('#')) {
+      const value = Number.parseInt(key.slice(1), 10);
+      return Number.isFinite(value) ? String.fromCodePoint(value) : match;
+    }
+    return Object.prototype.hasOwnProperty.call(named, key) ? named[key] : match;
+  });
+}
+
+function htmlToText(html) {
+  return decodeHtmlEntities(String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim());
+}
+
+function parseOfficialCreditText(text) {
+  const raw = String(text || '').replace(/\s+/g, ' ').trim();
+  const nums = Array.from(raw.matchAll(/\d+(?:\.\d+)?/g)).map(match => Number(match[0])).filter(Number.isFinite);
+  if (!nums.length) return null;
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  return {
+    raw,
+    min,
+    max,
+    exact: min === max ? min : null,
+  };
+}
+
+function officialCreditsCompatible(officialCredits, value) {
+  const credits = creditValue(value);
+  if (!officialCredits || !credits) return true;
+  if (officialCredits.exact !== null) return credits === officialCredits.exact;
+  return credits >= officialCredits.min && credits <= officialCredits.max;
+}
+
+function extractOfficialCatalogCourse(html, code) {
+  const id = normalizeCode(code);
+  const titleRe = /<p[^>]*class=["'][^"']*courseblocktitle[^"']*["'][^>]*>([\s\S]*?)<\/p>/gi;
+  let match;
+  while ((match = titleRe.exec(String(html || ''))) !== null) {
+    const text = htmlToText(match[1]);
+    const parsed = text.match(/^([A-Z]{3,4})\s*(\d{3}[A-Z]?)\s+(.+?)\s*\(([^)]*Credits?)\)$/i);
+    if (!parsed) continue;
+    const found = normalizeCode(`${parsed[1]}${parsed[2]}`);
+    if (found !== id) continue;
+    return {
+      code: found,
+      title: parsed[3].replace(/\s+/g, ' ').trim(),
+      credits: parseOfficialCreditText(parsed[4]),
+    };
+  }
+  return null;
+}
+
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -231,6 +307,7 @@ function profileFromRoll(rand) {
 }
 
 const planetTerpVerifyCache = new Map();
+const officialCatalogDeptCache = new Map();
 
 async function fetchPlanetTerpCourse(code) {
   const id = normalizeCode(code);
@@ -274,6 +351,76 @@ async function fetchPlanetTerpCourse(code) {
   }
   planetTerpVerifyCache.set(id, lastResult);
   return lastResult;
+}
+
+async function fetchOfficialCatalogDept(dept) {
+  const id = String(dept || '').trim().toLowerCase();
+  if (!id) return { ok: false, detail: 'missing department' };
+  if (officialCatalogDeptCache.has(id)) return officialCatalogDeptCache.get(id);
+  const url = `${OFFICIAL_CATALOG_COURSE_BASE}/${encodeURIComponent(id)}/`;
+  let lastResult = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let resp;
+    try {
+      resp = await fetch(url, {
+        headers: {
+          accept: 'text/html,application/xhtml+xml',
+          'user-agent': 'TerpTrack/catalog-title-verifier',
+        },
+      });
+    } catch (error) {
+      lastResult = { ok: false, url, detail: error?.message || String(error) };
+      if (attempt < 3) await wait(250 * attempt);
+      continue;
+    }
+    if (!resp.ok) {
+      lastResult = { ok: false, url, detail: `HTTP ${resp.status}` };
+      if (resp.status >= 500 && attempt < 3) {
+        await wait(250 * attempt);
+        continue;
+      }
+      officialCatalogDeptCache.set(id, lastResult);
+      return lastResult;
+    }
+    const html = await resp.text();
+    const result = { ok: true, url, html };
+    officialCatalogDeptCache.set(id, result);
+    return result;
+  }
+  officialCatalogDeptCache.set(id, lastResult);
+  return lastResult;
+}
+
+async function fetchOfficialCatalogCourse(code) {
+  const id = normalizeCode(code);
+  const match = id.match(/^([A-Z]{3,4})(\d{3}[A-Z]?)$/);
+  if (!match) return { ok: false, code: id, detail: 'invalid course code' };
+  const dept = match[1];
+  const deptPage = await fetchOfficialCatalogDept(dept);
+  if (!deptPage?.ok) {
+    return {
+      ok: false,
+      code: id,
+      url: deptPage?.url || `${OFFICIAL_CATALOG_COURSE_BASE}/${dept.toLowerCase()}/`,
+      detail: deptPage?.detail || 'department page unavailable',
+    };
+  }
+  const course = extractOfficialCatalogCourse(deptPage.html, id);
+  if (!course) {
+    return {
+      ok: false,
+      code: id,
+      url: deptPage.url,
+      detail: 'course not found on UMD catalog department page',
+    };
+  }
+  return {
+    ok: true,
+    code: id,
+    title: course.title,
+    credits: course.credits,
+    url: deptPage.url,
+  };
 }
 
 async function verifyMajor(context, major, rand) {
@@ -477,15 +624,16 @@ async function verifyCatalogSweep(context, opts) {
   const appLive = await fetchAppLiveMetadata(context, codes);
   const planetRows = await mapLimit(codes, 6, fetchPlanetTerpCourse);
   const planetByCode = new Map(planetRows.map(row => [normalizeCode(row.code), row]));
+  const entryByCode = new Map(entries.map(entry => [entry.code, entry]));
   const appMissing = [];
   const planetMissing = [];
   const mismatches = [];
-  const titleDriftNotes = [];
+  const titleDrifts = [];
   const coverageRows = [];
   codes.forEach(code => {
     const app = appLive[code];
     const planet = planetByCode.get(code);
-    const entry = entries.find(item => item.code === code) || { majors: [] };
+    const entry = entryByCode.get(code) || { majors: [] };
     if (!app) appMissing.push(`${displayCode(code)} (${entry.majors.slice(0, 5).join(',')})`);
     if (!planet?.ok) planetMissing.push(`${displayCode(code)} (${planet?.detail || 'missing'})`);
     if (!app || !planet?.ok) return;
@@ -495,7 +643,13 @@ async function verifyCatalogSweep(context, opts) {
       mismatches.push(`${displayCode(code)} credits ${appCredits} != PlanetTerp ${planetCredits}`);
     }
     if (!titlesCompatible(app.title, planet.title)) {
-      titleDriftNotes.push(`${displayCode(code)} app "${app.title}" vs PlanetTerp "${planet.title}"`);
+      titleDrifts.push({
+        code,
+        appTitle: app.title,
+        planetTitle: planet.title,
+        appCredits,
+        planetCredits,
+      });
     }
     coverageRows.push({
       code,
@@ -509,6 +663,34 @@ async function verifyCatalogSweep(context, opts) {
   assert(!planetMissing.length, `Catalog sweep PlanetTerp missing ${planetMissing.length}/${codes.length}: ${planetMissing.slice(0, 20).join('; ')}${planetMissing.length > 20 ? `; +${planetMissing.length - 20} more` : ''}`);
   assert(!mismatches.length, `Catalog sweep credit mismatches ${mismatches.length}/${codes.length}: ${mismatches.slice(0, 20).join('; ')}${mismatches.length > 20 ? `; +${mismatches.length - 20} more` : ''}`);
 
+  const officialResolved = [];
+  const officialUnverified = [];
+  const officialMismatches = [];
+  if (titleDrifts.length && !opts.skipOfficialTitleCheck) {
+    const officialRows = await mapLimit(titleDrifts, 3, async drift => ({
+      drift,
+      official: await fetchOfficialCatalogCourse(drift.code),
+    }));
+    officialRows.forEach(({ drift, official }) => {
+      if (!official?.ok) {
+        officialUnverified.push(`${displayCode(drift.code)} (${official?.detail || 'official catalog unavailable'})`);
+        return;
+      }
+      const appTitleOk = titlesCompatible(drift.appTitle, official.title);
+      const appCreditsOk = officialCreditsCompatible(official.credits, drift.appCredits);
+      if (!appTitleOk || !appCreditsOk) {
+        const creditText = official.credits?.raw ? `, official credits ${official.credits.raw}` : '';
+        officialMismatches.push(`${displayCode(drift.code)} app "${drift.appTitle}" (${drift.appCredits || '?'}) != official UMD "${official.title}"${creditText}`);
+        return;
+      }
+      officialResolved.push(`${displayCode(drift.code)} official "${official.title}" vs PlanetTerp "${drift.planetTitle}"`);
+    });
+  }
+  assert(
+    !officialMismatches.length,
+    `Catalog sweep official UMD title/credit mismatches ${officialMismatches.length}/${titleDrifts.length}: ${officialMismatches.slice(0, 20).join('; ')}${officialMismatches.length > 20 ? `; +${officialMismatches.length - 20} more` : ''}`,
+  );
+
   const reused = coverageRows
     .slice()
     .sort((a, b) => b.majors - a.majors || a.code.localeCompare(b.code))
@@ -516,8 +698,16 @@ async function verifyCatalogSweep(context, opts) {
     .map(row => `${displayCode(row.code)}:${row.majors}`)
     .join(', ');
   console.log(`Catalog sweep matched ${coverageRows.length}/${codes.length} unique generated required courses against app live metadata and PlanetTerp.`);
-  if (titleDriftNotes.length) {
-    console.log(`Catalog sweep noted ${titleDriftNotes.length} PlanetTerp title drift${titleDriftNotes.length === 1 ? '' : 's'} where app/UMD metadata may be newer: ${titleDriftNotes.slice(0, 10).join('; ')}${titleDriftNotes.length > 10 ? `; +${titleDriftNotes.length - 10} more` : ''}.`);
+  if (titleDrifts.length && opts.skipOfficialTitleCheck) {
+    const notes = titleDrifts.map(drift => `${displayCode(drift.code)} app "${drift.appTitle}" vs PlanetTerp "${drift.planetTitle}"`);
+    console.log(`Catalog sweep noted ${notes.length} PlanetTerp title drift${notes.length === 1 ? '' : 's'} where app/UMD metadata may be newer: ${notes.slice(0, 10).join('; ')}${notes.length > 10 ? `; +${notes.length - 10} more` : ''}.`);
+  } else if (titleDrifts.length) {
+    console.log(`Official UMD catalog confirmed app-compatible titles for ${officialResolved.length}/${titleDrifts.length} PlanetTerp title drift${titleDrifts.length === 1 ? '' : 's'}: ${officialResolved.slice(0, 10).join('; ')}${officialResolved.length > 10 ? `; +${officialResolved.length - 10} more` : ''}.`);
+    if (officialUnverified.length) {
+      console.log(`Official UMD catalog title check could not verify ${officialUnverified.length}/${titleDrifts.length} drift${officialUnverified.length === 1 ? '' : 's'}: ${officialUnverified.slice(0, 10).join('; ')}${officialUnverified.length > 10 ? `; +${officialUnverified.length - 10} more` : ''}.`);
+    }
+  } else {
+    console.log('Catalog sweep found no PlanetTerp title drifts.');
   }
   console.log(`Most reused generated requirements: ${reused || 'none'}.`);
 }
@@ -556,7 +746,18 @@ async function main() {
   console.log(`Verified ${rows.length} generated schedules against PlanetTerp.`);
 }
 
-main().catch(error => {
-  console.error(error.stack || error.message || String(error));
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error.stack || error.message || String(error));
+    process.exit(1);
+  });
+} else {
+  module.exports = {
+    decodeHtmlEntities,
+    extractOfficialCatalogCourse,
+    htmlToText,
+    officialCreditsCompatible,
+    parseOfficialCreditText,
+    titlesCompatible,
+  };
+}
