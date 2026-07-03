@@ -305,6 +305,36 @@ async function testCuratedScheduleFixtures(context) {
       goal: 'KNES450',
       minRealCourses: 19,
     },
+    {
+      id: 'PHSC',
+      required: ['SPHL100', 'PHSC300', 'EPIB301', 'PHSC401', 'PHSC402', 'BSCI170', 'BSCI223', 'EPIB315', 'PHSC450', 'PHSC420', 'MIEH300', 'HLTH391', 'BSCI171', 'CHEM131', 'CHEM132', 'MATH130', 'STAT100'],
+      goal: 'PHSC450',
+      minRealCourses: 21,
+    },
+    {
+      id: 'NFSC',
+      required: ['NFSC100', 'NFSC112', 'NFSC315', 'NFSC341', 'NFSC421', 'NFSC430', 'NFSC440', 'NFSC450', 'NFSC455', 'NFSC470', 'BSCI170', 'BSCI171', 'BSCI222', 'CHEM131', 'CHEM132', 'CHEM231', 'CHEM232', 'CHEM271', 'CHEM272'],
+      goal: 'NFSC450',
+      minRealCourses: 23,
+    },
+    {
+      id: 'HLTH',
+      required: ['HLTH140', 'HLTH200', 'HLTH230', 'HLTH285', 'HLTH377', 'HLTH471', 'HLTH476', 'HLTH498L', 'HLTH490', 'HLTH302', 'HLTH410', 'HLTH460', 'PSYC100', 'BSCI170', 'STAT100'],
+      goal: 'HLTH490',
+      minRealCourses: 19,
+    },
+    {
+      id: 'ENST',
+      required: ['ENST200', 'ENST233', 'ENST301', 'ENST303', 'ENST388', 'ENST471', 'ENST499', 'ENST405', 'ENST422', 'ENST453', 'BSCI170', 'BSCI171', 'CHEM131', 'CHEM132', 'MATH130', 'STAT100', 'GEOL100'],
+      goal: 'ENST499',
+      minRealCourses: 21,
+    },
+    {
+      id: 'ENCH',
+      required: ['ENES100', 'CHBE101', 'CHBE250', 'CHBE301', 'CHBE302', 'CHBE333', 'CHBE410', 'CHBE422', 'CHBE424', 'CHBE426', 'CHBE437', 'CHBE440', 'CHBE442', 'CHBE444', 'CHBE446', 'CHBE457', 'CHBE482', 'CHBE490', 'BIOE120', 'MATH140', 'MATH141', 'MATH241', 'MATH246', 'PHYS161', 'PHYS270', 'PHYS271', 'CHEM135', 'CHEM136', 'CHEM231', 'CHEM232', 'CHEM241', 'CHEM242', 'CHEM272'],
+      goal: 'CHBE446',
+      minRealCourses: 36,
+    },
   ];
   const rows = [];
 
@@ -1163,12 +1193,12 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
-  assert(result.templateFreshnessSummary.generatedCount === 30, 'auto plan diagnostics: freshness report should count generated templates');
-  assert(result.templateFreshnessSummary.requirementRows === 605, 'auto plan diagnostics: freshness report should count generated requirement rows');
+  assert(result.templateFreshnessSummary.generatedCount === 25, 'auto plan diagnostics: freshness report should count generated templates');
+  assert(result.templateFreshnessSummary.requirementRows === 510, 'auto plan diagnostics: freshness report should count generated requirement rows');
   assert(/Generated Catalog Freshness/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render a title');
-  assert(/30\/30/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
+  assert(/25\/25/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
   assert(/PlanetTerp/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should name the live source');
-  assert(/pass200-curated-health-earth-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
+  assert(/pass201-curated-public-health-food-earth-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
   assert(/Official sources/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render official source links');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/programs/'), 'auto plan diagnostics: freshness report should link the UMD catalog program index');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/approved-courses/'), 'auto plan diagnostics: freshness report should link the UMD course catalog');
@@ -1366,7 +1396,7 @@ async function testAllGeneratedRequirementGroups(context) {
       return out;
     })()
   `, context));
-  assert(rows.length >= 30, `all generated requirement groups: expected at least 30 generated majors, saw ${rows.length}`);
+  assert(rows.length >= 25, `all generated requirement groups: expected at least 25 generated majors, saw ${rows.length}`);
   rows.forEach(row => {
     const groupTotal = row.groups.reduce((sum, group) => sum + group.total, 0);
     const groupScheduled = row.groups.reduce((sum, group) => sum + group.scheduled, 0);
@@ -1457,11 +1487,11 @@ async function testCatalogYearTargeting(context) {
   assert(result.firstLink.isCurrentCatalog === false, 'catalog year: older target should be marked non-current');
   assert(/Catalog target 2024-2025/.test(result.sourceHtml) && /linked source 2026-2027/.test(result.sourceHtml), 'catalog year: source HTML should compare target and linked source years');
   assert(/Catalog target 2024-2025/.test(result.releaseHtml), 'catalog year: release checklist should show selected target year');
-  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /364\/364 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
-  assert(/9\/9 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
+  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /308\/308 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
+  assert(/8\/8 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
-  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass200-curated-health-earth-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
+  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass201-curated-public-health-food-earth-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
@@ -3994,12 +4024,14 @@ function testCanonicalCourseTitles(context) {
       amst205: UMDIO_CANONICAL_TITLES.AMST205,
       anth415: UMDIO_CANONICAL_TITLES.ANTH415,
       artt428: UMDIO_CANONICAL_TITLES.ARTT428,
+      bmgt301: UMDIO_CANONICAL_TITLES.BMGT301,
       phys260: UMDIO_CANONICAL_TITLES.PHYS260,
     })
   `, context));
   assert(result.amst205 === 'American Material Culture: The Study of People, Places, and Things', 'canonical titles: AMST 205 should use the current live catalog title');
   assert(result.anth415 === 'Critical Global Health', 'canonical titles: ANTH 415 should use the current live catalog title');
   assert(result.artt428 === 'Advanced Painting Studio; Painting', 'canonical titles: ARTT 428 should use the current live catalog title');
+  assert(result.bmgt301 === 'Information Systems, AI, and Digital Transformation', 'canonical titles: BMGT 301 should use the current live catalog title');
   assert(/Electricity/.test(result.phys260), 'canonical titles: existing PHYS override should remain present');
   return {
     id: 'COURSE-CANONICAL-TITLES',
@@ -6619,8 +6651,8 @@ async function main() {
   const fixtures = [
     { id: 'ENAE', category: 'high-credit engineering', minRequirementCourses: 30, minGenEdPlaceholders: 10, minFreeElectives: 0 },
     { id: 'BIOE', category: 'high-credit life science engineering', minRequirementCourses: 28, minGenEdPlaceholders: 10, minFreeElectives: 1 },
-    { id: 'PHSC', category: 'public health science BS', minRequirementCourses: 17, minGenEdPlaceholders: 10, minFreeElectives: 8 },
-    { id: 'ENST', category: 'environmental science BS', minRequirementCourses: 17, minGenEdPlaceholders: 10, minFreeElectives: 8 },
+    { id: 'ANSC', category: 'animal sciences BS', minRequirementCourses: 18, minGenEdPlaceholders: 10, minFreeElectives: 8 },
+    { id: 'AREC', category: 'resource economics BS', minRequirementCourses: 16, minGenEdPlaceholders: 10, minFreeElectives: 8 },
     { id: 'AOSC', category: 'STEM science', minRequirementCourses: 18, minGenEdPlaceholders: 10, minFreeElectives: 8 },
     { id: 'STAT', category: 'STEM data/math', minRequirementCourses: 15, minGenEdPlaceholders: 10, minFreeElectives: 8 },
   ];

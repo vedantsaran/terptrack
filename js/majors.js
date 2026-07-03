@@ -558,6 +558,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Public Health Science',
     eyebrow: 'UMD · Public Health Science · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_PHSC !== 'undefined' ? SCHEDULE_PHSC : null,
     coreCodes: [
       'SPHL100','PHSC300','EPIB301','PHSC401','PHSC402','BSCI170','BSCI223','EPIB315','PHSC450',
     ],
@@ -604,6 +605,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Nutrition & Food Science',
     eyebrow: 'UMD · Nutrition & Food Science · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_NFSC !== 'undefined' ? SCHEDULE_NFSC : null,
     coreCodes: [
       'NFSC100','NFSC112','NFSC315','NFSC341','NFSC421','NFSC430','NFSC440','NFSC450',
     ],
@@ -653,13 +655,14 @@ const MAJOR_TEMPLATES = {
     programName: 'Chemical Engineering',
     eyebrow: 'UMD · Chemical Engineering · BS',
     totalCredits: 124,
+    fixedSchedule: typeof SCHEDULE_ENCH !== 'undefined' ? SCHEDULE_ENCH : null,
     coreCodes: [
-      'ENES100','ENCH424','ENCH440','ENCH446','ENCH476','ENCH333','ENCH482','ENCH490','ENCH468C','ENCH437','ENCH442','ENCH444',
+      'ENES100','CHBE101','CHBE250','CHBE301','CHBE302','CHBE333','CHBE410','CHBE422','CHBE424','CHBE426','CHBE437','CHBE440','CHBE442','CHBE444','CHBE446',
     ],
-    upperElectiveCodes: ['ENCH468','ENCH468F'],
-    supportCodes: ['MATH140','MATH141','MATH240','MATH241','MATH246','PHYS161','PHYS260','CHEM131','CHEM132','CHEM231','CHEM232','CHEM241','CHEM242'],
-    goals: ['ENCH437','ENCH444'],
-    notes: 'Chem-E BS. Heaviest chem load of the engineering majors — full o-chem + p-chem sequence required.',
+    upperElectiveCodes: ['CHBE457','CHBE482','CHBE490'],
+    supportCodes: ['BIOE120','MATH140','MATH141','MATH241','MATH246','PHYS161','PHYS270','PHYS271','CHEM135','CHEM136','CHEM231','CHEM232','CHEM241','CHEM242','CHEM272'],
+    goals: ['CHBE437','CHBE446'],
+    notes: 'Chem-E BS. Current catalog uses CHBE undergraduate codes; legacy ENCH rows were formerly equivalent.',
   },
   ENMA: {
     id: 'ENMA', college: 'ENG',
@@ -970,6 +973,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Community Health',
     eyebrow: 'UMD · Community Health · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_HLTH !== 'undefined' ? SCHEDULE_HLTH : null,
     coreCodes: [
       'HLTH140','HLTH200','HLTH230','HLTH285','HLTH377','HLTH471','HLTH476','HLTH498L','HLTH490',
     ],
@@ -1000,6 +1004,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Environmental Science & Technology',
     eyebrow: 'UMD · Environmental Science & Technology · BS',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_ENST !== 'undefined' ? SCHEDULE_ENST : null,
     coreCodes: [
       'ENST200','ENST233','ENST301','ENST303','ENST388','ENST471','ENST499',
     ],

@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass200-curated-health-earth-all',
+  seed: 'pass201-curated-public-health-food-earth-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 30,
+  verifiedSchedules: 25,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass200-curated-health-earth-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass201-curated-public-health-food-earth-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 3, 2026',
+    seed: 'pass201-curated-public-health-food-earth-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 25,
+    generatedCount: 25,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving Public Health Science, Nutrition & Food Science, Community Health, Environmental Science & Technology, and Chemical Engineering to curated/current-code schedules.',
+  },
   {
     checkedAt: 'July 3, 2026',
     seed: 'pass200-curated-health-earth-all',
@@ -146,22 +155,22 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass200-curated-health-earth-catalog',
+  seed: 'pass201-curated-public-health-food-earth-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 364,
-  generatedMajors: 30,
-  requirementRows: 605,
-  matchedCourses: 364,
+  uniqueCourses: 308,
+  generatedMajors: 25,
+  requirementRows: 510,
+  matchedCourses: 308,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 9,
-  officialTitleChecks: 9,
+  titleDrifts: 8,
+  officialTitleChecks: 8,
   officialTitleMismatches: 0,
   testudoTermTitleCandidates: 0,
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass200-curated-health-earth-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass201-curated-public-health-food-earth-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -169,7 +178,7 @@ const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   status: 'passed',
   command: 'node scripts/run-release-checks.js',
   liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
-  liveMajors: ['PHYS', 'GEOL', 'PLSC', 'ENST', 'ENAE', 'ENCE'],
+  liveMajors: ['PHYS', 'GEOL', 'PLSC', 'ANSC', 'ENAE', 'ENCE'],
   defaultChecks: [
     'JS syntax',
     '/api/umd proxy fixture',

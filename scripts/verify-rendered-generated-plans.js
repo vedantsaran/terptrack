@@ -40,13 +40,13 @@ const TARGETS = [
     ],
   },
   {
-    major: 'ENST',
-    name: 'Environmental Science & Technology',
-    coverage: '17/17 live course records',
+    major: 'ANSC',
+    name: 'Animal Sciences',
+    coverage: '18/18 live course records',
     targetCredits: 120,
     cards: [
-      { code: 'ENST405', credits: 3, title: 'Energy and Environment' },
-      { code: 'ENST453', credits: 3, title: 'Watershed Science' },
+      { code: 'ANSC410', credits: 3, title: 'Gut Microbiome' },
+      { code: 'ANSC453', credits: 3, title: 'Animal Welfare and Bioethics' },
     ],
   },
   {
@@ -268,6 +268,56 @@ const CURATED_TARGETS = [
     cards: [
       { code: 'KNES450', credits: 3, title: 'Mental Skills Training Applications' },
       { code: 'KNES360', credits: 4, title: 'Physiology of Exercise' },
+    ],
+  },
+  {
+    major: 'PHSC',
+    name: 'Public Health Science',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'PHSC450', credits: 3, title: 'Interdisciplinary Applications of Public Health' },
+      { code: 'PHSC420', credits: 3, title: 'Vaccines and Immunology' },
+    ],
+  },
+  {
+    major: 'NFSC',
+    name: 'Nutrition & Food Science',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'NFSC450', credits: 3, title: 'Food and Nutrient Analysis' },
+      { code: 'NFSC440', credits: 4, title: 'Advanced Human Nutrition' },
+    ],
+  },
+  {
+    major: 'HLTH',
+    name: 'Community Health',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'HLTH490', credits: 3, title: 'Professional Preparation in Community Health' },
+      { code: 'HLTH498L', credits: 3, title: 'Health Literacy' },
+    ],
+  },
+  {
+    major: 'ENST',
+    name: 'Environmental Science & Technology',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'ENST499', credits: 1, title: 'Special Topics in Environmental Science and Technology' },
+      { code: 'ENST453', credits: 3, title: 'Watershed Science' },
+    ],
+  },
+  {
+    major: 'ENCH',
+    name: 'Chemical Engineering',
+    kind: 'curated',
+    targetCredits: 124,
+    cards: [
+      { code: 'CHBE446', credits: 3, title: 'Process Engineering Economics and Design II' },
+      { code: 'CHBE437', credits: 3, title: 'Chemical and Biomolecular Engineering Laboratory' },
     ],
   },
 ];
@@ -564,7 +614,7 @@ async function waitForReview(page, target, timeoutMs) {
           && text.includes('Curated plan ready')
           && text.includes(`${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass200-curated-health-earth-all');
+          && text.includes('pass201-curated-public-health-food-earth-all');
       },
       { name: target.name, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
@@ -581,7 +631,7 @@ async function waitForReview(page, target, timeoutMs) {
         && text.includes(coverage)
         && text.includes(`/${targetCredits} planned credits`)
         && text.includes('Generated Catalog Freshness')
-        && text.includes('pass200-curated-health-earth-all');
+        && text.includes('pass201-curated-public-health-food-earth-all');
     },
     { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
     { timeout: timeoutMs },
@@ -730,17 +780,17 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=9'), `${viewport.label}: rendered app did not load js/majors.js?v=9`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=10'), `${viewport.label}: rendered app did not load js/majors.js?v=10`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=42'), `${viewport.label}: rendered app did not load js/settings.js?v=42`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=44'), `${viewport.label}: rendered app did not load js/settings.js?v=44`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('364/364 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('9/9 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('308/308 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('8/8 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);

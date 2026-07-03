@@ -12,6 +12,7 @@ const UMDIO_CANONICAL_TITLES = Object.freeze({
   AMST205: 'American Material Culture: The Study of People, Places, and Things',
   ANTH415: 'Critical Global Health',
   ARTT428: 'Advanced Painting Studio; Painting',
+  BMGT301: 'Information Systems, AI, and Digital Transformation',
   PHYS260: 'General Physics: Electricity, Magnetism and Thermodynamics',
   PHYS261: 'General Physics: Mechanics, Vibrations, Waves, Heat (Laboratory)',
 });

@@ -1883,3 +1883,323 @@ const SCHEDULE_KNES = [
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
+
+// ============================================================
+// PHSC - Public Health Science (BS, 120 cr)
+// ============================================================
+const SCHEDULE_PHSC = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
+    _c('CHEM 132', 'General Chemistry I Laboratory', 1, { category: 'major-support' }),
+    _c('MATH 130', 'Calculus I for the Life Sciences', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('SPHL 100', 'Foundations of Public Health', 3, { category: 'major-core' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('BSCI 223', 'General Microbiology', 4, { prereqs: ['BSCI 170'], category: 'major-core' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('EPIB 301', 'Epidemiology for Public Health Practice', 3, { prereqs: ['SPHL 100'], category: 'major-core' }),
+    _c('EPIB 315', 'Biostatistics for Public Health Practice', 3, { prereqs: ['STAT 100'], category: 'major-core' }),
+    _c('PHSC 300', 'Foundations of Public Health', 3, { prereqs: ['SPHL 100'], category: 'major-core' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('PHSC 401', 'History of Public Health', 3, { prereqs: ['SPHL 100'], category: 'major-core' }),
+    _c('PHSC 402', 'Public Health Emergency Preparedness', 3, { prereqs: ['SPHL 100'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('PHSC 420', 'Vaccines and Immunology', 3, { prereqs: ['BSCI 223'], category: 'major-upper' }),
+    _c('MIEH 300', 'A Public Health Perspective: Introduction to Environmental Health', 3, { prereqs: ['SPHL 100'], category: 'major-upper' }),
+    _c('HLTH 391', 'Making a Difference: Applying Community Health', 3, { category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('PHSC 450', 'Interdisciplinary Applications of Public Health', 3, { prereqs: ['PHSC 300'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// NFSC - Nutrition & Food Science (BS, 120 cr)
+// ============================================================
+const SCHEDULE_NFSC = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
+    _c('CHEM 132', 'General Chemistry I Laboratory', 1, { category: 'major-support' }),
+    _c('NFSC 100', 'Elements of Nutrition', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('NFSC 112', 'Food: Science and Technology', 3, { category: 'major-core' }),
+    _c('BSCI 222', 'Principles of Genetics', 4, { prereqs: ['BSCI 170'], category: 'major-support' }),
+    _c('CHEM 231', 'Organic Chemistry I', 3, { prereqs: ['CHEM 131'], category: 'major-support' }),
+    _c('CHEM 232', 'Organic Chemistry Laboratory I', 1, { prereqs: ['CHEM 231'], category: 'major-support' }),
+    _c('CHEM 271', 'General Chemistry and Energetics', 2, { prereqs: ['CHEM 131'], category: 'major-support' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('CHEM 272', 'General Bioanalytical Chemistry Laboratory', 2, { category: 'major-support' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('FSAR Elective', 'Analytic Reasoning', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('NFSC 315', 'Nutrition During the Life Cycle', 3, { prereqs: ['NFSC 100'], category: 'major-core' }),
+    _c('NFSC 341', 'Fermented Food, Feed, and Pharmaceuticals', 3, { prereqs: ['NFSC 112'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('NFSC 421', 'Food Chemistry', 3, { prereqs: ['CHEM 231'], category: 'major-core' }),
+    _c('NFSC 430', 'Food Microbiology', 3, { prereqs: ['NFSC 112'], category: 'major-core' }),
+    _c('NFSC 440', 'Advanced Human Nutrition', 4, { prereqs: ['NFSC 315'], category: 'major-core' }),
+    _c('NFSC 455', 'Medical Nutrition Therapy I', 4, { prereqs: ['NFSC 315'], category: 'major-upper' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('NFSC 470', 'Community Nutrition', 3, { prereqs: ['NFSC 315'], category: 'major-upper' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('NFSC 450', 'Food and Nutrient Analysis', 3, { prereqs: ['NFSC 421'], category: 'major-core', isGoal: true }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// HLTH - Community Health (BS, 120 cr)
+// ============================================================
+const SCHEDULE_HLTH = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('HLTH 140', 'Personal and Community Health', 3, { category: 'major-core' }),
+    _c('PSYC 100', 'Introduction to Psychology', 3, { category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('HLTH 200', 'Introduction to Research in Community Health', 3, { prereqs: ['HLTH 140'], category: 'major-core' }),
+    _c('HLTH 230', 'Introduction to Health Behavior', 3, { category: 'major-core' }),
+    _c('HLTH 285', 'Controlling Stress and Tension', 3, { category: 'major-core' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('HLTH 377', 'Human Sexuality', 3, { prereqs: ['HLTH 230'], category: 'major-core' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('HLTH 302', 'Methods of Community Health Assessment', 3, { prereqs: ['HLTH 200'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('HLTH 410', 'Honors Seminar', 3, { prereqs: ['HLTH 200'], category: 'major-upper' }),
+    _c('HLTH 460', 'Multicultural Population Health', 3, { prereqs: ['HLTH 230'], category: 'major-upper' }),
+    _c('HLTH 471', 'Women\'s Health', 3, { category: 'major-core' }),
+    _c('HLTH 476', 'Death Education', 3, { category: 'major-core' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('HLTH 498L', 'Special Topics in Health; Health Literacy', 3, { prereqs: ['HLTH 200'], category: 'major-core' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('HLTH 490', 'Professional Preparation in Community Health', 3, { prereqs: ['HLTH 200'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ENST - Environmental Science & Technology (BS, 120 cr)
+// ============================================================
+const SCHEDULE_ENST = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
+    _c('CHEM 132', 'General Chemistry I Laboratory', 1, { category: 'major-support' }),
+    _c('GEOL 100', 'Physical Geology', 3, { category: 'major-support' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ENST 200', 'Fundamentals of Soil Science', 4, { category: 'major-core' }),
+    _c('ENST 233', 'Introduction to Environmental Health', 4, { category: 'major-core' }),
+    _c('MATH 130', 'Calculus I for the Life Sciences', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ENST 301', 'Field Soil Morphology I', 1, { prereqs: ['ENST 200'], category: 'major-core' }),
+    _c('ENST 303', 'Field Soil Morphology III', 1, { prereqs: ['ENST 200'], category: 'major-core' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ENST 388', 'Honors Thesis Research', 3, { prereqs: ['ENST 200'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ENST 405', 'Energy and Environment', 3, { prereqs: ['ENST 200'], category: 'major-upper' }),
+    _c('ENST 422', 'Soil Microbial Ecology', 3, { prereqs: ['ENST 200'], category: 'major-upper' }),
+    _c('ENST 453', 'Watershed Science: Water Balance, Open Channel Flow, and Near Surface Hydrology', 3, { prereqs: ['ENST 200'], category: 'major-upper' }),
+    _c('ENST 471', 'Capstone I', 2, { prereqs: ['ENST 301'], category: 'major-core' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ENST 499', 'Special Topics in Environmental Science and Technology', 1, { prereqs: ['ENST 471'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ENCH - Chemical Engineering (BS, 124 cr)
+// ============================================================
+const SCHEDULE_ENCH = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ENES 100', 'Introduction to Engineering Design', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('CHBE 101', 'Introduction to Chemical and Biomolecular Engineering', 3, { category: 'major-core', note: 'Current catalog replacement for legacy ENCH 215 content' }),
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { category: 'major-support' }),
+    _c('CHEM 136', 'General Chemistry Laboratory for Engineers', 1, { category: 'major-support' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma', note: 'Also satisfies FSAR' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('CHBE 250', 'Computer Methods in Chemical Engineering', 3, { prereqs: ['CHBE 101'], category: 'major-core' }),
+    _c('BIOE 120', 'Biology for Engineers', 3, { category: 'major-support' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('CHBE 301', 'Chemical and Biomolecular Engineering Thermodynamics I', 3, { prereqs: ['CHBE 101'], category: 'major-core' }),
+    _c('CHEM 231', 'Organic Chemistry I', 3, { prereqs: ['CHEM 135'], category: 'major-support' }),
+    _c('CHEM 232', 'Organic Chemistry Laboratory I', 1, { prereqs: ['CHEM 231'], category: 'major-support' }),
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 270', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 271', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics (Laboratory)', 1, { prereqs: ['PHYS 270'], kind: 'gened', category: 'gened-dsnl' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('CHBE 302', 'Chemical and Biomolecular Engineering Thermodynamics II', 3, { prereqs: ['CHBE 301'], category: 'major-core' }),
+    _c('CHBE 333', 'Chemical Engineering Seminar', 1, { prereqs: ['CHBE 101'], category: 'major-core' }),
+    _c('CHEM 241', 'Organic Chemistry II', 3, { prereqs: ['CHEM 231'], category: 'major-support' }),
+    _c('CHEM 242', 'Organic Chemistry Laboratory II', 1, { prereqs: ['CHEM 241'], category: 'major-support' }),
+    _c('MATH 246', 'Differential Equations for Scientists and Engineers', 3, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('CHBE 410', 'Statistics and Design of Experiments', 3, { prereqs: ['CHBE 250', 'MATH 241', 'MATH 246'], category: 'major-core' }),
+    _c('CHBE 422', 'Chemical and Biomolecular Engineering Transport Phenomena I', 3, { prereqs: ['CHBE 101', 'CHBE 250', 'MATH 241', 'MATH 246'], category: 'major-core' }),
+    _c('CHBE 440', 'Chemical Kinetics and Reactor Design', 3, { prereqs: ['CHBE 301', 'MATH 241', 'MATH 246'], category: 'major-core' }),
+    _c('CHEM 272', 'General Bioanalytical Chemistry Laboratory', 2, { prereqs: ['CHEM 271'], category: 'major-support' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('CHBE 424', 'Chemical and Biomolecular Engineering Transport Phenomena II', 3, { prereqs: ['CHBE 422'], category: 'major-core' }),
+    _c('CHBE 426', 'Chemical and Biomolecular Separation Processes', 3, { prereqs: ['CHBE 424'], category: 'major-core' }),
+    _c('CHBE 444', 'Process Engineering Economics and Design I', 3, { prereqs: ['CHBE 424', 'CHBE 426', 'CHBE 440'], category: 'major-core' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('CHBE 437', 'Chemical and Biomolecular Engineering Laboratory', 3, { prereqs: ['CHBE 424', 'CHBE 426', 'CHBE 440'], category: 'major-core' }),
+    _c('CHBE 442', 'Chemical and Biomolecular Systems Analysis', 3, { prereqs: ['CHBE 424', 'CHBE 426'], category: 'major-core' }),
+    _c('CHBE 457', 'Design and Processing of Polymers for Biomedical Devices', 3, { prereqs: ['CHBE 424'], category: 'major-upper' }),
+    _c('CHBE 482', 'Biochemical Engineering', 3, { prereqs: ['CHBE 301'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('CHBE 446', 'Process Engineering Economics and Design II', 3, { prereqs: ['CHBE 442', 'CHBE 444'], category: 'major-core', isGoal: true }),
+    _c('CHBE 490', 'Polymer Science', 3, { prereqs: ['CHBE 301'], category: 'major-upper' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+  ]},
+];

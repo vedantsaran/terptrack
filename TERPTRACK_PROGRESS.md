@@ -11715,3 +11715,96 @@ Next pass candidates:
 - Continue converting generated-only health, agriculture, and public-health majors into curated schedules, with Public Health Science, Nutrition & Food Science, Community Health, and Environmental Science & Technology as likely next candidates.
 - Add a maintainer-facing stale-course detector that flags generated templates when an official replacement like `ANTH 222` supersedes an older catalog code.
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+
+## 2026-07-03 Pass 201
+
+Focus: convert the next public-health, nutrition, environmental, and chemical-engineering majors to curated/current-code schedules and clean up live metadata drift exposed by the generated audit.
+
+Completed:
+- Added `SCHEDULE_PHSC`, a 120-credit Public Health Science BS path with biology/chemistry/calculus/statistics support, epidemiology, biostatistics, emergency preparedness, environmental health, vaccines/immunology, community application, and senior `PHSC 450`.
+- Added `SCHEDULE_NFSC`, a 120-credit Nutrition & Food Science BS path with nutrition/food science foundations, genetics, organic chemistry, food chemistry, microbiology, advanced nutrition, medical/community nutrition, and senior `NFSC 450`.
+- Added `SCHEDULE_HLTH`, a 120-credit Community Health BS path with health behavior/research/stress foundations, biology/psychology/statistics support, assessment methods, multicultural population health, health literacy, and senior `HLTH 490`.
+- Added `SCHEDULE_ENST`, a 120-credit Environmental Science & Technology BS path with biology/chemistry/geology support, soil science, environmental health, field soil morphology, thesis research, watershed/energy/soil microbial electives, capstone, and senior `ENST 499`.
+- Added `SCHEDULE_ENCH`, a 124-credit Chemical Engineering BS path using current `CHBE` undergraduate codes instead of stale legacy `ENCH` rows.
+  - It sequences CHBE intro, computer methods, thermodynamics, transport, separations, kinetics, systems analysis, lab, process design, polymer/biochemical electives, and senior `CHBE 446`.
+  - It preserves the ENCH major id while using current catalog CHBE courses and notes the legacy ENCH equivalence.
+- Updated `js/majors.js`.
+  - Wired `PHSC`, `NFSC`, `HLTH`, `ENST`, and `ENCH` to fixed curated schedules.
+  - Replaced the Chemical Engineering generated code lists with current `CHBE`/current support rows so Browse/source metadata no longer points students at dead ENCH undergraduate codes.
+- Updated `js/api.js`.
+  - Added a canonical title override for `BMGT 301` to use `Information Systems, AI, and Digital Transformation`, matching official/app live metadata while PlanetTerp still returns the older title.
+- Updated Settings/release evidence.
+  - Refreshed generated-template audit evidence to `25/25` using `pass201-curated-public-health-food-earth-all`.
+  - Refreshed catalog-sweep evidence to `308/308` unique generated required courses across `25` generated majors and `510` requirement rows.
+  - Recorded `8/8` official UMD catalog title-drift confirmations.
+  - Kept Testudo term-specific title evidence at `0/0` for `202608`.
+  - Updated the default live/rendered release-major set from generated `ENST` to generated `ANSC`.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks 25 curated schedules, adding PHSC, NFSC, HLTH, ENST, and ENCH.
+  - Generated fixture coverage now uses `ANSC` and `AREC` after moving `PHSC` and `ENST` to curated schedules.
+  - Generated-count expectations now use `25` majors and `510` requirement rows.
+  - Release checklist assertions now expect `308/308` generated required courses, `8/8` official title-drift confirmations, and `0/0` Testudo title-suffix checks.
+  - `scripts/verify-rendered-generated-plans.js` now checks curated rendered targets for PHSC, NFSC, HLTH, ENST, and ENCH.
+  - The default rendered generated-plan matrix now uses `ANSC` with `ANSC 410` and `ANSC 453` card checks instead of generated `ENST`.
+- Updated `index.html`.
+  - Bumped `js/majors.js` from `v=9` to `v=10`.
+  - Bumped `js/settings.js` from `v=42` to `v=44` after the catalog snapshot writer refreshed Settings evidence twice during the stale-code cleanup.
+
+Major-gap notes:
+- Public Health Science, Nutrition & Food Science, Community Health, Environmental Science & Technology, and Chemical Engineering now open with curated plans instead of generated drafts.
+- The remaining generated pool is now `25` generated majors, `510` generated requirement rows, and `308` unique generated required courses.
+- Chemical Engineering no longer depends on PlanetTerp-dead `ENCH 424/440/446/476` rows; it uses current `CHBE` rows confirmed by official UMD sources and live course metadata.
+- Information Systems no longer renders stale `BMGT 301` title text in generated plans.
+- No `README.md` changes were made or staged.
+
+Verification:
+- Queried live PlanetTerp metadata for PHSC/NFSC/HLTH/ENST rows before placing them.
+  - Confirmed Public Health Science rows including `SPHL 100`, `PHSC 300`, `EPIB 301`, `PHSC 401`, `PHSC 402`, `BSCI 170`, `BSCI 171`, `BSCI 223`, `EPIB 315`, `PHSC 420`, `MIEH 300`, `HLTH 391`, and `PHSC 450`.
+  - Confirmed Nutrition & Food Science rows including `NFSC 100`, `NFSC 112`, `NFSC 315`, `NFSC 341`, `NFSC 421`, `NFSC 430`, `NFSC 440`, `NFSC 450`, `NFSC 455`, `NFSC 470`, and chemistry/biology support.
+  - Confirmed Community Health rows including `HLTH 140`, `HLTH 200`, `HLTH 230`, `HLTH 285`, `HLTH 302`, `HLTH 377`, `HLTH 410`, `HLTH 460`, `HLTH 471`, `HLTH 476`, `HLTH 490`, and `HLTH 498L`.
+  - Confirmed Environmental Science & Technology rows including `ENST 200`, `ENST 233`, `ENST 301`, `ENST 303`, `ENST 388`, `ENST 405`, `ENST 422`, `ENST 453`, `ENST 471`, `ENST 499`, and `GEOL 100`.
+  - Confirmed current Chemical Engineering rows including `CHBE 101`, `CHBE 250`, `CHBE 301`, `CHBE 302`, `CHBE 333`, `CHBE 410`, `CHBE 422`, `CHBE 424`, `CHBE 426`, `CHBE 437`, `CHBE 440`, `CHBE 442`, `CHBE 444`, `CHBE 446`, `CHBE 457`, `CHBE 482`, and `CHBE 490`.
+  - Confirmed official UMD CHBE catalog evidence that current `CHBE` rows are credit-equivalent/formerly legacy `ENCH` rows where applicable.
+- Ran `node --check js/api.js`.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 3, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass201-curated-public-health-food-earth-catalog`.
+  - Initial run after moving PHSC/NFSC/HLTH/ENST matched `321/321` courses.
+  - After the ENCH/CHBE cleanup, rerunning matched `308/308` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `8/8` PlanetTerp title drifts against the official UMD catalog.
+  - It found `0/0` Testudo term-specific title candidates for `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v44`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed 25 curated schedule fixtures.
+  - It reported `PHSC 120/120`, max `17` credits, `13/13` GenEd coverage, `21` real courses, and goal term `Fall 2029`.
+  - It reported `NFSC 120/120`, max `17` credits, `13/13` GenEd coverage, `23` real courses, and goal term `Fall 2029`.
+  - It reported `HLTH 120/120`, max `16` credits, `13/13` GenEd coverage, `19` real courses, and goal term `Fall 2029`.
+  - It reported `ENST 120/120`, max `18` credits, `13/13` GenEd coverage, `21` real courses, and goal term `Fall 2029`.
+  - It reported `ENCH 124/124`, max `18` credits, `13/13` GenEd coverage, `36` real courses, and goal term `Spring 2030`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, term guards, calendar conflict guard, ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHSC,NFSC,HLTH,ENST,ENCH --viewports=all`.
+  - It passed all 5 new/current-code curated majors on desktop and mobile.
+  - Rendered cards included `PHSC450:3cr`, `PHSC420:3cr`, `NFSC450:3cr`, `NFSC440:4cr`, `HLTH490:3cr`, `HLTH498L:3cr`, `ENST499:1cr`, `ENST453:3cr`, `CHBE446:3cr`, and `CHBE437:3cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass201-curated-public-health-food-earth-all`.
+  - First run exposed stale generated metadata: dead ENCH rows and stale `BMGT 301`.
+  - After the current-code/canonical-title fixes, rerunning verified all `25/25` remaining generated schedules against PlanetTerp.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with 25 curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `GEOL`, `PLSC`, `ANSC`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `GEOL`, `PLSC`, `ANSC`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass201-curated-public-health-food-earth-random`.
+  - It randomly verified `EDUC`, `IS`, `STAT`, `ENFP`, `PLSC`, `ASTR`, `AOSC`, `ARCH`, `ENAE`, `BCHM`, `ACCOUNTING`, and `PHYS` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+Next pass candidates:
+- Continue converting remaining generated engineering/STEM programs into curated schedules, with Electrical Engineering, Aerospace Engineering, Civil Engineering, and Bioengineering as likely next candidates.
+- Add the maintainer-facing stale-course detector now that both `ANTH 222` and current `CHBE` replacements have proven the need.
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
