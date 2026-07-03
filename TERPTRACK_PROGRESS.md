@@ -11555,3 +11555,82 @@ Next pass candidates:
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
 - Add a future-term catalog comparison mode that can report when two posted Testudo terms disagree on title suffixes.
 - Continue converting high-demand generated-only humanities/social-science majors into curated schedules, with Women, Gender, & Sexuality Studies, American Studies, African American & Africana Studies, and Anthropology as likely next candidates.
+
+## 2026-07-03 Pass 199
+
+Focus: convert the next interdisciplinary humanities and social-science majors from generated drafts into curated, live-grounded four-year schedules.
+
+Completed:
+- Added `SCHEDULE_WMST`, a 120-credit Women, Gender, & Sexuality Studies BA path with WGSS foundations, social-science support, media/health electives, senior seminar, and senior `WMST 498Q`.
+- Added `SCHEDULE_AMST`, a 120-credit American Studies BA path with everyday life/material culture/information-age foundations, methods, cultural-era electives, seminar, and senior `AMST 498A`.
+- Added `SCHEDULE_AAST`, a 120-credit African American Studies BA path with AASP foundations, policy/research sequence, resistance/law electives, social-science support, and senior `AASP 401`.
+- Added `SCHEDULE_ANTH`, a 120-credit Anthropology BA path with archaeology, sociocultural, ecological/evolutionary, global health, material-culture, film, methods, and senior `ANTH 498Y`.
+- Updated `js/majors.js`.
+  - Wired `WMST`, `AMST`, `AAST`, and `ANTH` to fixed curated schedules.
+  - Replaced stale Anthropology `ANTH 220` core metadata with current `ANTH 222`, matching official catalog replacement evidence and live PlanetTerp credit/title data.
+- Updated Settings/release evidence.
+  - Refreshed generated-template audit evidence to `34/34` using `pass199-curated-interdisciplinary-all`.
+  - Refreshed catalog-sweep evidence to `413/413` unique generated required courses across `34` generated majors and `664` requirement rows.
+  - Recorded `12/12` official UMD catalog title-drift confirmations.
+  - Kept Testudo term-specific title evidence at `0/0` for `202608`.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks 16 curated schedules: ENGL, JOUR, HIST, SOCY, SPAN, PHIL, ARTH, LING, THET, MUSC, ARTT, CINE, WMST, AMST, AAST, and ANTH.
+  - Generated fixture coverage now uses `FMSC` and `GEOG` after moving `AAST` and `AMST` to curated schedules.
+  - Generated-count expectations now use `34` majors and `664` requirement rows.
+  - Release checklist assertions now expect `413/413` generated required courses, `12/12` official title-drift confirmations, and `0/0` Testudo title-suffix checks.
+  - `scripts/verify-rendered-generated-plans.js` now checks curated rendered targets for WMST, AMST, AAST, and ANTH.
+- Updated `index.html`.
+  - Bumped `js/majors.js` from `v=7` to `v=8`.
+  - Bumped `js/settings.js` from `v=39` to `v=40` after the catalog snapshot writer refreshed Settings evidence.
+
+Major-gap notes:
+- Women, Gender, & Sexuality Studies, American Studies, African American Studies, and Anthropology now open with curated plans instead of generated drafts.
+- The remaining generated pool is now `34` majors, `664` generated requirement rows, and `413` unique generated required courses.
+- Anthropology no longer relies on stale `ANTH 220`; the curated plan and core metadata use `ANTH 222`.
+- No `README.md` changes were made or staged.
+
+Verification:
+- Queried live PlanetTerp metadata for WMST/AMST/AASP/ANTH rows before placing them.
+  - Confirmed WGSS rows including `WMST 200`, `WMST 250`, `WMST 300`, `WMST 314`, `WMST 452`, `WMST 471`, `WMST 488B`, and `WMST 498Q`.
+  - Confirmed American Studies rows including `AMST 202`, `AMST 205`, `AMST 260`, `AMST 328C`, `AMST 340`, `AMST 398`, `AMST 428P`, `AMST 450`, and `AMST 498A`.
+  - Confirmed African American Studies rows including `AASP 100`, `AASP 202`, `AASP 211`, `AASP 301`, `AASP 320`, `AASP 400`, `AASP 401`, `AASP 411`, and `AASP 443`.
+  - Confirmed Anthropology rows including `ANTH 222`, `ANTH 240`, `ANTH 260`, `ANTH 305`, `ANTH 411`, `ANTH 415`, `ANTH 447`, `ANTH 462`, and `ANTH 498Y`; `ANTH 220` was blank in PlanetTerp and replaced with official current `ANTH 222`.
+  - Confirmed shared support rows including `ENGL 101`, `ENGL 393`, `COMM 107`, `HIST 200`, `PSYC 100`, `SOCY 100`, `STAT 100`, and `UNIV 100`.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 3, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass199-curated-interdisciplinary-catalog`.
+  - It matched `413/413` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `12/12` PlanetTerp title drifts against the official UMD catalog.
+  - It found `0/0` Testudo term-specific title candidates for `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v40`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed 16 curated schedule fixtures.
+  - It reported `WMST 120/120`, max `16` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It reported `AMST 120/120`, max `16` credits, `13/13` GenEd coverage, `15` real courses, and goal term `Fall 2029`.
+  - It reported `AAST 120/120`, max `16` credits, `13/13` GenEd coverage, `16` real courses, and goal term `Fall 2029`.
+  - It reported `ANTH 120/120`, max `17` credits, `13/13` GenEd coverage, `14` real courses, and goal term `Fall 2029`.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, Supabase live verifier helpers, release JSON, canonical titles, official catalog title parser, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, term guards, calendar conflict guard, ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, settings prior-credit, and personalized onboarding tests.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=ENGL,JOUR,HIST,SOCY,SPAN,PHIL,ARTH,LING,THET,MUSC,ARTT,CINE,WMST,AMST,AAST,ANTH --viewports=all`.
+  - It passed all 16 curated majors on desktop and mobile.
+  - Rendered cards included `WMST498Q:3cr`, `WMST488B:3cr`, `AMST498A:3cr`, `AMST450:3cr`, `AASP401:3cr`, `AASP443:3cr`, `ANTH498Y:3cr`, and `ANTH222:4cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass199-curated-interdisciplinary-all`.
+  - It verified all `34/34` remaining generated schedules against PlanetTerp.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with 16 curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `GEOL`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `GEOL`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass199-curated-interdisciplinary-random`.
+  - It randomly verified `BCHM`, `PLSC`, `PHYS`, `ASTR`, `MARKETING`, `BIOE`, `ANSC`, `ENCH`, `ENAE`, `PHSC`, `AOSC`, and `FMSC` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+
+Next pass candidates:
+- Continue converting generated-only student-heavy majors into curated schedules, with Family Science, Geography, Hearing & Speech Sciences, and Kinesiology as likely next candidates.
+- Add a maintainer-facing stale-course detector that flags generated templates when an official replacement like `ANTH 222` supersedes an older catalog code.
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.

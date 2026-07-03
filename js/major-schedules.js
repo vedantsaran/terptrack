@@ -1385,3 +1385,252 @@ const SCHEDULE_CINE = [
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
+
+// ============================================================
+// WMST — Women, Gender, & Sexuality Studies (BA, 120 cr)
+// ============================================================
+const SCHEDULE_WMST = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('WMST 200', 'Introduction to WGSS: Gender, Power, and Society', 3, { category: 'major-core' }),
+    _c('WMST 250', 'Introduction to WGSS: Art and Culture', 3, { category: 'major-core' }),
+    _c('SOCY 100', 'Introduction to Sociology', 3, { category: 'major-support' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('WMST 300', 'Feminist Reconceptualizations of Knowledge', 3, { prereqs: ['WMST 200'], category: 'major-core' }),
+    _c('PSYC 100', 'Introduction to Psychology', 3, { category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('WMST 314', 'Black Women in United States History', 3, { prereqs: ['WMST 200'], category: 'major-upper' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('WMST 452', 'Women in the Media', 3, { prereqs: ['WMST 200'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('WMST 471', 'Women\'s Health', 3, { prereqs: ['WMST 300'], category: 'major-upper' }),
+    _c('WMST 488B', 'Senior Seminar; Health Inequality and Social Determinants: How Race, Ethnicity, Class, and Gender Matter', 3, { prereqs: ['WMST 300'], category: 'major-core' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('WMST 498Q', 'Advanced Special Topics in Women\'s Studies; Gender and Politics', 3, { prereqs: ['WMST 300'], category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// AMST — American Studies (BA, 120 cr)
+// ============================================================
+const SCHEDULE_AMST = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('AMST 202', 'Cultures of Everyday Life in America', 3, { category: 'major-core' }),
+    _c('AMST 205', 'American Material Culture: The Study of People, Places, and Things', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('AMST 260', 'American Culture in the Information Age', 3, { category: 'major-core' }),
+    _c('HIST 200', 'Interpreting American History: Beginnings to 1877', 3, { category: 'major-support' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('AMST 340', 'Introduction to History, Theories and Methods in American Studies', 3, { prereqs: ['AMST 202'], category: 'major-core' }),
+    _c('AMST 328C', 'Perspectives on Identity and Culture; Black Popular Culture: The Politics of Blackness, Media, and Representation', 3, { category: 'major-upper' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('AMST 428P', 'American Cultural Eras; Power, Paranoia, and Politics in Postwar Film and Popular Culture', 3, { prereqs: ['AMST 340'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('AMST 450', 'Seminar in American Studies', 3, { prereqs: ['AMST 340'], category: 'major-core' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('AMST 398', 'Independent Studies', 1, { category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('AMST 498A', 'Special Topics in American Studies; Border Crossings: People, Power, and Politics in Transnational Perspective', 3, { prereqs: ['AMST 340'], category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// AAST — African American Studies (BA, 120 cr)
+// ============================================================
+const SCHEDULE_AAST = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('AASP 100', 'Introduction to African American Studies', 3, { category: 'major-core' }),
+    _c('AASP 202', 'Black Culture in the United States', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('AASP 211', 'Get Out: The Sunken Place of Race Relations in the Post-Racial Era', 3, { category: 'major-core' }),
+    _c('HIST 200', 'Interpreting American History: Beginnings to 1877', 3, { category: 'major-support' }),
+    _c('SOCY 100', 'Introduction to Sociology', 3, { category: 'major-support' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('AASP 301', 'Applied Policy Analysis and the Black Community', 3, { prereqs: ['AASP 100'], category: 'major-core' }),
+    _c('AASP 320', 'Poverty and African American Children', 3, { category: 'major-upper' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('AASP 400', 'Directed Readings in African American Studies', 3, { prereqs: ['AASP 301'], category: 'major-core' }),
+    _c('AASP 411', 'Black Resistance Movements', 3, { prereqs: ['AASP 301'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('AASP 443', 'Blacks and the Law', 3, { category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('AASP 401', 'Research Directions in African-American Studies', 3, { prereqs: ['AASP 301'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ANTH — Anthropology (BA, 120 cr)
+// ============================================================
+const SCHEDULE_ANTH = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ANTH 222', 'Introduction to Ecological and Evolutionary Anthropology', 4, { category: 'major-core', note: 'Current catalog replacement for ANTH 220' }),
+    _c('ANTH 240', 'Introduction to Archaeology', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('FSMA Elective', 'Mathematics', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ANTH 260', 'Introduction to Sociocultural Anthropology and Linguistics', 3, { category: 'major-core' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ANTH 305', 'Archaeological Methods and Practice', 3, { prereqs: ['ANTH 240'], category: 'major-core' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ANTH 411', 'Anthropology of Immigration and Health', 3, { prereqs: ['ANTH 260'], category: 'major-core' }),
+    _c('ANTH 415', 'Critical Global Health', 3, { prereqs: ['ANTH 260'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ANTH 447', 'Material Culture Studies in Archaeology', 3, { prereqs: ['ANTH 240'], category: 'major-upper' }),
+    _c('ANTH 462', 'Amazon Through Film', 3, { prereqs: ['ANTH 260'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ANTH 498Y', 'Advanced Field Training in Ethnography; Applied Archaeological Field Research', 3, { prereqs: ['ANTH 305'], category: 'major-core', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];

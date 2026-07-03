@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass198-curated-arts-all',
+  seed: 'pass199-curated-interdisciplinary-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 38,
+  verifiedSchedules: 34,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass198-curated-arts-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass199-curated-interdisciplinary-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 3, 2026',
+    seed: 'pass199-curated-interdisciplinary-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 34,
+    generatedCount: 34,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving WGSS, American Studies, African American Studies, and Anthropology to curated schedules.',
+  },
   {
     checkedAt: 'July 3, 2026',
     seed: 'pass198-curated-arts-all',
@@ -128,22 +137,22 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass198-curated-arts-catalog',
+  seed: 'pass199-curated-interdisciplinary-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 451,
-  generatedMajors: 38,
-  requirementRows: 706,
-  matchedCourses: 451,
+  uniqueCourses: 413,
+  generatedMajors: 34,
+  requirementRows: 664,
+  matchedCourses: 413,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 13,
-  officialTitleChecks: 13,
+  titleDrifts: 12,
+  officialTitleChecks: 12,
   officialTitleMismatches: 0,
   testudoTermTitleCandidates: 0,
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass198-curated-arts-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass199-curated-interdisciplinary-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',

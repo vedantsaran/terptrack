@@ -189,6 +189,46 @@ const CURATED_TARGETS = [
       { code: 'CINE411', credits: 3, title: 'Experimental Film' },
     ],
   },
+  {
+    major: 'WMST',
+    name: 'Women, Gender, & Sexuality Studies',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'WMST498Q', credits: 3, title: 'Gender and Politics' },
+      { code: 'WMST488B', credits: 3, title: 'Health Inequality' },
+    ],
+  },
+  {
+    major: 'AMST',
+    name: 'American Studies',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'AMST498A', credits: 3, title: 'Border Crossings' },
+      { code: 'AMST450', credits: 3, title: 'Seminar in American Studies' },
+    ],
+  },
+  {
+    major: 'AAST',
+    name: 'African American Studies',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'AASP401', credits: 3, title: 'Research Directions' },
+      { code: 'AASP443', credits: 3, title: 'Blacks and the Law' },
+    ],
+  },
+  {
+    major: 'ANTH',
+    name: 'Anthropology',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'ANTH498Y', credits: 3, title: 'Applied Archaeological Field Research' },
+      { code: 'ANTH222', credits: 4, title: 'Ecological and Evolutionary Anthropology' },
+    ],
+  },
 ];
 
 const ALL_TARGETS = [...TARGETS, ...CURATED_TARGETS];
@@ -483,7 +523,7 @@ async function waitForReview(page, target, timeoutMs) {
           && text.includes('Curated plan ready')
           && text.includes(`${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass198-curated-arts-all');
+          && text.includes('pass199-curated-interdisciplinary-all');
       },
       { name: target.name, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
@@ -500,7 +540,7 @@ async function waitForReview(page, target, timeoutMs) {
         && text.includes(coverage)
         && text.includes(`/${targetCredits} planned credits`)
         && text.includes('Generated Catalog Freshness')
-        && text.includes('pass198-curated-arts-all');
+        && text.includes('pass199-curated-interdisciplinary-all');
     },
     { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
     { timeout: timeoutMs },
@@ -649,17 +689,17 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=7'), `${viewport.label}: rendered app did not load js/majors.js?v=7`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=8'), `${viewport.label}: rendered app did not load js/majors.js?v=8`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=39'), `${viewport.label}: rendered app did not load js/settings.js?v=39`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=40'), `${viewport.label}: rendered app did not load js/settings.js?v=40`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('451/451 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('13/13 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('413/413 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('12/12 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);

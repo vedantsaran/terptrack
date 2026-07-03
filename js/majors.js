@@ -447,8 +447,9 @@ const MAJOR_TEMPLATES = {
     programName: 'Anthropology',
     eyebrow: 'UMD · Anthropology · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_ANTH !== 'undefined' ? SCHEDULE_ANTH : null,
     coreCodes: [
-      'ANTH220','ANTH240','ANTH260','ANTH305','ANTH411','ANTH498Y',
+      'ANTH222','ANTH240','ANTH260','ANTH305','ANTH411','ANTH498Y',
     ],
     upperElectiveCodes: ['ANTH415','ANTH447','ANTH462'],
     supportCodes: ['STAT100'],
@@ -810,6 +811,7 @@ const MAJOR_TEMPLATES = {
     programName: 'African American Studies',
     eyebrow: 'UMD · African American Studies · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_AAST !== 'undefined' ? SCHEDULE_AAST : null,
     coreCodes: [
       'AASP100','AASP202','AASP211','AASP301','AASP400','AASP401','AASP411',
     ],
@@ -916,6 +918,7 @@ const MAJOR_TEMPLATES = {
     programName: 'Women, Gender, & Sexuality Studies',
     eyebrow: 'UMD · Women, Gender, & Sexuality Studies · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_WMST !== 'undefined' ? SCHEDULE_WMST : null,
     coreCodes: [
       'WMST200','WMST250','WMST300','WMST488B','WMST498Q',
     ],
@@ -930,6 +933,7 @@ const MAJOR_TEMPLATES = {
     programName: 'American Studies',
     eyebrow: 'UMD · American Studies · BA',
     totalCredits: 120,
+    fixedSchedule: typeof SCHEDULE_AMST !== 'undefined' ? SCHEDULE_AMST : null,
     coreCodes: [
       'AMST202','AMST205','AMST260','AMST340','AMST450','AMST498A',
     ],
