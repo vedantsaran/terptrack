@@ -24,6 +24,8 @@ function parseArgs(argv) {
     seed: process.env.TERPTRACK_RANDOM_SEED || 'terptrack-random-schedule-v1',
     count: Number(process.env.TERPTRACK_RANDOM_COUNT || 6),
     all: false,
+    catalogSweep: false,
+    catalogLimit: null,
     keepGoing: false,
     majors: [],
   };
@@ -31,6 +33,12 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--all') {
       opts.all = true;
+    } else if (arg === '--catalog-sweep') {
+      opts.catalogSweep = true;
+    } else if (arg === '--catalog-limit') {
+      opts.catalogLimit = Number(argv[++i] || 0);
+    } else if (arg.startsWith('--catalog-limit=')) {
+      opts.catalogLimit = Number(arg.slice('--catalog-limit='.length) || 0);
     } else if (arg === '--keep-going') {
       opts.keepGoing = true;
     } else if (arg === '--major') {
@@ -56,6 +64,7 @@ function parseArgs(argv) {
     }
   }
   opts.count = Number.isFinite(opts.count) && opts.count > 0 ? Math.floor(opts.count) : 6;
+  opts.catalogLimit = Number.isFinite(opts.catalogLimit) && opts.catalogLimit > 0 ? Math.floor(opts.catalogLimit) : null;
   opts.majors = Array.from(new Set(opts.majors.map(item => String(item || '').trim().toUpperCase()).filter(Boolean)));
   return opts;
 }
@@ -178,6 +187,19 @@ function creditValue(value) {
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function mapLimit(list, limit, fn) {
+  const out = new Array(list.length);
+  let idx = 0;
+  async function worker() {
+    while (idx < list.length) {
+      const current = idx++;
+      out[current] = await fn(list[current], current);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, list.length)) }, worker));
+  return out;
 }
 
 function isPlaceholderCourse(course) {
@@ -370,16 +392,145 @@ async function verifyMajor(context, major, rand) {
   };
 }
 
-async function main() {
-  const opts = parseArgs(process.argv);
-  const rand = mulberry32(hashSeed(opts.seed));
-  const context = buildContext();
-  const majors = clone(vm.runInContext(`
+function generatedMajors(context) {
+  return clone(vm.runInContext(`
     listMajors()
       .filter(major => !isMajorFullyBaked(major) && majorAllCodes(major).length)
       .map(major => ({ id: major.id, name: major.name, college: major.college }))
       .sort((a, b) => a.id.localeCompare(b.id))
   `, context));
+}
+
+function generatedRequirementRows(context) {
+  return clone(vm.runInContext(`
+    (() => {
+      const rows = [];
+      listMajors()
+        .filter(major => !isMajorFullyBaked(major) && majorAllCodes(major).length)
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .forEach(major => {
+          majorAllCodes(major).forEach(item => {
+            rows.push({
+              majorId: major.id,
+              majorName: major.name,
+              code: item.code,
+              category: item.category || '',
+              kind: item.kind || ''
+            });
+          });
+        });
+      return rows;
+    })()
+  `, context));
+}
+
+async function fetchAppLiveMetadata(context, codes) {
+  return clone(await vm.runInContext(`
+    (async () => {
+      const codes = ${JSON.stringify(codes)};
+      const live = await fetchCoursesBatch(codes);
+      const out = {};
+      codes.forEach(code => {
+        const id = normalizeCode(code);
+        const course = live[id];
+        out[id] = course ? {
+          code: course.code,
+          title: course.title,
+          cr: course.cr,
+          categories: course.categories || [],
+          genEd: course.gen_ed || null
+        } : null;
+      });
+      return out;
+    })()
+  `, context));
+}
+
+async function verifyCatalogSweep(context, opts) {
+  const rows = generatedRequirementRows(context);
+  const byCode = new Map();
+  rows.forEach(row => {
+    const id = normalizeCode(row.code);
+    if (!id) return;
+    if (!byCode.has(id)) byCode.set(id, { code: id, majors: [], categories: new Set(), kinds: new Set() });
+    const bucket = byCode.get(id);
+    bucket.majors.push(row.majorId);
+    if (row.category) bucket.categories.add(row.category);
+    if (row.kind) bucket.kinds.add(row.kind);
+  });
+  const rand = mulberry32(hashSeed(opts.seed));
+  let entries = Array.from(byCode.values())
+    .sort((a, b) => a.code.localeCompare(b.code))
+    .map(row => ({
+      code: row.code,
+      majors: Array.from(new Set(row.majors)).sort(),
+      categories: Array.from(row.categories).sort(),
+      kinds: Array.from(row.kinds).sort(),
+    }));
+  const totalEntries = entries.length;
+  if (opts.catalogLimit && opts.catalogLimit < entries.length) {
+    entries = shuffle(entries, rand).slice(0, opts.catalogLimit).sort((a, b) => a.code.localeCompare(b.code));
+  }
+  const codes = entries.map(row => row.code);
+  const majors = generatedMajors(context);
+  console.log(`Catalog sweep verifier seed=${opts.seed} courses=${codes.length}/${totalEntries} majors=${majors.length} requirementRows=${rows.length}`);
+  const appLive = await fetchAppLiveMetadata(context, codes);
+  const planetRows = await mapLimit(codes, 6, fetchPlanetTerpCourse);
+  const planetByCode = new Map(planetRows.map(row => [normalizeCode(row.code), row]));
+  const appMissing = [];
+  const planetMissing = [];
+  const mismatches = [];
+  const titleDriftNotes = [];
+  const coverageRows = [];
+  codes.forEach(code => {
+    const app = appLive[code];
+    const planet = planetByCode.get(code);
+    const entry = entries.find(item => item.code === code) || { majors: [] };
+    if (!app) appMissing.push(`${displayCode(code)} (${entry.majors.slice(0, 5).join(',')})`);
+    if (!planet?.ok) planetMissing.push(`${displayCode(code)} (${planet?.detail || 'missing'})`);
+    if (!app || !planet?.ok) return;
+    const appCredits = creditValue(app.cr);
+    const planetCredits = creditValue(planet.credits);
+    if (appCredits && planetCredits && appCredits !== planetCredits) {
+      mismatches.push(`${displayCode(code)} credits ${appCredits} != PlanetTerp ${planetCredits}`);
+    }
+    if (!titlesCompatible(app.title, planet.title)) {
+      titleDriftNotes.push(`${displayCode(code)} app "${app.title}" vs PlanetTerp "${planet.title}"`);
+    }
+    coverageRows.push({
+      code,
+      credits: appCredits || planetCredits || 0,
+      title: app.title || planet.title || '',
+      majors: entry.majors.length,
+    });
+  });
+
+  assert(!appMissing.length, `Catalog sweep app live metadata missing ${appMissing.length}/${codes.length}: ${appMissing.slice(0, 20).join('; ')}${appMissing.length > 20 ? `; +${appMissing.length - 20} more` : ''}`);
+  assert(!planetMissing.length, `Catalog sweep PlanetTerp missing ${planetMissing.length}/${codes.length}: ${planetMissing.slice(0, 20).join('; ')}${planetMissing.length > 20 ? `; +${planetMissing.length - 20} more` : ''}`);
+  assert(!mismatches.length, `Catalog sweep credit mismatches ${mismatches.length}/${codes.length}: ${mismatches.slice(0, 20).join('; ')}${mismatches.length > 20 ? `; +${mismatches.length - 20} more` : ''}`);
+
+  const reused = coverageRows
+    .slice()
+    .sort((a, b) => b.majors - a.majors || a.code.localeCompare(b.code))
+    .slice(0, 8)
+    .map(row => `${displayCode(row.code)}:${row.majors}`)
+    .join(', ');
+  console.log(`Catalog sweep matched ${coverageRows.length}/${codes.length} unique generated required courses against app live metadata and PlanetTerp.`);
+  if (titleDriftNotes.length) {
+    console.log(`Catalog sweep noted ${titleDriftNotes.length} PlanetTerp title drift${titleDriftNotes.length === 1 ? '' : 's'} where app/UMD metadata may be newer: ${titleDriftNotes.slice(0, 10).join('; ')}${titleDriftNotes.length > 10 ? `; +${titleDriftNotes.length - 10} more` : ''}.`);
+  }
+  console.log(`Most reused generated requirements: ${reused || 'none'}.`);
+}
+
+async function main() {
+  const opts = parseArgs(process.argv);
+  const rand = mulberry32(hashSeed(opts.seed));
+  const context = buildContext();
+  if (opts.catalogSweep) {
+    await verifyCatalogSweep(context, opts);
+    return;
+  }
+  const majors = generatedMajors(context);
   const sample = opts.majors.length
     ? opts.majors.map(id => majors.find(major => major.id === id) || fail(`Unknown generated major for verification: ${id}`))
     : (opts.all ? majors : shuffle(majors, rand).slice(0, Math.min(opts.count, majors.length)));

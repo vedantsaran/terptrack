@@ -26,6 +26,8 @@ function parseArgs(argv) {
     renderedViewports: [],
     live: false,
     liveAll: false,
+    liveCatalogSweep: false,
+    liveCatalogLimit: null,
     liveMajors: DEFAULT_LIVE_MAJORS.slice(),
     liveCount: null,
     liveSeed: process.env.TERPTRACK_RELEASE_LIVE_SEED || 'release-check-live',
@@ -68,6 +70,12 @@ function parseArgs(argv) {
     } else if (arg === '--live-all') {
       opts.live = true;
       opts.liveAll = true;
+    } else if (arg === '--live-catalog-sweep') {
+      opts.liveCatalogSweep = true;
+    } else if (arg === '--live-catalog-limit') {
+      opts.liveCatalogLimit = Number(argv[++i] || 0);
+    } else if (arg.startsWith('--live-catalog-limit=')) {
+      opts.liveCatalogLimit = Number(arg.slice('--live-catalog-limit='.length) || 0);
     } else if (arg === '--live-majors') {
       opts.live = true;
       opts.liveMajors = String(argv[++i] || '').split(',');
@@ -96,6 +104,7 @@ function parseArgs(argv) {
   opts.renderedTimeoutMs = Number.isFinite(opts.renderedTimeoutMs) && opts.renderedTimeoutMs > 0 ? Math.floor(opts.renderedTimeoutMs) : 240000;
   opts.workflowsTimeoutMs = Number.isFinite(opts.workflowsTimeoutMs) && opts.workflowsTimeoutMs > 0 ? Math.floor(opts.workflowsTimeoutMs) : 120000;
   opts.liveCount = Number.isFinite(opts.liveCount) && opts.liveCount > 0 ? Math.floor(opts.liveCount) : null;
+  opts.liveCatalogLimit = Number.isFinite(opts.liveCatalogLimit) && opts.liveCatalogLimit > 0 ? Math.floor(opts.liveCatalogLimit) : null;
   return opts;
 }
 
@@ -116,6 +125,8 @@ function usage() {
     'Options:',
     '  --live                         Also run focused live PlanetTerp verification',
     '  --live-all                     Run live verification for every generated major',
+    '  --live-catalog-sweep           Live-check every unique generated required course once',
+    '  --live-catalog-limit N         Limit catalog sweep to N seeded unique courses',
     '  --live-majors A,B,C            Live-verify selected generated majors',
     '  --live-count N                 Live-verify N random generated majors',
     '  --live-seed SEED               Seed for live verification',
@@ -169,6 +180,8 @@ function publicOptions(opts) {
     renderedViewports: opts.renderedViewports,
     live: opts.live,
     liveAll: opts.liveAll,
+    liveCatalogSweep: opts.liveCatalogSweep,
+    liveCatalogLimit: opts.liveCatalogLimit,
     liveMajors: opts.liveMajors,
     liveCount: opts.liveCount,
     liveSeed: opts.liveSeed,
@@ -337,6 +350,14 @@ async function runReleaseChecks(opts, report) {
   } else {
     skipStage(report, 'live', 'live PlanetTerp generated schedule verifier', 'Pass --live, --live-majors, --live-count, or --live-all to include it.');
     reportLog(report, '\n[release] Live PlanetTerp verifier skipped. Pass --live, --live-majors, --live-count, or --live-all to include it.');
+  }
+  if (opts.liveCatalogSweep) {
+    const args = ['scripts/verify-random-schedules.js', '--catalog-sweep', `--seed=${opts.liveSeed}`];
+    if (opts.liveCatalogLimit) args.push(`--catalog-limit=${opts.liveCatalogLimit}`);
+    await runStage(report, 'live-catalog', 'live generated required-course catalog sweep', stage => runCommand(stage, 'live generated required-course catalog sweep', args, report));
+  } else {
+    skipStage(report, 'live-catalog', 'live generated required-course catalog sweep', 'Pass --live-catalog-sweep to include it.');
+    reportLog(report, '\n[release] Live generated course catalog sweep skipped. Pass --live-catalog-sweep to include it.');
   }
 }
 

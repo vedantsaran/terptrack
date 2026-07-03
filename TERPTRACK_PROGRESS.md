@@ -10598,3 +10598,75 @@ Next pass candidates:
 - Harden the rendered generated-plan verifier against a single transient live-course replacement miss by rechecking the affected major before failing, while still failing real metadata drift.
 - Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
 - Add a broader live title-drift sweep for all generated required courses now that random verification has caught multiple 2026 catalog title changes.
+
+## 2026-07-03 Pass 187
+
+Focus: add a fast all-generated-course live catalog sweep so TerpTrack can prove every unique generated-major required course exists in app live metadata and PlanetTerp without rerunning every full schedule.
+
+Planned changes:
+- Add a de-duplicated live catalog sweep mode to the random schedule verifier.
+- Check every unique generated-major required course once against app live metadata and PlanetTerp.
+- Fail missing app metadata, missing PlanetTerp records, and credit mismatches.
+- Treat PlanetTerp title lag as advisory when app/UMD metadata appears newer, because Testudo and the UMD catalog can update titles before PlanetTerp does.
+- Add a release-runner flag for the new sweep and preserve JSON release-report coverage.
+- Run the full catalog sweep, random live schedules, release checks, and whitespace checks.
+
+Completed:
+- Updated `scripts/verify-random-schedules.js`.
+  - Added `--catalog-sweep`.
+  - Added optional `--catalog-limit=N` for seeded smoke samples.
+  - Added shared generated-major and generated requirement-row helpers.
+  - Added a bounded-concurrency PlanetTerp check for unique generated required courses.
+  - Added app live metadata fetching through `fetchCoursesBatch()`.
+  - The sweep now reports total unique course count, generated major count, requirement-row count, matched records, advisory PlanetTerp title drifts, and the most reused generated requirements.
+  - It fails on missing app live metadata, missing PlanetTerp courses, and app/PlanetTerp credit mismatches.
+- Updated `scripts/run-release-checks.js`.
+  - Added `--live-catalog-sweep`.
+  - Added `--live-catalog-limit=N`.
+  - Added a separate `live-catalog` release stage.
+  - JSON reports now include `liveCatalogSweep` and `liveCatalogLimit` options.
+- Updated `scripts/test-generated-plans.js`.
+  - Extended the release JSON fixture to assert the new `live-catalog` stage is present and skipped when not requested.
+
+Major-gap notes:
+- The new sweep covers a different risk than random schedules: it proves the entire generated-major course catalog is not using missing or credit-wrong required course IDs.
+- The full sweep found 23 advisory PlanetTerp title drifts where the app/UMD metadata appears newer than PlanetTerp. Examples include `BMGT 301`, `AMST 205`, `ANTH 415`, `ARTT 428`, and several ENAE title updates.
+- Verified `BMGT 301` against current official UMD sources after the smoke sweep flagged a title mismatch: Testudo Fall 2026 and the UMD undergraduate course catalog list `Information Systems, AI, and Digital Transformation`, while PlanetTerp still lists `Introduction to Information Systems`.
+- Remaining title-drift work should distinguish official UMD title updates from app-side stale metadata; PlanetTerp is still valuable for existence and credit grounding but can lag titles.
+
+Verification:
+- Ran `node --check scripts/verify-random-schedules.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --catalog-limit=40 --seed=pass187-catalog-sweep-smoke`.
+  - It passed `40/40` seeded unique generated required courses.
+  - It noted one advisory PlanetTerp title drift for `BMGT 301`.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --seed=pass187-catalog-sweep`.
+  - It checked `574/574` unique generated required courses across `50` generated majors and `843` generated requirement rows.
+  - It matched `574/574` unique courses against app live metadata and PlanetTerp for presence and credits.
+  - It noted `23` advisory PlanetTerp title drifts where app/UMD metadata may be newer.
+  - The most reused generated requirements were `MATH 140`, `MATH 141`, `CHEM 131`, `STAT 100`, `CHEM 132`, `MATH 240`, `MATH 246`, and `PHYS 161`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the updated `RELEASE-JSON` fixture with the new `live-catalog` stage.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-limit=40 --live-seed=pass187-release-catalog-smoke`.
+  - It passed the release-runner `live-catalog` stage with a seeded 40-course sample.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass187-catalog-sweep-random`.
+  - It randomly verified `MATH`, `ARTH`, `JOUR`, `CHEM`, `SOCY`, `PHSC`, `AMST`, `NEUR`, `CINE`, `BCHM`, `ENCE`, and `STAT` against PlanetTerp.
+  - Every generated required course reported a matching live title/credit pair.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the new release JSON stage.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+  - Live schedule verification and live catalog sweep were skipped by the default release runner unless their explicit flags are passed.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add the full catalog-sweep result to the in-app release checklist so users can see the stronger unique-course grounding gate.
+- Harden the rendered generated-plan verifier against a single transient live-course replacement miss by rechecking the affected major before failing, while still failing real metadata drift.
+- Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.

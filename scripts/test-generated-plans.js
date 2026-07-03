@@ -3685,6 +3685,7 @@ function testReleaseJsonReport() {
   assert(stageStatus.rendered === 'skipped', 'release report: rendered stage should be represented as skipped');
   assert(stageStatus.workflows === 'skipped', 'release report: workflows stage should be represented as skipped');
   assert(stageStatus.live === 'skipped', 'release report: live stage should be represented as skipped when not requested');
+  assert(stageStatus['live-catalog'] === 'skipped', 'release report: live catalog sweep stage should be represented as skipped when not requested');
   const proxyStage = (report.stages || []).find(stage => stage.id === 'proxy');
   assert(proxyStage?.commands?.[0]?.status === 'passed', 'release report: proxy command should be represented as passed');
   assert(/UMD proxy offline fixtures passed/.test(proxyStage?.commands?.[0]?.stdout || ''), 'release report: proxy stdout should be captured in JSON mode');
