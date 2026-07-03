@@ -88,7 +88,7 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 3, 2026',
-  seed: 'pass187-catalog-sweep',
+  seed: 'pass191-refresh-helper-full',
   source: 'app live metadata + PlanetTerp',
   uniqueCourses: 574,
   generatedMajors: 50,
@@ -103,7 +103,7 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
   testudoTermTitleChecks: 1,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass190-testudo-title-full',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass191-refresh-helper-full --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',

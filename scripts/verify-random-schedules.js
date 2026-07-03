@@ -32,6 +32,9 @@ function parseArgs(argv) {
     skipOfficialTitleCheck: false,
     skipTestudoTitleCheck: false,
     testudoTerms: DEFAULT_TESTUDO_TITLE_TERMS.slice(),
+    writeSettingsSnapshot: false,
+    bumpSettingsAsset: true,
+    snapshotDate: '',
     keepGoing: false,
     majors: [],
   };
@@ -53,6 +56,14 @@ function parseArgs(argv) {
       opts.testudoTerms = String(argv[++i] || '').split(',');
     } else if (arg.startsWith('--testudo-terms=')) {
       opts.testudoTerms = arg.slice('--testudo-terms='.length).split(',');
+    } else if (arg === '--write-settings-snapshot') {
+      opts.writeSettingsSnapshot = true;
+    } else if (arg === '--no-bump-settings-asset') {
+      opts.bumpSettingsAsset = false;
+    } else if (arg === '--snapshot-date') {
+      opts.snapshotDate = argv[++i] || '';
+    } else if (arg.startsWith('--snapshot-date=')) {
+      opts.snapshotDate = arg.slice('--snapshot-date='.length);
     } else if (arg === '--keep-going') {
       opts.keepGoing = true;
     } else if (arg === '--major') {
@@ -82,6 +93,7 @@ function parseArgs(argv) {
   opts.majors = Array.from(new Set(opts.majors.map(item => String(item || '').trim().toUpperCase()).filter(Boolean)));
   opts.testudoTerms = Array.from(new Set(opts.testudoTerms.map(item => String(item || '').trim()).filter(Boolean)));
   if (!opts.testudoTerms.length) opts.testudoTerms = DEFAULT_TESTUDO_TITLE_TERMS.slice();
+  opts.snapshotDate = String(opts.snapshotDate || '').trim();
   return opts;
 }
 
@@ -115,6 +127,107 @@ function shuffle(list, rand) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function currentDateLabel() {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date());
+}
+
+function jsStringLiteral(value) {
+  return `'${String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+}
+
+function catalogSweepCommand(summary) {
+  const args = [
+    'node scripts/verify-random-schedules.js',
+    '--catalog-sweep',
+    `--seed=${summary.seed}`,
+  ];
+  if (summary.testudoTerms) args.push(`--testudo-terms=${summary.testudoTerms}`);
+  return args.join(' ');
+}
+
+function formatCatalogSweepSettingsBlock(summary) {
+  const normalized = {
+    checkedAt: summary.checkedAt,
+    seed: summary.seed,
+    source: summary.source || 'app live metadata + PlanetTerp',
+    uniqueCourses: Number(summary.uniqueCourses) || 0,
+    generatedMajors: Number(summary.generatedMajors) || 0,
+    requirementRows: Number(summary.requirementRows) || 0,
+    matchedCourses: Number(summary.matchedCourses) || 0,
+    missingCourses: Number(summary.missingCourses) || 0,
+    creditMismatches: Number(summary.creditMismatches) || 0,
+    titleDrifts: Number(summary.titleDrifts) || 0,
+    officialTitleChecks: Number(summary.officialTitleChecks) || 0,
+    officialTitleMismatches: Number(summary.officialTitleMismatches) || 0,
+    testudoTermTitleCandidates: Number(summary.testudoTermTitleCandidates) || 0,
+    testudoTermTitleChecks: Number(summary.testudoTermTitleChecks) || 0,
+    testudoTermTitleMismatches: Number(summary.testudoTermTitleMismatches) || 0,
+    testudoTerms: summary.testudoTerms || '',
+    command: summary.command || catalogSweepCommand(summary),
+  };
+  return [
+    'const GENERATED_CATALOG_SWEEP = Object.freeze({',
+    `  checkedAt: ${jsStringLiteral(normalized.checkedAt)},`,
+    `  seed: ${jsStringLiteral(normalized.seed)},`,
+    `  source: ${jsStringLiteral(normalized.source)},`,
+    `  uniqueCourses: ${normalized.uniqueCourses},`,
+    `  generatedMajors: ${normalized.generatedMajors},`,
+    `  requirementRows: ${normalized.requirementRows},`,
+    `  matchedCourses: ${normalized.matchedCourses},`,
+    `  missingCourses: ${normalized.missingCourses},`,
+    `  creditMismatches: ${normalized.creditMismatches},`,
+    `  titleDrifts: ${normalized.titleDrifts},`,
+    `  officialTitleChecks: ${normalized.officialTitleChecks},`,
+    `  officialTitleMismatches: ${normalized.officialTitleMismatches},`,
+    `  testudoTermTitleCandidates: ${normalized.testudoTermTitleCandidates},`,
+    `  testudoTermTitleChecks: ${normalized.testudoTermTitleChecks},`,
+    `  testudoTermTitleMismatches: ${normalized.testudoTermTitleMismatches},`,
+    `  testudoTerms: ${jsStringLiteral(normalized.testudoTerms)},`,
+    `  command: ${jsStringLiteral(normalized.command)},`,
+    '});',
+  ].join('\n');
+}
+
+function replaceCatalogSweepSettingsBlock(source, summary) {
+  const nextBlock = formatCatalogSweepSettingsBlock(summary);
+  const pattern = /const GENERATED_CATALOG_SWEEP = Object\.freeze\(\{\n[\s\S]*?\n\}\);/;
+  if (!pattern.test(source)) fail('Could not find GENERATED_CATALOG_SWEEP block in js/settings.js.');
+  return source.replace(pattern, nextBlock);
+}
+
+function bumpSettingsAssetVersion() {
+  const indexPath = path.join(ROOT, 'index.html');
+  const verifierPath = path.join(ROOT, 'scripts/verify-rendered-generated-plans.js');
+  const indexSource = fs.readFileSync(indexPath, 'utf8');
+  const match = indexSource.match(/js\/settings\.js\?v=(\d+)/);
+  if (!match) fail('Could not find js/settings.js asset version in index.html.');
+  const current = Number(match[1]);
+  const next = current + 1;
+  const replaceVersion = source => source.replace(
+    new RegExp(`js/settings\\.js\\?v=${current}`, 'g'),
+    `js/settings.js?v=${next}`,
+  );
+  fs.writeFileSync(indexPath, replaceVersion(indexSource));
+  fs.writeFileSync(verifierPath, replaceVersion(fs.readFileSync(verifierPath, 'utf8')));
+  return { current, next };
+}
+
+function writeCatalogSweepSettingsSnapshot(summary, opts) {
+  if (opts.catalogLimit) fail('Refusing to write Settings snapshot from a limited catalog sweep. Run without --catalog-limit.');
+  const settingsPath = path.join(ROOT, 'js/settings.js');
+  const before = fs.readFileSync(settingsPath, 'utf8');
+  const after = replaceCatalogSweepSettingsBlock(before, summary);
+  const changed = before !== after;
+  if (changed) fs.writeFileSync(settingsPath, after);
+  const asset = opts.bumpSettingsAsset ? bumpSettingsAssetVersion() : null;
+  return { changed, asset };
 }
 
 function buildContext() {
@@ -836,6 +949,26 @@ async function verifyCatalogSweep(context, opts) {
     console.log('Testudo term-title check found no official base-title drifts requiring term-specific confirmation.');
   }
   console.log(`Most reused generated requirements: ${reused || 'none'}.`);
+  const summary = {
+    checkedAt: opts.snapshotDate || currentDateLabel(),
+    seed: opts.seed,
+    source: 'app live metadata + PlanetTerp',
+    uniqueCourses: totalEntries,
+    generatedMajors: majors.length,
+    requirementRows: rows.length,
+    matchedCourses: coverageRows.length,
+    missingCourses: appMissing.length + planetMissing.length,
+    creditMismatches: mismatches.length,
+    titleDrifts: titleDrifts.length,
+    officialTitleChecks: officialResolved.length,
+    officialTitleMismatches: officialMismatches.length,
+    testudoTermTitleCandidates: testudoCandidates.length,
+    testudoTermTitleChecks: testudoResolved.length,
+    testudoTermTitleMismatches: testudoMismatches.length,
+    testudoTerms: opts.testudoTerms.join(','),
+  };
+  summary.command = catalogSweepCommand(summary);
+  return summary;
 }
 
 async function main() {
@@ -843,7 +976,12 @@ async function main() {
   const rand = mulberry32(hashSeed(opts.seed));
   const context = buildContext();
   if (opts.catalogSweep) {
-    await verifyCatalogSweep(context, opts);
+    const summary = await verifyCatalogSweep(context, opts);
+    if (opts.writeSettingsSnapshot) {
+      const write = writeCatalogSweepSettingsSnapshot(summary, opts);
+      console.log(`Settings catalog sweep snapshot ${write.changed ? 'updated' : 'already current'} in js/settings.js.`);
+      if (write.asset) console.log(`Bumped js/settings.js asset version from v${write.asset.current} to v${write.asset.next}.`);
+    }
     return;
   }
   const majors = generatedMajors(context);
@@ -882,9 +1020,11 @@ if (require.main === module) {
     decodeHtmlEntities,
     extractOfficialCatalogCourse,
     extractTestudoCourse,
+    formatCatalogSweepSettingsBlock,
     htmlToText,
     officialCreditsCompatible,
     parseOfficialCreditText,
+    replaceCatalogSweepSettingsBlock,
     titleNeedsTermSpecificCheck,
     titlesCompatible,
   };

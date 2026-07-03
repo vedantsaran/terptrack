@@ -10904,3 +10904,76 @@ Next pass candidates:
 - Add a one-click Settings or release helper that refreshes the stored catalog sweep snapshot after maintainers run a full live sweep.
 - Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
 - Add a Testudo term-title release option for maintainers to run the full sweep against a newly posted term as UMD publishes future schedules.
+
+## 2026-07-03 Pass 191
+
+Focus: make the generated catalog sweep snapshot refreshable from the verified full live sweep instead of hand-editing Settings evidence after each run.
+
+Planned changes:
+- Add a guarded catalog-sweep writer that updates `GENERATED_CATALOG_SWEEP` only after a full live sweep passes.
+- Refuse snapshot writes from limited catalog-smoke samples.
+- Bump the `settings.js` cache tag and rendered verifier assertion automatically when the snapshot is refreshed.
+- Add offline fixture coverage for the snapshot formatter/replacer.
+- Run the writer on a full live sweep, then rerun generated fixtures, rendered checks, random live schedules, release checks, and whitespace checks.
+
+Completed:
+- Updated `scripts/verify-random-schedules.js`.
+  - Added `--write-settings-snapshot`.
+  - Added `--no-bump-settings-asset` for diagnostics.
+  - Added `--snapshot-date=...` so release evidence can be recorded with the intended date.
+  - Added `formatCatalogSweepSettingsBlock()` and `replaceCatalogSweepSettingsBlock()`.
+  - Added a guard that refuses to write the Settings snapshot when `--catalog-limit` is present.
+  - Added automatic asset bumping for `index.html` and `scripts/verify-rendered-generated-plans.js` when the snapshot writer runs.
+  - `verifyCatalogSweep()` now returns a summary object with presence, credit, official title, and Testudo term-title counts.
+- Updated `scripts/test-generated-plans.js`.
+  - Extended the official catalog parser fixture to cover Settings snapshot formatting and replacement.
+- Ran the new writer:
+  - `node scripts/verify-random-schedules.js --catalog-sweep --seed=pass191-refresh-helper-full --testudo-terms=202608 --snapshot-date="July 3, 2026" --write-settings-snapshot`
+  - It matched `574/574` unique generated required courses.
+  - It confirmed `23/23` PlanetTerp title drifts against official UMD catalog evidence.
+  - It confirmed `1/1` official base-title drift in Testudo Fall 2026: `ARTT 428 202608 "Advanced Painting Studio; Painting"`.
+  - It updated `js/settings.js`.
+  - It bumped `js/settings.js` from `v=33` to `v=34`.
+- Updated `js/settings.js`, `index.html`, and `scripts/verify-rendered-generated-plans.js` through the writer.
+  - The Settings snapshot now records `pass191-refresh-helper-full`.
+  - The stored command now includes `--testudo-terms=202608`.
+
+Major-gap notes:
+- Maintainers now have a concrete refresh path for the in-app release readiness evidence:
+  `node scripts/verify-random-schedules.js --catalog-sweep --seed=<seed> --testudo-terms=<term> --snapshot-date="<date>" --write-settings-snapshot`
+- This reduces the chance that the Settings readiness card drifts away from the actual live verifier output.
+- The helper still intentionally requires a full live sweep; limited smoke samples remain useful for quick checks but cannot update the shipped evidence snapshot.
+
+Verification:
+- Ran `node --check scripts/verify-random-schedules.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed the new snapshot formatter/replacer assertions.
+  - It passed the release checklist assertions for `574/574` generated required courses, `23/23` official UMD title confirmations, and `1/1` Testudo term-specific title confirmation.
+  - It continued to pass generated-plan fixtures, prerequisite chain, prerequisite resolver state, normalized bulk state, auto-plan diagnostics, initial-plan resolver, all generated requirement groups, catalog-year targeting, account/share state, account setup, release JSON, canonical titles, schedule timing, registration readiness, calendar export readiness, readiness map undo, schedule action undo, schedule bounded solver, schedule chips, schedule term guards, schedule calendar conflict guard, schedule ready backups, cleanup, recommendation, planner, Browse, audit, onboarding, and settings prior-credit tests.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --seed=pass191-refresh-helper-full --testudo-terms=202608 --snapshot-date="July 3, 2026" --write-settings-snapshot`.
+  - It passed the full live catalog sweep and refreshed the Settings snapshot.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=PHYS --viewports=mobile`.
+  - It passed `PHYS [mobile]` with `20/20 live course records`.
+  - It verified the rendered app loaded `js/settings.js?v=34`.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass191-refresh-helper-random`.
+  - It randomly verified `MARKETING`, `ANSC`, `AMST`, `LING`, `WMST`, `FMSC`, `ENST`, `HESP`, `SOCY`, `GEOG`, `STAT`, and `MGMT` against PlanetTerp.
+  - Every sampled generated required course reported matching live title/credit pairs.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 43 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with the snapshot formatter coverage.
+  - It passed the generated-plan rendered desktop matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed the generated-plan rendered mobile matrix for `PHYS`, `ARTT`, `PLSC`, `KNES`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+  - Live schedule verification and live catalog sweep were skipped by the default release runner unless their explicit flags are passed.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a live-project Supabase verification path when a project id and credentials are available, including advisors after schema application.
+- Add a Testudo term-title release option to `scripts/run-release-checks.js` so maintainers can pass future posted terms through the release wrapper.
+- Add a small Settings maintenance note that shows the exact snapshot refresh command for maintainers without exposing it as student-facing UI clutter.

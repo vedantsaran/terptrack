@@ -3724,8 +3724,10 @@ function testOfficialCatalogTitleParser() {
   const {
     extractOfficialCatalogCourse,
     extractTestudoCourse,
+    formatCatalogSweepSettingsBlock,
     officialCreditsCompatible,
     titleNeedsTermSpecificCheck,
+    replaceCatalogSweepSettingsBlock,
     titlesCompatible,
   } = require('./verify-random-schedules.js');
   const html = `
@@ -3758,6 +3760,31 @@ function testOfficialCatalogTitleParser() {
   assert(variable?.credits?.min === 1 && variable?.credits?.max === 3, 'official catalog parser: should extract variable credit range');
   assert(officialCreditsCompatible(variable.credits, 2) && !officialCreditsCompatible(variable.credits, 4), 'official catalog parser: should enforce variable credit range');
   assert(testudo?.title === 'Advanced Painting Studio; Painting' && testudo?.credits?.exact === 3, 'official catalog parser: should extract Testudo term title and credits');
+  const snapshotBlock = formatCatalogSweepSettingsBlock({
+    checkedAt: 'July 3, 2026',
+    seed: 'fixture-sweep',
+    source: 'app live metadata + PlanetTerp',
+    uniqueCourses: 574,
+    generatedMajors: 50,
+    requirementRows: 843,
+    matchedCourses: 574,
+    missingCourses: 0,
+    creditMismatches: 0,
+    titleDrifts: 23,
+    officialTitleChecks: 23,
+    officialTitleMismatches: 0,
+    testudoTermTitleCandidates: 1,
+    testudoTermTitleChecks: 1,
+    testudoTermTitleMismatches: 0,
+    testudoTerms: '202608',
+  });
+  assert(/fixture-sweep/.test(snapshotBlock) && /testudoTermTitleChecks: 1/.test(snapshotBlock), 'official catalog parser: should format catalog sweep Settings snapshot');
+  const replaced = replaceCatalogSweepSettingsBlock(`before
+const GENERATED_CATALOG_SWEEP = Object.freeze({
+  seed: 'old',
+});
+after`, { seed: 'fixture-sweep', checkedAt: 'July 3, 2026' });
+  assert(/before/.test(replaced) && /fixture-sweep/.test(replaced) && /after/.test(replaced), 'official catalog parser: should replace catalog sweep Settings snapshot block');
   return {
     id: 'OFFICIAL-CATALOG-TITLES',
     bmgt301: bmgt.title,
