@@ -11896,3 +11896,95 @@ Next pass candidates:
 - Continue converting remaining generated engineering/STEM programs into curated schedules, with Electrical Engineering, Materials Science & Engineering, Fire Protection Engineering, Aerospace Engineering, Civil Engineering, and Bioengineering as likely candidates.
 - Add a maintainer-facing stale-course detector that flags generated codes missing from PlanetTerp or official catalog pages before a release sweep.
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+
+## Pass 203 - Curated electrical, materials, and fire engineering schedules
+
+Focus: convert three more engineering majors from generated drafts into fixed, catalog-backed schedules and refresh release evidence after shrinking the generated pool.
+
+Completed:
+- Added `SCHEDULE_ENMA`, a 124-credit Materials Science & Engineering BS default plan.
+  - It sequences the current catalog ENMA core from first-year materials through senior capstone: `ENMA 165`, `ENMA 180`, `ENMA 300`, `ENMA 301`, `ENMA 312`, `ENMA 441`, `ENMA 460`, `ENMA 461`, `ENMA 465`, `ENMA 470`, `ENMA 471`, `ENMA 487`, and `ENMA 490`.
+  - It keeps current chemistry, math, physics, and engineering support rows in the plan and uses live-supported ENMA technical electives instead of stale or missing rows.
+  - The plan is exactly `124/124` credits, maxes at `18` credits in a term, completes `13/13` GenEd requirements, has `35` real courses, and places the goal in `Fall 2029`.
+- Added `SCHEDULE_ENFP`, a 120-credit Fire Protection Engineering BS default plan.
+  - It sequences the current ENFP core through fire dynamics, detection, suppression, egress, risk, design, and senior design: `ENFP 201`, `ENFP 250`, `ENFP 300`, `ENFP 310`, `ENFP 312`, `ENFP 350`, `ENFP 405`, `ENFP 410`, `ENFP 411`, `ENFP 413`, `ENFP 415`, `ENFP 420`, `ENFP 425`, `ENFP 426`, and `ENFP 440`.
+  - It includes current engineering support rows and live-supported technical electives including `STAT 400`, `ENFP 461`, `ENFP 489I`, and `ENME 400`.
+  - The plan is exactly `120/120` credits, maxes at `18` credits, completes `13/13` GenEd requirements, has `35` real courses, and places the goal in `Fall 2029`.
+- Added `SCHEDULE_ENEE`, a 122-credit Electrical Engineering BS default plan.
+  - It follows the current catalog sample structure from `ENEE 101`, `ENEE 140`, and `ENEE 150` through circuits, signals, electronics, electromagnetics, laboratories, and senior EE electives.
+  - It uses live-supported senior rows such as `ENEE 436`, `ENEE 411`, `ENEE 445`, `ENEE 475`, `ENEE 408A`, `ENEE 420`, `ENEE 459B`, and `ENEE 428`.
+  - The plan is exactly `122/122` credits, maxes at `17` credits, completes `13/13` GenEd requirements, has `37` real courses, and places the goal in `Spring 2030`.
+- Updated `js/majors.js`.
+  - Wired `ENMA`, `ENFP`, and `ENEE` to fixed curated schedules.
+  - Replaced their generated requirement rows with current catalog-backed rows and stable live goal courses.
+  - Kept the official credit targets at `ENMA 124`, `ENFP 120`, and `ENEE 122`.
+- Updated Settings/release evidence.
+  - Generated-template audit now uses `pass203-curated-engineering-all`.
+  - Generated pool is now `19` generated majors, `386` generated requirement rows, and `232` unique generated required courses.
+  - Catalog sweep now records `232/232` matched generated required courses, `8/8` official UMD catalog title-drift confirmations, and `0/0` Testudo title-suffix candidates for `202608`.
+  - `js/majors.js` asset version bumped from `v=11` to `v=12`.
+  - `js/settings.js` asset version bumped from `v=45` to `v=46` after the live catalog snapshot writer refreshed Settings evidence.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks `31` curated schedules, adding `ENMA`, `ENFP`, and `ENEE`.
+  - Generated fixture coverage now uses `ENAE`, `BIOE`, `ENCE`, `CHEM`, `AOSC`, and `STAT`.
+  - Default rendered/release generated matrix now uses `PHYS`, `GEOL`, `BIOE`, `CHEM`, `ENAE`, and `ENCE`.
+  - `scripts/verify-rendered-generated-plans.js` now has curated rendered card checks for `ENMA 490`, `ENMA 441`, `ENFP 440`, `ENFP 420`, `ENEE 408A`, and `ENEE 436`.
+
+Major-gap notes:
+- Materials Science & Engineering, Fire Protection Engineering, and Electrical Engineering now open with curated fixed plans instead of generated drafts.
+- The remaining generated pool is now `19` majors: `ACCOUNTING`, `AOSC`, `ARCH`, `ASTR`, `BCHM`, `BIOE`, `CHEM`, `EDUC`, `ENAE`, `ENCE`, `GEOL`, `IS`, `MARKETING`, `MATH`, `MGMT`, `NEUR`, `PHYS`, `SCM`, and `STAT`.
+- `README.md` was not modified or staged.
+
+Verification:
+- Checked the official UMD 2026-2027 catalog pages for Materials Science & Engineering, Fire Protection Engineering, and Electrical Engineering before editing.
+  - Materials Science & Engineering: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/engineering/materials-science-engineering/materials-science-engineering-major/`
+  - Fire Protection Engineering: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/engineering/fire-protection-engineering/fire-protection-engineering-major/`
+  - Electrical Engineering: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/engineering/electrical-and-computer/electrical-engineering-major/`
+- Queried live PlanetTerp course metadata before placing rows.
+  - Confirmed current ENMA rows including `ENMA 165`, `ENMA 180`, `ENMA 300`, `ENMA 301`, `ENMA 312`, `ENMA 441`, `ENMA 460`, `ENMA 461`, `ENMA 465`, `ENMA 470`, `ENMA 471`, `ENMA 487`, `ENMA 490`, `ENMA 425`, `ENMA 430`, and `ENMA 482`.
+  - Confirmed current ENFP rows including `ENFP 201`, `ENFP 250`, `ENFP 300`, `ENFP 310`, `ENFP 312`, `ENFP 350`, `ENFP 405`, `ENFP 410`, `ENFP 411`, `ENFP 413`, `ENFP 415`, `ENFP 420`, `ENFP 425`, `ENFP 426`, `ENFP 440`, `ENFP 461`, and `ENFP 489I`.
+  - Confirmed current ENEE rows including `ENEE 101`, `ENEE 140`, `ENEE 150`, `ENEE 290`, `ENEE 244`, `ENEE 205`, `ENEE 222`, `ENEE 245`, `ENEE 304`, `ENEE 323`, `ENEE 350`, `ENEE 200`, `ENEE 305`, `ENEE 324`, `ENEE 382`, `ENEE 436`, `ENEE 411`, `ENEE 445`, `ENEE 475`, `ENEE 408A`, `ENEE 420`, `ENEE 459B`, and `ENEE 428`.
+  - Avoided missing `ENMA 457` after PlanetTerp returned no course record.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran a direct preview-builder check for `ENMA`, `ENFP`, and `ENEE`.
+  - `ENMA`: curated `124/124`, loads `15,16,17,17,18,18,13,10`, `13/13` GenEd, `35` real courses, no duplicate real rows.
+  - `ENFP`: curated `120/120`, loads `16,16,17,18,16,13,15,9`, `13/13` GenEd, `35` real courses, no duplicate real rows.
+  - `ENEE`: curated `122/122`, loads `15,16,15,17,16,15,14,14`, `13/13` GenEd, `37` real courses, no duplicate real rows.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 6, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass203-curated-engineering-catalog`.
+  - It matched `232/232` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `8/8` PlanetTerp title drifts against official UMD catalog titles.
+  - It found `0/0` Testudo term-specific title candidates for `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v46`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed 6 generated fixtures and 31 curated schedule fixtures.
+  - It reported `ENMA 124/124`, max `18` credits, `13/13` GenEd coverage, `35` real courses, goal term `Fall 2029`.
+  - It reported `ENFP 120/120`, max `18` credits, `13/13` GenEd coverage, `35` real courses, goal term `Fall 2029`.
+  - It reported `ENEE 122/122`, max `17` credits, `13/13` GenEd coverage, `37` real courses, goal term `Spring 2030`.
+  - It passed all generated requirement groups with `19` majors and `386` grouped requirements.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=ENMA,ENFP,ENEE --viewports=all`.
+  - Desktop and mobile both rendered the new curated plans with clean proxy-backed console output.
+  - Rendered cards included `ENMA490:3cr`, `ENMA441:3cr`, `ENFP440:3cr`, `ENFP420:4cr`, `ENEE408A:3cr`, and `ENEE436:3cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass203-curated-engineering-all`.
+  - It verified all `19/19` remaining generated schedules against PlanetTerp.
+  - Every generated required course reported matching live title/credit pairs.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with 31 curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `GEOL`, `BIOE`, `CHEM`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `GEOL`, `BIOE`, `CHEM`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass203-curated-engineering-random`.
+  - It randomly verified `ENCE`, `ARCH`, `MATH`, `MGMT`, `ACCOUNTING`, `BIOE`, `SCM`, `GEOL`, `ENAE`, `BCHM`, `NEUR`, and `STAT` against PlanetTerp.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`; it passed.
+
+Next pass candidates:
+- Continue converting remaining generated engineering/STEM programs into curated schedules, with Aerospace Engineering, Civil Engineering, and Bioengineering as likely high-impact next candidates.
+- Add a maintainer-facing stale-course detector that flags generated codes missing from PlanetTerp or official catalog pages before a release sweep.
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.

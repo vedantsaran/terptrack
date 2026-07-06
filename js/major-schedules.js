@@ -2205,6 +2205,197 @@ const SCHEDULE_ENCH = [
 ];
 
 // ============================================================
+// ENMA - Materials Science & Engineering (BS, 124 cr)
+// ============================================================
+const SCHEDULE_ENMA = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('CHEM 136', 'General Chemistry Laboratory for Engineers', 1, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENES 100', 'Introduction to Engineering Design', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('ENMA 180', 'Materials Science and Engineering: The Field and the Future', 1, { category: 'major-core' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ENMA 165', 'Introduction to Programming with Python', 3, { category: 'major-core' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 260', 'General Physics: Electricity, Magnetism and Thermodynamics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENMA 300', 'Introduction to Materials Engineering', 3, { category: 'major-core' }),
+    _c('ENES 200', 'Technology and Consequences: Engineering, Ethics and Humanity', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('MATH 246', 'Differential Equations for Scientists and Engineers', 3, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 270', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 271', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics (Laboratory)', 1, { coreqs: ['PHYS 270'], category: 'major-support' }),
+    _c('ENMA 301', 'Modern Materials Engineering', 3, { prereqs: ['ENMA 300'], category: 'major-core' }),
+    _c('CHEM 231', 'Organic Chemistry I', 3, { prereqs: ['CHEM 135'], category: 'major-support' }),
+    _c('CHEM 232', 'Organic Chemistry Laboratory I', 1, { coreqs: ['CHEM 231'], category: 'major-support' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ENMA 312', 'Experimental Methods in Materials Science', 3, { prereqs: ['ENMA 301'], category: 'major-core' }),
+    _c('ENMA 460', 'Introduction to Solid State Physics', 3, { prereqs: ['PHYS 270'], category: 'major-core' }),
+    _c('ENMA 461', 'Thermodynamics of Materials', 3, { prereqs: ['ENMA 300'], category: 'major-core' }),
+    _c('ENMA 465', 'Microprocessing Materials', 3, { prereqs: ['ENMA 300'], category: 'major-core' }),
+    _c('ENMA 470', 'Materials Selection for Engineering Design', 3, { prereqs: ['ENMA 300'], category: 'major-core' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ENMA 471', 'Kinetics, Diffusion and Phase Transformations', 3, { prereqs: ['ENMA 461'], category: 'major-core' }),
+    _c('ENMA 441', 'Characterization of Materials', 3, { prereqs: ['ENMA 312'], category: 'major-core' }),
+    _c('CHEM 481', 'Physical Chemistry I', 3, { prereqs: ['CHEM 231'], category: 'major-support' }),
+    _c('ENMA 482', 'Introduction to Electron Microscopy', 3, { prereqs: ['ENMA 312'], category: 'major-upper' }),
+    _c('ENMA 430', 'Nanosized Materials', 3, { prereqs: ['ENMA 300'], category: 'major-upper' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ENMA 487', 'Capstone Preparation', 1, { prereqs: ['ENMA 470'], category: 'major-core' }),
+    _c('ENMA 490', 'Materials Design', 3, { prereqs: ['ENMA 487'], category: 'major-core', isGoal: true }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('ENMA 425', 'Introduction to Biomaterials', 3, { prereqs: ['ENMA 300'], category: 'major-upper' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ENFP - Fire Protection Engineering (BS, 120 cr)
+// ============================================================
+const SCHEDULE_ENFP = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENES 100', 'Introduction to Engineering Design', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('ENFP 250', 'Introduction to Life Safety Analysis', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('ENES 102', 'Mechanics I', 3, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('ENFP 201', 'Numerical Methods with MatLab', 3, { prereqs: ['MATH 140'], category: 'major-core' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 260', 'General Physics: Electricity, Magnetism and Thermodynamics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENES 220', 'Mechanics II', 3, { prereqs: ['ENES 102'], category: 'major-support' }),
+    _c('ENFP 300', 'Fire Protection Fluid Mechanics', 3, { prereqs: ['ENES 220'], category: 'major-core' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('MATH 246', 'Differential Equations for Scientists and Engineers', 3, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('ENES 221', 'Dynamics', 3, { prereqs: ['ENES 220'], category: 'major-support' }),
+    _c('ENES 232', 'Thermodynamics', 3, { prereqs: ['MATH 141', 'PHYS 161'], category: 'major-support' }),
+    _c('ENFP 312', 'Heat and Mass Transfer', 3, { prereqs: ['ENES 232'], category: 'major-core' }),
+    _c('ENFP 310', 'Water Based Fire Protection Systems Design', 3, { prereqs: ['ENFP 300'], category: 'major-core' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ENFP 405', 'Structural Fire Protection', 3, { prereqs: ['ENFP 312'], category: 'major-core' }),
+    _c('ENFP 410', 'Special Hazard Suppression Systems', 3, { prereqs: ['ENFP 310'], category: 'major-core' }),
+    _c('ENFP 415', 'Fire Dynamics', 3, { prereqs: ['ENFP 312'], category: 'major-core' }),
+    _c('ENFP 350', 'Professional Development Seminar', 1, { category: 'major-core' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+    _c('DSHS/DSSP Elective', 'Scholarship in Practice Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS DSSP' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ENFP 411', 'Risk-Informed Performance Based Design', 3, { prereqs: ['ENFP 415'], category: 'major-core' }),
+    _c('ENFP 420', 'Fire Assessment Methods and Laboratory', 4, { prereqs: ['ENFP 415'], category: 'major-core' }),
+    _c('ENFP 413', 'Human Response to Fire', 3, { prereqs: ['ENFP 250'], category: 'major-core' }),
+    _c('STAT 400', 'Applied Probability and Statistics I', 3, { prereqs: ['MATH 141'], kind: 'gened', category: 'gened-fsar' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ENFP 425', 'Enclosure Fire Modeling', 3, { prereqs: ['ENFP 415'], category: 'major-core' }),
+    _c('ENFP 426', 'Computational Methods in Fire Protection', 3, { prereqs: ['ENFP 201'], category: 'major-core' }),
+    _c('ENFP 440', 'Smoke Management and Fire Alarm Systems', 3, { prereqs: ['ENFP 310'], category: 'major-core', isGoal: true }),
+    _c('ENFP 461', 'Think Tank', 3, { category: 'major-upper' }),
+    _c('ENFP 489I', 'Special Topics; Industrial Fire Safety', 3, { category: 'major-upper' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('ENME 400', 'Machine Design', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ENEE - Electrical Engineering (BS, 122 cr)
+// ============================================================
+const SCHEDULE_ENEE = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('ENEE 101', 'Introduction to Electrical & Computer Engineering', 3, { category: 'major-core' }),
+    _c('ENEE 140', 'Introduction to Programming Concepts for Engineers', 2, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ENES 100', 'Introduction to Engineering Design', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('ENEE 150', 'Intermediate Programming Concepts for Engineers', 3, { prereqs: ['ENEE 140'], category: 'major-core' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ENEE 290', 'Introduction to Differential Equations and Linear Algebra for Engineers', 4, { prereqs: ['MATH 141'], category: 'major-core' }),
+    _c('ENEE 244', 'Digital Logic Design', 3, { prereqs: ['ENEE 150'], category: 'major-core' }),
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 260', 'General Physics: Electricity, Magnetism and Thermodynamics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], kind: 'gened', category: 'gened-dsnl' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ENEE 205', 'Electric Circuits', 4, { prereqs: ['PHYS 260'], category: 'major-core' }),
+    _c('ENEE 222', 'Elements of Discrete Signal Analysis', 4, { prereqs: ['ENEE 290'], category: 'major-core' }),
+    _c('ENEE 245', 'Digital Circuits and Systems Laboratory', 2, { prereqs: ['ENEE 244'], category: 'major-core' }),
+    _c('PHYS 270', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 271', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics (Laboratory)', 1, { coreqs: ['PHYS 270'], category: 'major-support' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ENEE 304', 'Introduction to Micro and Nanoelectronics', 3, { prereqs: ['ENEE 205'], category: 'major-core' }),
+    _c('ENEE 323', 'Signals and Systems: Theory and Applications', 4, { prereqs: ['ENEE 222'], category: 'major-core' }),
+    _c('ENEE 350', 'Computer Organization', 3, { prereqs: ['ENEE 244'], category: 'major-core' }),
+    _c('STAT 400', 'Applied Probability and Statistics I', 3, { prereqs: ['MATH 141'], kind: 'gened', category: 'gened-fsar' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ENEE 200', 'Technology and Consequences: Engineering, Ethics, and Humanity', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('ENEE 305', 'Introduction to Micro and Nanoelectronics Lab', 2, { coreqs: ['ENEE 304'], category: 'major-core' }),
+    _c('ENEE 324', 'Engineering Probability', 3, { prereqs: ['ENEE 222'], category: 'major-core' }),
+    _c('ENEE 382', 'Electromagnetics', 4, { prereqs: ['PHYS 270'], category: 'major-core' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ENEE 436', 'Foundations of Machine Learning', 3, { prereqs: ['ENEE 324'], category: 'major-upper', isGoal: true }),
+    _c('ENEE 411', 'Advanced Analog and Digital Electronics', 3, { prereqs: ['ENEE 304'], category: 'major-upper' }),
+    _c('ENEE 445', 'Computer Laboratory', 2, { prereqs: ['ENEE 350'], category: 'major-upper' }),
+    _c('ENEE 475', 'Power Electronics', 3, { prereqs: ['ENEE 205'], category: 'major-upper' }),
+    _c('DSHS/DSSP Elective', 'Scholarship in Practice Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS DSSP' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('ENEE 408A', 'Capstone Design Project: Microprocessor-Based Design', 3, { prereqs: ['ENEE 350'], category: 'major-upper', isGoal: true }),
+    _c('ENEE 420', 'Communication Systems', 3, { prereqs: ['ENEE 323'], category: 'major-upper' }),
+    _c('ENEE 459B', 'Reverse Engineering and Hardware Security Laboratory', 3, { prereqs: ['ENEE 350'], category: 'major-upper' }),
+    _c('ENEE 428', 'Communications Design Laboratory', 2, { prereqs: ['ENEE 420'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+];
+
+// ============================================================
 // ANSC - Animal Sciences (BS, Animal Care & Management, 120 cr)
 // ============================================================
 const SCHEDULE_ANSC = [

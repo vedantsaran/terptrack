@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 6, 2026',
-  seed: 'pass202-curated-agnr-all',
+  seed: 'pass203-curated-engineering-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 22,
+  verifiedSchedules: 19,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass202-curated-agnr-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass203-curated-engineering-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 6, 2026',
+    seed: 'pass203-curated-engineering-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 19,
+    generatedCount: 19,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving Electrical Engineering, Materials Science & Engineering, and Fire Protection Engineering to curated current-catalog schedules.',
+  },
   {
     checkedAt: 'July 6, 2026',
     seed: 'pass202-curated-agnr-all',
@@ -164,12 +173,12 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 6, 2026',
-  seed: 'pass202-curated-agnr-catalog',
+  seed: 'pass203-curated-engineering-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 275,
-  generatedMajors: 22,
-  requirementRows: 459,
-  matchedCourses: 275,
+  uniqueCourses: 232,
+  generatedMajors: 19,
+  requirementRows: 386,
+  matchedCourses: 232,
   missingCourses: 0,
   creditMismatches: 0,
   titleDrifts: 8,
@@ -179,7 +188,7 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass202-curated-agnr-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass203-curated-engineering-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -187,7 +196,7 @@ const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   status: 'passed',
   command: 'node scripts/run-release-checks.js',
   liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
-  liveMajors: ['PHYS', 'GEOL', 'ENMA', 'ENFP', 'ENAE', 'ENCE'],
+  liveMajors: ['PHYS', 'GEOL', 'BIOE', 'CHEM', 'ENAE', 'ENCE'],
   defaultChecks: [
     'JS syntax',
     '/api/umd proxy fixture',
