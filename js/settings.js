@@ -45,14 +45,23 @@ let autoPlanReviewSeq = 0;
 let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
-  checkedAt: 'July 3, 2026',
-  seed: 'pass201-curated-public-health-food-earth-all',
+  checkedAt: 'July 6, 2026',
+  seed: 'pass202-curated-agnr-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 25,
+  verifiedSchedules: 22,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass201-curated-public-health-food-earth-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass202-curated-agnr-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 6, 2026',
+    seed: 'pass202-curated-agnr-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 22,
+    generatedCount: 22,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving Animal Sciences, Agricultural & Resource Economics, and Plant Sciences to curated catalog-backed schedules.',
+  },
   {
     checkedAt: 'July 3, 2026',
     seed: 'pass201-curated-public-health-food-earth-all',
@@ -154,13 +163,13 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
   },
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
-  checkedAt: 'July 3, 2026',
-  seed: 'pass201-curated-public-health-food-earth-catalog',
+  checkedAt: 'July 6, 2026',
+  seed: 'pass202-curated-agnr-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 308,
-  generatedMajors: 25,
-  requirementRows: 510,
-  matchedCourses: 308,
+  uniqueCourses: 275,
+  generatedMajors: 22,
+  requirementRows: 459,
+  matchedCourses: 275,
   missingCourses: 0,
   creditMismatches: 0,
   titleDrifts: 8,
@@ -170,7 +179,7 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass201-curated-public-health-food-earth-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass202-curated-agnr-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -178,7 +187,7 @@ const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   status: 'passed',
   command: 'node scripts/run-release-checks.js',
   liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
-  liveMajors: ['PHYS', 'GEOL', 'PLSC', 'ANSC', 'ENAE', 'ENCE'],
+  liveMajors: ['PHYS', 'GEOL', 'ENMA', 'ENFP', 'ENAE', 'ENCE'],
   defaultChecks: [
     'JS syntax',
     '/api/umd proxy fixture',

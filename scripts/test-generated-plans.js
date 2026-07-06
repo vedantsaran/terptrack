@@ -335,6 +335,24 @@ async function testCuratedScheduleFixtures(context) {
       goal: 'CHBE446',
       minRealCourses: 36,
     },
+    {
+      id: 'ANSC',
+      required: ['ANSC101', 'ANSC103', 'ANSC201', 'ANSC314', 'ANSC315', 'ANSC327', 'ANSC401', 'ANSC446', 'ANSC447', 'ANSC359', 'ANSC250', 'ANSC260', 'ANSC282', 'ANSC410', 'ANSC417', 'ANSC453', 'BSCI160', 'BSCI161', 'BSCI170', 'BSCI171', 'BSCI223', 'CHEM131', 'CHEM132', 'CHEM231', 'AREC250', 'AREC306', 'BIOM301', 'MATH113', 'STAT100'],
+      goal: 'ANSC453',
+      minRealCourses: 30,
+    },
+    {
+      id: 'AREC',
+      required: ['ECON200', 'ECON201', 'AREC326', 'AREC380', 'AREC422', 'AREC453', 'AREC456', 'AREC481', 'MATH120', 'STAT100', 'BMGT230', 'GEOG201', 'GVPT273', 'ENST415', 'ENGL101', 'ENGL393', 'COMM107'],
+      goal: 'AREC481',
+      minRealCourses: 18,
+    },
+    {
+      id: 'PLSC',
+      required: ['PLSC110', 'PLSC111', 'ENST200', 'PLSC201', 'PLSC205', 'PLSC389', 'PLSC401', 'PLSC402', 'PLSC420', 'PLSC453', 'BSCI160', 'BSCI161', 'BSCI170', 'BSCI171', 'BSCI337', 'AGST275', 'PHYS121', 'INAG215', 'INAG235', 'MATH115', 'STAT100'],
+      goal: 'PLSC402',
+      minRealCourses: 25,
+    },
   ];
   const rows = [];
 
@@ -1193,12 +1211,12 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
-  assert(result.templateFreshnessSummary.generatedCount === 25, 'auto plan diagnostics: freshness report should count generated templates');
-  assert(result.templateFreshnessSummary.requirementRows === 510, 'auto plan diagnostics: freshness report should count generated requirement rows');
+  assert(result.templateFreshnessSummary.generatedCount === 22, 'auto plan diagnostics: freshness report should count generated templates');
+  assert(result.templateFreshnessSummary.requirementRows === 459, 'auto plan diagnostics: freshness report should count generated requirement rows');
   assert(/Generated Catalog Freshness/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render a title');
-  assert(/25\/25/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
+  assert(/22\/22/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
   assert(/PlanetTerp/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should name the live source');
-  assert(/pass201-curated-public-health-food-earth-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
+  assert(/pass202-curated-agnr-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
   assert(/Official sources/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render official source links');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/programs/'), 'auto plan diagnostics: freshness report should link the UMD catalog program index');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/approved-courses/'), 'auto plan diagnostics: freshness report should link the UMD course catalog');
@@ -1396,7 +1414,7 @@ async function testAllGeneratedRequirementGroups(context) {
       return out;
     })()
   `, context));
-  assert(rows.length >= 25, `all generated requirement groups: expected at least 25 generated majors, saw ${rows.length}`);
+  assert(rows.length >= 22, `all generated requirement groups: expected at least 22 generated majors, saw ${rows.length}`);
   rows.forEach(row => {
     const groupTotal = row.groups.reduce((sum, group) => sum + group.total, 0);
     const groupScheduled = row.groups.reduce((sum, group) => sum + group.scheduled, 0);
@@ -1487,11 +1505,11 @@ async function testCatalogYearTargeting(context) {
   assert(result.firstLink.isCurrentCatalog === false, 'catalog year: older target should be marked non-current');
   assert(/Catalog target 2024-2025/.test(result.sourceHtml) && /linked source 2026-2027/.test(result.sourceHtml), 'catalog year: source HTML should compare target and linked source years');
   assert(/Catalog target 2024-2025/.test(result.releaseHtml), 'catalog year: release checklist should show selected target year');
-  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /308\/308 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
+  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /275\/275 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
   assert(/8\/8 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
-  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass201-curated-public-health-food-earth-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
+  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass202-curated-agnr-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
@@ -6651,8 +6669,8 @@ async function main() {
   const fixtures = [
     { id: 'ENAE', category: 'high-credit engineering', minRequirementCourses: 30, minGenEdPlaceholders: 10, minFreeElectives: 0 },
     { id: 'BIOE', category: 'high-credit life science engineering', minRequirementCourses: 28, minGenEdPlaceholders: 10, minFreeElectives: 1 },
-    { id: 'ANSC', category: 'animal sciences BS', minRequirementCourses: 18, minGenEdPlaceholders: 10, minFreeElectives: 8 },
-    { id: 'AREC', category: 'resource economics BS', minRequirementCourses: 16, minGenEdPlaceholders: 10, minFreeElectives: 8 },
+    { id: 'ENMA', category: 'materials engineering', minRequirementCourses: 25, minGenEdPlaceholders: 10, minFreeElectives: 0 },
+    { id: 'ENFP', category: 'fire protection engineering', minRequirementCourses: 21, minGenEdPlaceholders: 10, minFreeElectives: 0 },
     { id: 'AOSC', category: 'STEM science', minRequirementCourses: 18, minGenEdPlaceholders: 10, minFreeElectives: 8 },
     { id: 'STAT', category: 'STEM data/math', minRequirementCourses: 15, minGenEdPlaceholders: 10, minFreeElectives: 8 },
   ];

@@ -2203,3 +2203,192 @@ const SCHEDULE_ENCH = [
     _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
   ]},
 ];
+
+// ============================================================
+// ANSC - Animal Sciences (BS, Animal Care & Management, 120 cr)
+// ============================================================
+const SCHEDULE_ANSC = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ANSC 101', 'Principles of Animal Science', 3, { category: 'major-core' }),
+    _c('ANSC 103', 'Principles of Animal Science Laboratory', 1, { category: 'major-core' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('CHEM 132', 'General Chemistry I Laboratory', 1, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ANSC 201', 'Anatomy and Physiology of Domestic Animals', 4, { prereqs: ['ANSC 101'], category: 'major-core' }),
+    _c('BSCI 160', 'Principles of Ecology and Evolution', 3, { category: 'major-support' }),
+    _c('BSCI 161', 'Principles of Ecology and Evolution Lab', 1, { category: 'major-support' }),
+    _c('MATH 113', 'College Algebra and Trigonometry', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ANSC 314', 'Comparative Animal Nutrition', 3, { prereqs: ['ANSC 101'], category: 'major-core' }),
+    _c('BSCI 223', 'General Microbiology', 4, { prereqs: ['BSCI 170'], category: 'major-support' }),
+    _c('CHEM 231', 'Organic Chemistry I', 3, { prereqs: ['CHEM 131'], category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('AREC 250', 'Elements of Agricultural and Resource Economics', 3, { category: 'major-support' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ANSC 315', 'Applied Animal Nutrition', 3, { prereqs: ['ANSC 314'], category: 'major-core' }),
+    _c('BIOM 301', 'Introduction to Biometrics', 3, { prereqs: ['STAT 100'], category: 'major-support' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ANSC 327', 'Molecular and Quantitative Animal Genetics', 3, { prereqs: ['BSCI 170'], category: 'major-core' }),
+    _c('ANSC 401', 'Animal Growth and Development for Production Agriculture', 3, { prereqs: ['ANSC 201'], category: 'major-core' }),
+    _c('ANSC 250', 'Companion Animal Care and Management', 3, { category: 'major-core' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ANSC 446', 'Physiology of Mammalian Reproduction', 3, { prereqs: ['ANSC 201'], category: 'major-core' }),
+    _c('ANSC 447', 'Physiology of Mammalian Reproduction Laboratory', 1, { coreqs: ['ANSC 446'], category: 'major-core' }),
+    _c('ANSC 260', 'Laboratory Animal Management', 3, { category: 'major-core' }),
+    _c('ANSC 410', 'The Gut Microbiome and its Roles in Health and Disease', 3, { prereqs: ['BSCI 223'], category: 'major-upper' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ANSC 359', 'Internship Experience in Animal and Avian Sciences', 3, { category: 'major-core' }),
+    _c('ANSC 417', 'Regulatory Issues in Animal Care and Management', 3, { category: 'major-upper' }),
+    _c('AREC 306', 'Farm Management and Sustainable Food Production', 3, { prereqs: ['AREC 250'], category: 'major-support' }),
+    _c('ANSC 282', 'Grazing Animal Management', 3, { category: 'major-core' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('ANSC 453', 'Animal Welfare and Bioethics', 3, { category: 'major-upper', isGoal: true }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// AREC - Agricultural & Resource Economics (BS, Environmental and Resource Economics, 120 cr)
+// ============================================================
+const SCHEDULE_AREC = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('MATH 120', 'Elementary Calculus I', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ECON 200', 'Principles of Microeconomics', 3, { category: 'major-support' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ECON 201', 'Principles of Macroeconomics', 3, { prereqs: ['ECON 200'], category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('BMGT 230', 'Business Statistics', 3, { prereqs: ['MATH 120'], category: 'major-support' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('AREC 326', 'Intermediate Applied Microeconomics', 3, { prereqs: ['ECON 200'], category: 'major-core' }),
+    _c('AREC 380', 'Data Science for Environmental and Resource Economics', 3, { prereqs: ['STAT 100'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('AREC 422', 'Econometric Analysis in Agricultural and Environmental Economics', 3, { prereqs: ['BMGT 230'], category: 'major-upper' }),
+    _c('GEOG 201', 'Geography of Environmental Systems', 3, { category: 'major-support' }),
+    _c('GVPT 273', 'Introduction to Environmental Politics', 3, { category: 'major-support' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('AREC 453', 'Natural Resources and Public Policy', 3, { prereqs: ['ECON 200'], category: 'major-upper' }),
+    _c('AREC 456', 'Energy and Environmental Economics', 3, { prereqs: ['ECON 200'], category: 'major-upper' }),
+    _c('ENST 415', 'Renewable Energy', 3, { category: 'major-support' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('AREC 481', 'Environmental Economics', 3, { prereqs: ['AREC 326'], category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// PLSC - Plant Sciences (BS, Turf & Plant Systems, 120 cr)
+// ============================================================
+const SCHEDULE_PLSC = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('PLSC 110', 'Introduction to Horticulture', 3, { category: 'major-core' }),
+    _c('PLSC 111', 'Introduction to Horticulture Laboratory', 1, { category: 'major-core' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('MATH 115', 'Precalculus', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('BSCI 160', 'Principles of Ecology and Evolution', 3, { category: 'major-support' }),
+    _c('BSCI 161', 'Principles of Ecology and Evolution Lab', 1, { category: 'major-support' }),
+    _c('AGST 275', 'Fundamentals of Agricultural and Environmental Chemistry', 3, { category: 'major-support' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { kind: 'gened', category: 'gened-fsar' }),
+    _c('DSHU Elective #1', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ENST 200', 'Fundamentals of Soil Science', 4, { category: 'major-core' }),
+    _c('PLSC 201', 'Plant Structure and Function', 4, { prereqs: ['BSCI 170'], category: 'major-core' }),
+    _c('BSCI 337', 'Biology of Insects', 4, { prereqs: ['BSCI 160'], category: 'major-support' }),
+    _c('SCIS Elective', 'I-Series Signature Course', 3, { kind: 'gened', category: 'gened-scis' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('PLSC 205', 'Introduction to Turf Science and Management', 4, { prereqs: ['PLSC 201'], category: 'major-core' }),
+    _c('PHYS 121', 'Fundamentals of Physics I', 4, { category: 'major-support' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSHS Elective #1', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU Elective #2', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('PLSC 420', 'Principles of Plant Pathology', 4, { prereqs: ['PLSC 201'], category: 'major-core' }),
+    _c('INAG 215', 'Business Management Principles for Turf Facilities', 3, { category: 'major-support' }),
+    _c('INAG 235', 'Irrigation and Drainage', 3, { category: 'major-support' }),
+    _c('DSSP Elective #1', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('PLSC 401', 'Pest Management Strategies for Turfgrass', 3, { prereqs: ['PLSC 205'], category: 'major-upper' }),
+    _c('PLSC 453', 'Weed Science', 3, { prereqs: ['PLSC 201'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DVCC Elective', 'Cultural Competence', 3, { kind: 'gened', category: 'gened-dvcc' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('PLSC 389', 'Internship', 3, { category: 'major-core' }),
+    _c('PLSC 402', 'Sports Turf Management', 3, { prereqs: ['PLSC 205'], category: 'major-upper', isGoal: true }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];

@@ -11808,3 +11808,91 @@ Next pass candidates:
 - Continue converting remaining generated engineering/STEM programs into curated schedules, with Electrical Engineering, Aerospace Engineering, Civil Engineering, and Bioengineering as likely next candidates.
 - Add the maintainer-facing stale-course detector now that both `ANTH 222` and current `CHBE` replacements have proven the need.
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+
+## Pass 202 - Curated AGNR schedules
+
+Focus: move the remaining manageable AGNR student-facing generated plans into fixed, catalog-backed schedules and keep release evidence current after shrinking the generated pool.
+
+Completed:
+- Added `SCHEDULE_ANSC`, a 120-credit Animal Sciences BS default plan using the Animal Care & Management path.
+  - It now sequences `ANSC 101/103`, animal anatomy/physiology, nutrition, genetics, growth/development, reproduction plus lab, internship, animal care/management electives, microbiology, organic chemistry, agricultural economics, and senior `ANSC 453`.
+  - The plan is exactly `120/120` credits, maxes at `17` credits in a term, completes `13/13` GenEd requirements, has `33` real courses, and places the goal in `Spring 2030`.
+- Added `SCHEDULE_AREC`, a 120-credit Agricultural & Resource Economics BS default plan emphasizing environmental/resource economics.
+  - It uses economics, calculus, statistics, `AREC 326`, `AREC 380`, `AREC 422`, natural resources policy, energy economics, environmental field support, and senior `AREC 481`.
+  - The plan is exactly `120/120` credits, maxes at `16` credits, completes `13/13` GenEd requirements, has `18` real courses, and places the goal in `Fall 2029`.
+- Added `SCHEDULE_PLSC`, a 120-credit Plant Sciences BS default plan for turf and plant systems.
+  - It uses horticulture, biology labs, agricultural/environmental chemistry, soil science, plant structure, turf science, plant pathology, pest/weed management, turf business/irrigation support, internship, and senior `PLSC 402`.
+  - The plan is exactly `120/120` credits, maxes at `17` credits, completes `13/13` GenEd requirements, has `25` real courses, and places the goal in `Fall 2029`.
+- Updated `js/majors.js`.
+  - Wired `ANSC`, `AREC`, and `PLSC` to fixed curated schedules.
+  - Replaced their stale generated code lists with the current catalog-backed rows used by the new plans.
+  - Changed goal courses to senior-year stable rows: `ANSC 453`, `AREC 481`, and `PLSC 402`.
+- Updated Settings/release evidence.
+  - Generated-template audit now uses `pass202-curated-agnr-all`.
+  - Generated pool is now `22` generated majors, `459` generated requirement rows, and `275` unique generated required courses.
+  - Catalog sweep now records `275/275` matched generated required courses, `8/8` official UMD catalog title-drift confirmations, and `0/0` Testudo title-suffix candidates for `202608`.
+  - `js/settings.js` asset version bumped from `v44` to `v45`.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks `28` curated schedules, adding `ANSC`, `AREC`, and `PLSC`.
+  - Generated fixture coverage replaced generated `ANSC`/`AREC` with generated `ENMA` and `ENFP`.
+  - Default rendered/release generated matrix now uses `PHYS`, `GEOL`, `ENMA`, `ENFP`, `ENAE`, and `ENCE`.
+  - `scripts/verify-rendered-generated-plans.js` now has curated rendered card checks for `ANSC 453`, `ANSC 417`, `AREC 481`, `AREC 422`, `PLSC 402`, and `PLSC 420`.
+- Updated `index.html`.
+  - Bumped `js/majors.js` from `v=10` to `v=11`.
+  - Bumped `js/settings.js` from `v=44` to `v=45` after the live catalog snapshot writer refreshed Settings evidence.
+
+Major-gap notes:
+- Animal Sciences, Agricultural & Resource Economics, and Plant Sciences now open with curated fixed plans instead of generated drafts.
+- The remaining generated pool is now `22` majors: `ENEE`, `ENAE`, `ENCE`, `BIOE`, `MATH`, `STAT`, `CHEM`, `PHYS`, `ASTR`, `MARKETING`, `ACCOUNTING`, `IS`, `ARCH`, `ENMA`, `ENFP`, `BCHM`, `NEUR`, `AOSC`, `GEOL`, `MGMT`, `SCM`, and `EDUC`.
+- `README.md` was not modified or staged.
+
+Verification:
+- Checked the official UMD 2026-2027 catalog pages for Animal Sciences, Agricultural & Resource Economics, and Plant Sciences before editing.
+- Queried live PlanetTerp course metadata before placing rows.
+  - Confirmed new Animal Sciences rows including `ANSC 101`, `ANSC 103`, `ANSC 201`, `ANSC 314`, `ANSC 315`, `ANSC 327`, `ANSC 401`, `ANSC 410`, `ANSC 417`, `ANSC 446`, `ANSC 447`, `ANSC 453`, `ANSC 359`, animal management electives, biology/chemistry support, `AREC 250`, `AREC 306`, `BIOM 301`, `MATH 113`, and `STAT 100`.
+  - Confirmed new Agricultural & Resource Economics rows including `ECON 200`, `ECON 201`, `AREC 326`, `AREC 380`, `AREC 422`, `AREC 453`, `AREC 456`, `AREC 481`, `MATH 120`, `STAT 100`, `BMGT 230`, `GEOG 201`, `GVPT 273`, and `ENST 415`.
+  - Confirmed new Plant Sciences rows including `PLSC 110`, `PLSC 111`, `PLSC 201`, `PLSC 205`, `PLSC 389`, `PLSC 401`, `PLSC 402`, `PLSC 420`, `PLSC 453`, `AGST 275`, `BSCI 160`, `BSCI 161`, `BSCI 170`, `BSCI 171`, `BSCI 337`, `PHYS 121`, `INAG 215`, `INAG 235`, `MATH 115`, and `STAT 100`.
+  - Avoided unstable/missing PlanetTerp rows such as generic `AREC 489`, `PLSC 202`, `PLSC 398`, `PLSC 403`, and `PLSC 430`.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran a direct preview-builder check for `ANSC`, `AREC`, and `PLSC`.
+  - `ANSC`: curated `120/120`, loads `16,17,16,15,15,16,15,10`, `13/13` GenEd, `33` real courses, no duplicate real rows.
+  - `AREC`: curated `120/120`, loads `16,16,15,15,15,15,15,13`, `13/13` GenEd, `18` real courses, no duplicate real rows.
+  - `PLSC`: curated `120/120`, loads `15,16,15,17,16,15,15,11`, `13/13` GenEd, `25` real courses, no duplicate real rows.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 6, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass202-curated-agnr-catalog`.
+  - It matched `275/275` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `8/8` PlanetTerp title drifts against official UMD catalog titles.
+  - It found `0/0` Testudo term-specific title candidates for `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v45`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed 6 generated fixtures and 28 curated schedule fixtures.
+  - It reported `ANSC 120/120`, max `17` credits, `13/13` GenEd coverage, `33` real courses, goal term `Spring 2030`.
+  - It reported `AREC 120/120`, max `16` credits, `13/13` GenEd coverage, `18` real courses, goal term `Fall 2029`.
+  - It reported `PLSC 120/120`, max `17` credits, `13/13` GenEd coverage, `25` real courses, goal term `Fall 2029`.
+  - It passed all generated requirement groups with `22` majors and `459` grouped requirements.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=ANSC,AREC,PLSC --viewports=all`.
+  - Desktop and mobile both rendered the new curated plans with clean proxy-backed console output.
+  - Rendered cards included `ANSC453:3cr`, `ANSC417:3cr`, `AREC481:3cr`, `AREC422:3cr`, `PLSC402:3cr`, and `PLSC420:4cr`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass202-curated-agnr-all`.
+  - It verified all `22/22` remaining generated schedules against PlanetTerp.
+  - Every generated required course reported matching live title/credit pairs.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with 28 curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `GEOL`, `ENMA`, `ENFP`, `ENAE`, and `ENCE`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `GEOL`, `ENMA`, `ENFP`, `ENAE`, and `ENCE`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass202-curated-agnr-random`.
+  - It randomly verified `STAT`, `CHEM`, `NEUR`, `EDUC`, `ENAE`, `SCM`, `ENCE`, `ASTR`, `MATH`, `GEOL`, `IS`, and `BIOE` against PlanetTerp.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `git diff --check`; it passed.
+
+Next pass candidates:
+- Continue converting remaining generated engineering/STEM programs into curated schedules, with Electrical Engineering, Materials Science & Engineering, Fire Protection Engineering, Aerospace Engineering, Civil Engineering, and Bioengineering as likely candidates.
+- Add a maintainer-facing stale-course detector that flags generated codes missing from PlanetTerp or official catalog pages before a release sweep.
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
