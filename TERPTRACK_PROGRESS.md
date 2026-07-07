@@ -12846,6 +12846,60 @@ Next pass candidates:
 - Add per-major curated evidence drilldowns in Settings, such as a compact list of recently checked departments/courses for the selected fixed schedule.
 - Add a small artifact comparison helper that summarizes source drift between two curated catalog sweep JSON files.
 
+## Pass 219 - Curated Artifact Diff Helper
+
+Focus:
+- Added a maintainer comparison tool for strict curated catalog sweep artifacts so source drift can be summarized from two committed JSON snapshots.
+- Exposed the comparison command in Settings next to the artifact-writing strict sweep command.
+- Refreshed the latest strict artifact to the Pass 219 seed.
+- Kept `README.md` untouched.
+
+Code changes:
+- Added `scripts/compare-curated-catalog-artifacts.js`.
+  - Reads two `terptrack-curated-catalog-sweep/v1` artifacts.
+  - Reports summary, added-course, removed-course, curated-row, official-source, PlanetTerp-source, and warning drift.
+  - Supports `--json`, `--fail-on-drift`, and `--limit`.
+  - Exports helper functions for regression tests.
+- Updated `js/settings.js`.
+  - Added `Compare curated source artifacts` to the Settings maintainer commands.
+  - Updated the curated source snapshot and release gate labels to `Pass 219`.
+- Updated `index.html`.
+  - Bumped `js/settings.js` to `v=54`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added artifact comparison fixture coverage for no-drift, summary drift, added/removed courses, official-source drift, PlanetTerp-source drift, curated row drift, warning drift, human summaries, and CLI argument parsing.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Updated the Settings asset assertion to `settings.js?v=54`.
+  - Added rendered Settings coverage for the compare helper command and `Pass 219` snapshot.
+- Updated `artifacts/curated-catalog-sweep/latest.json`.
+  - Refreshed the artifact with seed `pass219-release-full`.
+
+Verification:
+- Ran `node --check scripts/compare-curated-catalog-artifacts.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+  - It verified the new artifact-diff helper and Settings compare command coverage.
+- Ran `node scripts/compare-curated-catalog-artifacts.js artifacts/curated-catalog-sweep/latest.json artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `No curated catalog source drift detected.`
+- Ran `node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass219-release-full`.
+  - It syntax-checked 47 JavaScript files, including the new compare helper.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop/mobile plan verification, and rendered desktop/mobile dark-mode plus mobile workflow checks.
+  - It passed the full strict live curated catalog sweep with `826/826` courses, no title or credit-source warnings, and 13 acknowledged PlanetTerp credit-lag rows.
+  - It rewrote `artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `TerpTrack release checks passed`.
+- Inspected `artifacts/curated-catalog-sweep/latest.json` with Node.
+  - Confirmed schema `terptrack-curated-catalog-sweep/v1`.
+  - Confirmed seed `pass219-release-full`, `826` course rows, `0` warning counts, `13` acknowledged credit lags, and `0` stale acknowledgements.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=5 --seed=pass219-random-live`.
+  - It confirmed no generated built-in majors remain; all built-ins are curated fixed schedules, so there were no random generated plans left to sample.
+
+Next pass candidates:
+- Add a conservative scheduled release job that runs the strict curated live sweep on a sample daily and the full artifact sweep before schedule-data releases.
+- Add per-major curated evidence drilldowns in Settings, such as a compact list of recently checked departments/courses for the selected fixed schedule.
+- Add a machine-readable compare summary artifact for CI uploads when source drift is detected.
+
 ## Pass 215 - Desktop Dark-Mode Surface Gate
 
 Focus:

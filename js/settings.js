@@ -228,8 +228,8 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
 });
 const CURATED_SCHEDULE_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 7, 2026',
-  pass: 'Pass 218',
-  seed: 'pass218-release-full',
+  pass: 'Pass 219',
+  seed: 'pass219-release-full',
   source: 'official UMD catalog + PlanetTerp',
   curatedMajors: 61,
   catalogSourceMajors: 61,
@@ -245,15 +245,15 @@ const CURATED_SCHEDULE_CATALOG_SWEEP = Object.freeze({
   unexpectedCreditWarnings: 0,
   acknowledgedCreditLags: 13,
   staleAcknowledgedCreditLags: 0,
-  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass218-release-full',
-  directCommand: 'node scripts/verify-curated-catalog-sweep.js --json --strict-titles --strict-credit-source --warning-limit=all --write-artifact --artifact-date="July 7, 2026" --seed=pass218-strict-artifact',
+  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass219-release-full',
+  directCommand: 'node scripts/verify-curated-catalog-sweep.js --json --strict-titles --strict-credit-source --warning-limit=all --write-artifact --artifact-date="July 7, 2026" --seed=pass219-strict-artifact',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 7, 2026',
-  pass: 'Pass 218',
+  pass: 'Pass 219',
   status: 'passed',
-  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass218-release-full',
-  liveCommand: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass218-release-full',
+  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass219-release-full',
+  liveCommand: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass219-release-full',
   liveMajors: [],
   defaultChecks: [
     'JS syntax',
@@ -574,6 +574,7 @@ function releaseMaintenanceHtml() {
   const snapshotCommand = releaseCatalogSnapshotCommand(GENERATED_CATALOG_SWEEP);
   const directCommand = GENERATED_CATALOG_SWEEP.command || 'node scripts/verify-random-schedules.js --catalog-sweep';
   const curatedCommand = CURATED_SCHEDULE_CATALOG_SWEEP.command || 'node scripts/verify-curated-catalog-sweep.js --strict-titles --strict-credit-source';
+  const curatedCompareCommand = 'node scripts/compare-curated-catalog-artifacts.js artifacts/curated-catalog-sweep/previous.json artifacts/curated-catalog-sweep/latest.json';
   return `
     <details class="release-maintenance">
       <summary>Maintainer commands</summary>
@@ -581,6 +582,11 @@ function releaseMaintenanceHtml() {
         <strong>Verify curated fixed schedules</strong>
         <code>${settingsHtml(curatedCommand)}</code>
         <span>Runs the strict live curated sweep against official UMD catalog pages and PlanetTerp, including acknowledged credit-source lag checks.</span>
+      </div>
+      <div>
+        <strong>Compare curated source artifacts</strong>
+        <code>${settingsHtml(curatedCompareCommand)}</code>
+        <span>Diffs two strict sweep artifacts and summarizes official catalog, PlanetTerp, curated row, warning, added-course, and removed-course drift.</span>
       </div>
       <div>
         <strong>Refresh catalog evidence</strong>

@@ -1654,7 +1654,7 @@ async function testCatalogYearTargeting(context) {
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
   assert(/--live-curated-catalog-strict-credit-source/.test(result.releaseHtml), 'catalog year: release checklist should expose strict curated sweep command');
-  assert(/Pass 218/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
+  assert(/Pass 219/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
   assert(/--live-curated-catalog-write-artifact/.test(result.releaseHtml), 'catalog year: release checklist should expose curated artifact writer command');
   assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass208-curated-final-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
@@ -4097,6 +4097,7 @@ function testSupabaseLiveVerifierHelpers() {
 function testReleaseJsonReport() {
   const releaseRunner = require(path.join(ROOT, 'scripts/run-release-checks.js'));
   const curatedCatalogSweep = require(path.join(ROOT, 'scripts/verify-curated-catalog-sweep.js'));
+  const artifactComparer = require(path.join(ROOT, 'scripts/compare-curated-catalog-artifacts.js'));
   const previousReleaseTestudoTerms = process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
   const previousReleaseSnapshotDate = process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE;
   delete process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
@@ -4185,6 +4186,86 @@ function testReleaseJsonReport() {
     titleWarnings: [],
     acknowledgedCreditLags: [],
   }]);
+  const fixtureArtifactHead = JSON.parse(JSON.stringify(fixtureArtifact));
+  fixtureArtifactHead.generatedAt = 'July 8, 2026';
+  fixtureArtifactHead.summary.officialMatches = 2;
+  fixtureArtifactHead.courses[0].official.title = 'Object-Oriented Programming I and Lab';
+  fixtureArtifactHead.courses[0].planetTerp.credits = 3;
+  fixtureArtifactHead.courses[0].curatedCredits = ['3'];
+  fixtureArtifactHead.courses[0].warnings = ['CMSC 131 fixture warning'];
+  fixtureArtifactHead.courses.push({
+    code: 'MATH 140',
+    normalizedCode: 'MATH140',
+    majors: ['CS'],
+    rowCount: 1,
+    curatedCredits: ['4'],
+    curatedTitles: ['Calculus I'],
+    official: {
+      ok: true,
+      requestedCode: 'MATH140',
+      matchedCode: 'MATH140',
+      mode: 'exact',
+      title: 'Calculus I',
+      credits: '4 Credits',
+      url: 'https://academiccatalog.umd.edu/undergraduate/approved-courses/math/',
+      detail: '',
+    },
+    planetTerp: {
+      ok: true,
+      code: 'MATH140',
+      title: 'Calculus I',
+      credits: 4,
+      detail: '',
+    },
+    failures: [],
+    warnings: [],
+    creditWarnings: [],
+    titleWarnings: [],
+    acknowledgedCreditLags: [],
+  });
+  const fixtureArtifactPrevious = JSON.parse(JSON.stringify(fixtureArtifact));
+  fixtureArtifactPrevious.courses.push({
+    code: 'ENGL 101',
+    normalizedCode: 'ENGL101',
+    majors: ['CS'],
+    rowCount: 1,
+    curatedCredits: ['3'],
+    curatedTitles: ['Academic Writing'],
+    official: {
+      ok: true,
+      requestedCode: 'ENGL101',
+      matchedCode: 'ENGL101',
+      mode: 'exact',
+      title: 'Academic Writing',
+      credits: '3 Credits',
+      url: 'https://academiccatalog.umd.edu/undergraduate/approved-courses/engl/',
+      detail: '',
+    },
+    planetTerp: {
+      ok: true,
+      code: 'ENGL101',
+      title: 'Academic Writing',
+      credits: 3,
+      detail: '',
+    },
+    failures: [],
+    warnings: [],
+    creditWarnings: [],
+    titleWarnings: [],
+    acknowledgedCreditLags: [],
+  });
+  const identicalArtifactDiff = artifactComparer.compareArtifacts(fixtureArtifact, JSON.parse(JSON.stringify(fixtureArtifact)));
+  const changedArtifactDiff = artifactComparer.compareArtifacts(fixtureArtifactPrevious, fixtureArtifactHead);
+  const changedArtifactSummary = artifactComparer.summarizeDiff(changedArtifactDiff, 3);
+  const artifactCompareOpts = artifactComparer.parseArgs([
+    'node',
+    'scripts/compare-curated-catalog-artifacts.js',
+    'artifacts/curated-catalog-sweep/previous.json',
+    'artifacts/curated-catalog-sweep/latest.json',
+    '--json',
+    '--fail-on-drift',
+    '--limit=3',
+  ]);
   const cappedCuratedCatalogOpts = curatedCatalogSweep.parseArgs([
     'node',
     'scripts/verify-curated-catalog-sweep.js',
@@ -4218,6 +4299,14 @@ function testReleaseJsonReport() {
   assert(fixtureArtifact.schema === 'terptrack-curated-catalog-sweep/v1', 'release report: curated sweep artifact should carry schema');
   assert(fixtureArtifact.generatedAt === 'July 7, 2026', 'release report: curated sweep artifact should carry stable generation label');
   assert(fixtureArtifact.courses[0]?.official?.credits === '4 Credits' && fixtureArtifact.courses[0]?.planetTerp?.credits === 4, 'release report: curated sweep artifact should include official and PlanetTerp course sources');
+  assert(identicalArtifactDiff.changed === false, 'release report: artifact comparer should report no drift for identical artifacts');
+  assert(changedArtifactDiff.schema === artifactComparer.DIFF_SCHEMA, 'release report: artifact comparer should expose a versioned diff schema');
+  assert(changedArtifactDiff.counts.summaryChanges >= 1, 'release report: artifact comparer should report summary drift');
+  assert(changedArtifactDiff.counts.addedCourses === 1 && changedArtifactDiff.counts.removedCourses === 1, 'release report: artifact comparer should report added and removed courses');
+  assert(changedArtifactDiff.counts.officialChanges === 1 && changedArtifactDiff.counts.planetTerpChanges === 1, 'release report: artifact comparer should report source drift');
+  assert(changedArtifactDiff.counts.curatedChanges === 1 && changedArtifactDiff.counts.warningChanges === 1, 'release report: artifact comparer should report curated and warning drift');
+  assert(/Official source changes: CMSC 131/.test(changedArtifactSummary) && /Added courses: MATH 140/.test(changedArtifactSummary), 'release report: artifact comparer should summarize drift with course codes');
+  assert(artifactCompareOpts.json === true && artifactCompareOpts.failOnDrift === true && artifactCompareOpts.limit === 3, 'release report: artifact comparer should parse JSON/fail/limit flags');
   assertThrows(
     () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-limit=1', '--live-catalog-write-settings-snapshot']),
     /Snapshot refresh requires a full catalog sweep/,
@@ -4278,6 +4367,7 @@ function testReleaseJsonReport() {
     stages: Object.keys(stageStatus).join(','),
     catalogArgs: catalogArgs.filter(arg => /^--(?:testudo|write|snapshot)/.test(arg)).join(' '),
     curatedCatalogArgs: curatedCatalogArgs.filter(arg => /^--(?:seed|limit|strict|artifact)/.test(arg)).join(' '),
+    artifactDiff: `${changedArtifactDiff.counts.officialChanges}/${changedArtifactDiff.counts.planetTerpChanges}`,
   };
 }
 
@@ -6983,7 +7073,7 @@ async function main() {
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}; friend rows after removal ${accountSetup.removal}.`);
   console.log(`Supabase live verifier fixture ${supabaseLive.id}: ${supabaseLive.keyType}; ${supabaseLive.denied}; REST URL ${supabaseLive.url ? 'ok' : 'missing'}.`);
-  console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}; catalog ${releaseJson.catalogArgs}; curated catalog ${releaseJson.curatedCatalogArgs}.`);
+  console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}; catalog ${releaseJson.catalogArgs}; curated catalog ${releaseJson.curatedCatalogArgs}; artifact diff ${releaseJson.artifactDiff}.`);
   console.log(`Canonical title fixture ${canonicalTitles.id}: AMST 205 -> ${canonicalTitles.amst205}.`);
   console.log(`Official catalog title fixture ${officialCatalogTitles.id}: BMGT 301 -> ${officialCatalogTitles.bmgt301}; ARTT 428 -> ${officialCatalogTitles.artt428}; variable ${officialCatalogTitles.variable}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);
