@@ -12740,6 +12740,54 @@ Next pass candidates:
 - Persist or export live curated catalog sweep JSON artifacts so maintainers can diff official/PlanetTerp source drift across releases.
 - Add a conservative scheduled release job that runs the strict curated live sweep on a sample daily and the full sweep before schedule-data releases.
 
+## Pass 217 - Settings Curated Source Evidence
+
+Focus:
+- Surfaced strict live fixed-schedule evidence inside Settings instead of leaving it only in verifier output.
+- Added selected-major catalog source proof and all-major curated sweep proof to the auto-plan review and release checklist.
+- Refreshed the UMD catalog checked date to match the latest full strict live sweep.
+- Kept `README.md` untouched.
+
+Code changes:
+- Updated `js/settings.js`.
+  - Added `CURATED_SCHEDULE_CATALOG_SWEEP` with Pass 216/217 strict sweep evidence: `61/61` curated majors with source pages, `826/826` unique curated courses, `1461` schedule rows, `0` title warnings, `0` unexpected credit warnings, `13` acknowledged PlanetTerp credit-lag rows, and `0` stale acknowledgements.
+  - Added `Curated Schedule Evidence` to curated major previews, including the selected exact UMD catalog page.
+  - Added `Curated fixed-schedule sweep` to the Settings release checklist.
+  - Added a maintainer command for the strict live curated sweep.
+  - Updated the release snapshot to `Pass 216` with the strict live curated sweep included.
+- Updated `js/majors.js`.
+  - Refreshed `UMD_CATALOG_CHECKED_AT` to `July 7, 2026`.
+- Updated `index.html`.
+  - Bumped `js/majors.js` to `v=18`.
+  - Bumped `js/settings.js` to `v=52`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added fixture assertions for the Settings curated fixed-schedule evidence, strict curated sweep command, latest pass label, and July 7 source metadata.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Added rendered browser assertions for the new Settings release checklist row and curated preview evidence panel.
+  - Updated cache-version assertions for `majors.js?v=18` and `settings.js?v=52`.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+  - It verified the Settings release checklist now shows `61/61` curated major source pages, `826/826` strict curated live course coverage, `0` unexpected credit warnings, and `13` acknowledged PlanetTerp credit lags.
+- Ran `node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass217-release-full`.
+  - It syntax-checked 46 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop/mobile plan verification, and rendered desktop/mobile dark-mode plus mobile workflow checks.
+  - It verified the rendered Settings checklist shows `5/6` launch checks ready with the new fixed-schedule sweep row.
+  - It passed the full strict live curated catalog sweep with `826/826` courses, no title or credit-source warnings, and 13 acknowledged PlanetTerp credit-lag rows.
+  - It reported `TerpTrack release checks passed`.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=5 --seed=pass217-random-live`.
+  - It confirmed no generated built-in majors remain; all built-ins are curated fixed schedules, so there were no random generated plans left to sample.
+
+Next pass candidates:
+- Persist or export live curated catalog sweep JSON artifacts so maintainers can diff official/PlanetTerp source drift across releases.
+- Add a conservative scheduled release job that runs the strict curated live sweep on a sample daily and the full sweep before schedule-data releases.
+- Add per-major curated evidence drilldowns in Settings, such as a compact list of recently checked departments/courses for the selected fixed schedule.
+
 ## Pass 215 - Desktop Dark-Mode Surface Gate
 
 Focus:

@@ -27,7 +27,7 @@ const UMD_CATALOG_ORIGIN = 'https://academiccatalog.umd.edu';
 const UMD_CATALOG_PROGRAMS_URL = `${UMD_CATALOG_ORIGIN}/undergraduate/programs/`;
 const UMD_COURSE_CATALOG_URL = `${UMD_CATALOG_ORIGIN}/undergraduate/approved-courses/`;
 const UMD_CATALOG_YEAR = '2026-2027';
-const UMD_CATALOG_CHECKED_AT = 'June 30, 2026';
+const UMD_CATALOG_CHECKED_AT = 'July 7, 2026';
 
 const MAJOR_CATALOG_SOURCES = Object.freeze({
   AAST: { label: 'African American and Africana Studies Major', path: '/undergraduate/colleges-schools/behavioral-social-sciences/african-american-africana-studies/african-american-africana-studies-major/' },

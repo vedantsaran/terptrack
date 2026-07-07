@@ -901,6 +901,9 @@ async function applyMajor(page, target, timeoutMs) {
     assert(reviewText.includes('Placeholder credits'), `${target.major}: rendered curated preview missing placeholder metric`);
     assert(reviewText.includes('Official sources'), `${target.major}: rendered curated preview missing official source links`);
     assert(reviewText.includes('Catalog year 2026-2027'), `${target.major}: rendered curated preview missing catalog year metadata`);
+    assert(reviewText.includes('Curated Schedule Evidence'), `${target.major}: rendered curated preview missing fixed-schedule evidence panel`);
+    assert(reviewText.includes('826/826'), `${target.major}: rendered curated preview missing strict curated course sweep count`);
+    assert(reviewText.includes('Selected catalog page'), `${target.major}: rendered curated preview missing selected catalog page link`);
     assert(reviewText.includes('Generated Catalog Freshness'), `${target.major}: rendered curated preview missing generated freshness panel`);
   } else {
     assert(!reviewText.includes('Template fallback'), `${target.major}: rendered preview still shows template fallback`);
@@ -983,22 +986,28 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=123'), `${viewport.label}: rendered app did not load styles.css?v=123`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=17'), `${viewport.label}: rendered app did not load js/majors.js?v=17`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=18'), `${viewport.label}: rendered app did not load js/majors.js?v=18`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=51'), `${viewport.label}: rendered app did not load js/settings.js?v=51`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=52'), `${viewport.label}: rendered app did not load js/settings.js?v=52`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=14'), `${viewport.label}: rendered app did not load js/import.js?v=14`);
-    assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
+    assert(initialSnapshot.releaseText.includes('5/6 launch checks ready'), `${viewport.label}: release checklist did not show 5/6 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
+    assert(initialSnapshot.releaseText.includes('Curated fixed-schedule sweep'), `${viewport.label}: release checklist missing curated fixed-schedule sweep row`);
+    assert(initialSnapshot.releaseText.includes('61/61 curated majors'), `${viewport.label}: release checklist missing curated source coverage`);
+    assert(initialSnapshot.releaseText.includes('826/826 unique curated courses'), `${viewport.label}: release checklist missing strict curated catalog coverage`);
+    assert(initialSnapshot.releaseText.includes('0 unexpected credit warnings'), `${viewport.label}: release checklist missing strict credit-source evidence`);
+    assert(initialSnapshot.releaseText.includes('13 acknowledged PlanetTerp credit lags'), `${viewport.label}: release checklist missing acknowledged credit-lag evidence`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
     assert(initialSnapshot.releaseText.includes('0/0 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
     assert(initialSnapshot.releaseText.includes('0/0 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);
+    assert(initialSnapshot.releaseText.includes('--live-curated-catalog-strict-credit-source'), `${viewport.label}: release checklist missing strict curated sweep command`);
     assert(initialSnapshot.releaseText.includes('Default release gate'), `${viewport.label}: release checklist missing release gate row`);
-    assert(initialSnapshot.releaseText.includes('Pass 208'), `${viewport.label}: release checklist missing Pass 208 snapshot`);
+    assert(initialSnapshot.releaseText.includes('Pass 216'), `${viewport.label}: release checklist missing Pass 216 snapshot`);
     assert(initialSnapshot.releaseText.includes('Cloud account setup'), `${viewport.label}: release checklist missing cloud setup row`);
     assert(initialSnapshot.releaseText.includes('SUPABASE_URL'), `${viewport.label}: release checklist missing Vercel/Supabase setup detail`);
     Object.entries(initialSnapshot.overflow || {}).forEach(([key, value]) => {

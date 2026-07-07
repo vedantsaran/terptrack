@@ -226,12 +226,34 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
   testudoTerms: '202608',
   command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass208-curated-final-catalog --testudo-terms=202608',
 });
+const CURATED_SCHEDULE_CATALOG_SWEEP = Object.freeze({
+  checkedAt: 'July 7, 2026',
+  pass: 'Pass 216',
+  seed: 'pass216-release-full',
+  source: 'official UMD catalog + PlanetTerp',
+  curatedMajors: 61,
+  catalogSourceMajors: 61,
+  checkedCourses: 826,
+  totalCourses: 826,
+  curatedRows: 1461,
+  officialMatches: 794,
+  planetMatches: 795,
+  bothMatches: 763,
+  baseTopicMatches: 41,
+  currentPrefixMatches: 7,
+  titleWarnings: 0,
+  unexpectedCreditWarnings: 0,
+  acknowledgedCreditLags: 13,
+  staleAcknowledgedCreditLags: 0,
+  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass216-release-full',
+  directCommand: 'node scripts/verify-curated-catalog-sweep.js --json --strict-titles --strict-credit-source --warning-limit=all --seed=pass216-strict-credit-source',
+});
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 7, 2026',
-  pass: 'Pass 208',
+  pass: 'Pass 216',
   status: 'passed',
-  command: 'node scripts/run-release-checks.js',
-  liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass208-curated-final-live',
+  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass216-release-full',
+  liveCommand: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass216-release-full',
   liveMajors: [],
   defaultChecks: [
     'JS syntax',
@@ -239,6 +261,7 @@ const RELEASE_CHECK_SNAPSHOT = Object.freeze({
     'generated-plan fixtures',
     'rendered generated-plan UI',
     'rendered mobile workflows',
+    'strict live curated catalog sweep',
   ],
 });
 
@@ -334,6 +357,35 @@ function generatedTemplateFreshnessSummary(review) {
     allVerified: GENERATED_TEMPLATE_AUDIT.failedSchedules === 0
       && GENERATED_TEMPLATE_AUDIT.verifiedSchedules >= generatedCount,
   };
+}
+
+function curatedScheduleSourceCoverage() {
+  const majors = typeof listMajors === 'function'
+    ? listMajors().filter(major => (
+        major
+        && !major.isCustom
+        && typeof isMajorFullyBaked === 'function'
+        && isMajorFullyBaked(major)
+      ))
+    : [];
+  const sourceCount = majors.filter(major => (
+    typeof MAJOR_CATALOG_SOURCES !== 'undefined'
+    && MAJOR_CATALOG_SOURCES
+    && MAJOR_CATALOG_SOURCES[major.id]
+  )).length;
+  const total = majors.length || CURATED_SCHEDULE_CATALOG_SWEEP.curatedMajors;
+  return {
+    total,
+    sourceCount: majors.length ? sourceCount : CURATED_SCHEDULE_CATALOG_SWEEP.catalogSourceMajors,
+  };
+}
+
+function curatedScheduleSweepOk(sweep = CURATED_SCHEDULE_CATALOG_SWEEP) {
+  return sweep.checkedCourses >= sweep.totalCourses
+    && sweep.catalogSourceMajors >= sweep.curatedMajors
+    && sweep.titleWarnings === 0
+    && sweep.unexpectedCreditWarnings === 0
+    && sweep.staleAcknowledgedCreditLags === 0;
 }
 
 function autoPlanFreshnessStat(label, value, detail) {
@@ -448,6 +500,37 @@ function generatedTemplateFreshnessHtml(review) {
   `;
 }
 
+function curatedScheduleFreshnessHtml(review) {
+  const sweep = CURATED_SCHEDULE_CATALOG_SWEEP;
+  const coverage = curatedScheduleSourceCoverage();
+  const sourceDetail = coverage.sourceCount >= coverage.total
+    ? 'exact UMD catalog page for every fixed schedule'
+    : `${coverage.total - coverage.sourceCount} curated source link${coverage.total - coverage.sourceCount === 1 ? '' : 's'} missing`;
+  const driftDetail = [
+    `${sweep.titleWarnings} title drift${sweep.titleWarnings === 1 ? '' : 's'}`,
+    `${sweep.unexpectedCreditWarnings} unexpected credit warning${sweep.unexpectedCreditWarnings === 1 ? '' : 's'}`,
+    `${sweep.staleAcknowledgedCreditLags} stale acknowledgement${sweep.staleAcknowledgedCreditLags === 1 ? '' : 's'}`,
+  ].join(' · ');
+  return `
+    <div class="auto-plan-freshness curated-source" title="${settingsHtml(sweep.command)}">
+      <div class="auto-plan-freshness-head">
+        <div>
+          <span class="auto-plan-review-label">Curated Schedule Evidence</span>
+          <strong>${curatedScheduleSweepOk(sweep) && coverage.sourceCount >= coverage.total ? 'Every fixed schedule passed strict live source checks' : 'Curated source evidence needs review'}</strong>
+        </div>
+        <span class="auto-plan-freshness-source">${settingsHtml(sweep.source)}</span>
+      </div>
+      <div class="auto-plan-freshness-grid">
+        ${autoPlanFreshnessStat('curated majors', `${coverage.sourceCount}/${coverage.total}`, sourceDetail)}
+        ${autoPlanFreshnessStat('live course sweep', `${sweep.checkedCourses}/${sweep.totalCourses}`, `${sweep.curatedRows} schedule rows`)}
+        ${autoPlanFreshnessStat('source drift', `${sweep.titleWarnings}/${sweep.unexpectedCreditWarnings}`, driftDetail)}
+        ${autoPlanFreshnessStat('last strict check', sweep.checkedAt, `${sweep.pass} · ${sweep.seed}`)}
+      </div>
+      ${autoPlanOfficialSourceLinksHtml(review, { includeGeneral: false, compact: true, label: 'Selected catalog page' })}
+    </div>
+  `;
+}
+
 let releaseChecklistSeq = 0;
 
 function releaseChecklistStatusLabel(status) {
@@ -490,9 +573,15 @@ function releaseCatalogSnapshotCommand(sweep = GENERATED_CATALOG_SWEEP) {
 function releaseMaintenanceHtml() {
   const snapshotCommand = releaseCatalogSnapshotCommand(GENERATED_CATALOG_SWEEP);
   const directCommand = GENERATED_CATALOG_SWEEP.command || 'node scripts/verify-random-schedules.js --catalog-sweep';
+  const curatedCommand = CURATED_SCHEDULE_CATALOG_SWEEP.command || 'node scripts/verify-curated-catalog-sweep.js --strict-titles --strict-credit-source';
   return `
     <details class="release-maintenance">
       <summary>Maintainer commands</summary>
+      <div>
+        <strong>Verify curated fixed schedules</strong>
+        <code>${settingsHtml(curatedCommand)}</code>
+        <span>Runs the strict live curated sweep against official UMD catalog pages and PlanetTerp, including acknowledged credit-source lag checks.</span>
+      </div>
       <div>
         <strong>Refresh catalog evidence</strong>
         <code>${settingsHtml(snapshotCommand)}</code>
@@ -530,6 +619,10 @@ function releaseChecklistItems(config, clientReady) {
   const audit = GENERATED_TEMPLATE_AUDIT;
   const auditHistory = GENERATED_TEMPLATE_AUDIT_HISTORY || [];
   const auditOk = audit.failedSchedules === 0 && auditHistory.length > 0;
+  const curatedSweep = CURATED_SCHEDULE_CATALOG_SWEEP;
+  const curatedCoverage = curatedScheduleSourceCoverage();
+  const curatedOk = curatedScheduleSweepOk(curatedSweep)
+    && curatedCoverage.sourceCount >= curatedCoverage.total;
   const sweep = GENERATED_CATALOG_SWEEP;
   const sweepOk = sweep.missingCourses === 0
     && sweep.creditMismatches === 0
@@ -560,6 +653,13 @@ function releaseChecklistItems(config, clientReady) {
       title: 'Live generated-template audit',
       detail: `${audit.verifiedSchedules} generated templates verified against ${audit.source}; ${audit.failedSchedules} issue${audit.failedSchedules === 1 ? '' : 's'} recorded.`,
       meta: `${audit.checkedAt} · ${audit.seed} · ${auditHistory.length} saved runs`,
+    },
+    {
+      id: 'curated-catalog-sweep',
+      status: curatedOk ? 'ok' : 'warn',
+      title: 'Curated fixed-schedule sweep',
+      detail: `${curatedCoverage.sourceCount}/${curatedCoverage.total} curated majors have exact UMD catalog source pages; ${curatedSweep.checkedCourses}/${curatedSweep.totalCourses} unique curated courses passed strict live ${curatedSweep.source} checks.`,
+      meta: `${curatedSweep.checkedAt} · ${curatedSweep.pass} · ${curatedSweep.seed} · ${curatedSweep.curatedRows} schedule rows · ${curatedSweep.titleWarnings} title drifts · ${curatedSweep.unexpectedCreditWarnings} unexpected credit warnings · ${curatedSweep.acknowledgedCreditLags} acknowledged PlanetTerp credit lags`,
     },
     {
       id: 'catalog-sweep',
@@ -1176,6 +1276,7 @@ function autoPlanReviewHtml(review, opts = {}) {
       ` : ''}
       ${autoPlanRealityHtml(review, opts)}
       ${autoPlanDiagnosticsHtml(review)}
+      ${curatedScheduleFreshnessHtml(review)}
       ${generatedTemplateFreshnessHtml(review)}
     `;
   }
