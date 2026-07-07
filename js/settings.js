@@ -228,8 +228,8 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
 });
 const CURATED_SCHEDULE_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 7, 2026',
-  pass: 'Pass 220',
-  seed: 'pass220-release-full',
+  pass: 'Pass 221',
+  seed: 'pass221-release-full',
   source: 'official UMD catalog + PlanetTerp',
   curatedMajors: 61,
   catalogSourceMajors: 61,
@@ -245,15 +245,15 @@ const CURATED_SCHEDULE_CATALOG_SWEEP = Object.freeze({
   unexpectedCreditWarnings: 0,
   acknowledgedCreditLags: 13,
   staleAcknowledgedCreditLags: 0,
-  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass220-release-full',
-  directCommand: 'node scripts/verify-curated-catalog-sweep.js --json --strict-titles --strict-credit-source --warning-limit=all --write-artifact --artifact-date="July 7, 2026" --seed=pass220-strict-artifact',
+  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass221-release-full',
+  directCommand: 'node scripts/verify-curated-catalog-sweep.js --json --strict-titles --strict-credit-source --warning-limit=all --write-artifact --artifact-date="July 7, 2026" --seed=pass221-strict-artifact',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 7, 2026',
-  pass: 'Pass 220',
+  pass: 'Pass 221',
   status: 'passed',
-  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass220-release-full',
-  liveCommand: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass220-release-full',
+  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass221-release-full',
+  liveCommand: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass221-release-full',
   liveMajors: [],
   defaultChecks: [
     'JS syntax',
@@ -386,6 +386,128 @@ function curatedScheduleSweepOk(sweep = CURATED_SCHEDULE_CATALOG_SWEEP) {
     && sweep.titleWarnings === 0
     && sweep.unexpectedCreditWarnings === 0
     && sweep.staleAcknowledgedCreditLags === 0;
+}
+
+function curatedScheduleForMajor(tpl, review) {
+  if (tpl?.useDefaultSchedule && typeof SCHEDULE !== 'undefined' && Array.isArray(SCHEDULE)) return SCHEDULE;
+  if (Array.isArray(tpl?.fixedSchedule) && tpl.fixedSchedule.length) return tpl.fixedSchedule;
+  if (Array.isArray(review?.semesters) && review.semesters.length) return review.semesters;
+  return [];
+}
+
+function curatedMajorCourseNumber(course) {
+  if (typeof autoPlanCourseNumber === 'function') return autoPlanCourseNumber(course);
+  const normalized = typeof normalizeCode === 'function'
+    ? normalizeCode(course?.code || '')
+    : String(course?.code || '').toUpperCase().replace(/\s+/g, '');
+  const match = normalized.match(/^[A-Z]{2,4}(\d{3})[A-Z]?$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function curatedMajorCourseDisplay(course) {
+  const code = typeof displayCode === 'function'
+    ? displayCode(course?.code || '')
+    : String(course?.code || '').trim();
+  const title = String(course?.title || '').trim();
+  return title && title !== code ? `${code} · ${title}` : code;
+}
+
+function curatedMajorEvidenceSummary(review) {
+  if (!review || review.kind !== 'curated') return null;
+  const majorId = String(review.majorId || state?.majorId || '').trim().toUpperCase();
+  const tpl = typeof getMajorTemplate === 'function' ? getMajorTemplate(majorId) : null;
+  const schedule = curatedScheduleForMajor(tpl, review);
+  const rows = [];
+  schedule.forEach((sem, semIndex) => {
+    (sem.courses || []).forEach(course => rows.push({
+      ...course,
+      semIndex,
+      semName: sem.name || `Term ${semIndex + 1}`,
+      number: curatedMajorCourseNumber(course),
+    }));
+  });
+  const normalized = rows
+    .map(course => (typeof normalizeCode === 'function'
+      ? normalizeCode(course.code || '')
+      : String(course.code || '').toUpperCase().replace(/\s+/g, '')))
+    .filter(code => /^[A-Z]{2,4}\d{3}[A-Z]?$/.test(code));
+  const uniqueCourses = Array.from(new Set(normalized));
+  const introRows = rows.filter(course => course.number >= 100 && course.number < 300);
+  const upperRows = rows.filter(course => course.number >= 300);
+  const upper400Rows = rows.filter(course => course.number >= 400);
+  const placeholders = rows.filter(course => !course.number);
+  const genEdRows = rows.filter(course => {
+    const category = String(course.category || '');
+    const kind = String(course.kind || '');
+    return category.startsWith('gened') || kind === 'gened';
+  });
+  const sourceLinks = autoPlanOfficialSourceLinks(review, { includeGeneral: false, catalogYear: review.catalogYear || settingsCatalogYearValue(), limit: 2 });
+  const sampleLabel = course => `${curatedMajorCourseDisplay(course)} (${course.semName})`;
+  return {
+    majorName: review.majorName || tpl?.name || majorId || 'Selected major',
+    sourceLinks,
+    sourceMeta: catalogSourceMetaText(sourceLinks),
+    scheduleRows: rows.length || review.courseCount || 0,
+    uniqueCourseCount: uniqueCourses.length || review.courseCount || 0,
+    termCount: schedule.length || (review.termLoads || []).length || 8,
+    totalCredits: review.totalCredits || rows.reduce((sum, course) => sum + (typeof autoPlanCredits === 'function' ? autoPlanCredits(course) : Number(course.cr || 0)), 0),
+    targetCredits: review.targetCredits || tpl?.totalCredits || 120,
+    introCount: introRows.length,
+    upperCount: upperRows.length,
+    upper400Count: upper400Rows.length,
+    genEdCount: genEdRows.length,
+    placeholderCount: placeholders.length,
+    firstTerm: schedule[0]?.name || '',
+    lastTerm: schedule[schedule.length - 1]?.name || '',
+    introSamples: introRows.slice(0, 4).map(sampleLabel),
+    upperSamples: (upper400Rows.length ? upper400Rows : upperRows).slice(0, 4).map(sampleLabel),
+    placeholderSamples: placeholders.slice(0, 4).map(sampleLabel),
+    hasSource: sourceLinks.length > 0,
+  };
+}
+
+function curatedMajorEvidenceSampleHtml(label, rows) {
+  if (!rows.length) return '';
+  return `
+    <span>
+      <strong>${settingsHtml(label)}</strong>
+      <em>${settingsHtml(rows.join(' · '))}</em>
+    </span>
+  `;
+}
+
+function curatedMajorEvidenceHtml(review) {
+  const evidence = curatedMajorEvidenceSummary(review);
+  if (!evidence) return '';
+  const sweepOk = curatedScheduleSweepOk(CURATED_SCHEDULE_CATALOG_SWEEP);
+  const range = evidence.firstTerm && evidence.lastTerm
+    ? `${evidence.firstTerm} to ${evidence.lastTerm}`
+    : `${evidence.termCount} terms`;
+  return `
+    <div class="curated-major-evidence">
+      <div class="curated-major-evidence-head">
+        <div>
+          <span class="auto-plan-review-label">Selected Major Evidence</span>
+          <strong>${settingsHtml(evidence.majorName)}</strong>
+          <p>${settingsHtml(sweepOk && evidence.hasSource ? 'Selected major is covered by the strict live source sweep.' : 'Selected major evidence should be reviewed before release.')}</p>
+        </div>
+        <b>${settingsHtml(sweepOk ? 'Strict source pass' : 'Review')}</b>
+      </div>
+      <div class="curated-major-evidence-grid">
+        ${autoPlanFreshnessStat('Catalog-backed schedule rows', `${evidence.scheduleRows}`, `${evidence.uniqueCourseCount} unique real courses`)}
+        ${autoPlanFreshnessStat('Freshman-to-senior span', `${evidence.termCount} terms`, range)}
+        ${autoPlanFreshnessStat('Upper-level path', `${evidence.upper400Count} 400-level`, `${evidence.upperCount} total 300/400-level rows`)}
+        ${autoPlanFreshnessStat('GenEd/elective rows', `${evidence.genEdCount}/${evidence.placeholderCount}`, `${evidence.totalCredits}/${evidence.targetCredits} planned credits`)}
+      </div>
+      <div class="curated-major-evidence-samples">
+        ${curatedMajorEvidenceSampleHtml('Intro/support', evidence.introSamples)}
+        ${curatedMajorEvidenceSampleHtml('Upper-level path', evidence.upperSamples)}
+        ${curatedMajorEvidenceSampleHtml('Replaceable rows', evidence.placeholderSamples)}
+      </div>
+      ${autoPlanOfficialSourceLinksHtml(review, { includeGeneral: false, compact: true, label: 'Selected catalog page' })}
+      ${evidence.sourceMeta ? `<small>${settingsHtml(evidence.sourceMeta)}</small>` : ''}
+    </div>
+  `;
 }
 
 function autoPlanFreshnessStat(label, value, detail) {
@@ -526,7 +648,7 @@ function curatedScheduleFreshnessHtml(review) {
         ${autoPlanFreshnessStat('source drift', `${sweep.titleWarnings}/${sweep.unexpectedCreditWarnings}`, driftDetail)}
         ${autoPlanFreshnessStat('last strict check', sweep.checkedAt, `${sweep.pass} · ${sweep.seed}`)}
       </div>
-      ${autoPlanOfficialSourceLinksHtml(review, { includeGeneral: false, compact: true, label: 'Selected catalog page' })}
+      ${curatedMajorEvidenceHtml(review)}
     </div>
   `;
 }
@@ -575,7 +697,7 @@ function releaseMaintenanceHtml() {
   const directCommand = GENERATED_CATALOG_SWEEP.command || 'node scripts/verify-random-schedules.js --catalog-sweep';
   const curatedCommand = CURATED_SCHEDULE_CATALOG_SWEEP.command || 'node scripts/verify-curated-catalog-sweep.js --strict-titles --strict-credit-source';
   const curatedCompareCommand = 'node scripts/compare-curated-catalog-artifacts.js artifacts/curated-catalog-sweep/previous.json artifacts/curated-catalog-sweep/latest.json';
-  const curatedWorkflowCommand = 'gh workflow run curated-source-evidence.yml -f mode=full -f seed=pass220-release-full -f artifact_date="July 7, 2026"';
+  const curatedWorkflowCommand = 'gh workflow run curated-source-evidence.yml -f mode=full -f seed=pass221-release-full -f artifact_date="July 7, 2026"';
   return `
     <details class="release-maintenance">
       <summary>Maintainer commands</summary>

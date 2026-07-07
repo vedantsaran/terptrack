@@ -1587,6 +1587,7 @@ async function testCatalogYearTargeting(context) {
         catalogYear: normalized
       });
       const reviewHtml = autoPlanReviewHtml(preview, { actions: false });
+      const curatedEvidence = curatedMajorEvidenceSummary(preview);
       const warning = catalogYearAdvisingWarning();
       const sem = getAllSemesters()[0];
       const advisorText = scheduleAdvisorText(
@@ -1629,6 +1630,7 @@ async function testCatalogYearTargeting(context) {
         previewCatalogYear: preview.catalogYear,
         previewSource: preview.officialSources[0],
         reviewHtml,
+        curatedEvidence,
         warning,
         advisorText,
         advisorHtml,
@@ -1654,7 +1656,7 @@ async function testCatalogYearTargeting(context) {
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
   assert(/--live-curated-catalog-strict-credit-source/.test(result.releaseHtml), 'catalog year: release checklist should expose strict curated sweep command');
-  assert(/Pass 220/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
+  assert(/Pass 221/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
   assert(/--live-curated-catalog-write-artifact/.test(result.releaseHtml), 'catalog year: release checklist should expose curated artifact writer command');
   assert(/curated-source-evidence\.yml/.test(result.releaseHtml), 'catalog year: release checklist should expose hosted curated evidence workflow command');
   assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass208-curated-final-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
@@ -1662,6 +1664,11 @@ async function testCatalogYearTargeting(context) {
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
   assert(/Curated Schedule Evidence/.test(result.reviewHtml) && /826\/826/.test(result.reviewHtml), 'catalog year: curated review should show strict fixed-schedule evidence');
+  assert(/Selected Major Evidence/.test(result.reviewHtml) && /Strict source pass/.test(result.reviewHtml), 'catalog year: curated review should show selected-major strict source evidence');
+  assert(/Catalog-backed schedule rows/.test(result.reviewHtml) && /Intro\/support/.test(result.reviewHtml) && /Upper-level path/.test(result.reviewHtml), 'catalog year: curated review should show selected-major source drilldown details');
+  assert(result.curatedEvidence?.majorName === 'Atmospheric & Oceanic Science', 'catalog year: selected-major evidence should identify the curated major');
+  assert(result.curatedEvidence?.scheduleRows > 20 && result.curatedEvidence?.upper400Count > 0, 'catalog year: selected-major evidence should count schedule rows and 400-level work');
+  assert(result.curatedEvidence?.sourceLinks?.[0]?.targetYear === '2024-2025', 'catalog year: selected-major evidence should preserve selected catalog target year');
   assert(result.warning?.targetYear === '2024-2025' && result.warning?.sourceYear === '2026-2027', 'catalog year: advising warning should expose target and source years');
   assert(/official UMD audit|advisor worksheet/.test(result.warning?.body || ''), 'catalog year: advising warning should tell students what evidence to bring');
   assert(/Catalog year: 2024-2025/.test(result.advisorText), 'catalog year: advisor text should include target catalog year');

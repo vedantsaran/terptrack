@@ -13003,3 +13003,61 @@ Next pass candidates:
 - Add per-major curated evidence drilldowns in Settings, such as a compact list of recently checked departments/courses for the selected fixed schedule.
 - Add a workflow drift-notification path that can open a lightweight issue or append a summary artifact when the hosted full sweep sees source drift.
 - Add a local script that simulates the GitHub Actions workflow modes end to end without requiring `actionlint`.
+
+## Pass 221 - Selected Major Source Evidence Drilldown
+
+Focus:
+- Added a selected-major evidence drilldown to the curated Settings review so students and advisors can inspect the exact schedule evidence for the chosen major, not just the global curated sweep.
+- Kept the panel fast and deterministic by deriving row counts, real-course counts, upper-level path, replaceable rows, term span, and course samples directly from the fixed schedule data.
+- Refreshed the Settings release snapshot and strict catalog artifact to the Pass 221 seed after a full release gate.
+- Kept `README.md` untouched.
+
+Code changes:
+- Updated `js/settings.js`.
+  - Added `curatedMajorEvidenceSummary` and rendering helpers for curated major evidence.
+  - The curated review now shows `Selected Major Evidence`, strict source status, catalog-backed schedule rows, freshman-to-senior span, upper-level path, GenEd/elective rows, intro/support samples, upper-level samples, replaceable row samples, source metadata, and the selected catalog page.
+  - Updated curated source and release snapshots to `Pass 221` with seed `pass221-release-full`.
+- Updated `styles.css`.
+  - Added responsive, dark-mode-safe styling for the selected-major evidence drilldown.
+  - Added mobile collapse rules for evidence stats and samples.
+- Updated `index.html`.
+  - Bumped `styles.css` to `v=124`.
+  - Bumped `js/settings.js` to `v=56`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added fixture coverage for the selected-major evidence summary and rendered text.
+  - Updated the release snapshot assertion to `Pass 221`.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Added rendered curated-preview assertions for the selected-major evidence panel, strict source status, schedule-row evidence, and course samples.
+  - Updated asset assertions to `styles.css?v=124` and `settings.js?v=56`.
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Updated the workflow asset assertion to `styles.css?v=124`; the first full release attempt caught the stale `v=123` expectation.
+- Updated `artifacts/curated-catalog-sweep/latest.json`.
+  - Refreshed the artifact with seed `pass221-release-full`.
+
+Verification:
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+  - It verified selected-major evidence for AOSC, including the selected catalog target year, schedule row count, and 400-level work.
+- Ran `node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass221-release-full`.
+  - The first attempt failed because `scripts/verify-rendered-workflows.js` still expected `styles.css?v=123`; this pass fixed the stale assertion.
+  - The final rerun syntax-checked 47 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop/mobile plan verification, and rendered desktop/mobile dark-mode plus mobile workflow checks.
+  - It passed the full strict live curated catalog sweep with `826/826` courses, no title or credit-source warnings, and 13 acknowledged PlanetTerp credit-lag rows.
+  - It rewrote `artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `TerpTrack release checks passed`.
+- Inspected `artifacts/curated-catalog-sweep/latest.json` with Node.
+  - Confirmed schema `terptrack-curated-catalog-sweep/v1`.
+  - Confirmed seed `pass221-release-full`, `generatedAt: July 7, 2026`, `826` checked courses, `0` warning counts, `13` acknowledged credit lags, and `0` stale acknowledgements.
+- Ran `node scripts/compare-curated-catalog-artifacts.js artifacts/curated-catalog-sweep/latest.json artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `No curated catalog source drift detected.`
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=5 --seed=pass221-random-live`.
+  - It confirmed no generated built-in majors remain; all built-ins are curated fixed schedules, so there were no random generated plans left to sample.
+
+Next pass candidates:
+- Add a workflow drift-notification path that can open a lightweight issue or append a summary artifact when the hosted full sweep sees source drift.
+- Add a local script that simulates the GitHub Actions workflow modes end to end without requiring `actionlint`.
+- Add a compact per-major evidence export block to advisor packets so the selected catalog page and strict sweep status travel with shared/printed plans.
