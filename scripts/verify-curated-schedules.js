@@ -74,6 +74,17 @@ function main() {
   const rows = vm.runInContext(`(() => {
     const realCode = code => /^[A-Z]{2,5}\\s?\\d{3}[A-Z]?$/i.test(String(code || '').trim());
     const upperCode = code => /^[A-Z]{2,5}\\s?4\\d{2}[A-Z]?$/i.test(String(code || '').trim());
+    const hasMajorUpperCategory = course => course.category === 'major-upper'
+      || (Array.isArray(course.categories) && course.categories.includes('major-upper'));
+    const genericUpperPlaceholder = course => {
+      if (!hasMajorUpperCategory(course)) return false;
+      const text = [course.code, course.title].map(value => String(value || '').toUpperCase()).join(' ');
+      if (/^AREA EMPHASIS ELECTIVE\\b/.test(text)) return false;
+      return /\\b[A-Z]{2,5}\\s?4XX\\b/.test(text)
+        || /\\bUPPER-DIVISION\\s+[A-Z]{2,5}\\s+(ELECTIVE|LAB)\\b/.test(text)
+        || /\\b[A-Z]{2,5}\\s+SPECIALIZATION ELECTIVE\\b/.test(text)
+        || /\\bSENIOR CAPSTONE ELECTIVE\\b/.test(text);
+    };
     const clone = value => JSON.parse(JSON.stringify(value));
     const scheduleFor = major => major.useDefaultSchedule ? SCHEDULE : major.fixedSchedule;
     return Object.values(MAJOR_TEMPLATES).filter(isMajorFullyBaked).map(major => {
@@ -103,6 +114,9 @@ function main() {
         missingGenEds: missing,
         realCourseCount: courses.filter(course => realCode(course.code)).length,
         upper400Count: courses.filter(course => upperCode(course.code)).length,
+        genericUpperPlaceholders: courses
+          .filter(genericUpperPlaceholder)
+          .map(course => String(course.code || '') + ' (' + String(course.title || '') + ')'),
         hasCatalogSource: Boolean(MAJOR_CATALOG_SOURCES[major.id]),
       };
     });
@@ -116,6 +130,7 @@ function main() {
     if (row.missingGenEds.length) failures.push(`${row.id}: missing GenEds ${row.missingGenEds.join(', ')}`);
     if (row.realCourseCount < 10) failures.push(`${row.id}: only ${row.realCourseCount} real catalog course rows`);
     if (row.upper400Count < 1) failures.push(`${row.id}: no real 400-level senior course rows`);
+    if (row.genericUpperPlaceholders.length) failures.push(`${row.id}: generic upper placeholders ${row.genericUpperPlaceholders.join(', ')}`);
     if (!row.hasCatalogSource) failures.push(`${row.id}: missing catalog source metadata`);
   });
 

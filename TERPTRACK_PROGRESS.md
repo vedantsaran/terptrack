@@ -12551,3 +12551,41 @@ Next pass candidates:
 - Add a stale-course detector that compares every curated fixed schedule against PlanetTerp plus official UMD catalog pages before release.
 - Replace remaining generic `4xx` elective placeholders in older social-science and communication schedules with real catalog options where the major rules allow it.
 - Continue reviewing release/verifier labels that still say `generated` even when the workflow covers curated schedules too.
+
+## Pass 212 - Real Upper-Division Curated Electives
+
+Focus:
+- Replaced the remaining generic `4xx` upper-division buckets in curated schedules with named, real UMD catalog courses.
+- Hardened the curated release gate so generic upper-division placeholders cannot be reintroduced silently.
+- Used the official 2026-2027 UMD approved-course catalog pages as the source of truth, with PlanetTerp spot checks where course records were available.
+- `README.md` was not modified or staged.
+
+Code changes:
+- Updated `js/major-schedules.js`.
+  - Replaced 46 vague upper-division placeholders across CS, BIOL, PSYC, CCJS, ENME, INST, COMM, ECON, ENGL, JOUR, HIST, SOCY, SPAN, ARTH, and LING.
+  - Preserved every affected schedule's credit totals and term loads.
+  - Added prerequisite metadata for the new rows where the catalog showed clear prerequisite flow.
+- Updated `scripts/verify-curated-schedules.js`.
+  - Added a generic-upper placeholder detector for fully baked schedules.
+  - The verifier now fails major-upper rows that contain `4xx`, `Upper-Division ... Elective/Lab`, department specialization placeholders, or senior capstone placeholders.
+  - Explicit area-emphasis buckets remain allowed for EDUC because they represent approved-choice area selections, not fake `4xx` courses.
+
+Verification:
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check scripts/verify-curated-schedules.js`.
+- Ran `rg -n "4xx|Upper-Division .*Elective|Specialization Elective|Senior Capstone Elective|Upper-Division .*Lab" js/major-schedules.js scripts/verify-curated-schedules.js`.
+  - It returned no matches.
+- Ran `git diff --check`.
+- Ran `node scripts/verify-curated-schedules.js`.
+  - It passed all 61 fully baked schedules with min real courses `14` and min 400-level rows `3`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated fixture schedules.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 45 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, the curated verifier, rendered desktop and mobile plan verification, and rendered mobile workflow checks.
+  - It reported `TerpTrack release checks passed`.
+
+Next pass candidates:
+- Add the stale-course detector that compares every curated fixed schedule against PlanetTerp plus official UMD catalog pages before release.
+- Normalize stale or mismatched existing curated course titles discovered while replacing placeholders, especially older special-topics and internship labels.
+- Add fixed-schedule source/evidence metadata per major so Settings can show exact catalog page and checked date for every curated schedule.
