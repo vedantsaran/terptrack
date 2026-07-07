@@ -5717,6 +5717,101 @@ h1.hero-title em {
   font-size: .66rem;
   margin-top: 5px;
 }
+.schedule-advisor-source-evidence {
+  margin: 10px 0 0;
+  border: 1px solid rgba(46,92,139,.30);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 86%, var(--blue));
+  color: var(--ink);
+  font-size: .74rem;
+  line-height: 1.4;
+  padding: 9px 10px;
+}
+.schedule-advisor-source-evidence-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.schedule-advisor-source-evidence-head h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: .86rem;
+}
+.schedule-advisor-source-evidence-head span,
+.schedule-advisor-source-evidence p,
+.schedule-advisor-source-evidence-grid em,
+.schedule-advisor-source-evidence-samples em,
+.schedule-advisor-source-evidence > span {
+  display: block;
+  color: var(--slate);
+  font-size: .7rem;
+  font-style: normal;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.schedule-advisor-source-evidence-head strong {
+  color: var(--blue);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-advisor-source-evidence-grid,
+.schedule-advisor-source-evidence-samples {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+.schedule-advisor-source-evidence-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.schedule-advisor-source-evidence-samples {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.schedule-advisor-source-evidence-grid span,
+.schedule-advisor-source-evidence-samples span {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  padding: 7px;
+}
+.schedule-advisor-source-evidence-grid b,
+.schedule-advisor-source-evidence-samples strong {
+  display: block;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.schedule-advisor-source-evidence-samples strong {
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .62rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.schedule-advisor-source-evidence a {
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 8px;
+  border: 1px solid var(--blue);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--blue);
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  padding: 5px 8px;
+  text-decoration: none;
+}
+.schedule-advisor-source-evidence a:hover {
+  background: var(--blue);
+  color: #fff;
+}
 .schedule-advisor-readiness-map-head {
   display: flex;
   justify-content: space-between;
@@ -9024,12 +9119,17 @@ h1.hero-title em {
     flex: 1 1 calc(50% - 6px);
     min-width: 0;
   }
-  .schedule-advisor-readiness-map-head {
+  .schedule-advisor-readiness-map-head,
+  .schedule-advisor-source-evidence-head {
     flex-direction: column;
     gap: 4px;
   }
-  .schedule-advisor-readiness-map-list {
+  .schedule-advisor-readiness-map-list,
+  .schedule-advisor-source-evidence-samples {
     grid-template-columns: 1fr;
+  }
+  .schedule-advisor-source-evidence-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .schedule-advisor-diagnostics-head {
     flex-direction: column;
@@ -9727,6 +9827,34 @@ h1.hero-title em {
 [data-theme="dark"] .schedule-readiness-term-metrics span {
   background: rgba(255, 255, 255, .055);
   border-color: var(--line-strong);
+}
+
+[data-theme="dark"] .schedule-advisor-source-evidence {
+  background: rgba(95, 163, 217, .10);
+  border-color: rgba(95, 163, 217, .42);
+  border-left-color: var(--blue);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .schedule-advisor-source-evidence-grid span,
+[data-theme="dark"] .schedule-advisor-source-evidence-samples span,
+[data-theme="dark"] .schedule-advisor-source-evidence a {
+  background: var(--paper);
+  border-color: var(--line-strong);
+}
+
+[data-theme="dark"] .schedule-advisor-source-evidence a,
+[data-theme="dark"] .schedule-advisor-source-evidence-head strong {
+  color: #9FCBFF;
+}
+
+[data-theme="dark"] .schedule-advisor-source-evidence a {
+  border-color: rgba(159, 203, 255, .62);
+}
+
+[data-theme="dark"] .schedule-advisor-source-evidence a:hover {
+  background: #9FCBFF;
+  color: #171411;
 }
 
 [data-theme="dark"] .schedule-readiness-term-status {

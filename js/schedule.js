@@ -4930,6 +4930,120 @@ function scheduleAdvisorCatalogYearText() {
   ];
 }
 
+function scheduleAdvisorSelectedMajorEvidence() {
+  try {
+    const settings = typeof getSettings === 'function' ? getSettings() : {};
+    const selectorMajor = typeof document !== 'undefined'
+      ? document.getElementById('set-major')?.value
+      : '';
+    const majorId = String(selectorMajor || state?.majorId || settings.majorId || '').trim().toUpperCase();
+    const evidenceMajorAliases = { CMSC: 'CS' };
+    const resolvedMajorId = evidenceMajorAliases[majorId] || majorId;
+    const tpl = typeof getMajorTemplate === 'function'
+      ? (getMajorTemplate(majorId) || getMajorTemplate(resolvedMajorId))
+      : null;
+    if (!tpl || typeof isMajorFullyBaked !== 'function' || !isMajorFullyBaked(tpl)) return null;
+    if (typeof curatedMajorEvidenceSummary !== 'function') return null;
+    const catalogYear = settings.catalogYear || (typeof currentCatalogYear === 'function' ? currentCatalogYear() : '');
+    const review = {
+      kind: 'curated',
+      majorId: tpl.id || resolvedMajorId,
+      majorName: tpl.name || majorId || 'Selected major',
+      targetCredits: tpl.totalCredits || settings.totalCredits || 120,
+      catalogYear,
+      officialSources: typeof majorOfficialSources === 'function'
+        ? majorOfficialSources(tpl, { includeGeneral: false, catalogYear })
+        : [],
+    };
+    const evidence = curatedMajorEvidenceSummary(review);
+    if (!evidence) return null;
+    const sweep = typeof CURATED_SCHEDULE_CATALOG_SWEEP !== 'undefined'
+      ? CURATED_SCHEDULE_CATALOG_SWEEP
+      : null;
+    const sweepOk = typeof curatedScheduleSweepOk === 'function'
+      ? curatedScheduleSweepOk(sweep)
+      : false;
+    return { ...evidence, sweep, sweepOk };
+  } catch {
+    return null;
+  }
+}
+
+function scheduleAdvisorSelectedMajorEvidenceText() {
+  const evidence = scheduleAdvisorSelectedMajorEvidence();
+  if (!evidence) return [];
+  const sweep = evidence.sweep || {};
+  const source = evidence.sourceLinks?.[0];
+  const strictStatus = evidence.sweepOk
+    ? `strict live source sweep passed ${sweep.checkedCourses || evidence.uniqueCourseCount}/${sweep.totalCourses || evidence.uniqueCourseCount} curated courses on ${sweep.checkedAt || 'the last release check'} (${sweep.pass || 'latest pass'}).`
+    : 'strict live source sweep needs maintainer review before this packet is considered release-ready.';
+  const samples = [];
+  if (evidence.introSamples?.length) samples.push(`  Intro/support: ${evidence.introSamples.slice(0, 3).join(' | ')}`);
+  if (evidence.upperSamples?.length) samples.push(`  Upper-level path: ${evidence.upperSamples.slice(0, 3).join(' | ')}`);
+  if (evidence.placeholderSamples?.length) samples.push(`  Replaceable rows: ${evidence.placeholderSamples.slice(0, 3).join(' | ')}`);
+  return [
+    '',
+    'Selected major source evidence:',
+    `- ${evidence.majorName}: ${evidence.scheduleRows} catalog-backed schedule rows, ${evidence.uniqueCourseCount} unique real courses, ${evidence.termCount} terms.`,
+    `  Upper-level path: ${evidence.upper400Count} 400-level rows / ${evidence.upperCount} total 300/400-level rows.`,
+    `  GenEd/elective rows: ${evidence.genEdCount}/${evidence.placeholderCount}; planned credits ${evidence.totalCredits}/${evidence.targetCredits}.`,
+    `  Status: ${strictStatus}`,
+    source
+      ? `  Selected catalog page: ${source.label || 'UMD Catalog major'} (${source.url})`
+      : '  Selected catalog page: not attached.',
+    evidence.sourceMeta ? `  ${evidence.sourceMeta}` : '',
+    ...samples,
+  ].filter(Boolean);
+}
+
+function scheduleAdvisorSelectedMajorEvidenceSampleHtml(label, rows) {
+  if (!rows?.length) return '';
+  return `
+    <span>
+      <strong>${scheduleEscape(label)}</strong>
+      <em>${scheduleEscape(rows.slice(0, 3).join(' · '))}</em>
+    </span>
+  `;
+}
+
+function scheduleAdvisorSelectedMajorEvidenceHtml() {
+  const evidence = scheduleAdvisorSelectedMajorEvidence();
+  if (!evidence) return '';
+  const sweep = evidence.sweep || {};
+  const source = evidence.sourceLinks?.[0];
+  const sweepText = evidence.sweepOk
+    ? `Strict live source sweep passed ${sweep.checkedCourses || evidence.uniqueCourseCount}/${sweep.totalCourses || evidence.uniqueCourseCount} curated courses on ${sweep.checkedAt || 'the last release check'} (${sweep.pass || 'latest pass'}).`
+    : 'Strict live source sweep needs maintainer review before this packet is considered release-ready.';
+  const range = evidence.firstTerm && evidence.lastTerm
+    ? `${evidence.firstTerm} to ${evidence.lastTerm}`
+    : `${evidence.termCount} terms`;
+  return `
+    <section class="schedule-advisor-source-evidence">
+      <div class="schedule-advisor-source-evidence-head">
+        <div>
+          <h4>Selected Major Source Evidence</h4>
+          <span>${scheduleEscape(evidence.majorName)} · ${scheduleEscape(range)}</span>
+        </div>
+        <strong>${scheduleEscape(evidence.sweepOk ? 'Strict source pass' : 'Review')}</strong>
+      </div>
+      <div class="schedule-advisor-source-evidence-grid">
+        <span><b>${scheduleEscape(evidence.scheduleRows)}</b><em>Catalog-backed schedule rows · ${scheduleEscape(evidence.uniqueCourseCount)} unique real courses</em></span>
+        <span><b>${scheduleEscape(evidence.upper400Count)}</b><em>400-level rows · ${scheduleEscape(evidence.upperCount)} total 300/400-level rows</em></span>
+        <span><b>${scheduleEscape(`${evidence.genEdCount}/${evidence.placeholderCount}`)}</b><em>GenEd/elective rows</em></span>
+        <span><b>${scheduleEscape(`${evidence.totalCredits}/${evidence.targetCredits}`)}</b><em>planned credits</em></span>
+      </div>
+      <p>${scheduleEscape(sweepText)}</p>
+      ${source ? `<a href="${scheduleEscape(source.url)}" target="_blank" rel="noopener noreferrer">Selected catalog page: ${scheduleEscape(source.label || 'UMD Catalog major')}</a>` : '<span>Selected catalog page: not attached.</span>'}
+      ${evidence.sourceMeta ? `<span>${scheduleEscape(evidence.sourceMeta)}</span>` : ''}
+      <div class="schedule-advisor-source-evidence-samples">
+        ${scheduleAdvisorSelectedMajorEvidenceSampleHtml('Intro/support', evidence.introSamples)}
+        ${scheduleAdvisorSelectedMajorEvidenceSampleHtml('Upper-level path', evidence.upperSamples)}
+        ${scheduleAdvisorSelectedMajorEvidenceSampleHtml('Replaceable rows', evidence.placeholderSamples)}
+      </div>
+    </section>
+  `;
+}
+
 function scheduleAdvisorSelectedSectionMap(semId, selectedItems) {
   const map = {};
   selectedItems.forEach(item => { map[`${semId}:${normalizeCode(item.course.code)}`] = item.section; });
@@ -5096,6 +5210,7 @@ function scheduleAdvisorText(sem, term, courses, selectedItems, conflicts, warni
   lines.push(...scheduleRegistrationBackupText(backupRows));
   lines.push(...scheduleAdvisorReadinessMapText(readinessRows));
   lines.push(...scheduleAdvisorCatalogYearText());
+  lines.push(...scheduleAdvisorSelectedMajorEvidenceText());
   if (outputOptions.auditIssues) lines.push(...scheduleAdvisorAuditSummaryText(auditIssues));
   if (outputOptions.auditIssues && auditIssues.length) lines.push(...scheduleAdvisorLiveLinkNoticeText());
   lines.push('', `${filterDef.heading}:`);
@@ -5150,6 +5265,17 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-catalog-warning strong{display:block;color:#8b0000}
     .schedule-advisor-catalog-warning p{margin:4px 0;color:#5d5962;line-height:1.4}
     .schedule-advisor-catalog-warning span{display:block;color:#5d5962;font-size:11px}
+    .schedule-advisor-source-evidence{border:1px solid #9fb4c8;border-left:4px solid #2e5c8b;border-radius:8px;background:#eef4fa;padding:10px;margin:10px 0;color:#241f1f;font-size:12px}
+    .schedule-advisor-source-evidence-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .schedule-advisor-source-evidence-head h4{margin:0}
+    .schedule-advisor-source-evidence-head span,.schedule-advisor-source-evidence p,.schedule-advisor-source-evidence-grid em,.schedule-advisor-source-evidence-samples em,.schedule-advisor-source-evidence>span{display:block;color:#5d5962;font-size:12px;line-height:1.35;font-style:normal}
+    .schedule-advisor-source-evidence-head strong{font-size:12px;text-transform:uppercase;color:#2e5c8b;white-space:nowrap}
+    .schedule-advisor-source-evidence-grid,.schedule-advisor-source-evidence-samples{display:grid;gap:6px;margin-top:8px}
+    .schedule-advisor-source-evidence-grid{grid-template-columns:repeat(4,1fr)}
+    .schedule-advisor-source-evidence-samples{grid-template-columns:repeat(3,1fr)}
+    .schedule-advisor-source-evidence-grid span,.schedule-advisor-source-evidence-samples span{border:1px solid #d8cec0;border-radius:7px;background:#fff;padding:7px}
+    .schedule-advisor-source-evidence-grid b,.schedule-advisor-source-evidence-samples strong{display:block;color:#241f1f}
+    .schedule-advisor-source-evidence a{display:inline-flex;margin-top:7px;border:1px solid #2e5c8b;border-radius:999px;background:#fff;color:#2e5c8b;font-size:11px;font-weight:700;padding:5px 8px;text-decoration:none}
     .schedule-advisor-live-note{border:1px solid #9fb4c8;border-radius:8px;background:#eef4fa;padding:9px 10px;color:#241f1f;font-size:12px;margin:10px 0}
     .schedule-advisor-live-note strong{display:block;color:#2e5c8b;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
     .schedule-advisor-live-note p{margin:3px 0 0;color:#5d5962;line-height:1.4}
@@ -5362,7 +5488,7 @@ function scheduleStandaloneAdvisorCss() {
     .schedule-advisor-course{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eee4d8;padding-top:6px;font-size:12px}
     .schedule-advisor-course span,.schedule-advisor-course em{display:block;color:#5d5962;font-style:normal}
     .schedule-output-list{border-top:1px solid #d8cec0;margin-top:10px;padding-top:8px;display:grid;gap:4px;font-size:12px}
-    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid,.schedule-calendar-export-metrics,.schedule-workload-metrics{grid-template-columns:repeat(2,1fr)}.schedule-advisor-readiness-map-list,.schedule-seat-freshness-list,.schedule-waitlist-list,.schedule-calendar-export-list,.schedule-final-checklist-grid,.schedule-workload-days{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-final-checklist-head,.schedule-workload-head,.schedule-seat-freshness-head,.schedule-waitlist-head,.schedule-calendar-export-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head,.schedule-advisor-readiness-map-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
+    @media (max-width:720px){.schedule-advisor-grid,.schedule-advisor-diagnostic-metrics,.schedule-readiness-grid,.schedule-calendar-export-metrics,.schedule-workload-metrics,.schedule-advisor-source-evidence-grid{grid-template-columns:repeat(2,1fr)}.schedule-advisor-readiness-map-list,.schedule-seat-freshness-list,.schedule-waitlist-list,.schedule-calendar-export-list,.schedule-final-checklist-grid,.schedule-workload-days,.schedule-advisor-source-evidence-samples{grid-template-columns:1fr}.schedule-readiness-actions,.schedule-seat-freshness-actions{align-items:flex-start;flex-direction:column}.schedule-readiness-actions div{justify-content:flex-start}.schedule-registration-appointment-head,.schedule-final-checklist-head,.schedule-workload-head,.schedule-seat-freshness-head,.schedule-waitlist-head,.schedule-calendar-export-head,.schedule-registration-handoff-head,.schedule-registration-order-head,.schedule-registration-backups-head,.schedule-advisor-readiness-map-head,.schedule-advisor-source-evidence-head{flex-direction:column}.schedule-registration-handoff-list li,.schedule-registration-backup{grid-template-columns:1fr}.schedule-advisor-diagnostic-notes{grid-template-columns:1fr}.schedule-advisor-audit-row{grid-template-columns:1fr;gap:3px}}
     @media print{body{padding:0}.schedule-output-panel{max-width:none}.schedule-print-sheet,.schedule-advisor-packet{border:none;padding:0}.schedule-print-sheet{break-after:page}.schedule-readiness-actions,.schedule-calendar-export-actions{display:none}}
   `;
 }
@@ -5437,6 +5563,7 @@ function scheduleAdvisorPacketHtml(sem, term, courses, selectedItems, conflicts,
       ${renderScheduleRegistrationOrderHtml(registrationOrder)}
       ${renderScheduleRegistrationBackupsHtml(backupRows)}
       ${scheduleAdvisorCatalogYearHtml()}
+      ${scheduleAdvisorSelectedMajorEvidenceHtml()}
       ${outputOptions.unscheduled && unscheduled.length ? `<div class="schedule-output-list warn"><strong>Advisor follow-up</strong>${unscheduled.map(course => `<span>${scheduleEscape(course.code)} needs a section choice for ${scheduleEscape(sem?.name || 'this term')}.</span>`).join('')}</div>` : ''}
       ${outputOptions.warnings && warnings.length ? `<div class="schedule-output-list warn"><strong>Schedule warnings</strong>${warnings.slice(0, 12).map(warning => `<span>${scheduleEscape(warning)}</span>`).join('')}</div>` : ''}
       ${scheduleAdvisorTimingDiagnosticsHtml(timing)}

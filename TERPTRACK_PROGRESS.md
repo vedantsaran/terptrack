@@ -6015,6 +6015,7 @@ Completed:
 
 Verification:
 - Ran `node --check js/schedule.js`.
+- Ran `node --check js/settings.js`.
 - Ran `node --check scripts/test-generated-plans.js`.
 - Ran `node --check scripts/verify-rendered-workflows.js`.
 - Ran `node --check scripts/verify-rendered-generated-plans.js`.
@@ -13061,3 +13062,72 @@ Next pass candidates:
 - Add a workflow drift-notification path that can open a lightweight issue or append a summary artifact when the hosted full sweep sees source drift.
 - Add a local script that simulates the GitHub Actions workflow modes end to end without requiring `actionlint`.
 - Add a compact per-major evidence export block to advisor packets so the selected catalog page and strict sweep status travel with shared/printed plans.
+
+## Pass 222 - Advisor Packet Source Evidence Export
+
+Focus:
+- Carried the selected-major source evidence from Settings into advisor packets so shared, downloaded, and printed plans include the selected catalog page, strict live sweep status, schedule-row counts, upper-level path counts, GenEd/elective counts, planned-credit counts, and course samples.
+- Kept the export deterministic by reusing `curatedMajorEvidenceSummary` from Settings and resolving the browser workflow's `CMSC` marker back to the shipped `CS` curated template.
+- Fixed the in-app Schedule tab styling for the new evidence block after the rendered dark-mode verifier caught a low-contrast default browser link.
+- Refreshed the Settings release snapshot and strict catalog artifact to the Pass 222 seed after a full release gate.
+- Kept `README.md` untouched.
+
+Code changes:
+- Updated `js/schedule.js`.
+  - Added `scheduleAdvisorSelectedMajorEvidence`, plain-text evidence export, HTML evidence export, sample rendering, standalone advisor CSS, and mobile standalone export rules.
+  - Inserted the evidence block after the catalog-year warning in both advisor text and advisor HTML.
+  - Added the narrow `CMSC -> CS` evidence alias so workflow fixtures and department-style schedule state still resolve to the Computer Science curated source page.
+- Updated `styles.css`.
+  - Added responsive in-app styling for `.schedule-advisor-source-evidence`.
+  - Added dark-mode surface, metric-card, and link colors so the selected catalog page link passes visible text contrast checks.
+- Updated `index.html`.
+  - Bumped `styles.css` to `v=125`.
+  - Bumped `js/schedule.js` to `v=74`.
+  - Bumped `js/settings.js` to `v=57`.
+- Updated `js/settings.js`.
+  - Updated curated source and release snapshots to `Pass 222` with seed `pass222-release-full`.
+  - Updated the hosted curated-source workflow command to the Pass 222 seed.
+- Updated `scripts/test-generated-plans.js`.
+  - Added advisor text and HTML assertions for selected-major evidence, strict live source sweep status, selected catalog URL, evidence counts, and strict source status.
+  - Updated the release snapshot assertion to `Pass 222`.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Updated asset assertions to `styles.css?v=125`, `settings.js?v=57`, and `Pass 222`.
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Updated asset assertions to `styles.css?v=125` and `js/schedule.js?v=74`.
+  - Added exported advisor document/text assertions for selected-major source evidence, strict source status, and selected catalog URL.
+- Updated `artifacts/curated-catalog-sweep/latest.json`.
+  - Refreshed the artifact with seed `pass222-release-full`.
+
+Verification:
+- Ran `node --check js/schedule.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+  - It verified advisor text and HTML now carry selected-major evidence and the selected catalog URL.
+- Ran `node scripts/verify-rendered-workflows.js`.
+  - The first attempt caught a dark-mode contrast failure on the new selected catalog page link in the Schedule tab.
+  - After adding global in-app CSS and dark-mode overrides, the rerun passed desktop/mobile dark mode, mobile onboarding, Browse replacement, Recommendations, Account setup, Schedule alternatives, and advisor packet workflows.
+  - It verified the exported advisor document/text include selected-major evidence, strict source status, and selected catalog URL.
+- Ran `node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass222-release-full`.
+  - Reran the same release wrapper after the final `settings.js?v=57` cache bump.
+  - It syntax-checked 47 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop/mobile plan verification, and rendered desktop/mobile dark-mode plus mobile workflow checks.
+  - It passed the full strict live curated catalog sweep with `826/826` courses, no title or credit-source warnings, and 13 acknowledged PlanetTerp credit-lag rows.
+  - It rewrote `artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `TerpTrack release checks passed`.
+- Inspected `artifacts/curated-catalog-sweep/latest.json` with Node.
+  - Confirmed schema `terptrack-curated-catalog-sweep/v1`.
+  - Confirmed seed `pass222-release-full`, `generatedAt: July 7, 2026`, `826` checked courses, `0` warning counts, `13` acknowledged credit lags, and `0` stale acknowledgements.
+- Ran `node scripts/compare-curated-catalog-artifacts.js artifacts/curated-catalog-sweep/latest.json artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `No curated catalog source drift detected.`
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=5 --seed=pass222-random-live`.
+  - It confirmed no generated built-in majors remain; all built-ins are curated fixed schedules, so there were no random generated plans left to sample.
+- Ran `git diff --check`.
+  - It reported no whitespace errors.
+
+Next pass candidates:
+- Add a workflow drift-notification path that can open a lightweight issue or append a summary artifact when the hosted full sweep sees source drift.
+- Add a local script that simulates the GitHub Actions workflow modes end to end without requiring `actionlint`.
+- Add a compact advisor-facing "what changed since last packet" source-evidence note when the selected major, catalog year, or strict sweep seed changes.

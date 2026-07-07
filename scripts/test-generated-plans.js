@@ -1656,7 +1656,7 @@ async function testCatalogYearTargeting(context) {
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
   assert(/--live-curated-catalog-strict-credit-source/.test(result.releaseHtml), 'catalog year: release checklist should expose strict curated sweep command');
-  assert(/Pass 221/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
+  assert(/Pass 222/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
   assert(/--live-curated-catalog-write-artifact/.test(result.releaseHtml), 'catalog year: release checklist should expose curated artifact writer command');
   assert(/curated-source-evidence\.yml/.test(result.releaseHtml), 'catalog year: release checklist should expose hosted curated evidence workflow command');
   assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass208-curated-final-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
@@ -1673,8 +1673,12 @@ async function testCatalogYearTargeting(context) {
   assert(/official UMD audit|advisor worksheet/.test(result.warning?.body || ''), 'catalog year: advising warning should tell students what evidence to bring');
   assert(/Catalog year: 2024-2025/.test(result.advisorText), 'catalog year: advisor text should include target catalog year');
   assert(/Catalog-year verification/.test(result.advisorText) && /Confirm 2024-2025 catalog requirements/.test(result.advisorText), 'catalog year: advisor text should include catalog-year verification warning');
+  assert(/Selected major source evidence:[\s\S]*strict live source sweep/.test(result.advisorText), 'catalog year: advisor text should include selected-major source evidence');
+  assert(/Selected catalog page:[\s\S]*academiccatalog\.umd\.edu/.test(result.advisorText), 'catalog year: advisor text should include selected catalog source URL');
   assert(/Catalog 2024-2025/.test(result.advisorHtml), 'catalog year: advisor HTML should include target catalog year');
   assert(/schedule-advisor-catalog-warning/.test(result.advisorHtml) && /Confirm 2024-2025 catalog requirements/.test(result.advisorHtml), 'catalog year: advisor HTML should include warning block');
+  assert(/schedule-advisor-source-evidence/.test(result.advisorHtml) && /Selected Major Source Evidence/.test(result.advisorHtml), 'catalog year: advisor HTML should include selected-major evidence block');
+  assert(/Catalog-backed schedule rows/.test(result.advisorHtml) && /Strict source pass/.test(result.advisorHtml), 'catalog year: advisor HTML should include selected-major evidence counts and strict status');
 
   return {
     id: 'CATALOG-YEAR',

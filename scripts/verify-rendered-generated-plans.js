@@ -989,11 +989,11 @@ async function runViewport(browser, url, viewport, selected, opts) {
     }, null, { timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.styles.includes('styles.css?v=124'), `${viewport.label}: rendered app did not load styles.css?v=124`);
+    assert(initialSnapshot.styles.includes('styles.css?v=125'), `${viewport.label}: rendered app did not load styles.css?v=125`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=18'), `${viewport.label}: rendered app did not load js/majors.js?v=18`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=56'), `${viewport.label}: rendered app did not load js/settings.js?v=56`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=57'), `${viewport.label}: rendered app did not load js/settings.js?v=57`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=14'), `${viewport.label}: rendered app did not load js/import.js?v=14`);
     assert(initialSnapshot.releaseText.includes('5/6 launch checks ready'), `${viewport.label}: release checklist did not show 5/6 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
@@ -1014,7 +1014,7 @@ async function runViewport(browser, url, viewport, selected, opts) {
     assert(initialSnapshot.releaseText.includes('compare-curated-catalog-artifacts.js'), `${viewport.label}: release checklist missing curated artifact comparison command`);
     assert(initialSnapshot.releaseText.includes('curated-source-evidence.yml'), `${viewport.label}: release checklist missing hosted curated evidence workflow command`);
     assert(initialSnapshot.releaseText.includes('Default release gate'), `${viewport.label}: release checklist missing release gate row`);
-    assert(initialSnapshot.releaseText.includes('Pass 221'), `${viewport.label}: release checklist missing Pass 221 snapshot`);
+    assert(initialSnapshot.releaseText.includes('Pass 222'), `${viewport.label}: release checklist missing Pass 222 snapshot`);
     assert(initialSnapshot.releaseText.includes('Cloud account setup'), `${viewport.label}: release checklist missing cloud setup row`);
     assert(initialSnapshot.releaseText.includes('SUPABASE_URL'), `${viewport.label}: release checklist missing Vercel/Supabase setup detail`);
     Object.entries(initialSnapshot.overflow || {}).forEach(([key, value]) => {

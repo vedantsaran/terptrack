@@ -341,8 +341,8 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=124'), 'workflow app did not load styles.css?v=124');
-  assert(snapshot.scripts.includes('js/schedule.js?v=73'), 'workflow app did not load js/schedule.js?v=73');
+  assert(snapshot.styles.includes('styles.css?v=125'), 'workflow app did not load styles.css?v=125');
+  assert(snapshot.scripts.includes('js/schedule.js?v=74'), 'workflow app did not load js/schedule.js?v=74');
   assert(snapshot.scheduleViewText.includes('Solver breadth'), 'workflow app did not render the schedule solver breadth preference');
   assert(snapshot.scripts.includes('js/timeline.js?v=27'), 'workflow app did not load js/timeline.js?v=27');
   assert(snapshot.scripts.includes('js/io.js?v=13'), 'workflow app did not load js/io.js?v=13');
@@ -1604,6 +1604,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/DTSTART;TZID=America\/New_York:20260902T090000/.test(result.calendarText), 'advisor packet: calendar export should include configured Fall 2026 class dates');
   assert(/Calendar range set in Terp Track: 2026-09-02 to 2026-12-14/.test(result.calendarText), 'advisor packet: calendar export should include custom date-range note');
   assert(/schedule-advisor-catalog-warning/.test(result.advisorDocument), 'advisor packet: exported HTML should include catalog warning markup');
+  assert(/schedule-advisor-source-evidence/.test(result.advisorDocument) && /Selected Major Source Evidence/.test(result.advisorDocument), 'advisor packet: exported HTML should include selected-major source evidence');
+  assert(/Strict source pass/.test(result.advisorDocument) && /Selected catalog page/.test(result.advisorDocument), 'advisor packet: exported HTML should include strict source status and catalog page');
   assert(/schedule-advisor-readiness-map/.test(result.advisorDocument) && /Plan Readiness Map/.test(result.advisorDocument), 'advisor packet: exported HTML should include plan-wide readiness map');
   assert(/Registration Blockers/.test(result.advisorDocument), 'advisor packet: exported HTML should include blocker view heading');
 	  assert(/Registration Readiness/.test(result.advisorDocument) && /Fix before registration/.test(result.advisorDocument), 'advisor packet: exported HTML should include registration readiness gates');
@@ -1624,6 +1626,8 @@ async function verifyAdvisorPacketMobile(page, url, opts) {
   assert(/Quick actions/.test(result.advisorDocument) && /data-readiness-action="auto-pick"/.test(result.advisorDocument), 'advisor packet: exported HTML should include readiness quick actions');
 	  assert(/MATH 140 0201: 0 open[\s\S]*4 waitlisted/.test(result.advisorDocument) && /backup section|backup 0301/i.test(result.advisorDocument), 'advisor packet: exported HTML should include waitlist backup warning');
   assert(/Catalog-year verification/.test(result.advisorText), 'advisor packet: exported text should include catalog-year verification');
+  assert(/Selected major source evidence:[\s\S]*strict live source sweep/.test(result.advisorText), 'advisor packet: exported text should include selected-major strict source evidence');
+  assert(/Selected catalog page:[\s\S]*academiccatalog\.umd\.edu/.test(result.advisorText), 'advisor packet: exported text should include selected catalog source URL');
   assert(/Plan readiness map:[\s\S]*Summary: 0\/2 terms registration-ready/.test(result.advisorText), 'advisor packet: exported text should include plan-wide readiness summary');
 	  assert(/Registration readiness/.test(result.advisorText) && /Sections: 2\/3/.test(result.advisorText), 'advisor packet: exported text should include registration readiness gates');
 	  assert(/Prereqs: 2\/3[\s\S]*MATH 115/.test(result.advisorText), 'advisor packet: exported text should include prerequisite gate');
