@@ -12589,3 +12589,58 @@ Next pass candidates:
 - Add the stale-course detector that compares every curated fixed schedule against PlanetTerp plus official UMD catalog pages before release.
 - Normalize stale or mismatched existing curated course titles discovered while replacing placeholders, especially older special-topics and internship labels.
 - Add fixed-schedule source/evidence metadata per major so Settings can show exact catalog page and checked date for every curated schedule.
+
+## Pass 213 - Live Curated Catalog Sweep
+
+Focus:
+- Added the stale-course detector for every fully baked curated fixed schedule, using official UMD approved-course pages plus PlanetTerp as the live evidence sources.
+- Fixed the missing/stale codes and credit mismatches the detector surfaced instead of only checking generated templates.
+- Kept `README.md` untouched.
+
+Code changes:
+- Added `scripts/verify-curated-catalog-sweep.js`.
+  - Loads all fully baked schedules in a VM and checks each unique real course code once.
+  - Confirms each course against the official UMD catalog and PlanetTerp, with base special-topic matching and legacy-prefix handling for `AASP` to `AAAS` and `WMST` to `WGSS`.
+  - Fails missing courses and official credit mismatches.
+  - Treats official UMD credits as authoritative when PlanetTerp has stale credit data, while keeping title and PlanetTerp-credit differences as warnings.
+- Wired the curated live sweep into `scripts/run-release-checks.js` as an opt-in stage:
+  - `--live-curated-catalog-sweep`
+  - `--live-curated-catalog-limit`
+  - JSON/report coverage through the generated-plan release fixture.
+- Updated current-catalog schedule data and fixtures:
+  - Migrated African American Studies rows from stale `AASP` assumptions to current `AAAS` codes and labels.
+  - Replaced stale PSYC support/core/elective rows with current `BSCI 170/171`, `PSYC 304`, `PSYC 334`, `PSYC 355`, and `PSYC 437` rows.
+  - Rebuilt the ENME path around current `ENES 220/221/232`, `ENME 202`, `ENME 331/332/350/351/361/371/392`, and current upper electives.
+  - Replaced stale `ARCH 474` with current `ARCH 472`.
+  - Replaced stale `COMM 497` with current `COMM 488` and rebalanced the final Communication term.
+  - Corrected official credit rows for BIOL, ECON, PSYC, KNES, PHYS, ASTR, PLSC, ENEE, ENCE, COMM, and the default CE schedule.
+  - Split the default CE `PHYS 260` combined row into official `PHYS 260` lecture plus `PHYS 261` lab rows.
+  - Replaced the now-3-credit ENEE lab choice with current 2-credit `ENEE 486` so the Electrical Engineering plan stays at official `122/122` credits.
+- Updated department search/profile fallbacks and cache-busted affected assets for `AAAS`, current import GenEd hints, and rendered verifier expectations.
+
+Verification:
+- Ran `node --check` on all touched app and script files.
+- Ran `node scripts/verify-curated-schedules.js`.
+  - It passed all 61 fully baked schedules.
+- Ran `node scripts/verify-curated-catalog-sweep.js --limit=40 --seed=pass213-smoke`.
+  - It passed `40/826` unique curated courses.
+- Ran `node scripts/verify-curated-catalog-sweep.js --seed=pass213-full-final`.
+  - It passed `826/826` unique curated courses across `1461` schedule rows.
+  - It found no missing courses and no credit failures.
+  - It reported 50 non-blocking title drift warnings for future cleanup, led by older CCJS and abbreviated CE/default titles.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-curated --skip-rendered --skip-workflows --live-curated-catalog-sweep --live-curated-catalog-limit=20 --live-seed=pass213-wrapper-smoke`.
+  - It passed the new release wrapper stage and verified the opt-in CLI flags.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+- Ran `node scripts/verify-random-schedules.js --count=6 --seed=pass213-random`.
+  - It confirmed no generated built-in majors remain; all built-ins are curated fixed schedules.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 46 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop and mobile plan verification, and rendered mobile workflow checks.
+  - It reported `TerpTrack release checks passed`.
+- Ran `git diff --check`; it passed.
+
+Next pass candidates:
+- Normalize the 50 remaining curated title-drift warnings now that the live sweep has separated title cleanup from hard stale-code and credit failures.
+- Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page, live sweep status, and checked date for every curated schedule.
+- Consider making the curated catalog sweep part of a scheduled release job with a conservative limit by default and a full sweep before major schedule-data releases.

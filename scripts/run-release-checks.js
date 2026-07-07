@@ -34,6 +34,8 @@ function parseArgs(argv) {
     liveCatalogWriteSettingsSnapshot: false,
     liveCatalogNoBumpSettingsAsset: false,
     liveCatalogSnapshotDate: process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE || '',
+    liveCuratedCatalogSweep: false,
+    liveCuratedCatalogLimit: null,
     liveCloud: false,
     liveCloudRequireAuth: false,
     liveCloudWriteSmoke: false,
@@ -109,6 +111,14 @@ function parseArgs(argv) {
     } else if (arg.startsWith('--live-catalog-snapshot-date=')) {
       opts.liveCatalogSweep = true;
       opts.liveCatalogSnapshotDate = arg.slice('--live-catalog-snapshot-date='.length) || opts.liveCatalogSnapshotDate;
+    } else if (arg === '--live-curated-catalog-sweep') {
+      opts.liveCuratedCatalogSweep = true;
+    } else if (arg === '--live-curated-catalog-limit') {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogLimit = Number(argv[++i] || 0);
+    } else if (arg.startsWith('--live-curated-catalog-limit=')) {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogLimit = Number(arg.slice('--live-curated-catalog-limit='.length) || 0);
     } else if (arg === '--live-cloud' || arg === '--live-supabase') {
       opts.liveCloud = true;
     } else if (arg === '--live-cloud-require-auth' || arg === '--live-supabase-require-auth') {
@@ -153,6 +163,7 @@ function parseArgs(argv) {
   opts.workflowsTimeoutMs = Number.isFinite(opts.workflowsTimeoutMs) && opts.workflowsTimeoutMs > 0 ? Math.floor(opts.workflowsTimeoutMs) : 120000;
   opts.liveCount = Number.isFinite(opts.liveCount) && opts.liveCount > 0 ? Math.floor(opts.liveCount) : null;
   opts.liveCatalogLimit = Number.isFinite(opts.liveCatalogLimit) && opts.liveCatalogLimit > 0 ? Math.floor(opts.liveCatalogLimit) : null;
+  opts.liveCuratedCatalogLimit = Number.isFinite(opts.liveCuratedCatalogLimit) && opts.liveCuratedCatalogLimit > 0 ? Math.floor(opts.liveCuratedCatalogLimit) : null;
   opts.liveCatalogTestudoTerms = uniqueClean(opts.liveCatalogTestudoTerms);
   opts.liveCatalogSnapshotDate = String(opts.liveCatalogSnapshotDate || '').trim();
   opts.liveCloudTimeoutMs = Number.isFinite(opts.liveCloudTimeoutMs) && opts.liveCloudTimeoutMs > 0 ? Math.floor(opts.liveCloudTimeoutMs) : 15000;
@@ -189,6 +200,8 @@ function usage() {
     '  --live-catalog-write-settings-snapshot  Refresh Settings evidence after full catalog sweep',
     '  --live-catalog-snapshot-date DATE  Date label for refreshed Settings evidence',
     '  --live-catalog-no-bump-settings-asset  Do not bump settings.js asset tag after snapshot write',
+    '  --live-curated-catalog-sweep  Live-check every unique curated schedule course once',
+    '  --live-curated-catalog-limit N  Limit curated catalog sweep to N seeded unique courses',
     '  --live-cloud                   Verify configured Supabase project table access and RLS',
     '  --live-cloud-require-auth      Require Supabase test-user credentials for authenticated checks',
     '  --live-cloud-write-smoke       Upsert/delete Supabase verifier rows after authenticated checks',
@@ -255,6 +268,8 @@ function publicOptions(opts) {
     liveCatalogWriteSettingsSnapshot: opts.liveCatalogWriteSettingsSnapshot,
     liveCatalogNoBumpSettingsAsset: opts.liveCatalogNoBumpSettingsAsset,
     liveCatalogSnapshotDate: opts.liveCatalogSnapshotDate,
+    liveCuratedCatalogSweep: opts.liveCuratedCatalogSweep,
+    liveCuratedCatalogLimit: opts.liveCuratedCatalogLimit,
     liveCloud: opts.liveCloud,
     liveCloudRequireAuth: opts.liveCloudRequireAuth,
     liveCloudWriteSmoke: opts.liveCloudWriteSmoke,
@@ -273,6 +288,12 @@ function buildLiveCatalogArgs(opts) {
   if (opts.liveCatalogWriteSettingsSnapshot) args.push('--write-settings-snapshot');
   if (opts.liveCatalogNoBumpSettingsAsset) args.push('--no-bump-settings-asset');
   if (opts.liveCatalogSnapshotDate) args.push(`--snapshot-date=${opts.liveCatalogSnapshotDate}`);
+  return args;
+}
+
+function buildLiveCuratedCatalogArgs(opts) {
+  const args = ['scripts/verify-curated-catalog-sweep.js', `--seed=${opts.liveSeed}`];
+  if (opts.liveCuratedCatalogLimit) args.push(`--limit=${opts.liveCuratedCatalogLimit}`);
   return args;
 }
 
@@ -451,6 +472,13 @@ async function runReleaseChecks(opts, report) {
     skipStage(report, 'live-catalog', 'live generated required-course catalog sweep', 'Pass --live-catalog-sweep to include it.');
     reportLog(report, '\n[release] Live generated course catalog sweep skipped. Pass --live-catalog-sweep to include it.');
   }
+  if (opts.liveCuratedCatalogSweep) {
+    const args = buildLiveCuratedCatalogArgs(opts);
+    await runStage(report, 'live-curated-catalog', 'live curated schedule catalog sweep', stage => runCommand(stage, 'live curated schedule catalog sweep', args, report));
+  } else {
+    skipStage(report, 'live-curated-catalog', 'live curated schedule catalog sweep', 'Pass --live-curated-catalog-sweep to include it.');
+    reportLog(report, '\n[release] Live curated schedule catalog sweep skipped. Pass --live-curated-catalog-sweep to include it.');
+  }
   if (opts.liveCloud) {
     const args = ['scripts/verify-supabase-live.js', `--timeout-ms=${opts.liveCloudTimeoutMs}`];
     if (opts.liveCloudRequireAuth) args.push('--require-auth');
@@ -498,6 +526,7 @@ if (require.main === module) {
 } else {
   module.exports = {
     buildLiveCatalogArgs,
+    buildLiveCuratedCatalogArgs,
     parseArgs,
     publicOptions,
     usage,

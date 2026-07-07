@@ -39,7 +39,7 @@ function _splitCodeList(text) {
    built-in curated list without waiting for a code release.
 */
 const PLAN_IMPORT_SUPPORT_DEPTS = new Set([
-  'AASP','AMST','ANTH','ARTH','ASTR','BSCI','CHEM','COMM','ECON','ENGL','GEOG','GEOL','HIST','JOUR',
+  'AAAS','AASP','AMST','ANTH','ARTH','ASTR','BSCI','CHEM','COMM','ECON','ENGL','GEOG','GEOL','HIST','JOUR',
   'MATH','PHIL','PHYS','PSYC','SOCY','STAT','THET','WGSS','WOMS','UNIV'
 ]);
 const PLAN_IMPORT_SKIP_TOKENS = new Set([

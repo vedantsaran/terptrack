@@ -265,12 +265,12 @@ const CURATED_TARGETS = [
   },
   {
     major: 'AAST',
-    name: 'African American Studies',
+    name: 'African American and Africana Studies',
     kind: 'curated',
     targetCredits: 120,
     cards: [
-      { code: 'AASP401', credits: 3, title: 'Research Directions' },
-      { code: 'AASP443', credits: 3, title: 'Blacks and the Law' },
+      { code: 'AAAS402', credits: 3, title: 'Classic Readings' },
+      { code: 'AAAS443', credits: 3, title: 'Law and the Black Community' },
     ],
   },
   {
@@ -983,11 +983,11 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=122'), `${viewport.label}: rendered app did not load styles.css?v=122`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=16'), `${viewport.label}: rendered app did not load js/majors.js?v=16`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=17'), `${viewport.label}: rendered app did not load js/majors.js?v=17`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
     assert(initialSnapshot.scripts.includes('js/settings.js?v=51'), `${viewport.label}: rendered app did not load js/settings.js?v=51`);
-    assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
+    assert(initialSnapshot.scripts.includes('js/import.js?v=14'), `${viewport.label}: rendered app did not load js/import.js?v=14`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);

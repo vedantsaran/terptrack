@@ -271,8 +271,8 @@ async function testCuratedScheduleFixtures(context) {
     },
     {
       id: 'AAST',
-      required: ['AASP100', 'AASP202', 'AASP211', 'AASP301', 'AASP400', 'AASP401', 'AASP411', 'AASP320', 'AASP443', 'HIST200', 'SOCY100', 'STAT100'],
-      goal: 'AASP401',
+      required: ['AAAS100', 'AAAS202', 'AAAS211', 'AAAS301', 'AAAS400', 'AAAS402', 'AAAS411', 'AAAS320', 'AAAS443', 'HIST200', 'SOCY100', 'STAT100'],
+      goal: 'AAAS402',
       minRealCourses: 16,
     },
     {
@@ -367,7 +367,7 @@ async function testCuratedScheduleFixtures(context) {
     },
     {
       id: 'ENEE',
-      required: ['ENEE101', 'ENEE140', 'ENEE150', 'ENEE290', 'ENEE244', 'ENEE205', 'ENEE222', 'ENEE245', 'ENEE304', 'ENEE323', 'ENEE350', 'ENEE200', 'ENEE305', 'ENEE324', 'ENEE382', 'ENEE436', 'ENEE411', 'ENEE445', 'ENEE475', 'ENEE408A', 'ENEE420', 'ENEE459B', 'ENEE428', 'CHEM135', 'ENES100', 'MATH140', 'MATH141', 'MATH241', 'PHYS161', 'PHYS260', 'PHYS261', 'PHYS270', 'PHYS271', 'STAT400'],
+      required: ['ENEE101', 'ENEE140', 'ENEE150', 'ENEE290', 'ENEE244', 'ENEE205', 'ENEE222', 'ENEE245', 'ENEE304', 'ENEE323', 'ENEE350', 'ENEE200', 'ENEE305', 'ENEE324', 'ENEE382', 'ENEE436', 'ENEE411', 'ENEE445', 'ENEE475', 'ENEE408A', 'ENEE420', 'ENEE459B', 'ENEE486', 'CHEM135', 'ENES100', 'MATH140', 'MATH141', 'MATH241', 'PHYS161', 'PHYS260', 'PHYS261', 'PHYS270', 'PHYS271', 'STAT400'],
       goal: 'ENEE408A',
       minRealCourses: 37,
     },
@@ -445,7 +445,7 @@ async function testCuratedScheduleFixtures(context) {
     },
     {
       id: 'ARCH',
-      required: ['ARCH171', 'ARCH225', 'ARCH200', 'ARCH226', 'ARCH300', 'ARCH201', 'ARCH462', 'ARCH400', 'ARCH463', 'ARCH401', 'ARCH402', 'ARCH403', 'ARCH464', 'ARCH465', 'ARCH466', 'ARCH474', 'ARCH408', 'ARCH430', 'ARCH460', 'MATH120', 'PHYS121', 'ENGL101', 'ENGL393', 'COMM107'],
+      required: ['ARCH171', 'ARCH225', 'ARCH200', 'ARCH226', 'ARCH300', 'ARCH201', 'ARCH462', 'ARCH400', 'ARCH463', 'ARCH401', 'ARCH402', 'ARCH403', 'ARCH464', 'ARCH465', 'ARCH466', 'ARCH472', 'ARCH408', 'ARCH430', 'ARCH460', 'MATH120', 'PHYS121', 'ENGL101', 'ENGL393', 'COMM107'],
       goal: 'ARCH403',
       minRealCourses: 24,
     },
@@ -4110,6 +4110,14 @@ function testReleaseJsonReport() {
     '--live-catalog-snapshot-date=July 3, 2026',
   ]);
   const catalogArgs = releaseRunner.buildLiveCatalogArgs(catalogOpts);
+  const curatedCatalogOpts = releaseRunner.parseArgs([
+    'node',
+    'scripts/run-release-checks.js',
+    '--live-seed=fixture-curated-sweep',
+    '--live-curated-catalog-sweep',
+    '--live-curated-catalog-limit=17',
+  ]);
+  const curatedCatalogArgs = releaseRunner.buildLiveCuratedCatalogArgs(curatedCatalogOpts);
   const skippedOpts = releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js']);
   assert(catalogOpts.liveCatalogSweep === true, 'release report: Testudo term option should enable live catalog sweep');
   assert(catalogOpts.liveCatalogTestudoTerms.join(',') === '202608,202701', 'release report: should normalize catalog Testudo terms');
@@ -4117,6 +4125,10 @@ function testReleaseJsonReport() {
   assert(catalogArgs.includes('--write-settings-snapshot'), 'release report: catalog sweep args should include Settings snapshot writer');
   assert(catalogArgs.includes('--snapshot-date=July 3, 2026'), 'release report: catalog sweep args should include snapshot date');
   assert(!releaseRunner.buildLiveCatalogArgs(skippedOpts).some(arg => arg.startsWith('--testudo-terms=')), 'release report: default catalog args should let verifier use its default Testudo term');
+  assert(curatedCatalogOpts.liveCuratedCatalogSweep === true, 'release report: curated catalog flag should enable curated sweep');
+  assert(curatedCatalogOpts.liveCuratedCatalogLimit === 17, 'release report: curated catalog limit should normalize');
+  assert(curatedCatalogArgs.includes('scripts/verify-curated-catalog-sweep.js'), 'release report: curated catalog args should invoke curated sweep script');
+  assert(curatedCatalogArgs.includes('--seed=fixture-curated-sweep') && curatedCatalogArgs.includes('--limit=17'), 'release report: curated catalog args should include seed and limit');
   assertThrows(
     () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-limit=1', '--live-catalog-write-settings-snapshot']),
     /Snapshot refresh requires a full catalog sweep/,
@@ -4160,6 +4172,7 @@ function testReleaseJsonReport() {
   assert(stageStatus.workflows === 'skipped', 'release report: workflows stage should be represented as skipped');
   assert(stageStatus.live === 'skipped', 'release report: live stage should be represented as skipped when not requested');
   assert(stageStatus['live-catalog'] === 'skipped', 'release report: live catalog sweep stage should be represented as skipped when not requested');
+  assert(stageStatus['live-curated-catalog'] === 'skipped', 'release report: live curated catalog sweep stage should be represented as skipped when not requested');
   assert(stageStatus['live-cloud'] === 'skipped', 'release report: live cloud stage should be represented as skipped when not requested');
   const proxyStage = (report.stages || []).find(stage => stage.id === 'proxy');
   assert(proxyStage?.commands?.[0]?.status === 'passed', 'release report: proxy command should be represented as passed');
@@ -4175,6 +4188,7 @@ function testReleaseJsonReport() {
     status: report.status,
     stages: Object.keys(stageStatus).join(','),
     catalogArgs: catalogArgs.filter(arg => /^--(?:testudo|write|snapshot)/.test(arg)).join(' '),
+    curatedCatalogArgs: curatedCatalogArgs.filter(arg => /^--(?:seed|limit)/.test(arg)).join(' '),
   };
 }
 
@@ -6880,7 +6894,7 @@ async function main() {
   console.log(`Account/share fixture ${account.id}: ${account.normalizedInvite}; ${account.importedCourse}; ${account.outputPreset}.`);
   console.log(`Account setup fixture ${accountSetup.id}: missing ${accountSetup.missing}; Vercel ${accountSetup.vercel}; friend rows after removal ${accountSetup.removal}.`);
   console.log(`Supabase live verifier fixture ${supabaseLive.id}: ${supabaseLive.keyType}; ${supabaseLive.denied}; REST URL ${supabaseLive.url ? 'ok' : 'missing'}.`);
-  console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}; catalog ${releaseJson.catalogArgs}.`);
+  console.log(`Release report fixture ${releaseJson.id}: ${releaseJson.status}; stages ${releaseJson.stages}; catalog ${releaseJson.catalogArgs}; curated catalog ${releaseJson.curatedCatalogArgs}.`);
   console.log(`Canonical title fixture ${canonicalTitles.id}: AMST 205 -> ${canonicalTitles.amst205}.`);
   console.log(`Official catalog title fixture ${officialCatalogTitles.id}: BMGT 301 -> ${officialCatalogTitles.bmgt301}; ARTT 428 -> ${officialCatalogTitles.artt428}; variable ${officialCatalogTitles.variable}.`);
   console.log(`Schedule timing fixture ${timing.id}: compact ${timing.compactScore}, idle ${timing.idleScore}, tight transitions ${timing.tightTransitions}, comparison +${timing.comparisonTimingDelta}.`);

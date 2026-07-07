@@ -27,7 +27,8 @@ const SCHEDULE = [
       { code: "ENEE 101", title: "Intro to ECE",                   cr: 3, prereqs: [], coreqs: ["MATH 140"], kind: "core", category: "ce-core" },
       { code: "ENEE 244", title: "Digital Logic Design",           cr: 3, prereqs: [], coreqs: ["CMSC 132"], kind: "core", category: "ce-core" },
       { code: "ENEE 290", title: "Diff Eq & LinAlg for Engr",      cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "critical", category: "ce-core", note: "Replaces MATH 246+461 · LinAlg prereq for CMSC 472" },
-      { code: "PHYS 260", title: "Physics: Waves & E&M (incl. 261 Lab)",cr: 4, prereqs: ["PHYS 161"], coreqs: [], kind: "core", category: "gened-dsnl", note: "Double-counts: CE Core + DSNL" },
+      { code: "PHYS 260", title: "General Physics: Electricity, Magnetism and Thermodynamics", cr: 3, prereqs: ["PHYS 161"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "PHYS 261", title: "General Physics: Vibrations, Waves, Heat, Electricity and Magnetism (Laboratory)", cr: 1, prereqs: [], coreqs: ["PHYS 260"], kind: "core", category: "gened-dsnl", note: "Double-counts: CE Core + DSNL" },
     ]
   },
   {

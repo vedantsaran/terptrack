@@ -25,7 +25,7 @@ const PROFILE_INTEREST_DEFS = [
   {
     id: 'policy-society',
     label: 'Policy + society',
-    depts: ['GVPT', 'CCJS', 'SOCY', 'AASP', 'WMST', 'HIST', 'AMST'],
+    depts: ['GVPT', 'CCJS', 'SOCY', 'AAAS', 'AASP', 'WMST', 'HIST', 'AMST'],
     keywords: ['policy', 'justice', 'law', 'government', 'society', 'community', 'equity', 'culture'],
   },
   {
@@ -57,7 +57,7 @@ const PROFILE_INTEREST_DEFS = [
 const PROFILE_KNOWN_DEPTS = new Set([
   ...PROFILE_INTEREST_DEFS.flatMap(def => def.depts || []),
   'ENGL', 'COMM', 'HIST', 'GVPT', 'PSYC', 'SOCY', 'ANTH', 'PHIL', 'ARTH', 'THET',
-  'MUSC', 'RELS', 'WMST', 'AASP', 'AMST', 'GEOG', 'ECON', 'JOUR', 'CINE', 'FMSC',
+  'MUSC', 'RELS', 'WMST', 'AAAS', 'AASP', 'AMST', 'GEOG', 'ECON', 'JOUR', 'CINE', 'FMSC',
   'NUTR', 'NFSC', 'BSCI', 'CHEM', 'PHYS', 'PLCY',
 ]);
 
