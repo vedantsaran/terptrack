@@ -12320,3 +12320,98 @@ Verification:
 Next pass candidates:
 - Convert the remaining generated science/specialized plans into fixed catalog-backed schedules: `AOSC`, `ASTR`, `BCHM`, `GEOL`, `NEUR`, `ARCH`, and `EDUC`.
 - Add a stale-course detector that compares curated and generated rows against PlanetTerp plus official UMD catalog pages before release.
+
+### Pass 208 - Final generated majors converted to curated schedules
+
+Goal focus:
+- Convert the final generated built-in majors into fixed, current-catalog schedules.
+- Make the Settings freshness and release-check surfaces honestly report zero remaining generated majors.
+- Keep rendered/onboarding workflows green after AOSC becomes curated instead of generated.
+
+Catalog/source checks:
+- Checked current UMD 2026-2027 catalog pages before editing:
+  - Atmospheric and Oceanic Science Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/computer-mathematical-natural-sciences/atmospheric-oceanic-science/atmospheric-oceanic-science-major/`
+  - Architecture Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/architecture-planning-preservation/architecture-major/`
+  - Astronomy Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/computer-mathematical-natural-sciences/astronomy/astronomy-major/`
+  - Biochemistry Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/computer-mathematical-natural-sciences/chemistry-biochemistry/biochemistry-major/`
+  - Elementary Education Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/education/teaching-learning-policy-leadership/elementary-education-major/`
+  - Geology Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/computer-mathematical-natural-sciences/geological-environmental-planetary-sciences/geology-major/`
+  - Neuroscience Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/computer-mathematical-natural-sciences/biology/neuroscience-major/`
+- Queried live PlanetTerp metadata for the new fixed-plan rows before encoding schedules.
+  - Confirmed live credits/titles for the available AOSC, ASTR, BCHM, NEUR, GEOL, ARCH, and TLPL/EDSP rows.
+  - Kept official-catalog titles directly for catalog rows that PlanetTerp did not return, including `ASTR 130`, `ASTR 131`, `ASTR 232`, `AOSC 358L`, `GEOL 394`, `GEOL 490`, `ARCH 474`, and repeated Elementary Education seminar/internship rows.
+  - Kept `NEUR 405` at the official catalog's `4` credits even though PlanetTerp returned `3`.
+
+Code changes:
+- Added fixed schedules in `js/major-schedules.js` for:
+  - `SCHEDULE_ASTR`: current Astronomy BS Astrophysics path with `ASTR 130/131/232`, `ASTR 310/320`, advanced ASTR electives, physics support, and `ASTR 498N`.
+  - `SCHEDULE_AOSC`: current Atmospheric and Oceanic Science BS with `AOSC 200/201/358L/431/432/493/494/498`, math/physics/chemistry support, and upper AOSC choices.
+  - `SCHEDULE_BCHM`: current Biochemistry BS with the honors-style chemistry sequence, `BCHM 461/462/464/465/485`, biology, calculus, and physics support.
+  - `SCHEDULE_NEUR`: current Neuroscience BS Molecular/Cellular/Physiology path with `NEUR 200/305/306/405`, life-science math, chemistry, physics, psychology, and advanced biology/neuroscience rows.
+  - `SCHEDULE_GEOL`: current Geology BS Professional track with thesis, field camp, mineralogy, structure, sedimentation, petrology, and geoscience options.
+  - `SCHEDULE_ARCH`: current Architecture BS option with media/history, studio sequence, structures/systems, professional practice, and studio electives.
+  - `SCHEDULE_EDUC`: current Elementary Education BS with gateway math/science, TLPL/EDSP blocks, internship year, and six student-selected area-of-emphasis slots.
+- Updated `js/majors.js`.
+  - Wired `AOSC`, `ARCH`, `ASTR`, `BCHM`, `EDUC`, `GEOL`, and `NEUR` to fixed schedules.
+  - Replaced stale generated-era code lists with current catalog-backed core/support/upper-course sets.
+  - Changed Architecture from the older BA label to the current BS-option fixed plan.
+- Updated verification and release scripts.
+  - Added the seven new schedules to curated fixtures in `scripts/test-generated-plans.js`.
+  - Made generated-only diagnostic tests temporarily unfix AOSC when they need to exercise the generator.
+  - Allowed `scripts/verify-random-schedules.js` to pass as a clear `0/0` no-op when no generated majors remain.
+  - Cleared the default live-generated major list in `scripts/run-release-checks.js`.
+  - Converted the rendered generated verifier's default matrix to the seven newly curated schedules.
+  - Updated workflow assertions so onboarding accepts AOSC as curated and checks curated GenEd coverage text.
+- Updated Settings evidence.
+  - `GENERATED_TEMPLATE_AUDIT` now uses `pass208-curated-final-all` and reports `0` verified/generated schedules.
+  - `GENERATED_CATALOG_SWEEP` now uses `pass208-curated-final-catalog` and reports `0/0` generated required courses.
+  - Release snapshot now reports `Pass 208`.
+  - Fixed audit-history rendering so a legitimate `0` generated-major count does not fall back to older nonzero audit counts.
+  - `js/majors.js` asset version bumped from `v=15` to `v=16`.
+  - `js/settings.js` asset version bumped from `v=50` to `v=51`.
+
+Major-gap notes:
+- The generated built-in major pool is now empty: `0` generated majors, `0` generated requirement rows.
+- VM audit reported `61/61` built-in majors as curated/fixed.
+- `README.md` was not modified or staged.
+
+Verification:
+- Ran `node --check js/major-schedules.js && node --check js/majors.js && node --check js/settings.js && node --check scripts/test-generated-plans.js && node --check scripts/verify-rendered-generated-plans.js && node --check scripts/verify-random-schedules.js && node --check scripts/run-release-checks.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed `0` generated fixtures and `51` curated schedule fixtures.
+  - It reported `ASTR 120/120`, max `17` credits, `13/13` GenEd coverage, `28` real courses, goal term `Fall 2029`.
+  - It reported `AOSC 120/120`, max `17` credits, `13/13` GenEd coverage, `30` real courses, goal term `Fall 2029`.
+  - It reported `BCHM 120/120`, max `18` credits, `13/13` GenEd coverage, `29` real courses, goal term `Fall 2029`.
+  - It reported `NEUR 120/120`, max `18` credits, `13/13` GenEd coverage, `33` real courses, goal term `Fall 2029`.
+  - It reported `GEOL 120/120`, max `18` credits, `13/13` GenEd coverage, `27` real courses, goal term `Spring 2030`.
+  - It reported `ARCH 120/120`, max `16` credits, `13/13` GenEd coverage, `25` real courses, goal term `Fall 2029`.
+  - It reported `EDUC 120/120`, max `18` credits, `13/13` GenEd coverage, `35` real courses, goal term `Fall 2029`.
+  - It passed all generated requirement groups with `0` majors and `0` grouped requirements.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass208-curated-final-all`.
+  - It reported `count=0/0`.
+  - It confirmed no generated majors remain.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --seed=pass208-curated-final-catalog --testudo-terms=202608`.
+  - It reported `courses=0/0`, `majors=0`, and `requirementRows=0`.
+  - It matched `0/0` unique generated required courses and found no title drifts.
+- Ran a VM generated-pool audit.
+  - It reported `generatedCount: 0`, `curatedCount: 61`, and `total: 61`.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=AOSC,ARCH,ASTR,BCHM,EDUC,GEOL,NEUR --viewports=all`.
+  - Desktop and mobile rendered all seven final schedules as curated.
+  - Rendered cards included `AOSC498`, `AOSC493`, `ARCH403`, `ARCH408`, `ASTR498N`, `ASTR450`, `BCHM465`, `BCHM485`, `TLPL489A`, `TLPL489B`, `GEOL490`, `GEOL394`, `NEUR405`, and `NEUR479`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=180000`.
+  - It passed rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with `0` generated majors and `51` curated schedules.
+  - It passed rendered desktop and mobile matrices for `GEOL`, `AOSC`, `ASTR`, `BCHM`, `NEUR`, `ARCH`, and `EDUC`.
+  - It passed rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-catalog-sweep --live-catalog-testudo-terms=202608 --live-seed=pass208-curated-final-live`.
+  - The live generated schedule verifier passed as `0/0`.
+  - The live generated catalog sweep passed as `0/0`.
+- Ran `git diff --check`; it passed.
+
+Next pass candidates:
+- Add a stale-course detector that compares all curated fixed schedules against PlanetTerp plus official UMD catalog pages before release.
+- Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page and checked date for every curated schedule.
+- Review the remaining generated-language in verifier/release labels now that those scripts cover curated schedules too.

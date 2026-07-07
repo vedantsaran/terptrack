@@ -985,6 +985,12 @@ async function main() {
     return;
   }
   const majors = generatedMajors(context);
+  if (!majors.length && !opts.majors.length) {
+    console.log(`Random schedule verifier seed=${opts.seed} count=0/0`);
+    console.log('No generated majors remain; every built-in major currently uses a curated fixed schedule.');
+    console.log('Verified 0 generated schedules against PlanetTerp.');
+    return;
+  }
   const sample = opts.majors.length
     ? opts.majors.map(id => majors.find(major => major.id === id) || fail(`Unknown generated major for verification: ${id}`))
     : (opts.all ? majors : shuffle(majors, rand).slice(0, Math.min(opts.count, majors.length)));

@@ -389,6 +389,443 @@ const SCHEDULE_PHYS = [
 ];
 
 // ============================================================
+// ASTR - Astronomy (BS, Astrophysics specialization, 120 cr)
+// ============================================================
+const SCHEDULE_ASTR = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ASTR 130', 'Introductory Astrophysics 1 - Foundations', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('PHYS 171', 'Introductory Physics: Mechanics and Relativity', 3, { category: 'major-support' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ASTR 131', 'Introductory Astrophysics 2 - Planets and Stars', 3, { prereqs: ['ASTR 130'], category: 'major-core' }),
+    _c('PHYS 265', 'Introduction to Scientific Programming', 3, { prereqs: ['PHYS 171'], category: 'major-support' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ASTR 232', 'Introductory Astrophysics 3 - The Milky Way and Beyond', 4, { prereqs: ['ASTR 131'], category: 'major-core' }),
+    _c('PHYS 272', 'Introductory Physics: Fields', 3, { prereqs: ['PHYS 171'], category: 'major-support' }),
+    _c('PHYS 275', 'Experimental Physics I: Mechanics and Heat', 2, { prereqs: ['PHYS 171'], category: 'major-support' }),
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ASTR 310', 'Observational Astronomy', 4, { prereqs: ['ASTR 232'], category: 'major-core' }),
+    _c('PHYS 273', 'Introductory Physics: Waves', 3, { prereqs: ['PHYS 272'], category: 'major-support' }),
+    _c('PHYS 276', 'Experimental Physics II: Electricity and Magnetism', 2, { prereqs: ['PHYS 275'], kind: 'gened', category: 'gened-dsnl' }),
+    _c('MATH 243', 'Introduction to Linear Algebra and Differential Equations', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ASTR 320', 'Theoretical Astrophysics', 3, { prereqs: ['ASTR 232','MATH 241'], category: 'major-upper' }),
+    _c('PHYS 313', 'Electricity and Magnetism I', 4, { prereqs: ['PHYS 272','MATH 241'], category: 'major-upper' }),
+    _c('PHYS 371', 'Modern Physics', 3, { prereqs: ['PHYS 273'], category: 'major-upper' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ASTR 406', 'Stellar Structure and Evolution', 3, { prereqs: ['ASTR 320'], category: 'major-upper' }),
+    _c('ASTR 415', 'Computational Astrophysics', 3, { prereqs: ['ASTR 320'], category: 'major-upper' }),
+    _c('ASTR 421', 'Galaxies', 3, { prereqs: ['ASTR 320'], category: 'major-upper' }),
+    _c('PHYS 401', 'Quantum Physics I', 4, { prereqs: ['PHYS 371'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ASTR 450', 'Orbital Dynamics', 3, { prereqs: ['ASTR 320'], category: 'major-upper' }),
+    _c('ASTR 498N', 'Special Problems in Astronomy; Stellar Evolution', 3, { category: 'major-upper', isGoal: true }),
+    _c('PHYS 410', 'Classical Mechanics', 4, { prereqs: ['PHYS 273','MATH 243'], category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 2, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// AOSC - Atmospheric and Oceanic Science (BS, 120 cr)
+// ============================================================
+const SCHEDULE_AOSC = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('AOSC 200', 'Weather and Climate', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { category: 'major-support' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('AOSC 201', 'Weather and Climate Laboratory', 1, { prereqs: ['AOSC 200'], kind: 'gened', category: 'gened-dsnl' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('CHEM 136', 'General Chemistry Laboratory for Engineers', 1, { coreqs: ['CHEM 135'], category: 'major-support' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 174', 'Physics Laboratory Introduction', 1, { coreqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 260', 'General Physics: Electricity, Magnetism and Thermodynamics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics: Mechanics, Vibrations, Waves, Heat (Laboratory)', 1, { coreqs: ['PHYS 260'], category: 'major-support' }),
+    _c('AOSC 358L', 'Computing and Data Analysis: Deciphering Climate Change Clues', 3, { category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('MATH 246', 'Differential Equations for Scientists and Engineers', 3, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 270', 'General Physics: Waves, Optics, Relativity and Modern Physics', 3, { prereqs: ['PHYS 260'], category: 'major-support' }),
+    _c('PHYS 271', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics (Laboratory)', 1, { coreqs: ['PHYS 270'], category: 'major-support' }),
+    _c('AOSC 431', 'Atmospheric Thermodynamics', 3, { prereqs: ['MATH 241','PHYS 260'], category: 'major-core' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('AOSC 432', 'Dynamics of the Atmosphere and Ocean', 3, { prereqs: ['AOSC 431'], category: 'major-core' }),
+    _c('AOSC 400', 'Physical Meteorology of the Atmosphere', 3, { prereqs: ['AOSC 431'], category: 'major-upper' }),
+    _c('AOSC 401', 'Climate Dynamics and Earth System Science', 3, { prereqs: ['AOSC 431'], category: 'major-upper' }),
+    _c('AOSC 424', 'Remote Sensing of the Atmosphere and Ocean', 3, { category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('AOSC 470', 'Synoptic Meteorology', 3, { prereqs: ['AOSC 432'], category: 'major-upper' }),
+    _c('AOSC 433', 'Atmospheric Chemistry and Climate', 3, { category: 'major-upper' }),
+    _c('AOSC 445', 'Climate Data Science', 3, { category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('AOSC 493', 'Senior Research Project I', 3, { category: 'major-upper', isGoal: true }),
+    _c('AOSC 494', 'Atmospheric and Oceanic Science Seminar', 1, { category: 'major-upper' }),
+    _c('AOSC 498', 'Senior Research Project II', 3, { prereqs: ['AOSC 493'], category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 2, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// BCHM - Biochemistry (BS, 120 cr)
+// ============================================================
+const SCHEDULE_BCHM = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('CHEM 146', 'Principles of General Chemistry', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('CHEM 177', 'Introduction to Laboratory Practices and Research in the Chemical Sciences', 2, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('CHEM 237', 'Principles of Organic Chemistry I', 4, { prereqs: ['CHEM 146'], category: 'major-core' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('CHEM 247', 'Principles of Organic Chemistry II', 4, { prereqs: ['CHEM 237'], category: 'major-core' }),
+    _c('CHEM 276', 'General Chemistry and Energetics - Majors', 2, { prereqs: ['CHEM 146'], category: 'major-core' }),
+    _c('CHEM 277', 'Fundamentals of Analytical and Bioanalytical Chemistry Laboratory', 3, { prereqs: ['CHEM 177'], category: 'major-core' }),
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 260', 'General Physics: Electricity, Magnetism and Thermodynamics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics: Mechanics, Vibrations, Waves, Heat (Laboratory)', 1, { coreqs: ['PHYS 260'], category: 'major-support' }),
+    _c('CHEM 395', 'Professional Issues in Chemistry and Biochemistry', 1, { category: 'major-core' }),
+    _c('CHEM 425', 'Instrumental Methods of Analysis', 4, { prereqs: ['CHEM 276','CHEM 277'], category: 'major-upper' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('CHEM 481', 'Physical Chemistry I', 3, { prereqs: ['MATH 241','PHYS 260'], category: 'major-upper' }),
+    _c('CHEM 483', 'Physical Chemistry Laboratory I', 2, { coreqs: ['CHEM 481'], category: 'major-upper' }),
+    _c('BCHM 461', 'Biochemistry I', 3, { prereqs: ['CHEM 247'], category: 'major-upper' }),
+    _c('BSCI 222', 'Principles of Genetics', 4, { prereqs: ['BSCI 170'], category: 'major-support' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('BCHM 462', 'Biochemistry II', 3, { prereqs: ['BCHM 461'], category: 'major-upper' }),
+    _c('BCHM 464', 'Biochemistry Laboratory', 3, { prereqs: ['BCHM 461'], category: 'major-upper' }),
+    _c('BCHM 485', 'Physical Biochemistry', 3, { prereqs: ['BCHM 461'], category: 'major-upper' }),
+    _c('BSCI 410', 'Molecular Genetics', 3, { prereqs: ['BSCI 222'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BCHM 465', 'Biochemistry III', 3, { prereqs: ['BCHM 462'], category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// NEUR - Neuroscience (BS, Molecular/Cellular/Physiology track, 120 cr)
+// ============================================================
+const SCHEDULE_NEUR = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('NEUR 200', 'Introduction to Neuroscience', 3, { category: 'major-core' }),
+    _c('BSCI 160', 'Principles of Ecology and Evolution', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('BSCI 161', 'Principles of Ecology and Evolution Lab', 1, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('MATH 135', 'Discrete Mathematics for Life Sciences', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('MATH 136', 'Calculus for Life Sciences', 4, { prereqs: ['MATH 135'], category: 'major-support' }),
+    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
+    _c('CHEM 132', 'General Chemistry I Laboratory', 1, { coreqs: ['CHEM 131'], category: 'major-support' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('CHEM 231', 'Organic Chemistry I', 3, { prereqs: ['CHEM 131'], category: 'major-support' }),
+    _c('CHEM 232', 'Organic Chemistry Laboratory I', 1, { coreqs: ['CHEM 231'], category: 'major-support' }),
+    _c('PSYC 100', 'Introduction to Psychology', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('STAT 400', 'Applied Probability and Statistics I', 3, { prereqs: ['MATH 136'], category: 'major-support' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('CHEM 241', 'Organic Chemistry II', 3, { prereqs: ['CHEM 231'], category: 'major-support' }),
+    _c('CHEM 242', 'Organic Chemistry Laboratory II', 1, { coreqs: ['CHEM 241'], category: 'major-support' }),
+    _c('CHEM 271', 'General Chemistry and Energetics', 2, { prereqs: ['CHEM 131'], category: 'major-support' }),
+    _c('CHEM 272', 'General Bioanalytical Chemistry Laboratory', 2, { coreqs: ['CHEM 271'], category: 'major-support' }),
+    _c('PHYS 131', 'Fundamentals of Physics for Life Sciences I', 4, { prereqs: ['MATH 136'], category: 'major-support' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('PHYS 132', 'Fundamentals of Physics for Life Sciences II', 4, { prereqs: ['PHYS 131'], category: 'major-support' }),
+    _c('NEUR 305', 'Neural Systems and Circuits', 3, { prereqs: ['NEUR 200'], category: 'major-core' }),
+    _c('NEUR 306', 'Cellular and Molecular Neuroscience', 3, { prereqs: ['NEUR 200'], category: 'major-core' }),
+    _c('BSCI 222', 'Principles of Genetics', 4, { prereqs: ['BSCI 170'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('NEUR 405', 'Neuroscience Laboratory', 4, { prereqs: ['NEUR 305','NEUR 306'], category: 'major-upper', isGoal: true }),
+    _c('BSCI 331', 'Cell Biology and Physiology', 3, { prereqs: ['BSCI 222'], category: 'major-upper' }),
+    _c('BSCI 332', 'Cell Biology and Physiology Laboratory', 1, { coreqs: ['BSCI 331'], category: 'major-upper' }),
+    _c('BCHM 461', 'Biochemistry I', 3, { prereqs: ['CHEM 241'], category: 'major-upper' }),
+    _c('BSCI 410', 'Molecular Genetics', 3, { prereqs: ['BSCI 222'], category: 'major-upper' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BSCI 440', 'Mammalian Physiology', 4, { prereqs: ['BSCI 331'], category: 'major-upper' }),
+    _c('NEUR 479', 'Advanced Research in Neuroscience', 1, { category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 5, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// GEOL - Geology (BS, Professional track, 120 cr)
+// ============================================================
+const SCHEDULE_GEOL = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('GEOL 100', 'Physical Geology', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('GEOL 110', 'Physical Geology Laboratory', 1, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('GEOL 102', 'Historical Geology', 4, { prereqs: ['GEOL 100'], category: 'major-core' }),
+    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
+    _c('CHEM 132', 'General Chemistry I Laboratory', 1, { coreqs: ['CHEM 131'], category: 'major-support' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('GEOL 322', 'Mineralogy', 4, { prereqs: ['GEOL 102'], category: 'major-core' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics: Mechanics, Vibrations, Waves, Heat (Laboratory)', 1, { coreqs: ['PHYS 161'], category: 'major-support' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('GEOL 341', 'Structural Geology', 4, { prereqs: ['GEOL 322'], category: 'major-core' }),
+    _c('GEOL 342', 'Sedimentation and Stratigraphy', 4, { prereqs: ['GEOL 102'], category: 'major-core' }),
+    _c('GEOL 351', 'Statistics for Geoscientists', 3, { category: 'major-upper' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('GEOL 423', 'Optical Mineralogy', 4, { prereqs: ['GEOL 322'], category: 'major-core' }),
+    _c('GEOL 443', 'Petrology', 4, { prereqs: ['GEOL 423'], category: 'major-core' }),
+    _c('GEOL 340', 'Geomorphology', 4, { category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('GEOL 446', 'Geophysics', 3, { category: 'major-upper' }),
+    _c('GEOL 444', 'Low Temperature Geochemistry', 4, { category: 'major-upper' }),
+    _c('GEOL 331', 'Principles of Paleontology', 4, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('GEOL 393', 'Geology Senior Thesis I: Proposal', 3, { category: 'major-upper', isGoal: true }),
+    _c('GEOL 412', 'Geology of the Terrestrial Planets', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('GEOL 394', 'Geology Senior Thesis II: Research', 3, { prereqs: ['GEOL 393'], category: 'major-upper', isGoal: true }),
+    _c('GEOL 490', 'Geology Field Camp', 6, { category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// ARCH - Architecture (BS option, 120 cr)
+// ============================================================
+const SCHEDULE_ARCH = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ARCH 171', 'Design Thinking and Making in Architecture', 3, { category: 'major-core' }),
+    _c('MATH 120', 'Elementary Calculus I', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ARCH 225', 'History of World Architecture I', 3, { category: 'major-core' }),
+    _c('ARCH 200', 'Design Media and Representation I', 3, { category: 'major-core' }),
+    _c('PHYS 121', 'Fundamentals of Physics I', 4, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ARCH 226', 'History of World Architecture II', 3, { prereqs: ['ARCH 225'], category: 'major-core' }),
+    _c('ARCH 300', 'Design Media and Representation II', 3, { prereqs: ['ARCH 200'], category: 'major-core' }),
+    _c('ARCH 201', 'Elements and Principles of Architecture', 1, { category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ARCH 462', 'Methods & Materials of Building Construction', 3, { category: 'major-core' }),
+    _c('ARCH 400', 'Architecture Design Studio I', 6, { category: 'major-core' }),
+    _c('ARCH 463', 'Sustainable Systems in Architecture', 3, { category: 'major-core' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ARCH 401', 'Architecture Design Studio II', 6, { prereqs: ['ARCH 400'], category: 'major-upper' }),
+    _c('ARCH 464', 'Architectural Structures I', 3, { category: 'major-upper' }),
+    _c('ARCH 430', 'Measuring Sustainability in Architecture', 3, { category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ARCH 402', 'Architecture Design Studio III', 6, { prereqs: ['ARCH 401'], category: 'major-upper' }),
+    _c('ARCH 465', 'Architectural Structures II', 3, { prereqs: ['ARCH 464'], category: 'major-upper' }),
+    _c('ARCH 460', 'Site Analysis and Design', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ARCH 403', 'Architecture Design Studio IV', 6, { prereqs: ['ARCH 402'], category: 'major-upper', isGoal: true }),
+    _c('ARCH 466', 'Environmental Systems in Architecture', 3, { category: 'major-upper' }),
+    _c('ARCH 408', 'Special Topics Architecture Design Studio', 6, { category: 'major-upper' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('ARCH 474', 'Architecture Professional Practice Seminar', 1, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 4, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
+// EDUC - Elementary Education (BS, 120 cr)
+// ============================================================
+const SCHEDULE_EDUC = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+    _c('UNIV 100', 'The Student in the University', 1, { category: 'major-support' }),
+    _c('MATH 212', 'Elements of Numbers and Operations', 3, { kind: 'gened', category: 'gened-fsma' }),
+    _c('HIST 200', 'Interpreting American History: Beginnings to 1877', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('MATH 213', 'Elements of Geometry and Measurement', 3, { prereqs: ['MATH 212'], category: 'major-support' }),
+    _c('MATH 214', 'Elements of Probability and Statistics', 3, { prereqs: ['MATH 212'], category: 'major-support' }),
+    _c('PHYS 121', 'Fundamentals of Physics I', 4, { category: 'major-support' }),
+    _c('TLPL 251', 'Community, Learners, and Classroom Climate', 3, { category: 'major-core' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('GEOG 100', 'Introduction to Geography', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+    _c('TLPL 340', "Introduction to Children's Literature and Critical Literacy", 3, { category: 'major-core' }),
+    _c('SOCY 230', 'Sociological Social Psychology', 3, { category: 'major-support' }),
+    _c('TLPL 250', 'Historical and Philosophical Perspectives on Education', 3, { category: 'major-core' }),
+    _c('EDHD 411', 'Child Growth and Development', 3, { category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('EDSP 401', 'Teaching Students with Disabilities in Elementary Classrooms', 3, { category: 'major-upper' }),
+    _c('TLPL 332', 'Arts Integration in Elementary Classrooms', 3, { category: 'major-upper' }),
+    _c('Area Emphasis Elective A', 'Elementary Education Area of Emphasis', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+    _c('Area Emphasis Elective B', 'Elementary Education Area of Emphasis', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('TLPL 341', 'Assessing Language and Literacy Development in Elementary Classrooms', 3, { category: 'major-upper' }),
+    _c('TLPL 342', 'Promoting Skilled and Motivated Readers in Diverse Elementary Classrooms (Part 1)', 3, { category: 'major-upper' }),
+    _c('TLPL 361', 'Community, Learners, and Classroom Engagement', 3, { category: 'major-upper' }),
+    _c('TLPL 362', 'Curriculum and Instruction in Elementary Education: Social Studies', 3, { category: 'major-upper' }),
+    _c('TLPL 478B', 'Professional Seminar in Education: Community, Learners and Classroom Engagement', 1, { category: 'major-upper' }),
+    _c('TLPL 479B', 'Field Experience in Elementary Education', 1, { category: 'major-upper' }),
+    _c('Area Emphasis Elective C', 'Elementary Education Area of Emphasis', 3, { kind: 'gened', category: 'gened-dssp', note: 'Satisfies DSSP when selected from approved area-of-emphasis options' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('TLPL 300', 'Digital Learning Tools and Communities', 1, { category: 'major-upper' }),
+    _c('TLPL 312', 'Curriculum and Instruction in Elementary Education: Mathematics', 3, { category: 'major-upper' }),
+    _c('TLPL 321', 'Curriculum and Instruction in Elementary Education: Science', 3, { category: 'major-upper' }),
+    _c('TLPL 343', 'Promoting Skilled and Motivated Readers in Diverse Elementary Classrooms (Part 2)', 3, { category: 'major-upper' }),
+    _c('TLPL 344', 'Culturally Responsive Language and Literacy Instruction in Diverse Elementary Classrooms', 3, { category: 'major-upper' }),
+    _c('TLPL 446', 'Language Variation and Multilingualism in Elementary Classrooms', 3, { category: 'major-upper' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('TLPL 478C', 'Professional Seminar in Education: Community, Learners and Classroom Behavior', 1, { category: 'major-upper' }),
+    _c('TLPL 489A', 'Internship in Education', 9, { category: 'major-upper', isGoal: true }),
+    _c('Area Emphasis Elective D', 'Elementary Education Area of Emphasis', 3, { category: 'major-upper' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('TLPL 478D', 'Professional Seminar in Education', 2, { category: 'major-upper' }),
+    _c('TLPL 489B', 'Internship in Education', 2, { category: 'major-upper', isGoal: true }),
+    _c('Area Emphasis Elective E', 'Elementary Education Area of Emphasis', 3, { category: 'major-upper' }),
+    _c('Area Emphasis Elective F', 'Elementary Education Area of Emphasis', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 1, { kind: 'tech', category: 'elective' }),
+  ]},
+];
+
+// ============================================================
 // PSYC — Psychology (BS)
 // ============================================================
 const SCHEDULE_PSYC = [

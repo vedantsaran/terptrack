@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 7, 2026',
-  seed: 'pass207-curated-smith-all',
+  seed: 'pass208-curated-final-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 7,
+  verifiedSchedules: 0,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass207-curated-smith-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass208-curated-final-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 7, 2026',
+    seed: 'pass208-curated-final-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 0,
+    generatedCount: 0,
+    failedSchedules: 0,
+    scope: 'All built-in major templates now use curated fixed schedules after moving AOSC, Architecture, Astronomy, Biochemistry, Geology, Neuroscience, and Elementary Education to fixed current-catalog schedules.',
+  },
   {
     checkedAt: 'July 7, 2026',
     seed: 'pass207-curated-smith-all',
@@ -200,30 +209,30 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 7, 2026',
-  seed: 'pass207-curated-smith-catalog',
+  seed: 'pass208-curated-final-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 106,
-  generatedMajors: 7,
-  requirementRows: 133,
-  matchedCourses: 106,
+  uniqueCourses: 0,
+  generatedMajors: 0,
+  requirementRows: 0,
+  matchedCourses: 0,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 3,
-  officialTitleChecks: 3,
+  titleDrifts: 0,
+  officialTitleChecks: 0,
   officialTitleMismatches: 0,
   testudoTermTitleCandidates: 0,
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass207-curated-smith-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass208-curated-final-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
-  checkedAt: 'July 1, 2026',
-  pass: 'Pass 95',
+  checkedAt: 'July 7, 2026',
+  pass: 'Pass 208',
   status: 'passed',
   command: 'node scripts/run-release-checks.js',
-  liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
-  liveMajors: ['GEOL', 'AOSC', 'ASTR', 'BCHM', 'NEUR', 'ARCH'],
+  liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass208-curated-final-live',
+  liveMajors: [],
   defaultChecks: [
     'JS syntax',
     '/api/umd proxy fixture',
@@ -378,10 +387,15 @@ function autoPlanOfficialSourceLinksHtml(review, opts = {}) {
 function generatedTemplateAuditHistoryHtml(summary) {
   const history = GENERATED_TEMPLATE_AUDIT_HISTORY || [];
   if (!history.length) return '';
-  const generatedCount = summary?.generatedCount || GENERATED_TEMPLATE_AUDIT.verifiedSchedules || 50;
+  const summaryGeneratedCount = Number(summary?.generatedCount);
+  const auditGeneratedCount = Number(GENERATED_TEMPLATE_AUDIT.verifiedSchedules);
+  const generatedCount = Number.isFinite(summaryGeneratedCount)
+    ? summaryGeneratedCount
+    : (Number.isFinite(auditGeneratedCount) ? auditGeneratedCount : 50);
   const rows = history.map(item => {
     const failures = item.failedSchedules || 0;
-    const itemGeneratedCount = item.generatedCount || generatedCount;
+    const rawItemGeneratedCount = Number(item.generatedCount);
+    const itemGeneratedCount = Number.isFinite(rawItemGeneratedCount) ? rawItemGeneratedCount : generatedCount;
     const result = failures
       ? `${failures} issue${failures === 1 ? '' : 's'}`
       : '0 issues';

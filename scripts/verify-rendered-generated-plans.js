@@ -13,27 +13,27 @@ const TARGETS = [
   {
     major: 'GEOL',
     name: 'Geology',
-    coverage: '19/19 live course records',
+    kind: 'curated',
     targetCredits: 120,
     cards: [
-      { code: 'GEOL453', credits: 3, title: 'Ecosystem Restoration' },
-      { code: 'GEOL460', credits: 4, title: 'Field Geophysics' },
+      { code: 'GEOL490', credits: 6, title: 'Geology Field Camp' },
+      { code: 'GEOL394', credits: 3, title: 'Geology Senior Thesis II: Research' },
     ],
   },
   {
     major: 'AOSC',
     name: 'Atmospheric & Oceanic Science',
-    coverage: '19/19 live course records',
+    kind: 'curated',
     targetCredits: 120,
     cards: [
-      { code: 'AOSC445', credits: 3, title: 'Climate Data Science' },
-      { code: 'AOSC470', credits: 3, title: 'Synoptic Meteorology' },
+      { code: 'AOSC498', credits: 3, title: 'Senior Research Project II' },
+      { code: 'AOSC493', credits: 3, title: 'Senior Research Project I' },
     ],
   },
   {
     major: 'ASTR',
     name: 'Astronomy',
-    coverage: '22/22 live course records',
+    kind: 'curated',
     targetCredits: 120,
     cards: [
       { code: 'ASTR498N', credits: 3, title: 'Special Problems in Astronomy; Stellar Evolution' },
@@ -43,31 +43,41 @@ const TARGETS = [
   {
     major: 'BCHM',
     name: 'Biochemistry',
-    coverage: '22/22 live course records',
+    kind: 'curated',
     targetCredits: 120,
     cards: [
       { code: 'BCHM465', credits: 3, title: 'Biochemistry III' },
-      { code: 'BSCI410', credits: 3, title: 'Molecular Genetics' },
+      { code: 'BCHM485', credits: 3, title: 'Physical Biochemistry' },
     ],
   },
   {
     major: 'NEUR',
     name: 'Neuroscience',
-    coverage: '18/18 live course records',
+    kind: 'curated',
     targetCredits: 120,
     cards: [
-      { code: 'NEUR405', credits: 3, title: 'Neuroscience Laboratory' },
+      { code: 'NEUR405', credits: 4, title: 'Neuroscience Laboratory' },
       { code: 'NEUR479', credits: 1, title: 'Advanced Research in Neuroscience' },
     ],
   },
   {
     major: 'ARCH',
     name: 'Architecture',
-    coverage: '19/19 live course records',
+    kind: 'curated',
     targetCredits: 120,
     cards: [
       { code: 'ARCH403', credits: 6, title: 'Architecture Design Studio IV' },
-      { code: 'ARCH430', credits: 3, title: 'Measuring Sustainability in Architecture' },
+      { code: 'ARCH408', credits: 6, title: 'Special Topics Architecture Design Studio' },
+    ],
+  },
+  {
+    major: 'EDUC',
+    name: 'Elementary Education',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'TLPL489A', credits: 9, title: 'Internship in Education' },
+      { code: 'TLPL489B', credits: 2, title: 'Internship in Education' },
     ],
   },
 ];
@@ -807,7 +817,7 @@ async function waitForReview(page, target, timeoutMs) {
           && text.includes('Curated plan ready')
           && text.includes(`${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass206-curated-core-stem-all');
+          && text.includes('pass208-curated-final-all');
       },
       { name: target.name, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
@@ -973,22 +983,22 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=120'), `${viewport.label}: rendered app did not load styles.css?v=120`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=15'), `${viewport.label}: rendered app did not load js/majors.js?v=15`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=16'), `${viewport.label}: rendered app did not load js/majors.js?v=16`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=50'), `${viewport.label}: rendered app did not load js/settings.js?v=50`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=51'), `${viewport.label}: rendered app did not load js/settings.js?v=51`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('106/106 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('3/3 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('0/0 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('0/0 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);
     assert(initialSnapshot.releaseText.includes('Default release gate'), `${viewport.label}: release checklist missing release gate row`);
-    assert(initialSnapshot.releaseText.includes('Pass 95'), `${viewport.label}: release checklist missing Pass 95 snapshot`);
+    assert(initialSnapshot.releaseText.includes('Pass 208'), `${viewport.label}: release checklist missing Pass 208 snapshot`);
     assert(initialSnapshot.releaseText.includes('Cloud account setup'), `${viewport.label}: release checklist missing cloud setup row`);
     assert(initialSnapshot.releaseText.includes('SUPABASE_URL'), `${viewport.label}: release checklist missing Vercel/Supabase setup detail`);
     Object.entries(initialSnapshot.overflow || {}).forEach(([key, value]) => {

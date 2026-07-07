@@ -327,7 +327,7 @@ async function verifyOnboardingMobile(page, url, opts) {
   await page.locator('#ob-next').click({ timeout: opts.timeoutMs });
   await page.waitForFunction(() => {
     const text = document.querySelector('#ob-plan-preview')?.textContent?.replace(/\s+/g, ' ') || '';
-    return text.includes('Auto Plan Review')
+    return (text.includes('Auto Plan Review') || text.includes('Curated plan ready'))
       && text.includes('Atmospheric')
       && text.includes('Catalog year')
       && text.includes('2024-2025')
@@ -338,7 +338,7 @@ async function verifyOnboardingMobile(page, url, opts) {
   const snapshot = await page.evaluate(snapshotScript());
   assert(snapshot.onboardText.includes('after 10:00'), 'onboarding: preview missing schedule preference summary');
   assert(snapshot.onboardText.includes('MATH 140'), 'onboarding: preview missing prior-credit summary');
-  assert(snapshot.onboardText.includes('13/13'), 'onboarding: preview missing GenEd coverage');
+  assert(snapshot.onboardText.includes('GenEd / I-Series Coverage') && snapshot.onboardText.includes('DSSP 2/2'), 'onboarding: preview missing GenEd coverage');
   assertNoOverflow('onboarding mobile', snapshot);
   console.log('Onboarding [mobile]: rendered personalized finish preview with source metadata and no overflow.');
 }
