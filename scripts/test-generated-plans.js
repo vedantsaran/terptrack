@@ -4117,12 +4117,15 @@ function testReleaseJsonReport() {
     '--live-seed=fixture-curated-sweep',
     '--live-curated-catalog-sweep',
     '--live-curated-catalog-limit=17',
+    '--live-curated-catalog-strict-titles',
+    '--live-curated-catalog-strict-credit-source',
   ]);
   const curatedCatalogArgs = releaseRunner.buildLiveCuratedCatalogArgs(curatedCatalogOpts);
   const strictCuratedCatalogOpts = curatedCatalogSweep.parseArgs([
     'node',
     'scripts/verify-curated-catalog-sweep.js',
     '--strict-titles',
+    '--strict-credit-source',
     '--warning-limit=all',
   ]);
   const cappedCuratedCatalogOpts = curatedCatalogSweep.parseArgs([
@@ -4139,11 +4142,16 @@ function testReleaseJsonReport() {
   assert(!releaseRunner.buildLiveCatalogArgs(skippedOpts).some(arg => arg.startsWith('--testudo-terms=')), 'release report: default catalog args should let verifier use its default Testudo term');
   assert(curatedCatalogOpts.liveCuratedCatalogSweep === true, 'release report: curated catalog flag should enable curated sweep');
   assert(curatedCatalogOpts.liveCuratedCatalogLimit === 17, 'release report: curated catalog limit should normalize');
+  assert(curatedCatalogOpts.liveCuratedCatalogStrictTitles === true, 'release report: curated catalog strict title flag should parse');
+  assert(curatedCatalogOpts.liveCuratedCatalogStrictCreditSource === true, 'release report: curated catalog strict credit-source flag should parse');
   assert(curatedCatalogArgs.includes('scripts/verify-curated-catalog-sweep.js'), 'release report: curated catalog args should invoke curated sweep script');
   assert(curatedCatalogArgs.includes('--seed=fixture-curated-sweep') && curatedCatalogArgs.includes('--limit=17'), 'release report: curated catalog args should include seed and limit');
+  assert(curatedCatalogArgs.includes('--strict-titles') && curatedCatalogArgs.includes('--strict-credit-source'), 'release report: curated catalog args should pass strict drift flags');
   assert(strictCuratedCatalogOpts.strictTitles === true, 'release report: curated sweep should parse strict title enforcement');
+  assert(strictCuratedCatalogOpts.strictCreditSource === true, 'release report: curated sweep should parse strict credit-source enforcement');
   assert(strictCuratedCatalogOpts.warningLimit === Number.MAX_SAFE_INTEGER, 'release report: curated sweep should allow complete warning output');
   assert(cappedCuratedCatalogOpts.warningLimit === 7, 'release report: curated sweep should parse capped warning output');
+  assert(curatedCatalogSweep.KNOWN_PLANETTERP_CREDIT_LAG.ECON305.curatedCredits === 4, 'release report: curated sweep should expose exact PlanetTerp credit lag acknowledgements');
   assertThrows(
     () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-limit=1', '--live-catalog-write-settings-snapshot']),
     /Snapshot refresh requires a full catalog sweep/,
@@ -4203,7 +4211,7 @@ function testReleaseJsonReport() {
     status: report.status,
     stages: Object.keys(stageStatus).join(','),
     catalogArgs: catalogArgs.filter(arg => /^--(?:testudo|write|snapshot)/.test(arg)).join(' '),
-    curatedCatalogArgs: curatedCatalogArgs.filter(arg => /^--(?:seed|limit)/.test(arg)).join(' '),
+    curatedCatalogArgs: curatedCatalogArgs.filter(arg => /^--(?:seed|limit|strict)/.test(arg)).join(' '),
   };
 }
 

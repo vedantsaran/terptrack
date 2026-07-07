@@ -18,6 +18,21 @@ const CURRENT_PREFIX_BY_LEGACY_PREFIX = Object.freeze({
   AASP: 'AAAS',
   WMST: 'WGSS',
 });
+const KNOWN_PLANETTERP_CREDIT_LAG = Object.freeze({
+  ECON305: Object.freeze({ planetCredits: 3, curatedCredits: 4 }),
+  ECON306: Object.freeze({ planetCredits: 3, curatedCredits: 4 }),
+  KNES385: Object.freeze({ planetCredits: 3, curatedCredits: 4 }),
+  NEUR405: Object.freeze({ planetCredits: 3, curatedCredits: 4 }),
+  PHYS402: Object.freeze({ planetCredits: 4, curatedCredits: 3 }),
+  PHYS410: Object.freeze({ planetCredits: 4, curatedCredits: 3 }),
+  PLSC201: Object.freeze({ planetCredits: 4, curatedCredits: 3 }),
+  TLPL478B: Object.freeze({ planetCredits: 2, curatedCredits: 1 }),
+  TLPL478C: Object.freeze({ planetCredits: 2, curatedCredits: 1 }),
+  TLPL478D: Object.freeze({ planetCredits: 1, curatedCredits: 2 }),
+  TLPL479B: Object.freeze({ planetCredits: 2, curatedCredits: 1 }),
+  TLPL489A: Object.freeze({ planetCredits: 12, curatedCredits: 9 }),
+  TLPL489B: Object.freeze({ planetCredits: 12, curatedCredits: 2 }),
+});
 
 function read(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -98,6 +113,7 @@ function parseArgs(argv) {
     majors: [],
     json: false,
     strictTitles: false,
+    strictCreditSource: false,
     warningLimit: 40,
   };
   for (let i = 2; i < argv.length; i += 1) {
@@ -120,6 +136,8 @@ function parseArgs(argv) {
       opts.json = true;
     } else if (arg === '--strict-titles') {
       opts.strictTitles = true;
+    } else if (arg === '--strict-credit-source') {
+      opts.strictCreditSource = true;
     } else if (arg === '--warning-limit') {
       opts.warningLimit = argv[++i] || opts.warningLimit;
     } else if (arg.startsWith('--warning-limit=')) {
@@ -395,11 +413,35 @@ function planetCreditsCompatible(planetCredits, value) {
   return app === planet;
 }
 
+function positiveIntegerCredit(value) {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function acknowledgedPlanetTerpCreditLag(entry, official, planet, value) {
+  const known = KNOWN_PLANETTERP_CREDIT_LAG[normalizeCode(entry.code)];
+  if (!known) return null;
+  const curatedCredits = positiveIntegerCredit(value);
+  const planetCredits = positiveIntegerCredit(planet?.credits);
+  if (curatedCredits !== known.curatedCredits || planetCredits !== known.planetCredits) return null;
+  return {
+    code: displayCode(entry.code),
+    normalizedCode: normalizeCode(entry.code),
+    curatedCredits,
+    planetCredits,
+    officialCredits: official?.credits?.raw || '',
+    officialMatchedCode: official?.matchedCode || '',
+    officialUrl: official?.url || '',
+    reason: 'PlanetTerp credit metadata currently lags the official UMD catalog; TerpTrack keeps the official-compatible curated credit value.',
+  };
+}
+
 function compatibilityRows(entry, official, planet) {
   const failures = [];
   const warnings = [];
   const creditWarnings = [];
   const titleWarnings = [];
+  const acknowledgedCreditLags = [];
   entry.credits.forEach(value => {
     const officialOk = official?.ok && creditsCompatible(official.credits, value);
     const planetOk = planet?.ok && planetCreditsCompatible(planet.credits, value);
@@ -408,9 +450,14 @@ function compatibilityRows(entry, official, planet) {
     } else if (!official?.ok && planet?.ok && !planetOk) {
       failures.push(`${displayCode(entry.code)} curated credits ${value} != PlanetTerp ${planet.credits || '?'}`);
     } else if (officialOk && planet?.ok && !planetOk) {
-      const warning = `${displayCode(entry.code)} PlanetTerp credits ${planet.credits || '?'} differ from official-compatible curated credits ${value}`;
-      warnings.push(warning);
-      creditWarnings.push(warning);
+      const acknowledged = acknowledgedPlanetTerpCreditLag(entry, official, planet, value);
+      if (acknowledged) {
+        acknowledgedCreditLags.push(acknowledged);
+      } else {
+        const warning = `${displayCode(entry.code)} PlanetTerp credits ${planet.credits || '?'} differ from official-compatible curated credits ${value}`;
+        warnings.push(warning);
+        creditWarnings.push(warning);
+      }
     }
   });
   entry.titles.forEach(title => {
@@ -426,7 +473,7 @@ function compatibilityRows(entry, official, planet) {
       titleWarnings.push(warning);
     }
   });
-  return { failures, warnings, creditWarnings, titleWarnings };
+  return { failures, warnings, creditWarnings, titleWarnings, acknowledgedCreditLags };
 }
 
 async function mapLimit(list, limit, fn) {
@@ -460,6 +507,7 @@ async function verifyCuratedCatalogSweep(context, opts) {
   const warnings = [];
   const creditWarnings = [];
   const titleWarnings = [];
+  const acknowledgedCreditLags = [];
   rows.forEach(row => {
     if (!row.official?.ok && !row.planet?.ok) {
       missing.push(`${displayCode(row.entry.code)} (${row.entry.majors.join(',')}; official: ${row.official?.detail || 'missing'}; PlanetTerp: ${row.planet?.detail || 'missing'})`);
@@ -468,10 +516,20 @@ async function verifyCuratedCatalogSweep(context, opts) {
     warnings.push(...row.warnings);
     creditWarnings.push(...row.creditWarnings);
     titleWarnings.push(...row.titleWarnings);
+    acknowledgedCreditLags.push(...row.acknowledgedCreditLags);
   });
+  const acknowledgedCreditLagCodes = unique(acknowledgedCreditLags.map(lag => lag.normalizedCode)).sort();
+  const acknowledgedCreditLagCodeSet = new Set(acknowledgedCreditLagCodes);
+  const expectedAcknowledgedCreditLagCodes = Object.keys(KNOWN_PLANETTERP_CREDIT_LAG).sort();
+  const isFullUnfilteredSweep = !opts.limit && !opts.majors.length;
+  const staleAcknowledgedCreditLags = isFullUnfilteredSweep
+    ? expectedAcknowledgedCreditLagCodes.filter(code => !acknowledgedCreditLagCodeSet.has(code))
+    : [];
   assert(!missing.length, `Curated catalog sweep could not verify ${missing.length}/${entries.length} courses in either official catalog or PlanetTerp: ${missing.slice(0, 25).join('; ')}${missing.length > 25 ? `; +${missing.length - 25} more` : ''}`);
   assert(!failures.length, `Curated catalog sweep found ${failures.length} credit mismatch${failures.length === 1 ? '' : 'es'}: ${failures.slice(0, 25).join('; ')}${failures.length > 25 ? `; +${failures.length - 25} more` : ''}`);
   assert(!opts.strictTitles || !titleWarnings.length, `Curated catalog sweep found ${titleWarnings.length} title drift warning${titleWarnings.length === 1 ? '' : 's'}: ${titleWarnings.slice(0, 25).join('; ')}${titleWarnings.length > 25 ? `; +${titleWarnings.length - 25} more` : ''}`);
+  assert(!opts.strictCreditSource || !creditWarnings.length, `Curated catalog sweep found ${creditWarnings.length} unexpected credit-source warning${creditWarnings.length === 1 ? '' : 's'}: ${creditWarnings.slice(0, 25).join('; ')}${creditWarnings.length > 25 ? `; +${creditWarnings.length - 25} more` : ''}`);
+  assert(!opts.strictCreditSource || !staleAcknowledgedCreditLags.length, `Curated catalog sweep has ${staleAcknowledgedCreditLags.length} stale PlanetTerp credit-lag acknowledgement${staleAcknowledgedCreditLags.length === 1 ? '' : 's'} no longer observed in the full sweep: ${staleAcknowledgedCreditLags.map(displayCode).join('; ')}`);
   const officialMatches = rows.filter(row => row.official?.ok).length;
   const planetMatches = rows.filter(row => row.planet?.ok).length;
   const bothMatches = rows.filter(row => row.official?.ok && row.planet?.ok).length;
@@ -489,10 +547,17 @@ async function verifyCuratedCatalogSweep(context, opts) {
     currentPrefixMatches,
     warningCount: warnings.length,
     creditWarningCount: creditWarnings.length,
+    unexpectedCreditWarningCount: creditWarnings.length,
     titleWarningCount: titleWarnings.length,
+    acknowledgedCreditLagCount: acknowledgedCreditLags.length,
+    expectedAcknowledgedCreditLagCount: expectedAcknowledgedCreditLagCodes.length,
+    staleAcknowledgedCreditLagCount: staleAcknowledgedCreditLags.length,
     warnings: warnings.slice(0, opts.warningLimit),
     creditWarnings: creditWarnings.slice(0, opts.warningLimit),
     titleWarnings: titleWarnings.slice(0, opts.warningLimit),
+    acknowledgedCreditLags: acknowledgedCreditLags.slice(0, opts.warningLimit),
+    acknowledgedCreditLagCodes,
+    staleAcknowledgedCreditLags: staleAcknowledgedCreditLags.map(displayCode),
   };
   if (opts.json) {
     console.log(JSON.stringify(summary, null, 2));
@@ -503,6 +568,12 @@ async function verifyCuratedCatalogSweep(context, opts) {
       console.log(`Warnings ${warnings.length} (${titleWarnings.length} title, ${creditWarnings.length} credit-source): ${warnings.slice(0, 12).join('; ')}${warnings.length > 12 ? `; +${warnings.length - 12} more` : ''}.`);
     } else {
       console.log('No title or credit-source warnings.');
+    }
+    if (acknowledgedCreditLags.length) {
+      const sample = acknowledgedCreditLags
+        .slice(0, 12)
+        .map(lag => `${lag.code} PlanetTerp ${lag.planetCredits} vs official-compatible ${lag.curatedCredits}`);
+      console.log(`Acknowledged PlanetTerp credit lag ${acknowledgedCreditLags.length}: ${sample.join('; ')}${acknowledgedCreditLags.length > 12 ? `; +${acknowledgedCreditLags.length - 12} more` : ''}.`);
     }
   }
   return summary;
@@ -522,6 +593,7 @@ if (require.main === module) {
 } else {
   module.exports = {
     collectCuratedCourses,
+    KNOWN_PLANETTERP_CREDIT_LAG,
     parseArgs,
     verifyCuratedCatalogSweep,
   };

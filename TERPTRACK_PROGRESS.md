@@ -12695,6 +12695,51 @@ Next pass candidates:
 - Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page, live sweep status, and checked date for every curated schedule.
 - Add a strict-title full live curated sweep preset for pre-release data refreshes.
 
+## Pass 216 - Strict Curated Credit-Source Gate
+
+Focus:
+- Converted the remaining 13 live curated catalog credit-source warnings into exact, structured PlanetTerp credit-lag acknowledgements against the official UMD catalog.
+- Added a strict credit-source mode so new unacknowledged PlanetTerp/official credit drift fails release checks, while stale acknowledgements also fail once PlanetTerp catches up.
+- Exposed strict title and strict credit-source live curated sweep flags through the release-check wrapper.
+- Kept `README.md` untouched.
+
+Code changes:
+- Updated `scripts/verify-curated-catalog-sweep.js`.
+  - Added `KNOWN_PLANETTERP_CREDIT_LAG` for the 13 currently observed source-lag cases: `ECON 305`, `ECON 306`, `KNES 385`, `NEUR 405`, `PHYS 402`, `PHYS 410`, `PLSC 201`, `TLPL 478B`, `TLPL 478C`, `TLPL 478D`, `TLPL 479B`, `TLPL 489A`, and `TLPL 489B`.
+  - Added `--strict-credit-source`.
+  - Reports `acknowledgedCreditLagCount`, exact acknowledgement rows, expected acknowledgement count, stale acknowledgement count, and unexpected credit warning count in JSON output.
+  - Keeps `warningCount` and `creditWarningCount` at zero when all observed credit-source drift is exactly acknowledged.
+- Updated `scripts/run-release-checks.js`.
+  - Added `--live-curated-catalog-strict-titles`.
+  - Added `--live-curated-catalog-strict-credit-source`.
+  - Carries both flags into the live curated catalog verifier and release JSON options.
+- Updated `scripts/test-generated-plans.js`.
+  - Added regression coverage for strict curated sweep wrapper flags, strict credit-source parsing, and the exported credit-lag acknowledgement table.
+
+Verification:
+- Ran `node --check scripts/verify-curated-catalog-sweep.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+- Ran `node scripts/verify-curated-catalog-sweep.js --json --strict-titles --strict-credit-source --warning-limit=all --seed=pass216-strict-credit-source`.
+  - It passed all `826/826` unique real curated courses across `1461` schedule rows.
+  - It reported `warningCount: 0`, `creditWarningCount: 0`, `titleWarningCount: 0`, `acknowledgedCreditLagCount: 13`, and `staleAcknowledgedCreditLagCount: 0`.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-curated --skip-rendered --skip-workflows --live-curated-catalog-sweep --live-curated-catalog-limit=20 --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass216-wrapper-smoke`.
+  - It passed the release-wrapper smoke and forwarded both strict curated catalog flags.
+- Ran `node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass216-release-full`.
+  - It syntax-checked 46 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop/mobile plan verification, rendered desktop/mobile dark-mode and mobile workflow checks.
+  - It passed the full live curated catalog sweep with `826/826` courses, no title or credit-source warnings, and 13 acknowledged PlanetTerp credit-lag rows.
+  - It reported `TerpTrack release checks passed`.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=5 --seed=pass216-random-live`.
+  - It confirmed no generated built-in majors remain; all built-ins are curated fixed schedules, so there were no random generated plans left to sample.
+
+Next pass candidates:
+- Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page, live sweep status, and checked date for every curated schedule.
+- Persist or export live curated catalog sweep JSON artifacts so maintainers can diff official/PlanetTerp source drift across releases.
+- Add a conservative scheduled release job that runs the strict curated live sweep on a sample daily and the full sweep before schedule-data releases.
+
 ## Pass 215 - Desktop Dark-Mode Surface Gate
 
 Focus:

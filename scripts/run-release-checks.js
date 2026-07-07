@@ -36,6 +36,8 @@ function parseArgs(argv) {
     liveCatalogSnapshotDate: process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE || '',
     liveCuratedCatalogSweep: false,
     liveCuratedCatalogLimit: null,
+    liveCuratedCatalogStrictTitles: false,
+    liveCuratedCatalogStrictCreditSource: false,
     liveCloud: false,
     liveCloudRequireAuth: false,
     liveCloudWriteSmoke: false,
@@ -119,6 +121,12 @@ function parseArgs(argv) {
     } else if (arg.startsWith('--live-curated-catalog-limit=')) {
       opts.liveCuratedCatalogSweep = true;
       opts.liveCuratedCatalogLimit = Number(arg.slice('--live-curated-catalog-limit='.length) || 0);
+    } else if (arg === '--live-curated-catalog-strict-titles') {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogStrictTitles = true;
+    } else if (arg === '--live-curated-catalog-strict-credit-source') {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogStrictCreditSource = true;
     } else if (arg === '--live-cloud' || arg === '--live-supabase') {
       opts.liveCloud = true;
     } else if (arg === '--live-cloud-require-auth' || arg === '--live-supabase-require-auth') {
@@ -202,6 +210,8 @@ function usage() {
     '  --live-catalog-no-bump-settings-asset  Do not bump settings.js asset tag after snapshot write',
     '  --live-curated-catalog-sweep  Live-check every unique curated schedule course once',
     '  --live-curated-catalog-limit N  Limit curated catalog sweep to N seeded unique courses',
+    '  --live-curated-catalog-strict-titles  Fail curated live sweep on title drift',
+    '  --live-curated-catalog-strict-credit-source  Fail curated live sweep on unacknowledged or stale PlanetTerp credit lag',
     '  --live-cloud                   Verify configured Supabase project table access and RLS',
     '  --live-cloud-require-auth      Require Supabase test-user credentials for authenticated checks',
     '  --live-cloud-write-smoke       Upsert/delete Supabase verifier rows after authenticated checks',
@@ -270,6 +280,8 @@ function publicOptions(opts) {
     liveCatalogSnapshotDate: opts.liveCatalogSnapshotDate,
     liveCuratedCatalogSweep: opts.liveCuratedCatalogSweep,
     liveCuratedCatalogLimit: opts.liveCuratedCatalogLimit,
+    liveCuratedCatalogStrictTitles: opts.liveCuratedCatalogStrictTitles,
+    liveCuratedCatalogStrictCreditSource: opts.liveCuratedCatalogStrictCreditSource,
     liveCloud: opts.liveCloud,
     liveCloudRequireAuth: opts.liveCloudRequireAuth,
     liveCloudWriteSmoke: opts.liveCloudWriteSmoke,
@@ -294,6 +306,8 @@ function buildLiveCatalogArgs(opts) {
 function buildLiveCuratedCatalogArgs(opts) {
   const args = ['scripts/verify-curated-catalog-sweep.js', `--seed=${opts.liveSeed}`];
   if (opts.liveCuratedCatalogLimit) args.push(`--limit=${opts.liveCuratedCatalogLimit}`);
+  if (opts.liveCuratedCatalogStrictTitles) args.push('--strict-titles');
+  if (opts.liveCuratedCatalogStrictCreditSource) args.push('--strict-credit-source');
   return args;
 }
 
