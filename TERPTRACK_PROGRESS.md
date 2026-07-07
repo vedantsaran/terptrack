@@ -12940,3 +12940,66 @@ Next pass candidates:
 - Resolve or document the 13 PlanetTerp-credit lag warnings against official catalog credits so the live sweep output is completely explainable to maintainers.
 - Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page, live sweep status, and checked date for every curated schedule.
 - Add a strict-title full live curated sweep preset for pre-release data refreshes.
+
+## Pass 220 - Hosted Curated Source Evidence Workflow
+
+Focus:
+- Added a GitHub Actions workflow for strict curated schedule source evidence so maintainers have a hosted daily sample and manual full artifact sweep.
+- Exposed the hosted workflow command in Settings next to the local strict sweep and artifact comparison commands.
+- Refreshed the strict curated source evidence labels and artifact to the Pass 220 release seed.
+- Kept `README.md` untouched.
+
+Code changes:
+- Added `.github/workflows/curated-source-evidence.yml`.
+  - Runs daily at `17 10 * * *` UTC with a strict 80-course curated source sample.
+  - Supports manual `workflow_dispatch` with `mode=sample|full`, seed, artifact date, and sample limit inputs.
+  - Full mode preserves the committed baseline artifact, runs the strict full artifact sweep, writes a JSON drift report, and uploads baseline/latest/diff evidence.
+  - Sample mode writes a strict sample artifact so scheduled runs retain machine-readable evidence.
+- Updated `js/settings.js`.
+  - Updated curated source and release snapshots to `Pass 220`.
+  - Updated strict sweep seeds to `pass220-release-full` and `pass220-strict-artifact`.
+  - Added the `gh workflow run curated-source-evidence.yml -f mode=full ...` maintainer command.
+- Updated `index.html`.
+  - Bumped `js/settings.js` to `v=55`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added release-regression assertions for the hosted workflow name, daily schedule, manual dispatch, official action versions, strict title and credit-source gates, sample artifact, full artifact diff, and upload artifact path.
+  - Updated Settings release evidence assertions to `Pass 220`.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Updated the Settings asset assertion to `settings.js?v=55`.
+  - Added rendered Settings coverage for the hosted curated evidence workflow command and `Pass 220` snapshot.
+- Updated `artifacts/curated-catalog-sweep/latest.json`.
+  - Refreshed the artifact with the Pass 220 strict full sweep.
+
+Verification:
+- Checked official action repositories for current supported majors before choosing `actions/checkout@v5`, `actions/setup-node@v4`, and `actions/upload-artifact@v4`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Checked `command -v actionlint`; no local `actionlint` binary is installed, so the workflow is guarded by repository fixture assertions instead.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+  - It verified the hosted workflow assertions, artifact comparison coverage, Settings maintainer command coverage, and Pass 220 snapshot text.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-curated --skip-rendered --skip-workflows --live-curated-catalog-sweep --live-curated-catalog-limit=25 --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-artifact=/tmp/terptrack-pass220-sample.json --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass220-workflow-sample`.
+  - It passed the strict live curated source sample with `25/826` courses and no title or credit-source warnings.
+  - It wrote `/tmp/terptrack-pass220-sample.json`.
+- Inspected `/tmp/terptrack-pass220-sample.json` with Node.
+  - Confirmed schema `terptrack-curated-catalog-sweep/v1`, `generatedAt: July 7, 2026`, `25` checked courses, and `0` warnings.
+- Ran `node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass220-release-full`.
+  - It syntax-checked 47 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop/mobile plan verification, and rendered desktop/mobile dark-mode plus mobile workflow checks.
+  - It passed the full strict live curated catalog sweep with `826/826` courses, no title or credit-source warnings, and 13 acknowledged PlanetTerp credit-lag rows.
+  - It rewrote `artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `TerpTrack release checks passed`.
+- Inspected `artifacts/curated-catalog-sweep/latest.json` with Node.
+  - Confirmed schema `terptrack-curated-catalog-sweep/v1`.
+  - Confirmed `generatedAt: July 7, 2026`, `826` checked courses, `0` warning counts, `13` acknowledged credit lags, and `0` stale acknowledgements.
+- Ran `node scripts/compare-curated-catalog-artifacts.js artifacts/curated-catalog-sweep/latest.json artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `No curated catalog source drift detected.`
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=5 --seed=pass220-random-live`.
+  - It confirmed no generated built-in majors remain; all built-ins are curated fixed schedules, so there were no random generated plans left to sample.
+
+Next pass candidates:
+- Add per-major curated evidence drilldowns in Settings, such as a compact list of recently checked departments/courses for the selected fixed schedule.
+- Add a workflow drift-notification path that can open a lightweight issue or append a summary artifact when the hosted full sweep sees source drift.
+- Add a local script that simulates the GitHub Actions workflow modes end to end without requiring `actionlint`.

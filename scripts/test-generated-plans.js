@@ -1654,8 +1654,9 @@ async function testCatalogYearTargeting(context) {
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
   assert(/--live-curated-catalog-strict-credit-source/.test(result.releaseHtml), 'catalog year: release checklist should expose strict curated sweep command');
-  assert(/Pass 219/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
+  assert(/Pass 220/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
   assert(/--live-curated-catalog-write-artifact/.test(result.releaseHtml), 'catalog year: release checklist should expose curated artifact writer command');
+  assert(/curated-source-evidence\.yml/.test(result.releaseHtml), 'catalog year: release checklist should expose hosted curated evidence workflow command');
   assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass208-curated-final-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
@@ -4272,6 +4273,7 @@ function testReleaseJsonReport() {
     '--warning-limit=7',
   ]);
   const skippedOpts = releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js']);
+  const sourceEvidenceWorkflow = read('.github/workflows/curated-source-evidence.yml');
   assert(catalogOpts.liveCatalogSweep === true, 'release report: Testudo term option should enable live catalog sweep');
   assert(catalogOpts.liveCatalogTestudoTerms.join(',') === '202608,202701', 'release report: should normalize catalog Testudo terms');
   assert(catalogArgs.includes('--testudo-terms=202608,202701'), 'release report: catalog sweep args should include Testudo terms');
@@ -4307,6 +4309,14 @@ function testReleaseJsonReport() {
   assert(changedArtifactDiff.counts.curatedChanges === 1 && changedArtifactDiff.counts.warningChanges === 1, 'release report: artifact comparer should report curated and warning drift');
   assert(/Official source changes: CMSC 131/.test(changedArtifactSummary) && /Added courses: MATH 140/.test(changedArtifactSummary), 'release report: artifact comparer should summarize drift with course codes');
   assert(artifactCompareOpts.json === true && artifactCompareOpts.failOnDrift === true && artifactCompareOpts.limit === 3, 'release report: artifact comparer should parse JSON/fail/limit flags');
+  assert(sourceEvidenceWorkflow.includes('name: Curated Source Evidence'), 'release report: curated source workflow should be named');
+  assert(sourceEvidenceWorkflow.includes('schedule:') && sourceEvidenceWorkflow.includes("cron: '17 10 * * *'"), 'release report: curated source workflow should run on a daily schedule');
+  assert(sourceEvidenceWorkflow.includes('workflow_dispatch:'), 'release report: curated source workflow should support manual full runs');
+  assert(sourceEvidenceWorkflow.includes('actions/checkout@v5') && sourceEvidenceWorkflow.includes('actions/setup-node@v4') && sourceEvidenceWorkflow.includes('actions/upload-artifact@v4'), 'release report: curated source workflow should use supported official actions');
+  assert(sourceEvidenceWorkflow.includes('--live-curated-catalog-limit="${SAMPLE_LIMIT}"') && sourceEvidenceWorkflow.includes('--live-curated-catalog-artifact=artifacts/curated-catalog-sweep/sample.json'), 'release report: curated source workflow should write strict scheduled sample artifacts');
+  assert(sourceEvidenceWorkflow.includes('--live-curated-catalog-strict-titles') && sourceEvidenceWorkflow.includes('--live-curated-catalog-strict-credit-source'), 'release report: curated source workflow should keep strict title and credit-source gates');
+  assert(sourceEvidenceWorkflow.includes('--live-curated-catalog-write-artifact') && sourceEvidenceWorkflow.includes('compare-curated-catalog-artifacts.js'), 'release report: curated source workflow should run full artifact sweeps and compare drift');
+  assert(sourceEvidenceWorkflow.includes('artifacts/curated-catalog-sweep/diff.json') && sourceEvidenceWorkflow.includes('curated-source-evidence-${{ github.run_id }}-${{ env.MODE }}'), 'release report: curated source workflow should upload machine-readable source evidence');
   assertThrows(
     () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-limit=1', '--live-catalog-write-settings-snapshot']),
     /Snapshot refresh requires a full catalog sweep/,
@@ -4368,6 +4378,7 @@ function testReleaseJsonReport() {
     catalogArgs: catalogArgs.filter(arg => /^--(?:testudo|write|snapshot)/.test(arg)).join(' '),
     curatedCatalogArgs: curatedCatalogArgs.filter(arg => /^--(?:seed|limit|strict|artifact)/.test(arg)).join(' '),
     artifactDiff: `${changedArtifactDiff.counts.officialChanges}/${changedArtifactDiff.counts.planetTerpChanges}`,
+    workflow: sourceEvidenceWorkflow.includes('curated-source-evidence-${{ github.run_id }}') ? 'curated-source-evidence' : 'missing',
   };
 }
 

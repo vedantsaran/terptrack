@@ -1,0 +1,146 @@
+name: Curated Source Evidence
+
+on:
+  schedule:
+    - cron: '17 10 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run the daily strict sample or the full artifact-writing sweep.
+        required: true
+        default: sample
+        type: choice
+        options:
+          - sample
+          - full
+      seed:
+        description: Stable seed prefix for the live source sweep.
+        required: false
+        default: workflow-curated-source
+      artifact_date:
+        description: Stable generatedAt label for uploaded JSON artifacts.
+        required: false
+        default: ''
+      sample_limit:
+        description: Number of seeded curated courses to check in sample mode.
+        required: false
+        default: '80'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: curated-source-evidence-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  curated-source-evidence:
+    name: Strict curated source evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Resolve sweep settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODE="${{ github.event.inputs.mode || '' }}"
+          SEED="${{ github.event.inputs.seed || '' }}"
+          ARTIFACT_DATE="${{ github.event.inputs.artifact_date || '' }}"
+          SAMPLE_LIMIT="${{ github.event.inputs.sample_limit || '' }}"
+
+          if [ -z "$MODE" ]; then MODE="sample"; fi
+          case "$MODE" in
+            sample|full) ;;
+            *) echo "::error::mode must be sample or full"; exit 1 ;;
+          esac
+
+          if [ -z "$SEED" ]; then SEED="workflow-curated-source"; fi
+          if [ -z "$ARTIFACT_DATE" ]; then ARTIFACT_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; fi
+          case "$SAMPLE_LIMIT" in
+            ''|*[!0-9]*) SAMPLE_LIMIT="80" ;;
+          esac
+          if [ "$SAMPLE_LIMIT" -lt 1 ]; then SAMPLE_LIMIT="80"; fi
+
+          {
+            echo "MODE=$MODE"
+            echo "SEED=$SEED"
+            echo "ARTIFACT_DATE=$ARTIFACT_DATE"
+            echo "SAMPLE_LIMIT=$SAMPLE_LIMIT"
+          } >> "$GITHUB_ENV"
+
+      - name: Preserve committed baseline artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/curated-catalog-sweep
+          cp artifacts/curated-catalog-sweep/latest.json artifacts/curated-catalog-sweep/baseline.json
+
+      - name: Run strict scheduled sample
+        if: env.MODE == 'sample'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-release-checks.js \
+            --skip-syntax \
+            --skip-proxy \
+            --skip-generated \
+            --skip-curated \
+            --skip-rendered \
+            --skip-workflows \
+            --live-curated-catalog-sweep \
+            --live-curated-catalog-limit="${SAMPLE_LIMIT}" \
+            --live-curated-catalog-strict-titles \
+            --live-curated-catalog-strict-credit-source \
+            --live-curated-catalog-artifact=artifacts/curated-catalog-sweep/sample.json \
+            --live-curated-catalog-artifact-date="${ARTIFACT_DATE}" \
+            --live-seed="${SEED}-sample"
+
+      - name: Run full strict artifact sweep
+        if: env.MODE == 'full'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-release-checks.js \
+            --skip-rendered \
+            --skip-workflows \
+            --live-curated-catalog-sweep \
+            --live-curated-catalog-strict-titles \
+            --live-curated-catalog-strict-credit-source \
+            --live-curated-catalog-write-artifact \
+            --live-curated-catalog-artifact-date="${ARTIFACT_DATE}" \
+            --live-seed="${SEED}-full"
+
+      - name: Compare full artifact sweep
+        if: env.MODE == 'full'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/compare-curated-catalog-artifacts.js \
+            artifacts/curated-catalog-sweep/baseline.json \
+            artifacts/curated-catalog-sweep/latest.json \
+            --json > artifacts/curated-catalog-sweep/diff.json
+          node scripts/compare-curated-catalog-artifacts.js \
+            artifacts/curated-catalog-sweep/baseline.json \
+            artifacts/curated-catalog-sweep/latest.json
+
+      - name: Upload curated source artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: curated-source-evidence-${{ github.run_id }}-${{ env.MODE }}
+          path: |
+            artifacts/curated-catalog-sweep/baseline.json
+            artifacts/curated-catalog-sweep/latest.json
+            artifacts/curated-catalog-sweep/sample.json
+            artifacts/curated-catalog-sweep/diff.json
+          if-no-files-found: warn
+          retention-days: 30
