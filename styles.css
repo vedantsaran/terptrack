@@ -9701,6 +9701,59 @@ h1.hero-title em {
   color: #FF9A9A;
 }
 
+[data-theme="dark"] #reco-container .reco-line strong,
+[data-theme="dark"] .audit-card h3,
+[data-theme="dark"] .footer em {
+  color: #FF9A9A;
+}
+
+[data-theme="dark"] .schedule-fit-head > strong,
+[data-theme="dark"] .schedule-workload-head > strong,
+[data-theme="dark"] .schedule-readiness-head > strong,
+[data-theme="dark"] .schedule-readiness-fixes strong,
+[data-theme="dark"] .schedule-readiness-actions strong,
+[data-theme="dark"] .schedule-registration-appointment-head strong,
+[data-theme="dark"] .schedule-final-checklist-head strong,
+[data-theme="dark"] .schedule-seat-freshness-head strong,
+[data-theme="dark"] .schedule-seat-freshness-actions strong,
+[data-theme="dark"] .schedule-waitlist-head strong,
+[data-theme="dark"] .schedule-calendar-export-head strong,
+[data-theme="dark"] .schedule-calendar-export-actions strong,
+[data-theme="dark"] .schedule-registration-handoff-head strong,
+[data-theme="dark"] .schedule-registration-order-head strong,
+[data-theme="dark"] .schedule-registration-backups-head strong,
+[data-theme="dark"] .schedule-output-day > strong,
+[data-theme="dark"] .schedule-output-list strong,
+[data-theme="dark"] .schedule-change-head strong,
+[data-theme="dark"] .schedule-change-row b,
+[data-theme="dark"] .schedule-advisor-catalog-warning strong,
+[data-theme="dark"] .schedule-advisor-readiness-map-head strong,
+[data-theme="dark"] .schedule-advisor-live-note strong,
+[data-theme="dark"] .schedule-advisor-diagnostics-head > strong,
+[data-theme="dark"] .schedule-advisor-audit-row b,
+[data-theme="dark"] .schedule-advisor-audit-next strong,
+[data-theme="dark"] .schedule-advisor-course strong,
+[data-theme="dark"] .alt-title strong,
+[data-theme="dark"] .section-pick-head strong,
+[data-theme="dark"] .section-decision-head strong {
+  color: #FF9A9A;
+  border-color: rgba(255, 154, 154, .42);
+}
+
+[data-theme="dark"] .schedule-advisor-audit-link,
+[data-theme="dark"] .schedule-advisor-import-link {
+  background: rgba(140, 199, 240, .14);
+  border-color: rgba(140, 199, 240, .42);
+  color: #8CC7F0;
+}
+
+[data-theme="dark"] .schedule-advisor-audit-link.primary,
+[data-theme="dark"] .schedule-advisor-import-link {
+  background: #8CC7F0;
+  border-color: #8CC7F0;
+  color: #101419;
+}
+
 [data-theme="dark"] .cat-badge.tech-e {
   background: rgba(244, 215, 126, .16);
   color: #FFE08A;
@@ -9736,4 +9789,12 @@ h1.hero-title em {
 [data-theme="dark"] .planner-question span,
 [data-theme="dark"] .planner-question em {
   color: var(--ink-soft);
+}
+
+[data-theme="dark"] .planner-check b,
+[data-theme="dark"] .planner-question b,
+[data-theme="dark"] .planner-action-rank {
+  background: rgba(255, 154, 154, .12);
+  border: 1px solid rgba(255, 154, 154, .34);
+  color: #FF9A9A;
 }

@@ -9,6 +9,16 @@ const { createRequire } = require('module');
 
 const ROOT = path.resolve(__dirname, '..');
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
+const DARK_MODE_TABS = [
+  { id: 'plan', label: 'Plan' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'audit', label: 'Degree Audit' },
+  { id: 'table', label: 'All Courses' },
+  { id: 'timeline', label: 'Action Timeline' },
+  { id: 'roadmap', label: 'Prereq Roadmap' },
+  { id: 'browse', label: 'Browse Courses' },
+  { id: 'gened', label: 'Gen-Eds' },
+];
 
 const MIME = {
   '.css': 'text/css; charset=utf-8',
@@ -246,16 +256,91 @@ function contrastAuditScript(rootSelector = 'body') {
   })(${JSON.stringify(rootSelector)})`;
 }
 
-async function assertDarkContrast(page, label, rootSelector = 'body') {
-  const failures = await page.evaluate(contrastAuditScript(rootSelector));
+function contrastFailureKey(failure) {
+  return [
+    failure.tag || '',
+    failure.id || '',
+    failure.className || '',
+    failure.text || '',
+    failure.color || '',
+    failure.background || '',
+  ].join('|');
+}
+
+async function collectDarkContrastFailures(page, rootSelector = 'body') {
+  const viewport = page.viewportSize() || MOBILE_VIEWPORT;
+  const scanMeta = await page.evaluate(() => ({
+    scrollHeight: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight),
+    innerHeight: window.innerHeight,
+  }));
+  const viewportHeight = Math.max(1, scanMeta.innerHeight || viewport.height || MOBILE_VIEWPORT.height);
+  const maxY = Math.max(0, scanMeta.scrollHeight - viewportHeight);
+  const step = Math.max(240, Math.floor(viewportHeight * 0.65));
+  const positions = [0];
+  for (let y = step; y < maxY; y += step) positions.push(y);
+  if (!positions.includes(maxY)) positions.push(maxY);
+
+  const failuresByKey = new Map();
+  for (const y of positions) {
+    await page.evaluate(scrollY => window.scrollTo(0, scrollY), y);
+    await page.waitForTimeout(50);
+    const failures = await page.evaluate(contrastAuditScript(rootSelector));
+    failures.forEach(failure => {
+      if (!failuresByKey.has(contrastFailureKey(failure))) {
+        failuresByKey.set(contrastFailureKey(failure), { ...failure, scrollY: y });
+      }
+    });
+    if (failuresByKey.size >= 24) break;
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  return Array.from(failuresByKey.values())
+    .sort((a, b) => a.ratio - b.ratio)
+    .slice(0, 24);
+}
+
+async function assertDarkContrast(page, label, rootSelector = 'body', opts = {}) {
+  const failures = opts.scroll ? await collectDarkContrastFailures(page, rootSelector) : await page.evaluate(contrastAuditScript(rootSelector));
   assert(!failures.length, `${label}: dark-mode contrast failures ${JSON.stringify(failures)}`);
+}
+
+async function activateDarkModeTab(page, tabId, opts) {
+  await page.evaluate(async tab => {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(item => {
+      item.classList.toggle('active', item.dataset.tab === tab);
+    });
+    document.querySelectorAll('.view').forEach(view => {
+      view.classList.toggle('active', view.id === `view-${tab}`);
+    });
+    if (tab === 'plan') render();
+    if (tab === 'audit') renderAudit();
+    if (tab === 'timeline') renderTimeline();
+    if (tab === 'roadmap') renderRoadmap();
+    if (tab === 'table') renderTable();
+    if (tab === 'schedule' && typeof renderSchedule === 'function') await Promise.resolve(renderSchedule());
+    if (tab === 'browse' && typeof renderBrowse === 'function') await Promise.resolve(renderBrowse());
+    if (tab === 'gened' && typeof renderGenEdMatrix === 'function') renderGenEdMatrix();
+  }, tabId);
+  await page.locator(`#view-${tabId}.active`).waitFor({ state: 'visible', timeout: opts.timeoutMs });
+  await page.waitForTimeout(100);
+  await page.evaluate(() => window.scrollTo(0, 0));
+}
+
+async function assertDarkModeTabSweep(page, opts) {
+  const scanned = [];
+  for (const tab of DARK_MODE_TABS) {
+    await activateDarkModeTab(page, tab.id, opts);
+    await assertDarkContrast(page, `dark ${tab.label} tab mobile`, 'body', { scroll: true });
+    scanned.push(tab.label);
+  }
+  return scanned;
 }
 
 async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=121'), 'workflow app did not load styles.css?v=121');
+  assert(snapshot.styles.includes('styles.css?v=122'), 'workflow app did not load styles.css?v=122');
   assert(snapshot.scripts.includes('js/schedule.js?v=73'), 'workflow app did not load js/schedule.js?v=73');
   assert(snapshot.scheduleViewText.includes('Solver breadth'), 'workflow app did not render the schedule solver breadth preference');
   assert(snapshot.scripts.includes('js/timeline.js?v=27'), 'workflow app did not load js/timeline.js?v=27');
@@ -295,7 +380,16 @@ async function verifyDarkModeContrastMobile(page, url, opts) {
   await assertDarkContrast(page, 'dark settings mobile', '#settings-modal');
   const snapshot = await page.evaluate(snapshotScript());
   assertNoOverflow('dark settings mobile', snapshot);
-  console.log('Dark mode [mobile]: onboarding, main plan, and Settings passed visible text contrast and no overflow.');
+  await page.evaluate(() => {
+    closeSettings();
+    state.theme = 'dark';
+    state.onboardingComplete = true;
+    saveState();
+    applyTheme();
+    render();
+  });
+  const scannedTabs = await assertDarkModeTabSweep(page, opts);
+  console.log(`Dark mode [mobile]: onboarding, Settings, and ${scannedTabs.join(', ')} passed scroll-aware visible text contrast with no overflow.`);
 }
 
 async function verifyOnboardingMobile(page, url, opts) {
