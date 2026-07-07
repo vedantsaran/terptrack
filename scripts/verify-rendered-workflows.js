@@ -355,7 +355,7 @@ async function openFreshApp(page, url, opts, suffix) {
   assert(snapshot.scripts.includes('js/share.js?v=17'), 'workflow app did not load js/share.js?v=17');
   assert(snapshot.scripts.includes('js/prereq-resolver.js?v=1'), 'workflow app did not load js/prereq-resolver.js?v=1');
   assert(snapshot.scripts.includes('js/bulk.js?v=1'), 'workflow app did not load js/bulk.js?v=1');
-  assert(snapshot.scripts.includes('js/placeholder-search.js?v=10'), 'workflow app did not load js/placeholder-search.js?v=10');
+  assert(snapshot.scripts.includes('js/placeholder-search.js?v=11'), 'workflow app did not load js/placeholder-search.js?v=11');
   assert(snapshot.scripts.includes('js/snapshots.js?v=12'), 'workflow app did not load js/snapshots.js?v=12');
   assert(snapshot.scripts.includes('js/account.js?v=17'), 'workflow app did not load js/account.js?v=17');
   return snapshot;

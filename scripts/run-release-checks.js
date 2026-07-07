@@ -18,6 +18,7 @@ function parseArgs(argv) {
     syntax: true,
     proxy: true,
     generated: true,
+    curated: true,
     rendered: true,
     workflows: true,
     renderedTimeoutMs: Number(process.env.TERPTRACK_RENDER_TIMEOUT_MS || 240000),
@@ -54,6 +55,8 @@ function parseArgs(argv) {
       opts.proxy = false;
     } else if (arg === '--skip-generated') {
       opts.generated = false;
+    } else if (arg === '--skip-curated') {
+      opts.curated = false;
     } else if (arg === '--skip-rendered') {
       opts.rendered = false;
     } else if (arg === '--skip-workflows') {
@@ -174,7 +177,7 @@ function usage() {
     'Usage: node scripts/run-release-checks.js [options]',
     '',
     'Default checks:',
-    '  syntax, offline /api/umd proxy fixture, generated-plan fixtures, rendered browser verifiers',
+    '  syntax, offline /api/umd proxy fixture, generated-plan fixtures, curated schedule verifier, rendered browser verifiers',
     '',
     'Options:',
     '  --live                         Also run focused live PlanetTerp verification',
@@ -201,6 +204,7 @@ function usage() {
     '  --skip-syntax                  Skip JS syntax checks',
     '  --skip-proxy                   Skip offline proxy fixture',
     '  --skip-generated               Skip generated-plan fixtures',
+    '  --skip-curated                 Skip curated schedule verifier',
     '  --skip-rendered                Skip rendered browser verifier',
     '  --skip-workflows               Skip rendered onboarding/Browse workflow verifier',
   ].join('\n');
@@ -235,6 +239,7 @@ function publicOptions(opts) {
     syntax: opts.syntax,
     proxy: opts.proxy,
     generated: opts.generated,
+    curated: opts.curated,
     rendered: opts.rendered,
     workflows: opts.workflows,
     renderedTimeoutMs: opts.renderedTimeoutMs,
@@ -403,6 +408,11 @@ async function runReleaseChecks(opts, report) {
     await runStage(report, 'generated', 'generated-plan fixtures', stage => runCommand(stage, 'generated-plan fixtures', ['scripts/test-generated-plans.js'], report));
   } else {
     skipStage(report, 'generated', 'generated-plan fixtures', '--skip-generated');
+  }
+  if (opts.curated) {
+    await runStage(report, 'curated', 'curated schedule verifier', stage => runCommand(stage, 'curated schedule verifier', ['scripts/verify-curated-schedules.js'], report));
+  } else {
+    skipStage(report, 'curated', 'curated schedule verifier', '--skip-curated');
   }
   if (opts.rendered) {
     await runStage(report, 'rendered', 'rendered generated-plan verifier', async stage => {

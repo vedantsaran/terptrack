@@ -4132,6 +4132,7 @@ function testReleaseJsonReport() {
     '--json',
     '--skip-syntax',
     '--skip-generated',
+    '--skip-curated',
     '--skip-rendered',
     '--skip-workflows',
   ], {
@@ -4148,12 +4149,13 @@ function testReleaseJsonReport() {
   const stageStatus = Object.fromEntries((report.stages || []).map(stage => [stage.id, stage.status]));
   assert(report.schema === 'terptrack-release-report/v1', 'release report: should include schema version');
   assert(report.status === 'passed', 'release report: JSON-mode run should pass');
-  assert(report.options?.syntax === false && report.options?.generated === false, 'release report: options should reflect skipped gates');
+  assert(report.options?.syntax === false && report.options?.generated === false && report.options?.curated === false, 'release report: options should reflect skipped gates');
   assert(Array.isArray(report.options?.liveCatalogTestudoTerms) && report.options.liveCatalogTestudoTerms.length === 0, 'release report: default JSON options should expose empty release-level Testudo terms');
   assert(report.options?.liveCatalogWriteSettingsSnapshot === false, 'release report: default JSON options should not request Settings snapshot writes');
   assert(stageStatus.syntax === 'skipped', 'release report: syntax stage should be represented as skipped');
   assert(stageStatus.proxy === 'passed', 'release report: proxy stage should pass when run under JSON mode');
   assert(stageStatus.generated === 'skipped', 'release report: generated stage should be represented as skipped');
+  assert(stageStatus.curated === 'skipped', 'release report: curated stage should be represented as skipped');
   assert(stageStatus.rendered === 'skipped', 'release report: rendered stage should be represented as skipped');
   assert(stageStatus.workflows === 'skipped', 'release report: workflows stage should be represented as skipped');
   assert(stageStatus.live === 'skipped', 'release report: live stage should be represented as skipped when not requested');

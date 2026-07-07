@@ -47,7 +47,6 @@ const SCHEDULE = [
       { code: "ENEE 322", title: "Signal & System Theory",         cr: 3, prereqs: ["ENEE 222", "ENEE 290"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENEE 350", title: "Computer Organization",          cr: 3, prereqs: ["ENEE 244", "CMSC 132"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "COMM 107", title: "Oral Communication",             cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fsoc", note: "FSOC" },
-      { code: "GenEd HS-1", title: "History/Social Sciences #1",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshs", note: "DSHS #1" },
       { code: "MATH 241", title: "Calculus III",                   cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "tech", category: "tech-a", note: "Tech Cat A (300-level) · supports high-dim ML" },
     ]
   },
@@ -58,7 +57,7 @@ const SCHEDULE = [
       { code: "CMSC 320", title: "Intro to Data Science",          cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "tech-f", note: "Strongly recommended for Deep Learning/ML tracks" },
       { code: "ENEE 324", title: "Engineering Probability & Stats",cr: 3, prereqs: ["ENEE 322"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENEE 445", title: "Computer Laboratory",            cr: 2, prereqs: ["ENEE 245"], coreqs: [], kind: "tech", category: "tech-d", note: "Tech Cat D · Advanced Lab · Fall/Spring · easiest lab option" },
-      { code: "GenEd HS-2", title: "HS #2 + I-Series + Diversity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshs", note: "Pick HS course tagged I-Series + UP/CC" },
+      { code: "GenEd HS-2", title: "HS #2 + I-Series + Diversity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshs", categories: ["gened-dshs", "gened-scis", "gened-dvup"], note: "Pick a DSHS I-Series course tagged DVUP" },
     ]
   },
   {
@@ -68,8 +67,7 @@ const SCHEDULE = [
       { code: "CMSC 451", title: "Design & Analysis of Algorithms",cr: 3, prereqs: ["CMSC 351"], coreqs: [], kind: "goal", category: "tech-b", isGoal: true, note: "★ GOAL · Tech Cat B" },
       { code: "ENEE 446", title: "Digital Computer Design",        cr: 3, prereqs: ["ENEE 350"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENGL 393", title: "Technical Writing",              cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fspw", note: "FSPW · Junior standing" },
-      { code: "GenEd SP-1", title: "Scholarship in Practice (outside major)",cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", note: "DSSP #1" },
-      { code: "MATH 401", title: "Applications of Linear Algebra", cr: 3, prereqs: ["MATH 241"], coreqs: [], kind: "tech", category: "tech-a", note: "Tech Cat A (400-level) · satisfies Cat A 400-lvl rule" },
+      { code: "GenEd SP-1", title: "Social Sciences Scholarship in Practice + Diversity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", categories: ["gened-dshs", "gened-dssp", "gened-dvcc"], note: "DSSP #1 · DSHS #2 · DVCC" },
     ]
   },
   {
@@ -78,7 +76,6 @@ const SCHEDULE = [
       { code: "CMSC 472", title: "Introduction to Deep Learning",  cr: 3, prereqs: ["CMSC 330", "CMSC 351", "ENEE 290"], coreqs: [], kind: "goal", category: "tech-f", isGoal: true, note: "★ GOAL · Apply Nov 2029" },
       { code: "CMSC 412", title: "Operating Systems (or ENEE 447)",cr: 4, prereqs: ["CMSC 330", "CMSC 351"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENEE 408N", title: "Design Experience in Machine Learning", cr: 3, prereqs: [], coreqs: [], kind: "tech", category: "tech-e", note: "Tech Cat E · Capstone · Spring Only · pairs perfectly w/ ML/Deep Learning track" },
-      { code: "ENEE 440", title: "Microprocessors",                cr: 3, prereqs: ["ENEE 350"], coreqs: [], kind: "tech", category: "tech-c", note: "Tech Cat C" },
       { code: "GenEd SP-2", title: "Scholarship in Practice #2",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", note: "DSSP #2" },
     ]
   },

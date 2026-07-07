@@ -37,6 +37,25 @@ function getGenEdNeed(tag) {
   return def ? def.need : 1;
 }
 
+function inferGenEdTagsFromText(course, opts = {}) {
+  const tags = new Set();
+  const hay = [course?.code, course?.title, course?.note, course?.category].join(' ').toUpperCase();
+  PLACEHOLDER_GENED_TAGS.forEach(tag => { if (hay.includes(tag)) tags.add(tag); });
+  if (hay.includes('HISTORY') || hay.includes('SOCIAL') || /\bHS\b/.test(hay)) tags.add('DSHS');
+  if (hay.includes('HUMANITIES') || /\bHU\b/.test(hay)) tags.add('DSHU');
+  if (hay.includes('SCHOLARSHIP') || hay.includes('SP-') || /\bSP\b/.test(hay)) tags.add('DSSP');
+  if (hay.includes('I-SERIES') || hay.includes('I SERIES')) tags.add('SCIS');
+  if (hay.includes('CULTURAL COMPETENCE')) tags.add('DVCC');
+  if (hay.includes('PLURAL')) tags.add('DVUP');
+  // Replacement search treats broad diversity slots as either/or. Degree
+  // coverage should still rely on explicit DVUP/DVCC tags or wording.
+  if (opts.includeEitherOr && (hay.includes('UP/CC') || hay.includes('DIVERSITY')) && !tags.has('DVUP') && !tags.has('DVCC')) {
+    tags.add('DVUP');
+    tags.add('DVCC');
+  }
+  return Array.from(tags).filter(t => PLACEHOLDER_GENED_TAGS.includes(t));
+}
+
 function courseGenEdTags(course) {
   const tags = new Set();
   if (!course) return [];
@@ -51,25 +70,13 @@ function courseGenEdTags(course) {
   }
   const cached = (typeof umdioCacheGet === 'function') ? umdioCacheGet('course:' + normalizeCode(course.code)) : null;
   if (cached && Array.isArray(cached.gen_ed)) cached.gen_ed.flat().filter(Boolean).forEach(t => tags.add(String(t).toUpperCase()));
+  inferGenEdTagsFromText(course).forEach(tag => tags.add(tag));
   return Array.from(tags).filter(t => PLACEHOLDER_GENED_TAGS.includes(t));
 }
 
 function inferPlaceholderTags(course) {
   const tags = new Set(courseGenEdTags(course));
-  const hay = [course.code, course.title, course.note, course.category].join(' ').toUpperCase();
-  PLACEHOLDER_GENED_TAGS.forEach(tag => { if (hay.includes(tag)) tags.add(tag); });
-  if (hay.includes('HISTORY') || hay.includes('SOCIAL') || /\bHS\b/.test(hay)) tags.add('DSHS');
-  if (hay.includes('HUMANITIES') || /\bHU\b/.test(hay)) tags.add('DSHU');
-  if (hay.includes('SCHOLARSHIP') || hay.includes('SP-') || /\bSP\b/.test(hay)) tags.add('DSSP');
-  if (hay.includes('I-SERIES') || hay.includes('I SERIES')) tags.add('SCIS');
-  if (hay.includes('CULTURAL COMPETENCE')) tags.add('DVCC');
-  if (hay.includes('PLURAL')) tags.add('DVUP');
-  // UMD's second diversity course can be DVUP or DVCC. Treat generic
-  // "Diversity" / "UP/CC" placeholders as an either/or search, not both.
-  if ((hay.includes('UP/CC') || hay.includes('DIVERSITY')) && !tags.has('DVUP') && !tags.has('DVCC')) {
-    tags.add('DVUP');
-    tags.add('DVCC');
-  }
+  inferGenEdTagsFromText(course, { includeEitherOr: true }).forEach(tag => tags.add(tag));
   return Array.from(tags).filter(t => PLACEHOLDER_GENED_TAGS.includes(t));
 }
 

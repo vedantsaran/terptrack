@@ -18,6 +18,7 @@ function _c(code, title, cr, opts) {
     kind: o.kind || 'core',
     category: o.category || 'major-core',
     note: o.note || '',
+    ...(Array.isArray(o.categories) ? { categories: o.categories } : {}),
     ...(o.isGoal ? { isGoal: true } : {}),
   };
 }
@@ -64,7 +65,7 @@ const SCHEDULE_CS = [
     _c('CMSC 421', 'Introduction to Artificial Intelligence', 3, { prereqs: ['CMSC 351'], category: 'major-upper', isGoal: true }),
     _c('CMSC 414', 'Computer and Network Security', 3, { prereqs: ['CMSC 216','CMSC 330'], category: 'major-upper' }),
     _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
-    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', categories: ['gened-dshs', 'gened-scis'], note: 'Satisfies DSHS SCIS' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
@@ -76,8 +77,9 @@ const SCHEDULE_CS = [
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('CMSC 4xx Upper Elective B', 'Upper-Division CS Elective', 3, { category: 'major-upper' }),
     _c('CMSC 4xx Upper Elective C', 'Upper-Division CS Elective', 3, { category: 'major-upper' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC/DSSP Elective', 'Humanities Cultural Competence Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc', 'gened-dssp'], note: 'Satisfies DSHU DVCC DSSP' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective #2', 'Free Elective', 2, { kind: 'tech', category: 'elective' }),
   ]},
 ];
 
@@ -86,8 +88,8 @@ const SCHEDULE_CS = [
 // ============================================================
 const SCHEDULE_BIOL = [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
-    _c('BSCI 170', 'Principles of Molecular and Cellular Biology', 3, { category: 'major-core' }),
-    _c('BSCI 171', 'Molecular and Cellular Biology Lab', 1, { coreqs: ['BSCI 170'], category: 'major-core' }),
+    _c('BSCI 170', 'Principles of Molecular and Cellular Biology', 3, { category: 'major-core', categories: ['gened-dsns'], note: 'Double-counts: BIOL Core + DSNS' }),
+    _c('BSCI 171', 'Molecular and Cellular Biology Lab', 1, { coreqs: ['BSCI 170'], category: 'major-core', categories: ['gened-dsnl'], note: 'Double-counts: BIOL Core + DSNL' }),
     _c('CHEM 131', 'General Chemistry I', 3, { category: 'major-support' }),
     _c('CHEM 132', 'General Chemistry I Lab', 1, { coreqs: ['CHEM 131'], category: 'major-support' }),
     _c('MATH 130', 'Calculus for the Life Sciences I', 3, { category: 'major-support', note: 'Satisfies FSMA' }),
@@ -125,8 +127,8 @@ const SCHEDULE_BIOL = [
     _c('BCHM 461', 'Biochemistry I', 3, { prereqs: ['CHEM 241'], category: 'major-upper' }),
     _c('BSCI 410', 'Molecular Genetics', 3, { prereqs: ['BSCI 222'], category: 'major-upper' }),
     _c('BSCI 4xx Upper Elective A', 'Upper-Division BSCI Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', categories: ['gened-fsar', 'gened-dssp'], note: 'Satisfies FSAR DSSP' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', categories: ['gened-dshs', 'gened-scis'], note: 'Satisfies DSHS SCIS' }),
   ]},
   { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
     _c('BSCI 440', 'Mammalian Physiology', 4, { prereqs: ['BSCI 330'], category: 'major-upper', isGoal: true }),
@@ -137,7 +139,7 @@ const SCHEDULE_BIOL = [
   ]},
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('BSCI 4xx Capstone', 'Senior Capstone Elective', 3, { category: 'major-upper' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc'], note: 'Satisfies DSHU DVCC' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
@@ -839,7 +841,7 @@ const SCHEDULE_PSYC = [
   ]},
   { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
     _c('BIOL 106', 'Principles of Biology II', 4, { kind: 'gened', category: 'gened-dsnl' }),
-    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support', categories: ['gened-fsar'], note: 'Double-counts: PSYC support + FSAR' }),
     _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
     _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
@@ -868,22 +870,23 @@ const SCHEDULE_PSYC = [
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
     _c('PSYC 4xx Elective B', 'Upper-Division PSYC Elective', 3, { category: 'major-upper' }),
     _c('PSYC 4xx Elective C', 'Upper-Division PSYC Elective', 3, { category: 'major-upper' }),
-    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', categories: ['gened-dshs', 'gened-scis'], note: 'Satisfies DSHS SCIS' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
     _c('PSYC 4xx Elective D', 'Upper-Division PSYC Elective', 3, { category: 'major-upper' }),
     _c('PSYC 4xx Elective E', 'Upper-Division PSYC Elective', 3, { category: 'major-upper' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc'], note: 'Satisfies DSHU DVCC' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('PSYC 489', 'Field Experience in Psychology', 3, { prereqs: ['PSYC 300'], category: 'major-upper', isGoal: true }),
     _c('PSYC 4xx Elective F', 'Upper-Division PSYC Elective', 3, { category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective #2', 'Free Elective', 1, { kind: 'tech', category: 'elective' }),
   ]},
 ];
 
@@ -908,7 +911,7 @@ const SCHEDULE_CCJS = [
     _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
   ]},
   { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
-    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support', categories: ['gened-fsar'], note: 'Double-counts: CCJS support + FSAR' }),
     _c('CCJS 200', 'Methods of Criminal Justice Research', 3, { prereqs: ['CCJS 100'], category: 'major-core' }),
     _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
     _c('Foreign Language 201', 'Foreign Language Sequence III', 3, { prereqs: ['Foreign Language 102'], category: 'major-support', note: 'BA req' }),
@@ -931,7 +934,7 @@ const SCHEDULE_CCJS = [
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
     _c('CCJS 400', 'Criminal Justice Process', 3, { prereqs: ['CCJS 200','CCJS 300'], category: 'major-core', isGoal: true }),
     _c('CCJS 4xx Elective A', 'Upper-Division CCJS Elective', 3, { category: 'major-upper' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc'], note: 'Satisfies DSHU DVCC' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
@@ -946,7 +949,7 @@ const SCHEDULE_CCJS = [
     _c('CCJS 498', 'Senior Internship in Criminal Justice', 3, { prereqs: ['CCJS 400'], category: 'major-upper', isGoal: true }),
     _c('CCJS 4xx Elective D', 'Upper-Division CCJS Elective', 3, { category: 'major-upper' }),
     _c('CCJS 4xx Elective E', 'Upper-Division CCJS Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('DSSP/SCIS Elective', 'I-Series Scholarship in Practice', 2, { kind: 'gened', category: 'gened-dssp', categories: ['gened-dssp', 'gened-scis'], note: 'Satisfies DSSP SCIS' }),
   ]},
 ];
 
@@ -966,7 +969,7 @@ const SCHEDULE_GVPT = [
   { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
     _c('GVPT 170', 'American Government', 3, { category: 'major-core' }),
     _c('ECON 200', 'Principles of Microeconomics', 3, { kind: 'gened', category: 'gened-dshs' }),
-    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support', categories: ['gened-fsar'], note: 'Double-counts: GVPT support + FSAR' }),
     _c('Foreign Language 102', 'Foreign Language Sequence II', 4, { prereqs: ['Foreign Language 101'], category: 'major-support', note: 'BA req' }),
     _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
   ]},
@@ -979,36 +982,36 @@ const SCHEDULE_GVPT = [
   ]},
   { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
     _c('GVPT 280', 'Introduction to International Relations', 3, { prereqs: ['GVPT 100'], category: 'major-core' }),
-    _c('GVPT 3xx Elective A', 'Upper-Division GVPT Elective', 3, { prereqs: ['GVPT 100'], category: 'major-upper' }),
+    _c('GVPT 301', 'Identity and Conflict', 3, { prereqs: ['GVPT 100'], category: 'major-upper' }),
     _c('Foreign Language 202', 'Foreign Language Sequence IV', 3, { prereqs: ['Foreign Language 201'], category: 'major-support', note: 'BA req' }),
     _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
     _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
   ]},
   { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
-    _c('GVPT 3xx Elective B', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
-    _c('GVPT 3xx Elective C', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
+    _c('GVPT 306', 'Global Environmental Politics', 3, { prereqs: ['GVPT 200'], category: 'major-upper' }),
+    _c('GVPT 390', 'Game Theory', 3, { category: 'major-upper' }),
     _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
     _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
-    _c('GVPT 3xx Elective D', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
-    _c('GVPT 4xx Elective A', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('GVPT 392', 'Introduction to Geographic Information Systems for Social Science Research', 3, { category: 'major-upper' }),
+    _c('GVPT 402', 'International Law', 3, { prereqs: ['GVPT 200'], category: 'major-upper' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc'], note: 'Satisfies DSHU DVCC' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
-    _c('GVPT 4xx Elective B', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
-    _c('GVPT 4xx Elective C', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
+    _c('GVPT 457', 'American Foreign Relations', 3, { prereqs: ['GVPT 200'], category: 'major-upper' }),
+    _c('GVPT 460', 'State Politics and Government', 3, { prereqs: ['GVPT 170'], category: 'major-upper' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('GVPT 399', 'Senior Seminar', 3, { prereqs: ['GVPT 200','GVPT 280'], category: 'major-upper', isGoal: true }),
-    _c('GVPT 4xx Elective D', 'Upper-Division GVPT Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('GVPT 475', 'The Presidency and the Executive Branch', 3, { prereqs: ['GVPT 170'], category: 'major-upper' }),
+    _c('DSSP/SCIS Elective', 'I-Series Scholarship in Practice', 2, { kind: 'gened', category: 'gened-dssp', categories: ['gened-dssp', 'gened-scis'], note: 'Satisfies DSSP SCIS' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
@@ -1036,7 +1039,7 @@ const SCHEDULE_ENME = [
     _c('MATH 240', 'Linear Algebra', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
     _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
     _c('PHYS 260', 'General Physics: Vibrations, Waves, Electricity and Magnetism', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
-    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], category: 'major-support', categories: ['gened-dsnl'], note: 'Double-counts: ME support + DSNL' }),
     _c('ENME 220', 'Mechanics II: Dynamics', 3, { prereqs: ['ENES 102'], category: 'major-core' }),
   ]},
   { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
@@ -1065,13 +1068,13 @@ const SCHEDULE_ENME = [
     _c('ENME 4xx Tech Elective B', 'Upper-Division ENME Elective', 3, { category: 'major-upper' }),
     _c('ENME 4xx Tech Elective C', 'Upper-Division ENME Elective', 3, { category: 'major-upper' }),
     _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc'], note: 'Satisfies DSHU DVCC' }),
   ]},
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('ENME 472', 'Integrated Product and Process Development', 3, { prereqs: ['ENME 462'], category: 'major-upper', isGoal: true }),
     _c('ENME 4xx Tech Elective D', 'Upper-Division ENME Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 4, { kind: 'gened', category: 'gened-fsar', categories: ['gened-fsar', 'gened-dssp'], note: 'Satisfies FSAR DSSP' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', categories: ['gened-dshs', 'gened-scis'], note: 'Satisfies DSHS SCIS' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
@@ -1327,7 +1330,7 @@ const SCHEDULE_INST = [
   ]},
   { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
     _c('INST 201', 'Introduction to Information Science', 3, { category: 'major-core' }),
-    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support' }),
+    _c('STAT 100', 'Elementary Statistics and Probability', 3, { category: 'major-support', categories: ['gened-fsar'], note: 'Double-counts: INST support + FSAR' }),
     _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
     _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
@@ -1350,7 +1353,7 @@ const SCHEDULE_INST = [
     _c('INST 352', 'Information User Needs and Assessment', 3, { prereqs: ['INST 201'], category: 'major-core' }),
     _c('INST 362', 'User-Centered Design', 3, { prereqs: ['INST 352'], category: 'major-core' }),
     _c('INST 4xx Specialization A', 'INST Specialization Elective', 3, { category: 'major-upper' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc'], note: 'Satisfies DSHU DVCC' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
@@ -1370,8 +1373,9 @@ const SCHEDULE_INST = [
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('INST 490', 'Integrated Capstone for Information Science', 3, { prereqs: ['INST 414'], category: 'major-upper', isGoal: true }),
     _c('INST 4xx Specialization F', 'INST Specialization Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', categories: ['gened-dshs', 'gened-scis'], note: 'Satisfies DSHS SCIS' }),
+    _c('Free Elective', 'Free Elective', 1, { kind: 'tech', category: 'elective' }),
   ]},
 ];
 
@@ -1418,7 +1422,7 @@ const SCHEDULE_COMM = [
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
     _c('COMM 4xx Elective C', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
     _c('COMM 4xx Elective D', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc'], note: 'Satisfies DSHU DVCC' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
@@ -1432,8 +1436,9 @@ const SCHEDULE_COMM = [
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('COMM 497', 'Senior Capstone in Communication', 3, { prereqs: ['COMM 402'], category: 'major-upper', isGoal: true }),
     _c('COMM 4xx Elective F', 'Upper-Division COMM Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', categories: ['gened-fsar', 'gened-dssp'], note: 'Satisfies FSAR DSSP' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', categories: ['gened-dshs', 'gened-scis'], note: 'Satisfies DSHS SCIS' }),
+    _c('Free Elective', 'Free Elective', 2, { kind: 'tech', category: 'elective' }),
   ]},
 ];
 
@@ -1458,7 +1463,7 @@ const SCHEDULE_ECON = [
   { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
     _c('ECON 305', 'Intermediate Microeconomic Theory', 3, { prereqs: ['ECON 200','MATH 140'], category: 'major-core' }),
     _c('ECON 306', 'Intermediate Macroeconomic Theory', 3, { prereqs: ['ECON 201','MATH 140'], category: 'major-core' }),
-    _c('STAT 400', 'Applied Probability and Statistics I', 3, { prereqs: ['MATH 141'], category: 'major-core' }),
+    _c('STAT 400', 'Applied Probability and Statistics I', 3, { prereqs: ['MATH 141'], category: 'major-core', categories: ['gened-fsar'], note: 'Double-counts: ECON Core + FSAR' }),
     _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
     _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
   ]},
@@ -1472,14 +1477,14 @@ const SCHEDULE_ECON = [
   { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
     _c('ECON 326', 'Intermediate Mathematical Macroeconomics', 3, { prereqs: ['ECON 306','MATH 141'], category: 'major-core' }),
     _c('ECON 4xx Elective A', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
-    _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('DSSP/SCIS Elective', 'I-Series Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp', categories: ['gened-dssp', 'gened-scis'], note: 'Satisfies DSSP SCIS' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
     _c('ECON 4xx Elective B', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
     _c('ECON 4xx Elective C', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', categories: ['gened-dshu', 'gened-dvcc'], note: 'Satisfies DSHU DVCC' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
@@ -1493,7 +1498,7 @@ const SCHEDULE_ECON = [
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
     _c('ECON 422', 'Econometrics II', 3, { prereqs: ['ECON 321'], category: 'major-upper', isGoal: true }),
     _c('ECON 4xx Elective E', 'Upper-Division ECON Elective', 3, { category: 'major-upper' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 4, { kind: 'gened', category: 'gened-dssp' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
 ];
@@ -2682,7 +2687,7 @@ const SCHEDULE_HESP = [
 const SCHEDULE_KNES = [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
     _c('KNES 157T', 'Physical Education Activities: Coed; Fight the 15: Introduction to Fitness and an Active Lifestyle', 1, { category: 'major-core' }),
-    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
+    _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support', categories: ['gened-dsns'], note: 'Double-counts: KNES support + DSNS' }),
     _c('MATH 130', 'Calculus I for the Life Sciences', 4, { kind: 'gened', category: 'gened-fsma' }),
     _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
     _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
@@ -2743,8 +2748,8 @@ const SCHEDULE_KNES = [
 // ============================================================
 const SCHEDULE_PHSC = [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
-    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
-    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support', categories: ['gened-dsns'], note: 'Double-counts: PHSC support + DSNS' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support', categories: ['gened-dsnl'], note: 'Double-counts: PHSC support + DSNL' }),
     _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
     _c('CHEM 132', 'General Chemistry I Laboratory', 1, { category: 'major-support' }),
     _c('MATH 130', 'Calculus I for the Life Sciences', 4, { kind: 'gened', category: 'gened-fsma' }),
@@ -2806,8 +2811,8 @@ const SCHEDULE_PHSC = [
 // ============================================================
 const SCHEDULE_NFSC = [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
-    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
-    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support', categories: ['gened-dsns'], note: 'Double-counts: NFSC support + DSNS' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support', categories: ['gened-dsnl'], note: 'Double-counts: NFSC support + DSNL' }),
     _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
     _c('CHEM 132', 'General Chemistry I Laboratory', 1, { category: 'major-support' }),
     _c('NFSC 100', 'Elements of Nutrition', 3, { category: 'major-core' }),
@@ -2932,8 +2937,8 @@ const SCHEDULE_HLTH = [
 // ============================================================
 const SCHEDULE_ENST = [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
-    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
-    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support', categories: ['gened-dsns'], note: 'Double-counts: ENST support + DSNS' }),
+    _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { category: 'major-support', categories: ['gened-dsnl'], note: 'Double-counts: ENST support + DSNL' }),
     _c('CHEM 131', 'Chemistry I - Fundamentals of General Chemistry', 3, { category: 'major-support' }),
     _c('CHEM 132', 'General Chemistry I Laboratory', 1, { category: 'major-support' }),
     _c('GEOL 100', 'Physical Geology', 3, { category: 'major-support' }),
@@ -3576,7 +3581,7 @@ const SCHEDULE_PLSC = [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
     _c('PLSC 110', 'Introduction to Horticulture', 3, { category: 'major-core' }),
     _c('PLSC 111', 'Introduction to Horticulture Laboratory', 1, { category: 'major-core' }),
-    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support' }),
+    _c('BSCI 170', 'Principles of Molecular & Cellular Biology', 3, { category: 'major-support', categories: ['gened-dsns'], note: 'Double-counts: PLSC support + DSNS' }),
     _c('BSCI 171', 'Principles of Molecular & Cellular Biology Laboratory', 1, { kind: 'gened', category: 'gened-dsnl' }),
     _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
     _c('MATH 115', 'Precalculus', 3, { kind: 'gened', category: 'gened-fsma' }),

@@ -12509,3 +12509,45 @@ Next pass candidates:
 - Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page and checked date for every curated schedule.
 - Add a stale-course detector that compares all curated fixed schedules against PlanetTerp plus official UMD catalog pages before release.
 - Review the remaining generated-language in verifier/release labels now that those scripts cover curated schedules too.
+
+## Pass 211 - Curated Schedule Invariant Gate
+
+Focus:
+- Made every fully baked schedule pass exact credit, load, GenEd, source, and senior-level invariants instead of only the 51 older fixture majors.
+- Added a release-gated all-curated verifier so future schedule edits cannot quietly break degree shape.
+- `README.md` was not modified or staged.
+
+Code changes:
+- Added `scripts/verify-curated-schedules.js`.
+  - Loads the app in a VM and verifies all 61 fully baked majors through the same `flatCourses`, `courseGenEdTags`, and GenEd coverage logic used by the app.
+  - Enforces exactly 8 terms, exact target credits, no term over 18 credits, complete planned GenEd coverage, at least 10 real catalog course rows, at least one real 400-level row, and catalog-source metadata.
+- Wired the curated verifier into `scripts/run-release-checks.js`.
+  - Added a default `curated` release stage.
+  - Added `--skip-curated` and JSON report support.
+  - Updated `scripts/test-generated-plans.js` so release JSON fixtures expect the new stage.
+- Improved GenEd tag handling in `js/placeholder-search.js`.
+  - Shared text inference between replacement-search hints and planned GenEd coverage.
+  - Kept broad `Diversity` / `UP/CC` placeholders as replacement-search hints only unless an explicit DVUP/DVCC tag or wording exists.
+  - Bumped `js/placeholder-search.js` to `v=11` in `index.html` and updated rendered workflow assertions.
+- Fixed older curated schedule data in `js/data.js` and `js/major-schedules.js`.
+  - CE now lands at `125/125`, removes the 19-credit term, and has explicit DVUP/DVCC/SCIS/DSSP/DSHS coverage.
+  - CS, ENME, BIOL, ECON, PSYC, CCJS, GVPT, COMM, and INST now hit their target credits and all 13 GenEd requirements.
+  - PHSC, KNES, NFSC, ENST, and PLSC now count their embedded science/lab support courses toward DSNS/DSNL where appropriate.
+  - GVPT senior electives now use real catalog-listed 400-level courses instead of generic `GVPT 4xx` placeholders.
+  - `_c()` now preserves multi-tag `categories` arrays for curated schedule rows.
+
+Verification:
+- Ran `node --check` on the touched app and script files.
+- Ran `node scripts/verify-curated-schedules.js`.
+  - It passed all 61 fully baked schedules with min real courses `12` and min 400-level rows `1`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed and reported the new release JSON `curated` stage.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 45 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, the new curated verifier, rendered desktop and mobile plan verification, and rendered mobile workflow checks.
+  - It reported `TerpTrack release checks passed`.
+
+Next pass candidates:
+- Add a stale-course detector that compares every curated fixed schedule against PlanetTerp plus official UMD catalog pages before release.
+- Replace remaining generic `4xx` elective placeholders in older social-science and communication schedules with real catalog options where the major rules allow it.
+- Continue reviewing release/verifier labels that still say `generated` even when the workflow covers curated schedules too.
