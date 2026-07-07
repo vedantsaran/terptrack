@@ -41,7 +41,7 @@
   --paper: #26211A;
   --ink: #F5EFDF;
   --ink-soft: #C9BFA9;
-  --slate: #8B8170;
+  --slate: #A99F8D;
   --line: #3D3528;
   --line-strong: #5C5240;
   --green: #6FBA82;
@@ -56,6 +56,55 @@
   --shadow-lg: 0 12px 40px rgba(0,0,0,.5);
   --bg-grad-1: rgba(232,185,35,.04);
   --bg-grad-2: rgba(199,62,62,.06);
+}
+
+[data-theme="dark"] h2,
+[data-theme="dark"] .eyebrow,
+[data-theme="dark"] h1.hero-title em,
+[data-theme="dark"] .tab.active,
+[data-theme="dark"] .section-rule .badge,
+[data-theme="dark"] .code,
+[data-theme="dark"] .tag.tech,
+[data-theme="dark"] .goal-status.in-prog,
+[data-theme="dark"] .roadmap-legend .goal {
+  color: var(--maroon-soft);
+}
+
+[data-theme="dark"] .tab.active {
+  border-bottom-color: var(--maroon-soft);
+}
+
+[data-theme="dark"] .filter-chip:hover,
+[data-theme="dark"] .status-btn:hover,
+[data-theme="dark"] .course-action:hover {
+  color: var(--maroon-soft);
+  border-color: var(--maroon-soft);
+}
+
+[data-theme="dark"] .pt-link {
+  color: var(--maroon-soft);
+  background: rgba(255, 95, 95, .12);
+  border-color: rgba(255, 95, 95, .35);
+}
+
+[data-theme="dark"] .auto-plan-load.heavy {
+  color: var(--maroon-soft);
+  background: rgba(255, 95, 95, .12);
+  border-color: rgba(255, 95, 95, .35);
+}
+
+[data-theme="dark"] .auto-plan-reality.danger .auto-plan-reality-head b {
+  color: #FF8A8A;
+  background: rgba(255, 138, 138, .12);
+  border-color: rgba(255, 138, 138, .42);
+}
+
+[data-theme="dark"] .search-box::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A99F8D' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .topbar {
+  background: #7A1515;
 }
 
 /* ===========================================================
@@ -3676,6 +3725,11 @@ h1.hero-title em {
 .save-indicator.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+[data-theme="dark"] .save-indicator {
+  background: #2F7D46;
+  color: #FFFFFF;
 }
 
 /* ===========================================================
@@ -9460,6 +9514,24 @@ h1.hero-title em {
     flex: 1 1 220px;
   }
   .ps-verify span { text-align: left; }
+}
+
+/* Dark-mode foreground contrast final pass */
+[data-theme="dark"] h2,
+[data-theme="dark"] .welcome-card h2,
+[data-theme="dark"] .eyebrow,
+[data-theme="dark"] h1.hero-title em,
+[data-theme="dark"] .tab.active,
+[data-theme="dark"] .section-rule .badge,
+[data-theme="dark"] .code,
+[data-theme="dark"] .tag.tech,
+[data-theme="dark"] .goal-status.in-prog,
+[data-theme="dark"] .roadmap-legend .goal {
+  color: var(--maroon-soft);
+}
+
+[data-theme="dark"] .tab.active {
+  border-bottom-color: var(--maroon-soft);
 }
 
 /* Dark-mode Gen-Ed matrix contrast */

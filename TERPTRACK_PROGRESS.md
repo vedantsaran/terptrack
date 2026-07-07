@@ -12078,3 +12078,47 @@ Next pass candidates:
 - Convert remaining generated STEM/business majors with high student impact: `MATH`, `STAT`, `CHEM`, `PHYS`, `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM`.
 - Add a maintainer-facing stale-course detector that explicitly compares generated and curated rows against both PlanetTerp and official UMD catalog pages, with special handling for official catalog rows PlanetTerp has not ingested yet.
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+
+## Pass 205 - Dark Mode Contrast and Visual Polish
+
+Focus:
+- Fixed dark-mode UI contrast and visible text color issues so the app reads cleanly in onboarding, the main plan view, Settings, generated-plan status UI, and persistent save feedback.
+
+Completed:
+- Updated the dark theme foreground palette.
+  - Lightened `--slate` from `#8B8170` to `#A99F8D`.
+  - Moved dark-mode maroon foreground surfaces to `--maroon-soft`, including section headings, active tabs, badges, code-style labels, tech tags, roadmap goal labels, and hover states.
+  - Deepened the dark topbar background to `#7A1515` so white icon controls meet contrast expectations.
+  - Adjusted the dark search icon stroke to the higher-contrast slate tone.
+- Fixed generated-plan and workflow dark-mode affordances.
+  - Updated PlanetTerp links, heavy-load generated-plan pills, warning badges, and the save indicator so their foreground/background pairs pass visible text contrast checks.
+  - Added final cascade overrides for late dark-mode styles so later CSS blocks cannot accidentally reintroduce low-contrast maroon text.
+- Added a mobile dark-mode regression audit to `scripts/verify-rendered-workflows.js`.
+  - The workflow verifier now forces dark mode, checks onboarding, dismisses onboarding, audits the main app, opens Settings, audits Settings, and confirms Settings has no overflow.
+  - The audit computes WCAG-style visible text contrast from rendered colors, including effective alpha compositing through ancestor backgrounds.
+- Bumped the CSS asset version from `styles.css?v=119` to `styles.css?v=120` in `index.html` and the rendered verifiers.
+- `README.md` was not modified or staged.
+
+Verification:
+- Ran in-app browser dark-mode contrast audits on the main app and Settings; both returned zero failures after the CSS cache bump.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=180000`.
+  - It passed the new dark-mode mobile audit for onboarding, main plan, and Settings.
+  - It passed onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with 34 curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `GEOL`, `CHEM`, `AOSC`, `STAT`, and `MATH`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `GEOL`, `CHEM`, `AOSC`, `STAT`, and `MATH`.
+  - It passed rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass205-dark-mode-random`.
+  - It verified `IS`, `CHEM`, `ACCOUNTING`, `MARKETING`, `EDUC`, `PHYS`, `GEOL`, `MGMT`, `MATH`, `AOSC`, `BCHM`, and `SCM` against PlanetTerp.
+  - All 12 sampled generated schedules passed live title/credit matching, requirement-group checks, progression checks, and max-credit checks.
+
+Next pass candidates:
+- Continue converting remaining generated high-impact STEM/business majors into curated plans: `MATH`, `STAT`, `CHEM`, `PHYS`, `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM`.
+- Expand rendered dark-mode contrast coverage to additional tabs, generated schedule output states, and any newly curated plan surfaces.
+- Add a maintainer-facing stale-course detector that compares generated and curated rows against PlanetTerp and official UMD catalog pages.

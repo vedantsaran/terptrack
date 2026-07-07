@@ -872,7 +872,7 @@ async function runViewport(browser, url, viewport, selected, opts) {
     }, null, { timeout: opts.timeoutMs });
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
-    assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
+    assert(initialSnapshot.styles.includes('styles.css?v=120'), `${viewport.label}: rendered app did not load styles.css?v=120`);
     assert(initialSnapshot.scripts.includes('js/majors.js?v=13'), `${viewport.label}: rendered app did not load js/majors.js?v=13`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);

@@ -173,11 +173,89 @@ function assertNoOverflow(label, snapshot) {
   });
 }
 
+function contrastAuditScript(rootSelector = 'body') {
+  return `((rootSelector) => {
+    function parseColor(value) {
+      const match = String(value || '').match(/rgba?\\(([^)]+)\\)/);
+      if (!match) return null;
+      const parts = match[1].split(',').map(part => Number(part.trim()));
+      if (parts.length < 3) return null;
+      return { r: parts[0], g: parts[1], b: parts[2], a: parts.length >= 4 ? parts[3] : 1 };
+    }
+    function blend(top, bottom) {
+      const a = top.a == null ? 1 : top.a;
+      return {
+        r: Math.round(top.r * a + bottom.r * (1 - a)),
+        g: Math.round(top.g * a + bottom.g * (1 - a)),
+        b: Math.round(top.b * a + bottom.b * (1 - a)),
+        a: 1,
+      };
+    }
+    function luminance(color) {
+      const vals = [color.r, color.g, color.b].map(value => {
+        const s = value / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * vals[0] + 0.7152 * vals[1] + 0.0722 * vals[2];
+    }
+    function contrast(fg, bg) {
+      const l1 = luminance(fg);
+      const l2 = luminance(bg);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+    function effectiveBackground(element) {
+      let bg = parseColor(getComputedStyle(document.body).backgroundColor) || { r: 26, g: 22, b: 18, a: 1 };
+      const chain = [];
+      let node = element;
+      while (node && node.nodeType === 1) {
+        chain.push(node);
+        node = node.parentElement;
+      }
+      chain.reverse().forEach(item => {
+        const color = parseColor(getComputedStyle(item).backgroundColor);
+        if (!color || color.a === 0) return;
+        bg = color.a < 1 ? blend(color, bg) : color;
+      });
+      return bg;
+    }
+    const root = document.querySelector(rootSelector);
+    if (!root) return [{ selector: rootSelector, text: 'missing root', ratio: 0 }];
+    return Array.from(root.querySelectorAll('*')).map(element => {
+      const rect = element.getBoundingClientRect();
+      if (rect.width < 2 || rect.height < 2 || rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) return null;
+      const text = (element.innerText || element.textContent || '').replace(/\\s+/g, ' ').trim();
+      if (!text || text.length > 160) return null;
+      const style = getComputedStyle(element);
+      if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0) return null;
+      const rawFg = parseColor(style.color);
+      const bg = effectiveBackground(element);
+      if (!rawFg || !bg) return null;
+      const fg = rawFg.a < 1 ? blend(rawFg, bg) : rawFg;
+      const ratio = contrast(fg, bg);
+      if (ratio >= 4.5) return null;
+      return {
+        ratio: Number(ratio.toFixed(2)),
+        tag: element.tagName.toLowerCase(),
+        id: element.id || '',
+        className: element.className ? String(element.className).slice(0, 120) : '',
+        text: text.slice(0, 90),
+        color: style.color,
+        background: style.backgroundColor,
+      };
+    }).filter(Boolean).sort((a, b) => a.ratio - b.ratio).slice(0, 16);
+  })(${JSON.stringify(rootSelector)})`;
+}
+
+async function assertDarkContrast(page, label, rootSelector = 'body') {
+  const failures = await page.evaluate(contrastAuditScript(rootSelector));
+  assert(!failures.length, `${label}: dark-mode contrast failures ${JSON.stringify(failures)}`);
+}
+
 async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=119'), 'workflow app did not load styles.css?v=119');
+  assert(snapshot.styles.includes('styles.css?v=120'), 'workflow app did not load styles.css?v=120');
   assert(snapshot.scripts.includes('js/schedule.js?v=73'), 'workflow app did not load js/schedule.js?v=73');
   assert(snapshot.scheduleViewText.includes('Solver breadth'), 'workflow app did not render the schedule solver breadth preference');
   assert(snapshot.scripts.includes('js/timeline.js?v=27'), 'workflow app did not load js/timeline.js?v=27');
@@ -196,6 +274,28 @@ async function openFreshApp(page, url, opts, suffix) {
   assert(snapshot.scripts.includes('js/snapshots.js?v=12'), 'workflow app did not load js/snapshots.js?v=12');
   assert(snapshot.scripts.includes('js/account.js?v=17'), 'workflow app did not load js/account.js?v=17');
   return snapshot;
+}
+
+async function verifyDarkModeContrastMobile(page, url, opts) {
+  await openFreshApp(page, url, opts, 'dark-contrast');
+  await page.evaluate(() => {
+    state.theme = 'dark';
+    state.onboardingComplete = false;
+    saveState();
+    applyTheme();
+    startOnboarding();
+  });
+  await page.locator('#onboard-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
+  await assertDarkContrast(page, 'dark onboarding mobile', '#onboard-modal');
+  await page.locator('#ob-skip').click({ timeout: opts.timeoutMs });
+  await page.locator('#onboard-modal.open').waitFor({ state: 'hidden', timeout: opts.timeoutMs });
+  await assertDarkContrast(page, 'dark main mobile');
+  await page.locator('#settings-btn').click({ timeout: opts.timeoutMs });
+  await page.locator('#settings-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
+  await assertDarkContrast(page, 'dark settings mobile', '#settings-modal');
+  const snapshot = await page.evaluate(snapshotScript());
+  assertNoOverflow('dark settings mobile', snapshot);
+  console.log('Dark mode [mobile]: onboarding, main plan, and Settings passed visible text contrast and no overflow.');
 }
 
 async function verifyOnboardingMobile(page, url, opts) {
@@ -1509,6 +1609,7 @@ async function main() {
       if (msg.type() === 'error') consoleErrors.push(msg.text());
     });
     page.on('pageerror', error => pageErrors.push(error.message));
+    await verifyDarkModeContrastMobile(page, url, opts);
     await verifyOnboardingMobile(page, url, opts);
     await verifyBrowseReplacementMobile(page, url, opts);
     await verifyRecommendationsSectionMobile(page, url, opts);
@@ -1517,7 +1618,7 @@ async function main() {
     await verifyAdvisorPacketMobile(page, url, opts);
     assert(!pageErrors.length, `Workflow page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
     assert(!consoleErrors.length, `Workflow console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
-    console.log('Verified rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.');
+    console.log('Verified rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.');
     if (opts.keepOpen) await page.waitForTimeout(60_000);
   } finally {
     await browser.close().catch(() => {});
