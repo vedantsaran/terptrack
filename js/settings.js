@@ -45,14 +45,23 @@ let autoPlanReviewSeq = 0;
 let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
-  checkedAt: 'July 6, 2026',
-  seed: 'pass204-curated-core-engineering-all',
+  checkedAt: 'July 7, 2026',
+  seed: 'pass206-curated-core-stem-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 16,
+  verifiedSchedules: 12,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass204-curated-core-engineering-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass206-curated-core-stem-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 7, 2026',
+    seed: 'pass206-curated-core-stem-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 12,
+    generatedCount: 12,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving Mathematics, Statistics, Chemistry, and Physics to curated current-catalog schedules.',
+  },
   {
     checkedAt: 'July 6, 2026',
     seed: 'pass204-curated-core-engineering-all',
@@ -181,13 +190,13 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
   },
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
-  checkedAt: 'July 6, 2026',
-  seed: 'pass204-curated-core-engineering-catalog',
+  checkedAt: 'July 7, 2026',
+  seed: 'pass206-curated-core-stem-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 181,
-  generatedMajors: 16,
-  requirementRows: 303,
-  matchedCourses: 181,
+  uniqueCourses: 149,
+  generatedMajors: 12,
+  requirementRows: 233,
+  matchedCourses: 149,
   missingCourses: 0,
   creditMismatches: 0,
   titleDrifts: 4,
@@ -197,7 +206,7 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass204-curated-core-engineering-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass206-curated-core-stem-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -205,7 +214,7 @@ const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   status: 'passed',
   command: 'node scripts/run-release-checks.js',
   liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
-  liveMajors: ['PHYS', 'GEOL', 'CHEM', 'AOSC', 'STAT', 'MATH'],
+  liveMajors: ['GEOL', 'AOSC', 'ASTR', 'BCHM', 'NEUR', 'IS'],
   defaultChecks: [
     'JS syntax',
     '/api/umd proxy fixture',

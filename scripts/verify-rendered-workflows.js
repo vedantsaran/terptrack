@@ -307,7 +307,7 @@ async function verifyOnboardingMobile(page, url, opts) {
     startOnboarding();
   });
   await page.locator('#onboard-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
-  await page.selectOption('#ob-major', 'STAT');
+  await page.selectOption('#ob-major', 'AOSC');
   await page.fill('#ob-start-year', '2027');
   await page.selectOption('#ob-catalog-year', '2024-2025');
   await page.locator('#ob-next').click({ timeout: opts.timeoutMs });
@@ -328,7 +328,7 @@ async function verifyOnboardingMobile(page, url, opts) {
   await page.waitForFunction(() => {
     const text = document.querySelector('#ob-plan-preview')?.textContent?.replace(/\s+/g, ' ') || '';
     return text.includes('Auto Plan Review')
-      && text.includes('Statistics')
+      && text.includes('Atmospheric')
       && text.includes('Catalog year')
       && text.includes('2024-2025')
       && text.includes('Catalog target 2024-2025')

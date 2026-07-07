@@ -389,6 +389,30 @@ async function testCuratedScheduleFixtures(context) {
       goal: 'BIOE486',
       minRealCourses: 39,
     },
+    {
+      id: 'MATH',
+      required: ['MATH140', 'MATH141', 'MATH240', 'MATH241', 'MATH246', 'MATH310', 'MATH403', 'MATH405', 'MATH410', 'MATH411', 'MATH430', 'MATH452', 'MATH456', 'STAT410', 'CMSC131', 'CMSC132', 'CMSC216', 'ENGL101', 'ENGL393', 'COMM107'],
+      goal: 'MATH411',
+      minRealCourses: 20,
+    },
+    {
+      id: 'STAT',
+      required: ['MATH140', 'MATH141', 'MATH240', 'MATH241', 'MATH246', 'MATH310', 'MATH405', 'MATH410', 'STAT400', 'STAT401', 'STAT410', 'STAT420', 'STAT426', 'STAT430', 'STAT440', 'AMSC460', 'CMSC131', 'CMSC132', 'ENGL101', 'ENGL393', 'COMM107'],
+      goal: 'STAT420',
+      minRealCourses: 21,
+    },
+    {
+      id: 'CHEM',
+      required: ['CHEM146', 'CHEM177', 'CHEM237', 'CHEM247', 'CHEM276', 'CHEM277', 'CHEM395', 'CHEM425', 'CHEM481', 'CHEM483', 'CHEM401', 'CHEM482', 'CHEM484', 'CHEM441', 'BCHM461', 'BSCI170', 'BSCI171', 'MATH140', 'MATH141', 'MATH241', 'PHYS161', 'PHYS260', 'PHYS261', 'ENGL101', 'ENGL393', 'COMM107'],
+      goal: 'CHEM441',
+      minRealCourses: 26,
+    },
+    {
+      id: 'PHYS',
+      required: ['PHYS170', 'PHYS171', 'PHYS265', 'PHYS272', 'PHYS273', 'PHYS275', 'PHYS276', 'PHYS313', 'PHYS371', 'PHYS375', 'PHYS401', 'PHYS402', 'PHYS404', 'PHYS405', 'PHYS410', 'PHYS413', 'PHYS420', 'PHYS441', 'MATH140', 'MATH141', 'MATH241', 'MATH243', 'ENGL101', 'ENGL393', 'COMM107'],
+      goal: 'PHYS402',
+      minRealCourses: 25,
+    },
   ];
   const rows = [];
 
@@ -1132,7 +1156,7 @@ async function testAutoPlanDiagnostics(context) {
         careerGoal: 'machine learning for public policy',
         genEdDepts: 'INST, PSYC, GVPT'
       });
-      const template = await buildAutoPlanPreview('STAT', {
+      const template = await buildAutoPlanPreview('AOSC', {
         noFetch: true,
         force: true,
         profilePrefs: getProfilePrefs()
@@ -1181,7 +1205,7 @@ async function testAutoPlanDiagnostics(context) {
         if (onProgress) onProgress(3, codes.length);
         return out;
       };
-      const mixed = await buildAutoPlanPreview('STAT', {
+      const mixed = await buildAutoPlanPreview('AOSC', {
         force: true,
         profilePrefs: getProfilePrefs()
       });
@@ -1245,21 +1269,21 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Next replacement actions/.test(result.templateHtml) && /data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan reality: review should render actionable replacement buttons');
   assert(/data-auto-plan-apply-resolve/.test(result.templateHtml) && /Apply \+ resolve placeholders/.test(result.templateHtml), 'auto plan initial resolver: review should render apply-and-resolve action');
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
-  assert(/Requirement source/.test(result.templateHtml) && /Mathematics Major/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
+  assert(/Requirement source/.test(result.templateHtml) && /Atmospheric/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
-  assert(result.templateFreshnessSummary.generatedCount === 16, 'auto plan diagnostics: freshness report should count generated templates');
-  assert(result.templateFreshnessSummary.requirementRows === 303, 'auto plan diagnostics: freshness report should count generated requirement rows');
+  assert(result.templateFreshnessSummary.generatedCount === 12, 'auto plan diagnostics: freshness report should count generated templates');
+  assert(result.templateFreshnessSummary.requirementRows === 233, 'auto plan diagnostics: freshness report should count generated requirement rows');
   assert(/Generated Catalog Freshness/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render a title');
-  assert(/16\/16/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
+  assert(/12\/12/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
   assert(/PlanetTerp/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should name the live source');
-  assert(/pass204-curated-core-engineering-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
+  assert(/pass206-curated-core-stem-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
   assert(/Official sources/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render official source links');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/programs/'), 'auto plan diagnostics: freshness report should link the UMD catalog program index');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/approved-courses/'), 'auto plan diagnostics: freshness report should link the UMD course catalog');
   assert(/Catalog year 2026-2027/.test(result.templateFreshnessHtml) && /checked June 30, 2026/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show source year metadata');
   assert(/Audit history/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render audit history');
   assert(/pass86-all/.test(result.templateFreshnessHtml) && /pass85-all-final/.test(result.templateFreshnessHtml), 'auto plan diagnostics: audit history should show prior verification seeds');
-  assert(result.templateOfficialSources.some(link => /Mathematics Major/.test(link.label) && /academiccatalog\.umd\.edu/.test(link.url)), 'auto plan diagnostics: preview should carry selected official catalog source');
+  assert(result.templateOfficialSources.some(link => /Atmospheric/.test(link.label) && /academiccatalog\.umd\.edu/.test(link.url)), 'auto plan diagnostics: preview should carry selected official catalog source');
   assert(result.templateOfficialSources.some(link => link.year === '2026-2027' && link.checkedAt === 'June 30, 2026'), 'auto plan diagnostics: preview should carry official source year metadata');
   assert(result.builtInSourceMissing.length === 0, `auto plan diagnostics: missing official catalog sources for ${result.builtInSourceMissing.join(', ')}`);
   assert(result.templatePlaceholderSamples.length > 0, 'auto plan diagnostics: should include placeholder samples');
@@ -1332,7 +1356,7 @@ async function testAutoPlanInitialResolverAction(context) {
         const toasts = [];
         document.getElementById = id => {
           const defaults = {
-            'set-major': { value: 'STAT' },
+            'set-major': { value: 'AOSC' },
             'set-catalog-year': { value: '2026-2027' },
             'set-career-goal': { value: 'climate policy analytics' },
             'set-gened-depts': { value: 'INST, GVPT' },
@@ -1353,8 +1377,8 @@ async function testAutoPlanInitialResolverAction(context) {
           state.majorId = id;
           state.settings = normalizeSettings({
             ...state.settings,
-            programName: 'Statistics',
-            eyebrow: 'UMD · Statistics',
+            programName: 'Atmospheric & Oceanic Science',
+            eyebrow: 'UMD · Atmospheric & Oceanic Science',
             totalCredits: 120,
             catalogYear: opts.catalogYear,
           });
@@ -1450,7 +1474,7 @@ async function testAllGeneratedRequirementGroups(context) {
       return out;
     })()
   `, context));
-  assert(rows.length >= 16, `all generated requirement groups: expected at least 16 generated majors, saw ${rows.length}`);
+  assert(rows.length >= 12, `all generated requirement groups: expected at least 12 generated majors, saw ${rows.length}`);
   rows.forEach(row => {
     const groupTotal = row.groups.reduce((sum, group) => sum + group.total, 0);
     const groupScheduled = row.groups.reduce((sum, group) => sum + group.scheduled, 0);
@@ -1477,7 +1501,7 @@ async function testCatalogYearTargeting(context) {
       const sourceHtml = autoPlanOfficialSourceLinksHtml({ majorId: 'CS', catalogYear: normalized }, { includeGeneral: true });
       const releaseHtml = releaseChecklistHtml({ source: 'none', supabaseUrl: '', supabaseAnonKey: '' }, false);
       const releaseCommand = releaseCatalogSnapshotCommand();
-      const preview = await buildAutoPlanPreview('STAT', {
+      const preview = await buildAutoPlanPreview('AOSC', {
         noFetch: true,
         force: true,
         catalogYear: normalized
@@ -1541,11 +1565,11 @@ async function testCatalogYearTargeting(context) {
   assert(result.firstLink.isCurrentCatalog === false, 'catalog year: older target should be marked non-current');
   assert(/Catalog target 2024-2025/.test(result.sourceHtml) && /linked source 2026-2027/.test(result.sourceHtml), 'catalog year: source HTML should compare target and linked source years');
   assert(/Catalog target 2024-2025/.test(result.releaseHtml), 'catalog year: release checklist should show selected target year');
-  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /181\/181 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
+  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /149\/149 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
   assert(/4\/4 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
-  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass204-curated-core-engineering-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
+  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass206-curated-core-stem-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');
@@ -6166,7 +6190,7 @@ async function testOnboardingPersonalizedSetup(context) {
         mode: 'compact',
         avoidDays: ['F', 'X', 'M', 'F']
       });
-      const preview = await buildAutoPlanPreview('STAT', {
+      const preview = await buildAutoPlanPreview('AOSC', {
         noFetch: true,
         force: true,
         startYear: 2027,
@@ -6703,10 +6727,7 @@ async function testSettingsPriorCreditEditor(context) {
 async function main() {
   const context = buildContext();
   const fixtures = [
-    { id: 'CHEM', category: 'chemistry science', minRequirementCourses: 20, minGenEdPlaceholders: 10, minFreeElectives: 4 },
     { id: 'AOSC', category: 'STEM science', minRequirementCourses: 18, minGenEdPlaceholders: 10, minFreeElectives: 8 },
-    { id: 'STAT', category: 'STEM data/math', minRequirementCourses: 15, minGenEdPlaceholders: 10, minFreeElectives: 8 },
-    { id: 'MATH', category: 'STEM math', minRequirementCourses: 15, minGenEdPlaceholders: 10, minFreeElectives: 8 },
     { id: 'ASTR', category: 'astronomy physics', minRequirementCourses: 22, minGenEdPlaceholders: 10, minFreeElectives: 6 },
     { id: 'GEOL', category: 'earth science', minRequirementCourses: 19, minGenEdPlaceholders: 10, minFreeElectives: 8 },
   ];

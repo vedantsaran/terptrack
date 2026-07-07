@@ -11,16 +11,6 @@ const ROOT = path.resolve(__dirname, '..');
 
 const TARGETS = [
   {
-    major: 'PHYS',
-    name: 'Physics',
-    coverage: '20/20 live course records',
-    targetCredits: 120,
-    cards: [
-      { code: 'PHYS402', credits: 4, title: 'Quantum Physics II' },
-      { code: 'PHYS410', credits: 4, title: 'Classical Mechanics' },
-    ],
-  },
-  {
     major: 'GEOL',
     name: 'Geology',
     coverage: '19/19 live course records',
@@ -28,16 +18,6 @@ const TARGETS = [
     cards: [
       { code: 'GEOL453', credits: 3, title: 'Ecosystem Restoration' },
       { code: 'GEOL460', credits: 4, title: 'Field Geophysics' },
-    ],
-  },
-  {
-    major: 'CHEM',
-    name: 'Chemistry',
-    coverage: '20/20 live course records',
-    targetCredits: 120,
-    cards: [
-      { code: 'CHEM425', credits: 4, title: 'Instrumental Methods of Analysis' },
-      { code: 'CHEM482', credits: 3, title: 'Physical Chemistry II' },
     ],
   },
   {
@@ -51,28 +31,88 @@ const TARGETS = [
     ],
   },
   {
-    major: 'STAT',
-    name: 'Statistics',
-    coverage: '15/15 live course records',
+    major: 'ASTR',
+    name: 'Astronomy',
+    coverage: '22/22 live course records',
     targetCredits: 120,
     cards: [
-      { code: 'STAT410', credits: 3, title: 'Introduction to Probability Theory' },
-      { code: 'STAT420', credits: 3, title: 'Theory and Methods of Statistics' },
+      { code: 'ASTR498N', credits: 3, title: 'Special Problems in Astronomy; Stellar Evolution' },
+      { code: 'ASTR450', credits: 3, title: 'Orbital Dynamics' },
     ],
   },
   {
-    major: 'MATH',
-    name: 'Mathematics',
-    coverage: '15/15 live course records',
+    major: 'BCHM',
+    name: 'Biochemistry',
+    coverage: '22/22 live course records',
     targetCredits: 120,
     cards: [
-      { code: 'MATH410', credits: 3, title: 'Advanced Calculus I' },
-      { code: 'MATH411', credits: 3, title: 'Advanced Calculus II' },
+      { code: 'BCHM465', credits: 3, title: 'Biochemistry III' },
+      { code: 'BSCI410', credits: 3, title: 'Molecular Genetics' },
+    ],
+  },
+  {
+    major: 'NEUR',
+    name: 'Neuroscience',
+    coverage: '18/18 live course records',
+    targetCredits: 120,
+    cards: [
+      { code: 'NEUR405', credits: 3, title: 'Neuroscience Laboratory' },
+      { code: 'NEUR479', credits: 1, title: 'Advanced Research in Neuroscience' },
+    ],
+  },
+  {
+    major: 'IS',
+    name: 'Information Systems',
+    coverage: '21/21 live course records',
+    targetCredits: 120,
+    cards: [
+      { code: 'BMGT407', credits: 3, title: 'Information Systems Projects' },
+      { code: 'BMGT496', credits: 3, title: 'Business Ethics and Society' },
     ],
   },
 ];
 
 const CURATED_TARGETS = [
+  {
+    major: 'MATH',
+    name: 'Mathematics',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'MATH411', credits: 3, title: 'Advanced Calculus II' },
+      { code: 'MATH410', credits: 3, title: 'Advanced Calculus I' },
+    ],
+  },
+  {
+    major: 'STAT',
+    name: 'Statistics',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'STAT420', credits: 3, title: 'Theory and Methods of Statistics' },
+      { code: 'STAT430', credits: 3, title: 'Introduction to Statistical Computing with SAS' },
+    ],
+  },
+  {
+    major: 'CHEM',
+    name: 'Chemistry',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'CHEM441', credits: 3, title: 'Advanced Organic Chemistry' },
+      { code: 'CHEM425', credits: 4, title: 'Instrumental Methods of Analysis' },
+    ],
+  },
+  {
+    major: 'PHYS',
+    name: 'Physics',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'PHYS402', credits: 4, title: 'Quantum Physics II' },
+      { code: 'PHYS410', credits: 4, title: 'Classical Mechanics' },
+    ],
+  },
   {
     major: 'ENGL',
     name: 'English',
@@ -707,7 +747,7 @@ async function waitForReview(page, target, timeoutMs) {
           && text.includes('Curated plan ready')
           && text.includes(`${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass204-curated-core-engineering-all');
+          && text.includes('pass206-curated-core-stem-all');
       },
       { name: target.name, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
@@ -724,7 +764,7 @@ async function waitForReview(page, target, timeoutMs) {
         && text.includes(coverage)
         && text.includes(`/${targetCredits} planned credits`)
         && text.includes('Generated Catalog Freshness')
-        && text.includes('pass204-curated-core-engineering-all');
+        && text.includes('pass206-curated-core-stem-all');
     },
     { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
     { timeout: timeoutMs },
@@ -873,16 +913,16 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=120'), `${viewport.label}: rendered app did not load styles.css?v=120`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=13'), `${viewport.label}: rendered app did not load js/majors.js?v=13`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=14'), `${viewport.label}: rendered app did not load js/majors.js?v=14`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=48'), `${viewport.label}: rendered app did not load js/settings.js?v=48`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=49'), `${viewport.label}: rendered app did not load js/settings.js?v=49`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('181/181 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('149/149 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
     assert(initialSnapshot.releaseText.includes('4/4 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);

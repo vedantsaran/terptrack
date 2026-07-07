@@ -12122,3 +12122,94 @@ Next pass candidates:
 - Continue converting remaining generated high-impact STEM/business majors into curated plans: `MATH`, `STAT`, `CHEM`, `PHYS`, `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM`.
 - Expand rendered dark-mode contrast coverage to additional tabs, generated schedule output states, and any newly curated plan surfaces.
 - Add a maintainer-facing stale-course detector that compares generated and curated rows against PlanetTerp and official UMD catalog pages.
+
+## Pass 206 - Curated Core STEM Schedules
+
+Focus:
+- Convert the highest-impact remaining CMNS generated majors into fixed, current-catalog four-year plans: Mathematics, Statistics, Chemistry, and Physics.
+
+Completed:
+- Added `SCHEDULE_MATH`, a 120-credit Mathematics BS traditional-track plan.
+  - It includes calculus, linear algebra, proofs, differential equations, `STAT 410`, eight 400-level MATH/STAT rows, and a real CMSC support sequence through `CMSC 216`.
+  - The plan is exactly `120/120` credits, maxes at `18` credits, completes `13/13` GenEd requirements, has `21` real courses, and places `MATH 411` in senior year.
+- Added `SCHEDULE_STAT`, a 120-credit Mathematics BS Statistics track plan.
+  - It includes proof, differential equations, probability/statistics, statistical computing, computational methods, `MATH 405`, `MATH 410`, STAT electives, and CMSC programming support.
+  - The plan is exactly `120/120` credits, maxes at `17` credits, completes `13/13` GenEd requirements, has `22` real courses, and places `STAT 420` in senior year.
+- Added `SCHEDULE_CHEM`, a 120-credit Chemistry BS plan using the current chemistry-major sequence.
+  - It replaces the older generated general-chemistry path with `CHEM 146`, `CHEM 177`, `CHEM 237`, `CHEM 247`, `CHEM 276`, `CHEM 277`, physical chemistry/labs, inorganic chemistry, `CHEM 441`, and `BCHM 461`.
+  - The plan is exactly `120/120` credits, maxes at `18` credits, completes `13/13` GenEd requirements, has `27` real courses, and places `CHEM 441` in senior year.
+- Added `SCHEDULE_PHYS`, a 120-credit Physics BS Physics-specialization plan.
+  - It uses the current `PHYS 170/171/265/272/273/275/276` intro sequence, `PHYS 313`, `PHYS 371`, `PHYS 375`, quantum, E&M, statistical thermodynamics, classical mechanics, advanced experiments, and senior upper electives.
+  - The plan is exactly `120/120` credits, maxes at `18` credits, completes `13/13` GenEd requirements, has `26` real courses, and places `PHYS 402` in senior year.
+- Updated `js/majors.js`.
+  - Wired `MATH`, `STAT`, `CHEM`, and `PHYS` to fixed curated schedules.
+  - Updated their core/support/elective code lists, goal courses, and notes to match the new fixed plans.
+- Updated generated-plan/release evidence.
+  - The remaining generated pool is now `12` majors: `ACCOUNTING`, `AOSC`, `ARCH`, `ASTR`, `BCHM`, `EDUC`, `GEOL`, `IS`, `MARKETING`, `MGMT`, `NEUR`, and `SCM`.
+  - Generated-template audit now uses `pass206-curated-core-stem-all`.
+  - Generated catalog sweep now records `149/149` matched unique generated required courses across `233` requirement rows.
+  - `js/majors.js` asset version bumped from `v=13` to `v=14`.
+  - `js/settings.js` asset version bumped from `v=48` to `v=49` after the live catalog snapshot writer refreshed the cache tag.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks `38` curated schedules, adding `MATH`, `STAT`, `CHEM`, and `PHYS`.
+  - The generated fixture matrix now uses the remaining generated STEM majors `AOSC`, `ASTR`, and `GEOL`.
+  - Default rendered/release generated matrix now uses `GEOL`, `AOSC`, `ASTR`, `BCHM`, `NEUR`, and `IS`.
+  - Rendered curated checks now include `MATH 411`, `STAT 420`, `CHEM 441`, and `PHYS 402`.
+
+Major-gap notes:
+- `MATH`, `STAT`, `CHEM`, and `PHYS` now open with curated fixed plans instead of generated drafts.
+- The biggest remaining generated student-impact gap is now the Smith set: `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM`.
+- `README.md` was not modified or staged.
+
+Verification:
+- Checked current official UMD catalog pages before editing:
+  - Mathematics Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/computer-mathematical-natural-sciences/mathematics/mathematics-major/`
+  - Chemistry Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/computer-mathematical-natural-sciences/chemistry-biochemistry/chemistry-major/`
+  - Physics Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/computer-mathematical-natural-sciences/physics/physics-major/`
+- Queried live PlanetTerp metadata before placing rows.
+  - Confirmed the live course title/credit pairs for new fixed-plan rows including `MATH 411`, `STAT 420`, `AMSC 460`, `CHEM 146`, `CHEM 177`, `CHEM 237`, `CHEM 247`, `CHEM 276`, `CHEM 277`, `CHEM 441`, `BCHM 461`, `PHYS 170`, `PHYS 171`, `PHYS 265`, `PHYS 272`, `PHYS 273`, `PHYS 275`, `PHYS 276`, `PHYS 313`, `PHYS 371`, `PHYS 375`, `PHYS 402`, `PHYS 410`, `PHYS 413`, and `PHYS 441`.
+  - `BSCI 180` was not live in PlanetTerp, so the Chemistry plan uses the live `BSCI 170` plus `BSCI 171` biology support pair.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed `3` generated fixtures and `38` curated schedule fixtures.
+  - It reported `MATH 120/120`, max `18` credits, `13/13` GenEd coverage, `21` real courses, goal term `Fall 2029`.
+  - It reported `STAT 120/120`, max `17` credits, `13/13` GenEd coverage, `22` real courses, goal term `Fall 2029`.
+  - It reported `CHEM 120/120`, max `18` credits, `13/13` GenEd coverage, `27` real courses, goal term `Fall 2029`.
+  - It reported `PHYS 120/120`, max `18` credits, `13/13` GenEd coverage, `26` real courses, goal term `Fall 2029`.
+  - It passed all generated requirement groups with `12` majors and `233` grouped requirements.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 7, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass206-curated-core-stem-catalog`.
+  - It matched `149/149` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `4/4` PlanetTerp title drifts against official UMD catalog titles.
+  - It found `0/0` Testudo term-specific title candidates for `202608`.
+  - It bumped `settings.js` to `v49`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass206-curated-core-stem-all`.
+  - It verified all `12/12` remaining generated schedules against PlanetTerp.
+  - Every generated required course reported matching live title/credit pairs.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=MATH,STAT,CHEM,PHYS --viewports=all`.
+  - Desktop and mobile both rendered the new curated plans with clean proxy-backed console output.
+  - Rendered cards included `MATH411:3cr`, `STAT420:3cr`, `CHEM441:3cr`, and `PHYS402:4cr`.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --viewports=all`.
+  - Desktop and mobile both passed the refreshed default generated matrix for `GEOL`, `AOSC`, `ASTR`, `BCHM`, `NEUR`, and `IS`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=180000`.
+  - It passed rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with `38` curated schedules.
+  - It passed rendered generated-plan desktop and mobile matrices for `GEOL`, `AOSC`, `ASTR`, `BCHM`, `NEUR`, and `IS`.
+  - It passed rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass206-curated-core-stem-random`.
+  - It randomly verified `BCHM`, `MGMT`, `ASTR`, `IS`, `GEOL`, `NEUR`, `ACCOUNTING`, `AOSC`, `ARCH`, `SCM`, `EDUC`, and `MARKETING` against PlanetTerp.
+  - All 12 sampled generated schedules passed live title/credit matching, requirement-group checks, progression checks, and max-credit checks.
+- Ran `git diff --check`; it passed.
+
+Next pass candidates:
+- Convert the remaining Smith generated majors into fixed catalog-backed plans: `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM`.
+- Convert the remaining generated science/specialized plans after Smith: `AOSC`, `ASTR`, `BCHM`, `GEOL`, `NEUR`, `ARCH`, and `EDUC`.
+- Add a stale-course detector that compares curated and generated rows against PlanetTerp plus official UMD catalog pages before release.
