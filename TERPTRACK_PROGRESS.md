@@ -12415,3 +12415,51 @@ Next pass candidates:
 - Add a stale-course detector that compares all curated fixed schedules against PlanetTerp plus official UMD catalog pages before release.
 - Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page and checked date for every curated schedule.
 - Review the remaining generated-language in verifier/release labels now that those scripts cover curated schedules too.
+
+## Pass 209 - Dark-Mode UI Hardening
+
+Focus:
+- Tightened dark-mode component surfaces after a manual in-app browser audit on `http://127.0.0.1:8765/`.
+- Used the browser contrast scanner across every primary tab: Plan, Schedule, Degree Audit, All Courses, Action Timeline, Prereq Roadmap, Browse Courses, and Gen-Eds.
+- Kept the pass scoped to app polish and verifier cache-bust updates; `README.md` was not modified or staged.
+
+Code changes:
+- Added a dark-mode cleanup block in `styles.css` for hard-coded light and low-contrast surfaces.
+  - Fixed planner question panels, saved-search panels, registration readiness rows, schedule advisor rows, replacement queue candidates, browse saved chips, slot chips, selected recommendation tags, placeholder tags, warning previews, and muted helper text.
+  - Reworked amber and green badge states so warning, partial, live, and in-plan indicators stay readable on dark surfaces.
+  - Fixed Plan locked-course warnings, Plan add reasons, Timeline dates, All Courses category badges, All Courses course-code cells, schedule chips, section preference notes, and planner question labels.
+- Bumped `styles.css` from `v=120` to `v=121` in `index.html`.
+- Updated rendered verifier assertions in:
+  - `scripts/verify-rendered-generated-plans.js`
+  - `scripts/verify-rendered-workflows.js`
+
+Visual validation:
+- Captured a dark-mode Plan screenshot in the in-app browser after the CSS changes.
+- Ran a tab-by-tab dark-mode contrast sweep in the in-app browser.
+  - Plan: `0` failures.
+  - Schedule: `0` failures.
+  - Degree Audit: `0` failures.
+  - All Courses: `0` failures.
+  - Action Timeline: `0` failures.
+  - Prereq Roadmap: `0` failures.
+  - Browse Courses: `0` failures.
+  - Gen-Eds: `0` failures.
+
+Verification:
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `git diff --check`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=180000`.
+  - It passed rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --viewports=all`.
+  - It rendered all seven curated verifier majors across desktop and mobile.
+  - Verified `GEOL`, `AOSC`, `ASTR`, `BCHM`, `NEUR`, `ARCH`, and `EDUC`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, rendered desktop and mobile curated matrices, and rendered mobile workflow checks.
+  - It reported `TerpTrack release checks passed`.
+
+Next pass candidates:
+- Add dark-mode contrast scanning to a repeatable verifier script so these browser checks become part of release automation.
+- Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page and checked date for every curated schedule.
+- Review the remaining generated-language in verifier/release labels now that those scripts cover curated schedules too.
