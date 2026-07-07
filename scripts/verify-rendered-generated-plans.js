@@ -31,16 +31,6 @@ const TARGETS = [
     ],
   },
   {
-    major: 'BIOE',
-    name: 'Bioengineering',
-    coverage: '28/28 live course records',
-    targetCredits: 126,
-    cards: [
-      { code: 'BIOE485', credits: 3, title: 'Capstone Design I' },
-      { code: 'BIOE486', credits: 3, title: 'Capstone Design II' },
-    ],
-  },
-  {
     major: 'CHEM',
     name: 'Chemistry',
     coverage: '20/20 live course records',
@@ -51,21 +41,33 @@ const TARGETS = [
     ],
   },
   {
-    major: 'ENAE',
-    name: 'Aerospace Engineering',
-    coverage: '30/30 live course records',
-    targetCredits: 125,
+    major: 'AOSC',
+    name: 'Atmospheric & Oceanic Science',
+    coverage: '19/19 live course records',
+    targetCredits: 120,
     cards: [
-      { code: 'ENAE432', credits: 3, title: 'Control of Aerospace Systems' },
+      { code: 'AOSC445', credits: 3, title: 'Climate Data Science' },
+      { code: 'AOSC470', credits: 3, title: 'Synoptic Meteorology' },
     ],
   },
   {
-    major: 'ENCE',
-    name: 'Civil Engineering',
-    coverage: '25/25 live course records',
-    targetCredits: 124,
+    major: 'STAT',
+    name: 'Statistics',
+    coverage: '15/15 live course records',
+    targetCredits: 120,
     cards: [
-      { code: 'ENCE215', credits: 3, title: 'Engineering for Sustainability' },
+      { code: 'STAT410', credits: 3, title: 'Introduction to Probability Theory' },
+      { code: 'STAT420', credits: 3, title: 'Theory and Methods of Statistics' },
+    ],
+  },
+  {
+    major: 'MATH',
+    name: 'Mathematics',
+    coverage: '15/15 live course records',
+    targetCredits: 120,
+    cards: [
+      { code: 'MATH410', credits: 3, title: 'Advanced Calculus I' },
+      { code: 'MATH411', credits: 3, title: 'Advanced Calculus II' },
     ],
   },
 ];
@@ -381,6 +383,36 @@ const CURATED_TARGETS = [
       { code: 'ENEE436', credits: 3, title: 'Foundations of Machine Learning' },
     ],
   },
+  {
+    major: 'ENAE',
+    name: 'Aerospace Engineering',
+    kind: 'curated',
+    targetCredits: 124,
+    cards: [
+      { code: 'ENAE492', credits: 3, title: 'Aeronautical Systems Design' },
+      { code: 'ENAE432', credits: 3, title: 'Control of Aerospace Systems' },
+    ],
+  },
+  {
+    major: 'ENCE',
+    name: 'Civil Engineering',
+    kind: 'curated',
+    targetCredits: 122,
+    cards: [
+      { code: 'ENCE467', credits: 2, title: 'Civil and Environmental Engineering Design II' },
+      { code: 'ENCE464', credits: 2, title: 'Civil and Environmental Engineering Design I' },
+    ],
+  },
+  {
+    major: 'BIOE',
+    name: 'Bioengineering',
+    kind: 'curated',
+    targetCredits: 126,
+    cards: [
+      { code: 'BIOE486', credits: 3, title: 'Capstone Design II' },
+      { code: 'BIOE485', credits: 3, title: 'Capstone Design I' },
+    ],
+  },
 ];
 
 const ALL_TARGETS = [...TARGETS, ...CURATED_TARGETS];
@@ -675,7 +707,7 @@ async function waitForReview(page, target, timeoutMs) {
           && text.includes('Curated plan ready')
           && text.includes(`${targetCredits} planned credits`)
           && text.includes('Generated Catalog Freshness')
-          && text.includes('pass203-curated-engineering-all');
+          && text.includes('pass204-curated-core-engineering-all');
       },
       { name: target.name, targetCredits: target.targetCredits },
       { timeout: timeoutMs },
@@ -692,7 +724,7 @@ async function waitForReview(page, target, timeoutMs) {
         && text.includes(coverage)
         && text.includes(`/${targetCredits} planned credits`)
         && text.includes('Generated Catalog Freshness')
-        && text.includes('pass203-curated-engineering-all');
+        && text.includes('pass204-curated-core-engineering-all');
     },
     { name: target.name, coverage: target.coverage, targetCredits: target.targetCredits },
     { timeout: timeoutMs },
@@ -841,17 +873,17 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=119'), `${viewport.label}: rendered app did not load styles.css?v=119`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=12'), `${viewport.label}: rendered app did not load js/majors.js?v=12`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=13'), `${viewport.label}: rendered app did not load js/majors.js?v=13`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=46'), `${viewport.label}: rendered app did not load js/settings.js?v=46`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=48'), `${viewport.label}: rendered app did not load js/settings.js?v=48`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('232/232 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('8/8 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('181/181 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('4/4 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);

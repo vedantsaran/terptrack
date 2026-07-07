@@ -11988,3 +11988,93 @@ Next pass candidates:
 - Continue converting remaining generated engineering/STEM programs into curated schedules, with Aerospace Engineering, Civil Engineering, and Bioengineering as likely high-impact next candidates.
 - Add a maintainer-facing stale-course detector that flags generated codes missing from PlanetTerp or official catalog pages before a release sweep.
 - Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.
+
+## Pass 204 - Curated aerospace, civil, and bioengineering schedules
+
+Focus: finish the high-impact generated engineering trio from the prior pass by moving Aerospace Engineering, Civil Engineering, and Bioengineering into fixed, current-catalog schedules.
+
+Completed:
+- Added `SCHEDULE_ENAE`, a 124-credit Aerospace Engineering BS default plan using the current aeronautical track.
+  - It follows the 2026-2027 catalog structure from `ENAE 100`, `ENAE 202`, `ENAE 203`, `ENAE 222`, `ENAE 283`, and `ENAE 284` into dynamics, aerodynamics, structures, lab, controls, aircraft propulsion, aircraft design, and `ENAE 492`.
+  - The plan is exactly `124/124` credits, maxes at `17` credits, completes `13/13` GenEd requirements, has `38` real courses, and places the goal in `Spring 2030`.
+- Added `SCHEDULE_ENCE`, a 122-credit Civil Engineering BS default plan.
+  - It follows the current catalog path through engineering graphics, civil computing, fluids, materials, structural behavior, geotech, transportation, environmental engineering, systems optimization, and the `ENCE 464` / `ENCE 467` design sequence.
+  - The plan is exactly `122/122` credits, maxes at `16` credits, completes `13/13` GenEd requirements, has `36` real courses, and places the goal in `Spring 2030`.
+- Added `SCHEDULE_BIOE`, a 126-credit Bioengineering BS default plan.
+  - It now includes `BIOE 120/121`, `BIOE 241`, `BIOE 221`, `BIOE 232`, `BIOE 246`, `BIOE 331`, `BIOE 372`, `BIOE 340`, `BIOE 457`, live BIOE electives, biology electives, and `BIOE 485/486`.
+  - The plan is exactly `126/126` credits, maxes at `17` credits, completes `13/13` GenEd requirements, has `39` real courses, and places the goal in `Spring 2030`.
+- Updated `js/majors.js`.
+  - Wired `ENAE`, `ENCE`, and `BIOE` to fixed curated schedules.
+  - Corrected official credit targets to `ENAE 124`, `ENCE 122`, and `BIOE 126`.
+  - Replaced their generated code lists with current catalog-backed rows and stable capstone goals.
+- Updated Settings/release evidence.
+  - Generated-template audit now uses `pass204-curated-core-engineering-all`.
+  - Generated pool is now `16` generated majors, `303` generated requirement rows, and `181` unique generated required courses.
+  - Catalog sweep now records `181/181` matched generated required courses, `4/4` official UMD catalog title-drift confirmations, and `0/0` Testudo title-suffix candidates for `202608`.
+  - `js/majors.js` asset version bumped from `v=12` to `v=13`.
+  - `js/settings.js` asset version bumped from `v=46` to `v=48` after the live catalog snapshot writer refreshed Settings evidence.
+- Updated verifiers.
+  - `scripts/test-generated-plans.js` now checks `34` curated schedules, adding `ENAE`, `ENCE`, and `BIOE`.
+  - Generated fixture coverage now uses `CHEM`, `AOSC`, `STAT`, `MATH`, `ASTR`, and `GEOL`.
+  - Default rendered/release generated matrix now uses `PHYS`, `GEOL`, `CHEM`, `AOSC`, `STAT`, and `MATH`.
+  - `scripts/verify-rendered-generated-plans.js` now has curated rendered card checks for `ENAE 492`, `ENAE 432`, `ENCE 467`, `ENCE 464`, `BIOE 486`, and `BIOE 485`.
+
+Major-gap notes:
+- Aerospace Engineering, Civil Engineering, and Bioengineering now open with curated fixed plans instead of generated drafts.
+- The remaining generated pool is now `16` majors: `ACCOUNTING`, `AOSC`, `ARCH`, `ASTR`, `BCHM`, `CHEM`, `EDUC`, `GEOL`, `IS`, `MARKETING`, `MATH`, `MGMT`, `NEUR`, `PHYS`, `SCM`, and `STAT`.
+- `README.md` was not modified or staged.
+
+Verification:
+- Checked the official UMD 2026-2027 catalog pages for Aerospace Engineering, Civil Engineering, and Bioengineering before editing.
+  - Aerospace Engineering: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/engineering/aerospace-engineering/aerospace-engineering-major/`
+  - Civil Engineering: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/engineering/civil-environmental-engineering/civil-environmental-engineering-major/`
+  - Bioengineering: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/engineering/bioengineering/bioengineering-major/`
+- Checked official approved-course pages for current ENAE and ENCE rows that PlanetTerp has not yet ingested.
+  - ENAE approved courses: `https://academiccatalog.umd.edu/undergraduate/approved-courses/enae/`
+  - ENCE approved courses: `https://academiccatalog.umd.edu/undergraduate/approved-courses/ence/`
+  - PlanetTerp currently lacks several new 2026-2027 official ENAE/ENCE rows such as `ENAE 203`, `ENAE 222`, `ENAE 284`, `ENAE 310`, `ENAE 325`, `ENAE 364`, `ENAE 410`, `ENAE 480`, `ENAE 491`, `ENAE 492`, and several new ENCE rows. These are included from official UMD catalog evidence rather than generated/live-sweep evidence.
+- Queried live PlanetTerp course metadata before placing rows.
+  - Confirmed current live BIOE rows including `BIOE 120`, `BIOE 121`, `BIOE 221`, `BIOE 232`, `BIOE 241`, `BIOE 246`, `BIOE 331`, `BIOE 372`, `BIOE 340`, `BIOE 457`, `BIOE 404`, `BIOE 411`, `BIOE 420`, `BIOE 453`, `BIOE 485`, `BIOE 486`, `BIOE 489A`, and `BIOE 489B`.
+  - Confirmed live support/elective rows used across the plans including `MATH 243`, `GEOL 120`, `BSCI 207`, `BSCI 331`, `BSCI 332`, `BSCI 430`, `ENAE 425`, `ENAE 471`, `ENCE 420`, `ENCE 466`, `ENCE 467`, `ENCE 472`, and `STAT 400`.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed 6 generated fixtures and 34 curated schedule fixtures.
+  - It reported `ENAE 124/124`, max `17` credits, `13/13` GenEd coverage, `38` real courses, goal term `Spring 2030`.
+  - It reported `ENCE 122/122`, max `16` credits, `13/13` GenEd coverage, `36` real courses, goal term `Spring 2030`.
+  - It reported `BIOE 126/126`, max `17` credits, `13/13` GenEd coverage, `39` real courses, goal term `Spring 2030`.
+  - It passed all generated requirement groups with `16` majors and `303` grouped requirements.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 6, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass204-curated-core-engineering-catalog`.
+  - It matched `181/181` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `4/4` PlanetTerp title drifts against official UMD catalog titles.
+  - It found `0/0` Testudo term-specific title candidates for `202608`.
+  - It updated the Settings catalog sweep snapshot and bumped `settings.js` to `v48`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass204-curated-core-engineering-all`.
+  - It verified all `16/16` remaining generated schedules against PlanetTerp.
+  - Every generated required course reported matching live title/credit pairs.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=ENAE,ENCE,BIOE --viewports=all`.
+  - Desktop and mobile both rendered the new curated plans with clean proxy-backed console output.
+  - Rendered cards included `ENAE492:3cr`, `ENAE432:3cr`, `ENCE467:2cr`, `ENCE464:2cr`, `BIOE486:3cr`, and `BIOE485:3cr`.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --viewports=all`.
+  - Desktop and mobile both passed the new default generated matrix for `PHYS`, `GEOL`, `CHEM`, `AOSC`, `STAT`, and `MATH`.
+  - Rendered cards included `PHYS402`, `GEOL453`, `CHEM425`, `AOSC445`, `STAT410`, and `MATH410`.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=12 --seed=pass204-curated-core-engineering-random`.
+  - It randomly verified `ARCH`, `MARKETING`, `CHEM`, `STAT`, `MGMT`, `ASTR`, `SCM`, `BCHM`, `AOSC`, `IS`, `ACCOUNTING`, and `PHYS` against PlanetTerp.
+  - Every sampled generated major passed complete requirement-group checks and early lower / later upper / 400-level progression checks.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with 34 curated schedules.
+  - It passed the rendered generated-plan desktop matrix for `PHYS`, `GEOL`, `CHEM`, `AOSC`, `STAT`, and `MATH`.
+  - It passed the rendered generated-plan mobile matrix for `PHYS`, `GEOL`, `CHEM`, `AOSC`, `STAT`, and `MATH`.
+  - It passed rendered mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `git diff --check`; it passed.
+
+Next pass candidates:
+- Convert remaining generated STEM/business majors with high student impact: `MATH`, `STAT`, `CHEM`, `PHYS`, `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM`.
+- Add a maintainer-facing stale-course detector that explicitly compares generated and curated rows against both PlanetTerp and official UMD catalog pages, with special handling for official catalog rows PlanetTerp has not ingested yet.
+- Add a hosted-project smoke profile for Supabase once production project credentials and a disposable test account exist.

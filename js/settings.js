@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 6, 2026',
-  seed: 'pass203-curated-engineering-all',
+  seed: 'pass204-curated-core-engineering-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 19,
+  verifiedSchedules: 16,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass203-curated-engineering-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass204-curated-core-engineering-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 6, 2026',
+    seed: 'pass204-curated-core-engineering-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 16,
+    generatedCount: 16,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving Aerospace Engineering, Civil Engineering, and Bioengineering to curated current-catalog schedules.',
+  },
   {
     checkedAt: 'July 6, 2026',
     seed: 'pass203-curated-engineering-all',
@@ -173,22 +182,22 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 6, 2026',
-  seed: 'pass203-curated-engineering-catalog',
+  seed: 'pass204-curated-core-engineering-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 232,
-  generatedMajors: 19,
-  requirementRows: 386,
-  matchedCourses: 232,
+  uniqueCourses: 181,
+  generatedMajors: 16,
+  requirementRows: 303,
+  matchedCourses: 181,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 8,
-  officialTitleChecks: 8,
+  titleDrifts: 4,
+  officialTitleChecks: 4,
   officialTitleMismatches: 0,
   testudoTermTitleCandidates: 0,
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass203-curated-engineering-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass204-curated-core-engineering-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -196,7 +205,7 @@ const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   status: 'passed',
   command: 'node scripts/run-release-checks.js',
   liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
-  liveMajors: ['PHYS', 'GEOL', 'BIOE', 'CHEM', 'ENAE', 'ENCE'],
+  liveMajors: ['PHYS', 'GEOL', 'CHEM', 'AOSC', 'STAT', 'MATH'],
   defaultChecks: [
     'JS syntax',
     '/api/umd proxy fixture',

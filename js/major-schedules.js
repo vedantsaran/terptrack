@@ -2205,6 +2205,199 @@ const SCHEDULE_ENCH = [
 ];
 
 // ============================================================
+// ENAE - Aerospace Engineering (BS, Aeronautical Track, 124 cr)
+// ============================================================
+const SCHEDULE_ENAE = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ENAE 100', 'The Aerospace Engineering Profession', 1, { category: 'major-core' }),
+    _c('ENES 100', 'Introduction to Engineering Design', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('ENAE 202', 'Computing Fundamentals for Engineers', 3, { coreqs: ['MATH 141'], category: 'major-core' }),
+    _c('ENES 200', 'Technology and Consequences: Engineering, Ethics and Humanity', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('ENAE 203', 'Introduction to Computer-Aided Design', 1, { prereqs: ['ENAE 100'], category: 'major-core' }),
+    _c('ENAE 222', 'Aerospace Mechanics', 4, { prereqs: ['MATH 141', 'PHYS 161'], coreqs: ['MATH 241'], category: 'major-core' }),
+    _c('ENAE 283', 'Foundations of Aerospace I', 3, { prereqs: ['MATH 141', 'PHYS 161'], coreqs: ['ENAE 222'], category: 'major-core' }),
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 260', 'General Physics: Electricity, Magnetism and Thermodynamics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], kind: 'gened', category: 'gened-dsnl' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ENAE 284', 'Foundations of Aerospace II', 3, { prereqs: ['ENAE 222', 'ENAE 283', 'PHYS 260'], category: 'major-core' }),
+    _c('ENES 232', 'Thermodynamics', 3, { prereqs: ['MATH 141', 'PHYS 161'], category: 'major-support' }),
+    _c('MATH 243', 'Introduction to Linear Algebra and Differential Equations', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 270', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 271', 'General Physics: Electrodynamics, Light, Relativity and Modern Physics (Laboratory)', 1, { coreqs: ['PHYS 270'], category: 'major-support' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ENAE 301', 'Dynamics of Aerospace Systems', 3, { prereqs: ['ENAE 202', 'ENAE 283', 'MATH 241', 'PHYS 270'], category: 'major-core' }),
+    _c('ENAE 310', 'Incompressible Aerodynamics', 3, { prereqs: ['ENAE 202', 'ENAE 284', 'ENES 232', 'MATH 243'], category: 'major-core' }),
+    _c('ENAE 362', 'Aerospace Instrumentation and Experimentation', 3, { prereqs: ['ENAE 283'], category: 'major-core' }),
+    _c('ENAE 380', 'Flight Software Systems', 3, { prereqs: ['ENAE 202', 'ENAE 283'], category: 'major-core' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ENAE 325', 'Aerospace Structures', 3, { prereqs: ['ENAE 222', 'ENAE 284'], category: 'major-core' }),
+    _c('ENAE 364', 'Aerospace Engineering Laboratory', 3, { prereqs: ['ENAE 310', 'ENAE 362'], category: 'major-core' }),
+    _c('ENAE 410', 'Compressible Aerodynamics', 3, { prereqs: ['ENAE 310', 'ENES 232', 'MATH 241'], category: 'major-core' }),
+    _c('ENAE 432', 'Control of Aerospace Systems', 3, { prereqs: ['ENAE 301', 'ENAE 283'], category: 'major-core' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ENAE 423', 'Vibration and Aeroelasticity', 3, { prereqs: ['ENAE 325'], category: 'major-core' }),
+    _c('ENAE 480', 'Fundamentals of Aerospace Design', 2, { prereqs: ['ENAE 301', 'ENAE 310', 'ENAE 325', 'ENAE 362'], category: 'major-core' }),
+    _c('ENAE 403', 'Aircraft Flight Dynamics', 3, { prereqs: ['ENAE 310', 'ENAE 432'], category: 'major-core' }),
+    _c('ENAE 491', 'Principles of Aircraft Design', 2, { prereqs: ['ENAE 325'], coreqs: ['ENAE 403', 'ENAE 455', 'ENAE 480'], category: 'major-core' }),
+    _c('ENAE 455', 'Aircraft Propulsion and Power', 3, { prereqs: ['ENAE 310', 'ENAE 410', 'ENES 232'], category: 'major-core' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('ENAE 492', 'Aeronautical Systems Design', 3, { prereqs: ['ENAE 403', 'ENAE 423', 'ENAE 455', 'ENAE 491'], category: 'major-core', isGoal: true }),
+    _c('ENAE 425', 'Mechanics of Composite Structures', 3, { prereqs: ['ENAE 325'], category: 'major-upper' }),
+    _c('ENAE 471', 'Aircraft Flight Testing', 3, { prereqs: ['ENAE 310'], coreqs: ['ENAE 403'], category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+  ]},
+];
+
+// ============================================================
+// ENCE - Civil Engineering (BS, 122 cr)
+// ============================================================
+const SCHEDULE_ENCE = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ENES 100', 'Introduction to Engineering Design', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('GEOL 120', 'Environmental Geology', 3, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('ENES 102', 'Mechanics I', 3, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('ENES 200', 'Technology and Consequences: Engineering, Ethics and Humanity', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('PHYS 260', 'General Physics: Electricity, Magnetism and Thermodynamics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], category: 'major-support' }),
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('ENES 220', 'Mechanics II', 3, { prereqs: ['ENES 102'], category: 'major-support' }),
+    _c('ENCE 202', 'Engineering Drawings and Design for Civil and Environmental Engineers', 3, { prereqs: ['ENES 100', 'ENES 102', 'MATH 141'], category: 'major-core' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('MATH 243', 'Introduction to Linear Algebra and Differential Equations', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('ENCE 305', 'Fundamentals of Engineering Fluids', 3, { category: 'major-core' }),
+    _c('ENCE 203', 'Data Models and Numerical Computing for Civil Engineers', 3, { prereqs: ['ENES 220', 'MATH 241'], category: 'major-core' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('ENCE 303', 'Probability and Statistics for Civil and Environmental Engineers', 3, { category: 'major-core' }),
+    _c('ENCE 312', 'Engineering Economics and Project Management', 3, { category: 'major-core' }),
+    _c('ENCE 365', 'Materials in Civil Infrastructure', 4, { prereqs: ['ENES 220'], coreqs: ['ENCE 303'], category: 'major-core' }),
+    _c('ENCE 336', 'Structural Systems and Behavior', 3, { prereqs: ['ENES 220', 'ENCE 203'], category: 'major-core' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('ENCE 340', 'Fundamentals of Geotechnical Engineering', 3, { category: 'major-core' }),
+    _c('ENCE 383', 'Transportation Systems I', 3, { prereqs: ['ENCE 303', 'PHYS 260', 'PHYS 261'], category: 'major-core' }),
+    _c('ENCE 367', 'Civil Engineering Systems Optimization', 4, { prereqs: ['MATH 243'], coreqs: ['ENCE 303'], category: 'major-core' }),
+    _c('ENCE 436', 'Structural Design and Materials II', 3, { category: 'major-core' }),
+    _c('ENCE 342', 'Environmental Engineering Fundamentals', 3, { category: 'major-core' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('ENCE 483', 'Transportation Systems II', 3, { prereqs: ['ENCE 383'], category: 'major-core' }),
+    _c('ENCE 442', 'Environmental Engineering Design', 3, { prereqs: ['ENCE 342'], category: 'major-core' }),
+    _c('ENCE 464', 'Civil and Environmental Engineering Design I', 2, { prereqs: ['ENCE 336', 'ENCE 342', 'ENCE 367'], category: 'major-core' }),
+    _c('ENCE 420', 'Selection and Utilization of Construction Equipment', 3, { category: 'major-upper' }),
+    _c('ENCE 472', 'Transportation Engineering', 3, { category: 'major-upper' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('ENCE 467', 'Civil and Environmental Engineering Design II', 2, { prereqs: ['ENCE 464'], category: 'major-core', isGoal: true }),
+    _c('STAT 400', 'Applied Probability and Statistics I', 3, { prereqs: ['MATH 141'], kind: 'gened', category: 'gened-fsar' }),
+    _c('ENCE 466', 'Design of Civil Engineering Systems', 3, { category: 'major-upper' }),
+    _c('DSHS/DSSP Elective', 'Scholarship in Practice Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS DSSP' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+  ]},
+];
+
+// ============================================================
+// BIOE - Bioengineering (BS, 126 cr)
+// ============================================================
+const SCHEDULE_BIOE = [
+  { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
+    _c('ENES 100', 'Introduction to Engineering Design', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('MATH 140', 'Calculus I', 4, { kind: 'gened', category: 'gened-fsma' }),
+    _c('CHEM 135', 'General Chemistry for Engineers', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('CHEM 136', 'General Chemistry Laboratory for Engineers', 1, { kind: 'gened', category: 'gened-dsnl' }),
+    _c('BIOE 120', 'Biology for Engineers', 3, { category: 'major-core' }),
+    _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
+  ]},
+  { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
+    _c('BIOE 121', 'Biology for Engineers Laboratory', 1, { coreqs: ['BIOE 120'], category: 'major-core' }),
+    _c('MATH 141', 'Calculus II', 4, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('PHYS 161', 'General Physics: Mechanics and Particle Dynamics', 3, { kind: 'gened', category: 'gened-dsns' }),
+    _c('BIOE 241', 'Biocomputational Methods', 3, { category: 'major-core' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
+  ]},
+  { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
+    _c('CHEM 231', 'Organic Chemistry I', 3, { prereqs: ['CHEM 135'], category: 'major-support' }),
+    _c('CHEM 232', 'Organic Chemistry Laboratory I', 1, { coreqs: ['CHEM 231'], category: 'major-support' }),
+    _c('MATH 241', 'Calculus III', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('PHYS 260', 'General Physics: Electricity, Magnetism and Thermodynamics', 3, { prereqs: ['PHYS 161'], category: 'major-support' }),
+    _c('PHYS 261', 'General Physics Laboratory', 1, { coreqs: ['PHYS 260'], category: 'major-support' }),
+    _c('BIOE 221', 'Academic and Career Planning', 1, { category: 'major-core' }),
+    _c('BIOE 232', 'Bioengineering Thermodynamics', 3, { category: 'major-core' }),
+  ]},
+  { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
+    _c('ENES 200', 'Technology and Consequences: Engineering, Ethics and Humanity', 3, { kind: 'gened', category: 'gened-dssp' }),
+    _c('ENES 102', 'Mechanics I', 3, { prereqs: ['MATH 140'], category: 'major-support' }),
+    _c('MATH 243', 'Introduction to Linear Algebra and Differential Equations', 4, { prereqs: ['MATH 141'], category: 'major-support' }),
+    _c('BIOE 246', 'Differential Equations for Bioengineering', 3, { prereqs: ['MATH 141'], category: 'major-core' }),
+    _c('BSCI 207', 'Principles of Biology III - Organismal Biology', 3, { category: 'major-support' }),
+  ]},
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('BIOE 331', 'Biofluids', 3, { category: 'major-core' }),
+    _c('BIOE 372', 'Biostatistics for Experimental Design and Data Analysis', 3, { category: 'major-core' }),
+    _c('BSCI 331', 'Cell Biology and Physiology', 3, { category: 'major-support' }),
+    _c('BSCI 332', 'Cell Biology and Physiology Laboratory', 1, { coreqs: ['BSCI 331'], category: 'major-support' }),
+    _c('BIOE 340', 'Modeling Physiological Systems and Lab', 4, { category: 'major-core' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('BIOE 457', 'Biomedical Electronics & Instrumentation', 4, { category: 'major-core' }),
+    _c('BIOE 404', 'Biomechanics', 3, { category: 'major-upper' }),
+    _c('BIOE 411', 'Tissue Engineering', 3, { category: 'major-upper' }),
+    _c('BIOE 420', 'Bioimaging', 3, { category: 'major-upper' }),
+    _c('DSHS/SCIS Elective', 'I-Series History/Social Sciences', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BIOE 485', 'Capstone Design I: Entrepreneurship, Regulatory Issues, and Ethics', 3, { category: 'major-core' }),
+    _c('BIOE 489A', 'Special Topics in Bioengineering; Python: Introduction to Programming and Data Analysis', 3, { category: 'major-upper' }),
+    _c('BIOE 453', 'Biomaterials', 3, { category: 'major-upper' }),
+    _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('BIOE 486', 'Capstone Design II', 3, { prereqs: ['BIOE 485'], category: 'major-core', isGoal: true }),
+    _c('BIOE 489B', 'Special Topics in Bioengineering; Numerical Methods in Bioengineering', 3, { category: 'major-upper' }),
+    _c('BSCI 430', 'Developmental Biology', 3, { category: 'major-support' }),
+    _c('DSHS Elective #2', 'History/Social Sciences Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+  ]},
+];
+
+// ============================================================
 // ENMA - Materials Science & Engineering (BS, 124 cr)
 // ============================================================
 const SCHEDULE_ENMA = [
