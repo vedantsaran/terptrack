@@ -4088,6 +4088,7 @@ function testSupabaseLiveVerifierHelpers() {
 
 function testReleaseJsonReport() {
   const releaseRunner = require(path.join(ROOT, 'scripts/run-release-checks.js'));
+  const curatedCatalogSweep = require(path.join(ROOT, 'scripts/verify-curated-catalog-sweep.js'));
   const previousReleaseTestudoTerms = process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
   const previousReleaseSnapshotDate = process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE;
   delete process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
@@ -4118,6 +4119,17 @@ function testReleaseJsonReport() {
     '--live-curated-catalog-limit=17',
   ]);
   const curatedCatalogArgs = releaseRunner.buildLiveCuratedCatalogArgs(curatedCatalogOpts);
+  const strictCuratedCatalogOpts = curatedCatalogSweep.parseArgs([
+    'node',
+    'scripts/verify-curated-catalog-sweep.js',
+    '--strict-titles',
+    '--warning-limit=all',
+  ]);
+  const cappedCuratedCatalogOpts = curatedCatalogSweep.parseArgs([
+    'node',
+    'scripts/verify-curated-catalog-sweep.js',
+    '--warning-limit=7',
+  ]);
   const skippedOpts = releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js']);
   assert(catalogOpts.liveCatalogSweep === true, 'release report: Testudo term option should enable live catalog sweep');
   assert(catalogOpts.liveCatalogTestudoTerms.join(',') === '202608,202701', 'release report: should normalize catalog Testudo terms');
@@ -4129,6 +4141,9 @@ function testReleaseJsonReport() {
   assert(curatedCatalogOpts.liveCuratedCatalogLimit === 17, 'release report: curated catalog limit should normalize');
   assert(curatedCatalogArgs.includes('scripts/verify-curated-catalog-sweep.js'), 'release report: curated catalog args should invoke curated sweep script');
   assert(curatedCatalogArgs.includes('--seed=fixture-curated-sweep') && curatedCatalogArgs.includes('--limit=17'), 'release report: curated catalog args should include seed and limit');
+  assert(strictCuratedCatalogOpts.strictTitles === true, 'release report: curated sweep should parse strict title enforcement');
+  assert(strictCuratedCatalogOpts.warningLimit === Number.MAX_SAFE_INTEGER, 'release report: curated sweep should allow complete warning output');
+  assert(cappedCuratedCatalogOpts.warningLimit === 7, 'release report: curated sweep should parse capped warning output');
   assertThrows(
     () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-limit=1', '--live-catalog-write-settings-snapshot']),
     /Snapshot refresh requires a full catalog sweep/,

@@ -7,7 +7,7 @@ const SCHEDULE = [
       { code: "MATH 140", title: "Calculus I",                    cr: 4, prereqs: [], coreqs: [], kind: "core", category: "gened-fsma", note: "Double-counts: CE Core + FSMA" },
       { code: "CHEM 135", title: "General Chemistry for Engineers",cr: 3, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENGL 101", title: "Academic Writing",               cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fsaw", note: "FSAW" },
-      { code: "UNIV 100", title: "The University Mind",            cr: 1, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "UNIV 100", title: "The Student in the University",  cr: 1, prereqs: [], coreqs: [], kind: "core", category: "ce-core" },
     ]
   },
   {
@@ -16,17 +16,17 @@ const SCHEDULE = [
       { code: "CMSC 132", title: "Object-Oriented Programming II",cr: 4, prereqs: ["CMSC 131"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "MATH 141", title: "Calculus II",                    cr: 4, prereqs: ["MATH 140"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "PHYS 161", title: "General Physics: Mechanics",     cr: 3, prereqs: [], coreqs: ["MATH 141"], kind: "core", category: "gened-dsns", note: "Double-counts: CE Core + DSNS" },
-      { code: "ENES 100", title: "Intro to Engineering Design",    cr: 3, prereqs: [], coreqs: [], kind: "core", category: "ce-core", note: "Cannot share semester w/ ENEE 101" },
+      { code: "ENES 100", title: "Introduction to Engineering Design", cr: 3, prereqs: [], coreqs: [], kind: "core", category: "ce-core", note: "Cannot share semester w/ ENEE 101" },
       { code: "GenEd HU-1", title: "Humanities Distributive #1",   cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshu", note: "DSHU #1" },
     ]
   },
   {
     id: "F27", name: "Fall 2027", year: "Year 2",
     courses: [
-      { code: "CMSC 216", title: "Intro to Computer Systems",      cr: 4, prereqs: ["CMSC 132"], coreqs: [], kind: "core", category: "ce-core" },
-      { code: "ENEE 101", title: "Intro to ECE",                   cr: 3, prereqs: [], coreqs: ["MATH 140"], kind: "core", category: "ce-core" },
+      { code: "CMSC 216", title: "Introduction to Computer Systems", cr: 4, prereqs: ["CMSC 132"], coreqs: [], kind: "core", category: "ce-core" },
+      { code: "ENEE 101", title: "Introduction to Electrical & Computer Engineering", cr: 3, prereqs: [], coreqs: ["MATH 140"], kind: "core", category: "ce-core" },
       { code: "ENEE 244", title: "Digital Logic Design",           cr: 3, prereqs: [], coreqs: ["CMSC 132"], kind: "core", category: "ce-core" },
-      { code: "ENEE 290", title: "Diff Eq & LinAlg for Engr",      cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "critical", category: "ce-core", note: "Replaces MATH 246+461 · LinAlg prereq for CMSC 472" },
+      { code: "ENEE 290", title: "Introduction to Differential Equations and Linear Algebra for Engineers", cr: 4, prereqs: ["MATH 141"], coreqs: [], kind: "critical", category: "ce-core", note: "Replaces MATH 246+461 · LinAlg prereq for CMSC 472" },
       { code: "PHYS 260", title: "General Physics: Electricity, Magnetism and Thermodynamics", cr: 3, prereqs: ["PHYS 161"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "PHYS 261", title: "General Physics: Vibrations, Waves, Heat, Electricity and Magnetism (Laboratory)", cr: 1, prereqs: [], coreqs: ["PHYS 260"], kind: "core", category: "gened-dsnl", note: "Double-counts: CE Core + DSNL" },
     ]
@@ -38,13 +38,13 @@ const SCHEDULE = [
       { code: "ENEE 205", title: "Electric Circuits",              cr: 4, prereqs: ["PHYS 260"], coreqs: ["ENEE 290"], kind: "core", category: "ce-core" },
       { code: "ENEE 222", title: "Discrete Signal Analysis",       cr: 4, prereqs: [], coreqs: ["ENEE 290"], kind: "core", category: "ce-core" },
       { code: "ENEE 245", title: "Digital Circuits & Systems Lab", cr: 2, prereqs: ["ENEE 244"], coreqs: [], kind: "core", category: "ce-core" },
-      { code: "ENEE 200", title: "Engr Ethics & Humanity",         cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshu", note: "Double-counts: CE Core + DSHU (often also I-Series)" },
+      { code: "ENEE 200", title: "Technology and Consequences: Engineering, Ethics, and Humanity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshu", note: "Double-counts: CE Core + DSHU (often also I-Series)" },
     ]
   },
   {
     id: "F28", name: "Fall 2028", year: "Year 3",
     courses: [
-      { code: "CMSC 330", title: "Org. of Programming Languages",  cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "ce-core", note: "Prereq for ENEE 436 + CMSC 472" },
+      { code: "CMSC 330", title: "Organization of Programming Languages", cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "ce-core", note: "Prereq for ENEE 436 + CMSC 472" },
       { code: "ENEE 322", title: "Signal & System Theory",         cr: 3, prereqs: ["ENEE 222", "ENEE 290"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENEE 350", title: "Computer Organization",          cr: 3, prereqs: ["ENEE 244", "CMSC 132"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "COMM 107", title: "Oral Communication",             cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fsoc", note: "FSOC" },
@@ -55,7 +55,7 @@ const SCHEDULE = [
     id: "S29", name: "Spring 2029", year: "Year 3",
     courses: [
       { code: "CMSC 351", title: "Algorithms",                     cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "ce-core", note: "Prereq for ENEE 436 + CMSC 451 + CMSC 472" },
-      { code: "CMSC 320", title: "Intro to Data Science",          cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "tech-f", note: "Strongly recommended for Deep Learning/ML tracks" },
+      { code: "CMSC 320", title: "Introduction to Data Science",   cr: 3, prereqs: ["CMSC 216", "CMSC 250"], coreqs: [], kind: "critical", category: "tech-f", note: "Strongly recommended for Deep Learning/ML tracks" },
       { code: "ENEE 324", title: "Engineering Probability & Stats",cr: 3, prereqs: ["ENEE 322"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENEE 445", title: "Computer Laboratory",            cr: 2, prereqs: ["ENEE 245"], coreqs: [], kind: "tech", category: "tech-d", note: "Tech Cat D · Advanced Lab · Fall/Spring · easiest lab option" },
       { code: "GenEd HS-2", title: "HS #2 + I-Series + Diversity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dshs", categories: ["gened-dshs", "gened-scis", "gened-dvup"], note: "Pick a DSHS I-Series course tagged DVUP" },
@@ -65,7 +65,7 @@ const SCHEDULE = [
     id: "F29", name: "Fall 2029", year: "Year 4",
     courses: [
       { code: "ENEE 436", title: "Foundations of Machine Learning",cr: 3, prereqs: ["CMSC 330", "CMSC 351"], coreqs: [], kind: "goal", category: "tech-c", isGoal: true, note: "★ GOAL · Tech Cat C · EE Theory" },
-      { code: "CMSC 451", title: "Design & Analysis of Algorithms",cr: 3, prereqs: ["CMSC 351"], coreqs: [], kind: "goal", category: "tech-b", isGoal: true, note: "★ GOAL · Tech Cat B" },
+      { code: "CMSC 451", title: "Design and Analysis of Computer Algorithms", cr: 3, prereqs: ["CMSC 351"], coreqs: [], kind: "goal", category: "tech-b", isGoal: true, note: "★ GOAL · Tech Cat B" },
       { code: "ENEE 446", title: "Digital Computer Design",        cr: 3, prereqs: ["ENEE 350"], coreqs: [], kind: "core", category: "ce-core" },
       { code: "ENGL 393", title: "Technical Writing",              cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-fspw", note: "FSPW · Junior standing" },
       { code: "GenEd SP-1", title: "Social Sciences Scholarship in Practice + Diversity", cr: 3, prereqs: [], coreqs: [], kind: "gened", category: "gened-dssp", categories: ["gened-dshs", "gened-dssp", "gened-dvcc"], note: "DSSP #1 · DSHS #2 · DVCC" },

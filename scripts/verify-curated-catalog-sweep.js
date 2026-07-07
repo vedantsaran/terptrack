@@ -97,6 +97,8 @@ function parseArgs(argv) {
     limit: null,
     majors: [],
     json: false,
+    strictTitles: false,
+    warningLimit: 40,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -116,12 +118,24 @@ function parseArgs(argv) {
       opts.majors.push(...arg.slice('--majors='.length).split(','));
     } else if (arg === '--json') {
       opts.json = true;
+    } else if (arg === '--strict-titles') {
+      opts.strictTitles = true;
+    } else if (arg === '--warning-limit') {
+      opts.warningLimit = argv[++i] || opts.warningLimit;
+    } else if (arg.startsWith('--warning-limit=')) {
+      opts.warningLimit = arg.slice('--warning-limit='.length) || opts.warningLimit;
     } else {
       fail(`Unknown argument: ${arg}`);
     }
   }
   opts.limit = Number.isFinite(opts.limit) && opts.limit > 0 ? Math.floor(opts.limit) : null;
   opts.majors = unique(opts.majors.map(item => String(item || '').trim().toUpperCase()));
+  if (/^(all|full)$/i.test(String(opts.warningLimit || ''))) {
+    opts.warningLimit = Number.MAX_SAFE_INTEGER;
+  } else {
+    opts.warningLimit = Number(opts.warningLimit);
+    opts.warningLimit = Number.isFinite(opts.warningLimit) && opts.warningLimit >= 0 ? Math.floor(opts.warningLimit) : 40;
+  }
   return opts;
 }
 
@@ -384,6 +398,8 @@ function planetCreditsCompatible(planetCredits, value) {
 function compatibilityRows(entry, official, planet) {
   const failures = [];
   const warnings = [];
+  const creditWarnings = [];
+  const titleWarnings = [];
   entry.credits.forEach(value => {
     const officialOk = official?.ok && creditsCompatible(official.credits, value);
     const planetOk = planet?.ok && planetCreditsCompatible(planet.credits, value);
@@ -392,7 +408,9 @@ function compatibilityRows(entry, official, planet) {
     } else if (!official?.ok && planet?.ok && !planetOk) {
       failures.push(`${displayCode(entry.code)} curated credits ${value} != PlanetTerp ${planet.credits || '?'}`);
     } else if (officialOk && planet?.ok && !planetOk) {
-      warnings.push(`${displayCode(entry.code)} PlanetTerp credits ${planet.credits || '?'} differ from official-compatible curated credits ${value}`);
+      const warning = `${displayCode(entry.code)} PlanetTerp credits ${planet.credits || '?'} differ from official-compatible curated credits ${value}`;
+      warnings.push(warning);
+      creditWarnings.push(warning);
     }
   });
   entry.titles.forEach(title => {
@@ -403,10 +421,12 @@ function compatibilityRows(entry, official, planet) {
         official?.ok ? `official "${official.title}"` : '',
         planet?.ok ? `PlanetTerp "${planet.title}"` : '',
       ].filter(Boolean).join(' / ');
-      warnings.push(`${displayCode(entry.code)} title "${title}" differs from ${sources}`);
+      const warning = `${displayCode(entry.code)} title "${title}" differs from ${sources}`;
+      warnings.push(warning);
+      titleWarnings.push(warning);
     }
   });
-  return { failures, warnings };
+  return { failures, warnings, creditWarnings, titleWarnings };
 }
 
 async function mapLimit(list, limit, fn) {
@@ -438,15 +458,20 @@ async function verifyCuratedCatalogSweep(context, opts) {
   const missing = [];
   const failures = [];
   const warnings = [];
+  const creditWarnings = [];
+  const titleWarnings = [];
   rows.forEach(row => {
     if (!row.official?.ok && !row.planet?.ok) {
       missing.push(`${displayCode(row.entry.code)} (${row.entry.majors.join(',')}; official: ${row.official?.detail || 'missing'}; PlanetTerp: ${row.planet?.detail || 'missing'})`);
     }
     failures.push(...row.failures);
     warnings.push(...row.warnings);
+    creditWarnings.push(...row.creditWarnings);
+    titleWarnings.push(...row.titleWarnings);
   });
   assert(!missing.length, `Curated catalog sweep could not verify ${missing.length}/${entries.length} courses in either official catalog or PlanetTerp: ${missing.slice(0, 25).join('; ')}${missing.length > 25 ? `; +${missing.length - 25} more` : ''}`);
   assert(!failures.length, `Curated catalog sweep found ${failures.length} credit mismatch${failures.length === 1 ? '' : 'es'}: ${failures.slice(0, 25).join('; ')}${failures.length > 25 ? `; +${failures.length - 25} more` : ''}`);
+  assert(!opts.strictTitles || !titleWarnings.length, `Curated catalog sweep found ${titleWarnings.length} title drift warning${titleWarnings.length === 1 ? '' : 's'}: ${titleWarnings.slice(0, 25).join('; ')}${titleWarnings.length > 25 ? `; +${titleWarnings.length - 25} more` : ''}`);
   const officialMatches = rows.filter(row => row.official?.ok).length;
   const planetMatches = rows.filter(row => row.planet?.ok).length;
   const bothMatches = rows.filter(row => row.official?.ok && row.planet?.ok).length;
@@ -463,7 +488,11 @@ async function verifyCuratedCatalogSweep(context, opts) {
     baseTopicMatches,
     currentPrefixMatches,
     warningCount: warnings.length,
-    warnings: warnings.slice(0, 40),
+    creditWarningCount: creditWarnings.length,
+    titleWarningCount: titleWarnings.length,
+    warnings: warnings.slice(0, opts.warningLimit),
+    creditWarnings: creditWarnings.slice(0, opts.warningLimit),
+    titleWarnings: titleWarnings.slice(0, opts.warningLimit),
   };
   if (opts.json) {
     console.log(JSON.stringify(summary, null, 2));
@@ -471,9 +500,9 @@ async function verifyCuratedCatalogSweep(context, opts) {
     console.log(`Curated catalog sweep verified ${entries.length}/${allEntries.length} unique real curated courses across ${summary.curatedRows} schedule rows.`);
     console.log(`Sources: official UMD catalog ${officialMatches}, PlanetTerp ${planetMatches}, both ${bothMatches}; base-topic matches ${baseTopicMatches}; legacy-prefix matches ${currentPrefixMatches}.`);
     if (warnings.length) {
-      console.log(`Title drift warnings ${warnings.length}: ${warnings.slice(0, 12).join('; ')}${warnings.length > 12 ? `; +${warnings.length - 12} more` : ''}.`);
+      console.log(`Warnings ${warnings.length} (${titleWarnings.length} title, ${creditWarnings.length} credit-source): ${warnings.slice(0, 12).join('; ')}${warnings.length > 12 ? `; +${warnings.length - 12} more` : ''}.`);
     } else {
-      console.log('No title drift warnings.');
+      console.log('No title or credit-source warnings.');
     }
   }
   return summary;

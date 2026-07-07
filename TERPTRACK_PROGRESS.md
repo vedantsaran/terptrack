@@ -12644,3 +12644,53 @@ Next pass candidates:
 - Normalize the 50 remaining curated title-drift warnings now that the live sweep has separated title cleanup from hard stale-code and credit failures.
 - Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page, live sweep status, and checked date for every curated schedule.
 - Consider making the curated catalog sweep part of a scheduled release job with a conservative limit by default and a full sweep before major schedule-data releases.
+
+## Pass 214 - Strict Curated Title Hygiene
+
+Focus:
+- Normalized every curated schedule title-drift warning from the live catalog sweep, using the official UMD approved-course catalog as the primary title source and PlanetTerp only where the official exact course row is currently absent.
+- Split live curated catalog warnings into title warnings vs credit-source warnings so title drift can now be promoted to a hard release failure.
+- Kept `README.md` untouched.
+
+Code changes:
+- Updated `js/data.js`.
+  - Replaced abbreviated/stale default Computer Engineering labels for `UNIV 100`, `ENES 100`, `CMSC 216`, `ENEE 101`, `ENEE 200`, `ENEE 290`, `CMSC 320`, `CMSC 330`, and `CMSC 451`.
+- Updated `js/major-schedules.js`.
+  - Normalized stale titles across CS, BIOL, EDUC, PSYC, CCJS, GVPT, ENME, ENCE, INST, and COMM.
+  - Cleared older title labels for chemistry labs, life-sciences calculus, criminal justice, government and politics, information science, civil engineering structural/environmental courses, and several UMD current-catalog course renames.
+  - Preserved course codes, credits, term placement, categories, and prerequisites during this metadata pass.
+- Updated `scripts/verify-curated-catalog-sweep.js`.
+  - Added `--strict-titles` to fail on any remaining curated title drift.
+  - Added `--warning-limit` and `--warning-limit=all` for complete JSON diagnostics.
+  - Added separate `creditWarningCount`, `titleWarningCount`, `creditWarnings`, and `titleWarnings` summary fields.
+- Updated `scripts/test-generated-plans.js`.
+  - Added regression coverage for curated catalog sweep strict-title parsing and warning-output limits.
+
+Verification:
+- Ran `node --check js/data.js`.
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check scripts/verify-curated-catalog-sweep.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran stale-title `rg` checks across `js/data.js` and `js/major-schedules.js`.
+  - It found no remaining targeted stale title strings; only unrelated legitimate senior/capstone wording remained.
+- Ran `node scripts/verify-curated-catalog-sweep.js --json --warning-limit=all --seed=pass214-after-titles`.
+  - It reduced live title warnings from 37 to 4, exposing the remaining ENCE title swaps.
+- Ran `node scripts/verify-curated-catalog-sweep.js --json --strict-titles --warning-limit=all --seed=pass214-strict-titles`.
+  - It passed all `826/826` unique real curated courses across `1461` schedule rows.
+  - It reported `titleWarningCount: 0`.
+  - It preserved the known `13` non-blocking credit-source warnings where PlanetTerp credits lag official-compatible curated credits.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+- Ran `node scripts/verify-curated-schedules.js`.
+  - It passed all 61 fully baked schedules with min real courses `14` and min 400-level rows `3`.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 46 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop and mobile plan verification, and rendered mobile workflow checks.
+  - It reported `TerpTrack release checks passed`.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-curated --skip-rendered --skip-workflows --live-curated-catalog-sweep --live-curated-catalog-limit=20 --live-seed=pass214-wrapper-smoke`.
+  - It passed the release-wrapper live curated catalog smoke with `20/826` unique courses and no warnings in the sampled set.
+
+Next pass candidates:
+- Resolve or document the 13 PlanetTerp-credit lag warnings against official catalog credits so the live sweep output is completely explainable to maintainers.
+- Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page, live sweep status, and checked date for every curated schedule.
+- Add a strict-title full live curated sweep preset for pre-release data refreshes.
