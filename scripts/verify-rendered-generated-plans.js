@@ -61,13 +61,13 @@ const TARGETS = [
     ],
   },
   {
-    major: 'IS',
-    name: 'Information Systems',
-    coverage: '21/21 live course records',
+    major: 'ARCH',
+    name: 'Architecture',
+    coverage: '19/19 live course records',
     targetCredits: 120,
     cards: [
-      { code: 'BMGT407', credits: 3, title: 'Information Systems Projects' },
-      { code: 'BMGT496', credits: 3, title: 'Business Ethics and Society' },
+      { code: 'ARCH403', credits: 6, title: 'Architecture Design Studio IV' },
+      { code: 'ARCH430', credits: 3, title: 'Measuring Sustainability in Architecture' },
     ],
   },
 ];
@@ -451,6 +451,66 @@ const CURATED_TARGETS = [
     cards: [
       { code: 'BIOE486', credits: 3, title: 'Capstone Design II' },
       { code: 'BIOE485', credits: 3, title: 'Capstone Design I' },
+    ],
+  },
+  {
+    major: 'FINANCE',
+    name: 'Finance',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'BMGT495', credits: 3, title: 'Strategic Management' },
+      { code: 'BMGT443', credits: 3, title: 'Applied Equity Analysis and Portfolio Management' },
+    ],
+  },
+  {
+    major: 'ACCOUNTING',
+    name: 'Accounting',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'BMGT417', credits: 3, title: 'Taxation of Corporations, Partnerships and Estates' },
+      { code: 'BMGT422', credits: 3, title: 'Auditing Theory and Practice' },
+    ],
+  },
+  {
+    major: 'IS',
+    name: 'Information Systems',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'BMGT495', credits: 3, title: 'Strategic Management' },
+      { code: 'BMGT407', credits: 3, title: 'Information Systems Projects' },
+    ],
+  },
+  {
+    major: 'MARKETING',
+    name: 'Marketing',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'BMGT495', credits: 3, title: 'Strategic Management' },
+      { code: 'BMGT457', credits: 3, title: 'Marketing Policies and Strategies' },
+    ],
+  },
+  {
+    major: 'MGMT',
+    name: 'Management & Organization',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'BMGT495', credits: 3, title: 'Strategic Management' },
+      { code: 'BMGT463', credits: 3, title: 'Cross-cultural Challenges in Business' },
+    ],
+  },
+  {
+    major: 'SCM',
+    name: 'Supply Chain Management',
+    kind: 'curated',
+    targetCredits: 120,
+    cards: [
+      { code: 'BMGT475', credits: 3, title: 'Supply Chain Strategy and Network Design' },
+      { code: 'BMGT476', credits: 3, title: 'Technology Applications in Supply Chain Management' },
     ],
   },
 ];
@@ -913,17 +973,17 @@ async function runViewport(browser, url, viewport, selected, opts) {
 
     const initialSnapshot = await page.evaluate(cardSnapshotScript());
     assert(initialSnapshot.styles.includes('styles.css?v=120'), `${viewport.label}: rendered app did not load styles.css?v=120`);
-    assert(initialSnapshot.scripts.includes('js/majors.js?v=14'), `${viewport.label}: rendered app did not load js/majors.js?v=14`);
+    assert(initialSnapshot.scripts.includes('js/majors.js?v=15'), `${viewport.label}: rendered app did not load js/majors.js?v=15`);
     assert(initialSnapshot.scripts.includes('js/planetterp.js?v=4'), `${viewport.label}: rendered app did not load js/planetterp.js?v=4`);
     assert(initialSnapshot.scripts.includes('js/api.js?v=9'), `${viewport.label}: rendered app did not load js/api.js?v=9`);
-    assert(initialSnapshot.scripts.includes('js/settings.js?v=49'), `${viewport.label}: rendered app did not load js/settings.js?v=49`);
+    assert(initialSnapshot.scripts.includes('js/settings.js?v=50'), `${viewport.label}: rendered app did not load js/settings.js?v=50`);
     assert(initialSnapshot.scripts.includes('js/import.js?v=13'), `${viewport.label}: rendered app did not load js/import.js?v=13`);
     assert(initialSnapshot.releaseText.includes('4/5 launch checks ready'), `${viewport.label}: release checklist did not show 4/5 ready status`);
     assert(initialSnapshot.releaseText.includes('Official source links'), `${viewport.label}: release checklist missing official source row`);
     assert(initialSnapshot.releaseText.includes('Live generated-template audit'), `${viewport.label}: release checklist missing generated audit row`);
     assert(initialSnapshot.releaseText.includes('Generated course catalog sweep'), `${viewport.label}: release checklist missing catalog sweep row`);
-    assert(initialSnapshot.releaseText.includes('149/149 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
-    assert(initialSnapshot.releaseText.includes('4/4 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
+    assert(initialSnapshot.releaseText.includes('106/106 unique generated required courses'), `${viewport.label}: release checklist missing catalog sweep coverage`);
+    assert(initialSnapshot.releaseText.includes('3/3 title drifts'), `${viewport.label}: release checklist missing official title drift evidence`);
     assert(initialSnapshot.releaseText.includes('0/0 term-specific title suffixes'), `${viewport.label}: release checklist missing Testudo title suffix evidence`);
     assert(initialSnapshot.releaseText.includes('Maintainer commands'), `${viewport.label}: release checklist missing maintainer command block`);
     assert(initialSnapshot.releaseText.includes('--live-catalog-write-settings-snapshot'), `${viewport.label}: release checklist missing snapshot refresh command`);

@@ -413,6 +413,42 @@ async function testCuratedScheduleFixtures(context) {
       goal: 'PHYS402',
       minRealCourses: 25,
     },
+    {
+      id: 'FINANCE',
+      required: ['BMGT110', 'ECON200', 'MATH220', 'ENGL101', 'COMM107', 'ECON201', 'BMGT230', 'BMGT220', 'BMGT221', 'BMGT301', 'ENGL393', 'BMGT340', 'BMGT350', 'BMGT364', 'BMGT367', 'BMGT380', 'BMGT343', 'BMGT440', 'BMGT347', 'BMGT441', 'BMGT443', 'BMGT446', 'BMGT332', 'BMGT341', 'BMGT445', 'BMGT495'],
+      goal: 'BMGT495',
+      minRealCourses: 27,
+    },
+    {
+      id: 'ACCOUNTING',
+      required: ['BMGT110', 'ECON200', 'MATH220', 'ENGL101', 'COMM107', 'ECON201', 'BMGT230', 'BMGT220', 'BMGT221', 'BMGT301', 'ENGL393', 'BMGT340', 'BMGT350', 'BMGT364', 'BMGT367', 'BMGT380', 'BMGT310', 'BMGT321', 'BMGT326', 'BMGT311', 'BMGT323', 'BMGT411', 'BMGT422', 'BMGT417', 'BMGT495'],
+      goal: 'BMGT417',
+      minRealCourses: 26,
+    },
+    {
+      id: 'IS',
+      required: ['BMGT110', 'ECON200', 'MATH220', 'ENGL101', 'COMM107', 'ECON201', 'BMGT230', 'BMGT220', 'BMGT221', 'BMGT301', 'ENGL393', 'BMGT340', 'BMGT350', 'BMGT364', 'BMGT367', 'BMGT380', 'BMGT302', 'BMGT402', 'BMGT403', 'BMGT407', 'BMGT400', 'BMGT401', 'BMGT430', 'BMGT485', 'BMGT495'],
+      goal: 'BMGT495',
+      minRealCourses: 26,
+    },
+    {
+      id: 'MARKETING',
+      required: ['BMGT110', 'ECON200', 'MATH220', 'ENGL101', 'COMM107', 'ECON201', 'BMGT230', 'BMGT220', 'BMGT221', 'BMGT301', 'ENGL393', 'BMGT340', 'BMGT350', 'BMGT364', 'BMGT367', 'BMGT380', 'BMGT354', 'BMGT351', 'BMGT457', 'BMGT456', 'BMGT453', 'BMGT450', 'BMGT454', 'BMGT455', 'BMGT495'],
+      goal: 'BMGT495',
+      minRealCourses: 26,
+    },
+    {
+      id: 'MGMT',
+      required: ['BMGT110', 'ECON200', 'MATH220', 'ENGL101', 'COMM107', 'ECON201', 'BMGT230', 'BMGT220', 'BMGT221', 'BMGT301', 'ENGL393', 'BMGT340', 'BMGT350', 'BMGT364', 'BMGT367', 'BMGT380', 'BMGT363', 'BMGT362', 'BMGT360', 'BMGT366', 'BMGT461', 'BMGT463', 'BMGT466', 'BMGT495'],
+      goal: 'BMGT495',
+      minRealCourses: 25,
+    },
+    {
+      id: 'SCM',
+      required: ['BMGT110', 'ECON200', 'MATH220', 'ENGL101', 'COMM107', 'ECON201', 'BMGT230', 'BMGT220', 'BMGT221', 'BMGT301', 'ENGL393', 'BMGT340', 'BMGT350', 'BMGT364', 'BMGT367', 'BMGT380', 'BMGT370', 'BMGT372', 'BMGT472', 'BMGT476', 'BMGT477', 'BMGT385', 'BMGT475', 'BMGT495'],
+      goal: 'BMGT475',
+      minRealCourses: 25,
+    },
   ];
   const rows = [];
 
@@ -1271,12 +1307,12 @@ async function testAutoPlanDiagnostics(context) {
   assert(/Placeholders to replace/.test(result.templateHtml), 'auto plan diagnostics: source samples should include placeholder row');
   assert(/Requirement source/.test(result.templateHtml) && /Atmospheric/.test(result.templateHtml), 'auto plan diagnostics: source samples should include selected official requirement source');
   assert(/data-auto-plan-browse-placeholder/.test(result.templateHtml), 'auto plan diagnostics: placeholder source samples should include browse actions');
-  assert(result.templateFreshnessSummary.generatedCount === 12, 'auto plan diagnostics: freshness report should count generated templates');
-  assert(result.templateFreshnessSummary.requirementRows === 233, 'auto plan diagnostics: freshness report should count generated requirement rows');
+  assert(result.templateFreshnessSummary.generatedCount === 7, 'auto plan diagnostics: freshness report should count generated templates');
+  assert(result.templateFreshnessSummary.requirementRows === 133, 'auto plan diagnostics: freshness report should count generated requirement rows');
   assert(/Generated Catalog Freshness/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render a title');
-  assert(/12\/12/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
+  assert(/7\/7/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the passing catalog audit');
   assert(/PlanetTerp/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should name the live source');
-  assert(/pass206-curated-core-stem-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
+  assert(/pass207-curated-smith-all/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should show the audit seed');
   assert(/Official sources/.test(result.templateFreshnessHtml), 'auto plan diagnostics: freshness report should render official source links');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/programs/'), 'auto plan diagnostics: freshness report should link the UMD catalog program index');
   assert(result.templateFreshnessHtml.includes('academiccatalog.umd.edu/undergraduate/approved-courses/'), 'auto plan diagnostics: freshness report should link the UMD course catalog');
@@ -1474,7 +1510,7 @@ async function testAllGeneratedRequirementGroups(context) {
       return out;
     })()
   `, context));
-  assert(rows.length >= 12, `all generated requirement groups: expected at least 12 generated majors, saw ${rows.length}`);
+  assert(rows.length >= 7, `all generated requirement groups: expected at least 7 generated majors, saw ${rows.length}`);
   rows.forEach(row => {
     const groupTotal = row.groups.reduce((sum, group) => sum + group.total, 0);
     const groupScheduled = row.groups.reduce((sum, group) => sum + group.scheduled, 0);
@@ -1565,11 +1601,11 @@ async function testCatalogYearTargeting(context) {
   assert(result.firstLink.isCurrentCatalog === false, 'catalog year: older target should be marked non-current');
   assert(/Catalog target 2024-2025/.test(result.sourceHtml) && /linked source 2026-2027/.test(result.sourceHtml), 'catalog year: source HTML should compare target and linked source years');
   assert(/Catalog target 2024-2025/.test(result.releaseHtml), 'catalog year: release checklist should show selected target year');
-  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /149\/149 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
-  assert(/4\/4 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
+  assert(/Generated course catalog sweep/.test(result.releaseHtml) && /106\/106 unique generated required courses/.test(result.releaseHtml), 'catalog year: release checklist should show generated course catalog sweep evidence');
+  assert(/3\/3 title drifts/.test(result.releaseHtml) && /official UMD catalog/.test(result.releaseHtml), 'catalog year: release checklist should show official title drift evidence');
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
-  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass206-curated-core-stem-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
+  assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass207-curated-smith-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
   assert(/Catalog target 2024-2025/.test(result.reviewHtml) && /linked source 2026-2027/.test(result.reviewHtml), 'catalog year: auto-plan review should render target/source metadata');

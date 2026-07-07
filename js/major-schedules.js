@@ -639,69 +639,242 @@ const SCHEDULE_ENME = [
   ]},
 ];
 
-// ============================================================
-// FINANCE — Smith Business, Finance track (BS, 120 cr)
-// ============================================================
-const SCHEDULE_FINANCE = [
+function _smithBusinessCommonTerms() {
+  return [
   { id: 'F26', name: 'Fall 2026', year: 'Year 1', courses: [
-    _c('BMGT 110', 'Introduction to Business and Management', 3, { category: 'major-core' }),
+    _c('BMGT 110', 'Introduction to the Business Value Chain', 3, { category: 'major-core' }),
     _c('ECON 200', 'Principles of Microeconomics', 3, { kind: 'gened', category: 'gened-dshs' }),
-    _c('MATH 220', 'Elementary Calculus I', 3, { category: 'major-support', note: 'Satisfies FSMA' }),
+    _c('MATH 220', 'Elementary Calculus I', 3, { kind: 'gened', category: 'gened-fsma' }),
     _c('ENGL 101', 'Academic Writing', 3, { kind: 'gened', category: 'gened-fsaw' }),
     _c('UNIV 100', 'The Student in the University', 1, { category: 'major-core' }),
-    _c('COMM 107', 'Oral Communication', 3, { kind: 'gened', category: 'gened-fsoc' }),
+    _c('COMM 107', 'Oral Communication: Principles and Practices', 3, { kind: 'gened', category: 'gened-fsoc' }),
   ]},
   { id: 'S27', name: 'Spring 2027', year: 'Year 1', courses: [
     _c('ECON 201', 'Principles of Macroeconomics', 3, { prereqs: ['ECON 200'], category: 'major-core' }),
     _c('BMGT 230', 'Business Statistics', 3, { prereqs: ['MATH 220'], category: 'major-core' }),
     _c('BMGT 220', 'Principles of Accounting I', 3, { category: 'major-core' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVUP Elective', 'Humanities and Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVUP' }),
     _c('DSNS Elective', 'Natural Sciences Distributive', 3, { kind: 'gened', category: 'gened-dsns' }),
   ]},
   { id: 'F27', name: 'Fall 2027', year: 'Year 2', courses: [
     _c('BMGT 221', 'Principles of Accounting II', 3, { prereqs: ['BMGT 220'], category: 'major-core' }),
-    _c('BMGT 289I', 'Introductory Business Lecture Series', 1, { category: 'major-core' }),
+    _c('BMGT 301', 'Information Systems, AI, and Digital Transformation', 3, { category: 'major-core' }),
     _c('DSNL Elective', 'Natural Sciences Lab', 4, { kind: 'gened', category: 'gened-dsnl' }),
     _c('ENGL 393', 'Technical Writing', 3, { prereqs: ['ENGL 101'], kind: 'gened', category: 'gened-fspw' }),
-    _c('DSSP Elective', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
-    _c('Free Elective', 'Free Elective', 2, { kind: 'tech', category: 'elective' }),
+    _c('FSAR/DSSP Elective', 'Analytic Reasoning and Scholarship in Practice', 3, { kind: 'gened', category: 'gened-fsar', note: 'Satisfies FSAR DSSP' }),
   ]},
   { id: 'S28', name: 'Spring 2028', year: 'Year 2', courses: [
     _c('BMGT 340', 'Business Finance', 3, { prereqs: ['BMGT 220','ECON 201'], category: 'major-core' }),
-    _c('BMGT 350', 'Marketing Principles', 3, { prereqs: ['ECON 200'], category: 'major-core' }),
-    _c('BMGT 364', 'Management and Organization Theory', 3, { category: 'major-core' }),
+    _c('BMGT 350', 'Marketing Principles and Organization', 3, { prereqs: ['ECON 200'], category: 'major-core' }),
+    _c('BMGT 364', 'Managing People and Organizations', 3, { category: 'major-core' }),
     _c('BMGT 367', 'Career Search Strategies in Business', 1, { category: 'major-core' }),
-    _c('DVUP Elective', 'Understanding Plural Societies', 3, { kind: 'gened', category: 'gened-dvup' }),
-    _c('DSHU Elective', 'Humanities Distributive', 3, { kind: 'gened', category: 'gened-dshu' }),
+    _c('DSHU/DVCC Elective', 'Humanities and Cultural Competence', 3, { kind: 'gened', category: 'gened-dshu', note: 'Satisfies DSHU DVCC' }),
+    _c('DSHS/SCIS Elective', 'History/Social Sciences and I-Series', 3, { kind: 'gened', category: 'gened-dshs', note: 'Satisfies DSHS SCIS' }),
   ]},
+  ];
+}
+
+function _smithBusinessSchedule(upperTerms) {
+  return [..._smithBusinessCommonTerms(), ...upperTerms];
+}
+
+// ============================================================
+// FINANCE — Smith Business, Finance track (BS, 120 cr)
+// ============================================================
+const SCHEDULE_FINANCE = _smithBusinessSchedule([
   { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('BMGT 380', 'Business Law I', 3, { category: 'major-core' }),
     _c('BMGT 343', 'Investments', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
-    _c('BMGT 380', 'Business Law', 3, { category: 'major-core' }),
-    _c('BMGT 4xx Finance Elective A', 'Upper-Division Finance Elective', 3, { category: 'major-upper' }),
-    _c('DSHS Elective', 'History/Social Sci Distributive', 3, { kind: 'gened', category: 'gened-dshs' }),
-    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('BMGT 440', 'Advanced Financial Management', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
+    _c('BMGT 347', 'Quantitative Financial Analysis', 3, { prereqs: ['BMGT 340','BMGT 343'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
   ]},
   { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
-    _c('BMGT 440', 'Advanced Financial Management', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
-    _c('BMGT 443', 'Security Analysis and Valuation', 3, { prereqs: ['BMGT 343'], category: 'major-upper', isGoal: true }),
-    _c('BMGT 446', 'Commercial Bank Management', 3, { prereqs: ['BMGT 343'], category: 'major-upper' }),
-    _c('BMGT 4xx Finance Elective B', 'Upper-Division Finance Elective', 3, { category: 'major-upper' }),
+    _c('BMGT 441', 'Fixed Income', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
+    _c('BMGT 443', 'Applied Equity Analysis and Portfolio Management', 3, { prereqs: ['BMGT 343'], category: 'major-upper', isGoal: true }),
+    _c('BMGT 446', 'International Finance', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
+    _c('BMGT 332', 'Quantitative Models for Management Decisions', 3, { category: 'major-upper' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
-    _c('BMGT 449', 'Real Estate Finance and Investment', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
-    _c('BMGT 4xx Finance Elective C', 'Upper-Division Finance Elective', 3, { category: 'major-upper' }),
+    _c('BMGT 341', 'Financial Markets', 3, { category: 'major-upper' }),
+    _c('BMGT 445', 'Banking and Financial Institutions', 3, { prereqs: ['BMGT 340'], category: 'major-upper' }),
+    _c('BMGT 495', 'Strategic Management', 3, { category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+]);
+
+// ============================================================
+// ACCOUNTING — Smith Business, Public Accounting path (BS, 120 cr)
+// ============================================================
+const SCHEDULE_ACCOUNTING = _smithBusinessSchedule([
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('BMGT 380', 'Business Law I', 3, { category: 'major-core' }),
+    _c('BMGT 310', 'Intermediate Accounting I', 3, { prereqs: ['BMGT 221'], category: 'major-upper' }),
+    _c('BMGT 321', 'Managerial Accounting', 3, { prereqs: ['BMGT 221'], category: 'major-upper' }),
+    _c('BMGT 326', 'Accounting Systems', 3, { prereqs: ['BMGT 221'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('BMGT 311', 'Intermediate Accounting II', 3, { prereqs: ['BMGT 310'], category: 'major-upper' }),
+    _c('BMGT 323', 'Taxation of Individuals', 3, { prereqs: ['BMGT 221'], category: 'major-upper' }),
+    _c('BMGT 411', 'Ethics and Professionalism in Accounting', 3, { prereqs: ['BMGT 310'], category: 'major-upper' }),
+    _c('BMGT 422', 'Auditing Theory and Practice', 3, { prereqs: ['BMGT 310'], category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BMGT 417', 'Taxation of Corporations, Partnerships and Estates', 3, { prereqs: ['BMGT 323'], category: 'major-upper', isGoal: true }),
+    _c('BMGT 495', 'Strategic Management', 3, { category: 'major-upper', isGoal: true }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
   { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
-    _c('BMGT 496', 'Business Ethics', 3, { category: 'major-upper', isGoal: true }),
-    _c('BMGT 4xx Finance Elective D', 'Upper-Division Finance Elective', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
     _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
   ]},
-];
+]);
+
+// ============================================================
+// INFORMATION SYSTEMS — Smith Business (BS, 120 cr)
+// ============================================================
+const SCHEDULE_IS = _smithBusinessSchedule([
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('BMGT 380', 'Business Law I', 3, { category: 'major-core' }),
+    _c('BMGT 302', 'Essential Programming and AI Skills for Business Analytics', 3, { category: 'major-upper' }),
+    _c('BMGT 402', 'Database Systems', 3, { category: 'major-upper' }),
+    _c('BMGT 403', 'Systems Analysis and Design', 3, { category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('BMGT 407', 'Information Systems Projects', 3, { prereqs: ['BMGT 402','BMGT 403'], category: 'major-upper' }),
+    _c('BMGT 400', 'Data Visualization and Web Analytics', 3, { category: 'major-upper' }),
+    _c('BMGT 401', 'Big Data and AI using Cloud Computing', 3, { category: 'major-upper' }),
+    _c('BMGT 430', 'Data Modeling in Business', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BMGT 485', 'Project Management', 3, { category: 'major-upper' }),
+    _c('BMGT 495', 'Strategic Management', 3, { category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+]);
+
+// ============================================================
+// MARKETING — Smith Business (BS, 120 cr)
+// ============================================================
+const SCHEDULE_MARKETING = _smithBusinessSchedule([
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('BMGT 380', 'Business Law I', 3, { category: 'major-core' }),
+    _c('BMGT 354', 'Consumer Analysis', 3, { prereqs: ['BMGT 350'], category: 'major-upper' }),
+    _c('BMGT 351', 'Marketing Research Methods', 3, { prereqs: ['BMGT 350'], category: 'major-upper' }),
+    _c('BMGT 457', 'Marketing Policies and Strategies', 3, { prereqs: ['BMGT 350'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('BMGT 456', 'Customer-Centric Innovation', 3, { prereqs: ['BMGT 350'], category: 'major-upper' }),
+    _c('BMGT 453', 'Retail Management', 3, { prereqs: ['BMGT 220','BMGT 350'], category: 'major-upper' }),
+    _c('BMGT 450', 'Integrated Marketing Communications', 3, { prereqs: ['BMGT 350'], category: 'major-upper' }),
+    _c('BMGT 454', 'Global Marketing', 3, { prereqs: ['BMGT 350'], category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BMGT 455', 'Sales Management', 3, { prereqs: ['BMGT 350'], category: 'major-upper' }),
+    _c('BMGT 495', 'Strategic Management', 3, { category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+]);
+
+// ============================================================
+// MANAGEMENT — Smith Business (BS, 120 cr)
+// ============================================================
+const SCHEDULE_MGMT = _smithBusinessSchedule([
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('BMGT 380', 'Business Law I', 3, { category: 'major-core' }),
+    _c('BMGT 363', 'Leadership and Teamwork in Organizations', 3, { category: 'major-upper' }),
+    _c('BMGT 362', 'Negotiations', 3, { category: 'major-upper' }),
+    _c('BMGT 360', 'Strategic Management of Human Capital', 3, { category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('BMGT 366', 'Growth Strategies for Emerging Companies', 3, { category: 'major-upper' }),
+    _c('BMGT 461', 'Entrepreneurship', 3, { category: 'major-upper' }),
+    _c('BMGT 463', 'Cross-cultural Challenges in Business', 3, { category: 'major-upper' }),
+    _c('BMGT 466', 'Global Business Strategy', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BMGT 495', 'Strategic Management', 3, { category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+]);
+
+// ============================================================
+// SUPPLY CHAIN MANAGEMENT — Smith Business (BS, 120 cr)
+// ============================================================
+const SCHEDULE_SCM = _smithBusinessSchedule([
+  { id: 'F28', name: 'Fall 2028', year: 'Year 3', courses: [
+    _c('BMGT 380', 'Business Law I', 3, { category: 'major-core' }),
+    _c('BMGT 370', 'Introduction to Transportation', 3, { category: 'major-upper' }),
+    _c('BMGT 372', 'Introduction to Logistics and Supply Chain Management', 3, { category: 'major-upper' }),
+    _c('BMGT 472', 'Purchasing and Inbound Logistics', 3, { prereqs: ['BMGT 372'], category: 'major-upper' }),
+    _c('DSSP Elective #2', 'Scholarship in Practice', 3, { kind: 'gened', category: 'gened-dssp' }),
+  ]},
+  { id: 'S29', name: 'Spring 2029', year: 'Year 3', courses: [
+    _c('BMGT 476', 'Technology Applications in Supply Chain Management', 3, { prereqs: ['BMGT 372'], category: 'major-upper' }),
+    _c('BMGT 477', 'International Supply Chain Management', 3, { category: 'major-upper' }),
+    _c('BMGT 385', 'Operations Management', 3, { category: 'major-upper' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'F29', name: 'Fall 2029', year: 'Year 4', courses: [
+    _c('BMGT 475', 'Supply Chain Strategy and Network Design', 3, { prereqs: ['BMGT 372'], category: 'major-upper', isGoal: true }),
+    _c('BMGT 495', 'Strategic Management', 3, { category: 'major-upper', isGoal: true }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+  { id: 'S30', name: 'Spring 2030', year: 'Year 4', courses: [
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+    _c('Free Elective', 'Free Elective', 3, { kind: 'tech', category: 'elective' }),
+  ]},
+]);
 
 // ============================================================
 // INST — Information Science (BS, 120 cr)

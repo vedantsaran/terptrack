@@ -7,7 +7,7 @@ const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const NODE = process.execPath;
-const DEFAULT_LIVE_MAJORS = ['GEOL', 'AOSC', 'ASTR', 'BCHM', 'NEUR', 'IS'];
+const DEFAULT_LIVE_MAJORS = ['GEOL', 'AOSC', 'ASTR', 'BCHM', 'NEUR', 'ARCH'];
 
 function fail(message) {
   throw new Error(message);

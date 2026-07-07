@@ -12213,3 +12213,110 @@ Next pass candidates:
 - Convert the remaining Smith generated majors into fixed catalog-backed plans: `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM`.
 - Convert the remaining generated science/specialized plans after Smith: `AOSC`, `ASTR`, `BCHM`, `GEOL`, `NEUR`, `ARCH`, and `EDUC`.
 - Add a stale-course detector that compares curated and generated rows against PlanetTerp plus official UMD catalog pages before release.
+
+### Pass 207 - Curated current-catalog Smith schedules
+
+Goal focus:
+- Convert the remaining generated Smith business majors into fixed, current-catalog schedules.
+- Refresh Finance too, because its fixed plan still used the older Smith common-core assumptions.
+- Keep the progress log current and continue shrinking the generated-template pool.
+
+Catalog/source checks:
+- Checked current UMD 2026-2027 catalog pages before editing:
+  - Smith School common requirements: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/business/`
+  - Finance Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/business/finance/finance-major/`
+  - Accounting Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/business/accounting/accounting-major/`
+  - Information Systems Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/business/decision-operations-information-technologies/information-systems-major/`
+  - Marketing Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/business/marketing/marketing-major/`
+  - Management Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/business/management/management-major/`
+  - Supply Chain Management Major: `https://academiccatalog.umd.edu/undergraduate/colleges-schools/business/logistics-business-public-policy/supply-chain-management-major/`
+- Confirmed the current Smith common core uses `BMGT 301` and `BMGT 495`, not the older generated-plan `BMGT 289B` / `BMGT 496` path.
+- Queried live PlanetTerp metadata for the new Smith rows.
+  - Confirmed live rows including `BMGT 302`, `BMGT 310`, `BMGT 321`, `BMGT 326`, `BMGT 341`, `BMGT 343`, `BMGT 347`, `BMGT 363`, `BMGT 370`, `BMGT 372`, `BMGT 400`, `BMGT 401`, `BMGT 402`, `BMGT 403`, `BMGT 407`, `BMGT 411`, `BMGT 417`, `BMGT 422`, `BMGT 430`, `BMGT 441`, `BMGT 443`, `BMGT 445`, `BMGT 446`, `BMGT 450`, `BMGT 454`, `BMGT 455`, `BMGT 457`, `BMGT 461`, `BMGT 463`, `BMGT 466`, `BMGT 472`, `BMGT 475`, `BMGT 476`, `BMGT 477`, `BMGT 485`, and `BMGT 495`.
+  - `BMGT 354`, `BMGT 351`, `BMGT 456`, and `BMGT 453` are current catalog marketing rows, but PlanetTerp returned null metadata for some of them, so the fixed Marketing schedule carries official catalog titles directly.
+  - `BMGT 342` was not live in PlanetTerp, so the refreshed Finance plan avoids it.
+
+Code changes:
+- Added a shared Smith fixed-plan skeleton in `js/major-schedules.js`.
+  - First two years now use the current common Smith sequence: `BMGT 110`, `ECON 200`, `MATH 220`, `ENGL 101`, `COMM 107`, `ECON 201`, `BMGT 230`, `BMGT 220`, `BMGT 221`, `BMGT 301`, `ENGL 393`, `BMGT 340`, `BMGT 350`, `BMGT 364`, `BMGT 367`, and GenEd coverage placeholders.
+  - Every Smith plan is exactly 120 credits, maxes at 16 credits, and completes `13/13` GenEd requirements in the fixture review.
+- Refreshed `SCHEDULE_FINANCE`.
+  - Finance now uses current catalog rows including `BMGT 343`, `BMGT 440`, `BMGT 347`, `BMGT 441`, `BMGT 443`, `BMGT 446`, `BMGT 332`, `BMGT 341`, `BMGT 445`, and `BMGT 495`.
+- Added `SCHEDULE_ACCOUNTING`.
+  - Public-accounting path includes `BMGT 310`, `BMGT 321`, `BMGT 326`, `BMGT 311`, `BMGT 323`, `BMGT 411`, `BMGT 422`, `BMGT 417`, and `BMGT 495`.
+- Added `SCHEDULE_IS`.
+  - Current IS path includes `BMGT 302`, `BMGT 402`, `BMGT 403`, `BMGT 407`, `BMGT 400`, `BMGT 401`, `BMGT 430`, `BMGT 485`, and `BMGT 495`.
+- Added `SCHEDULE_MARKETING`.
+  - Current Marketing path includes `BMGT 354`, `BMGT 351`, `BMGT 457`, `BMGT 456`, `BMGT 453`, `BMGT 450`, `BMGT 454`, `BMGT 455`, and `BMGT 495`.
+- Added `SCHEDULE_MGMT`.
+  - Current Management path includes `BMGT 363`, `BMGT 362`, `BMGT 360`, `BMGT 366`, `BMGT 461`, `BMGT 463`, `BMGT 466`, and `BMGT 495`.
+- Added `SCHEDULE_SCM`.
+  - Current Supply Chain path includes `BMGT 370`, `BMGT 372`, `BMGT 472`, `BMGT 476`, `BMGT 477`, `BMGT 385`, `BMGT 475`, and `BMGT 495`.
+- Updated `js/majors.js`.
+  - Wired `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM` to fixed schedules.
+  - Refreshed Finance code lists/goals to match the new fixed plan.
+  - Removed stale Smith `BMGT289B` / `BMGT496` assumptions from the touched Smith major definitions.
+- Updated verification surfaces.
+  - Added six Smith curated fixtures to `scripts/test-generated-plans.js`.
+  - Moved `IS` from the rendered generated matrix to the curated rendered matrix.
+  - Added rendered Smith checks for `FINANCE`, `ACCOUNTING`, `IS`, `MARKETING`, `MGMT`, and `SCM`.
+  - Replaced the default generated rendered/release target `IS` with `ARCH`.
+  - Updated the Settings freshness panel to `pass207-curated-smith-all`.
+  - Updated the generated catalog sweep snapshot to `106/106` matched unique generated required courses across `7` generated majors and `133` requirement rows.
+  - `js/majors.js` asset version bumped from `v=14` to `v=15`.
+  - `js/settings.js` asset version bumped from `v=49` to `v=50`.
+
+Major-gap notes:
+- Smith business majors no longer open as generated drafts.
+- The remaining generated pool is now `7` majors: `AOSC`, `ARCH`, `ASTR`, `BCHM`, `EDUC`, `GEOL`, and `NEUR`.
+- `README.md` was not modified or staged.
+
+Verification:
+- Ran `node --check js/major-schedules.js`.
+- Ran `node --check js/majors.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed `3` generated fixtures and `44` curated schedule fixtures.
+  - It reported `FINANCE 120/120`, max `16` credits, `13/13` GenEd coverage, `27` real courses, goal term `Fall 2029`.
+  - It reported `ACCOUNTING 120/120`, max `16` credits, `13/13` GenEd coverage, `26` real courses, goal term `Fall 2029`.
+  - It reported `IS 120/120`, max `16` credits, `13/13` GenEd coverage, `26` real courses, goal term `Fall 2029`.
+  - It reported `MARKETING 120/120`, max `16` credits, `13/13` GenEd coverage, `26` real courses, goal term `Fall 2029`.
+  - It reported `MGMT 120/120`, max `16` credits, `13/13` GenEd coverage, `25` real courses, goal term `Fall 2029`.
+  - It reported `SCM 120/120`, max `16` credits, `13/13` GenEd coverage, `25` real courses, goal term `Fall 2029`.
+  - It passed all generated requirement groups with `7` majors and `133` grouped requirements.
+- Ran `node scripts/verify-random-schedules.js --catalog-sweep --seed=pass207-curated-smith-catalog --testudo-terms=202608`.
+  - It matched `106/106` unique generated required courses against app live metadata and PlanetTerp.
+  - It confirmed `3/3` PlanetTerp title drifts against official UMD catalog titles.
+  - It found no Testudo term-specific title suffix candidates requiring confirmation.
+- Ran `node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live-catalog-sweep --live-catalog-write-settings-snapshot --live-catalog-snapshot-date="July 7, 2026" --live-catalog-testudo-terms=202608 --live-seed=pass207-curated-smith-catalog`.
+  - It matched `106/106` unique generated required courses.
+  - It confirmed `3/3` official-title drifts.
+  - It bumped `settings.js` to `v50`.
+- Ran `node scripts/verify-random-schedules.js --all --keep-going --seed=pass207-curated-smith-all`.
+  - It verified all `7/7` remaining generated schedules against PlanetTerp.
+  - Every generated required course reported matching live title/credit pairs.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --majors=FINANCE,ACCOUNTING,IS,MARKETING,MGMT,SCM --viewports=all`.
+  - Desktop and mobile rendered all refreshed Smith plans as curated schedules.
+  - Rendered cards included `BMGT495`, `BMGT443`, `BMGT417`, `BMGT422`, `BMGT407`, `BMGT457`, `BMGT463`, `BMGT475`, and `BMGT476` as expected.
+- Ran `node scripts/verify-rendered-generated-plans.js --timeout-ms=240000 --viewports=all`.
+  - Desktop and mobile both passed the refreshed default generated matrix for `GEOL`, `AOSC`, `ASTR`, `BCHM`, `NEUR`, and `ARCH`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=180000`.
+  - It passed rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 44 JavaScript files.
+  - It passed the offline umd.io proxy fixture.
+  - It passed generated-plan fixtures with `44` curated schedules.
+  - It passed rendered generated-plan desktop and mobile matrices for `GEOL`, `AOSC`, `ASTR`, `BCHM`, `NEUR`, and `ARCH`.
+  - It passed rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=7 --seed=pass207-curated-smith-random`.
+  - It randomly verified `ASTR`, `BCHM`, `ARCH`, `EDUC`, `GEOL`, `NEUR`, and `AOSC` against PlanetTerp.
+  - All 7 sampled generated schedules passed live title/credit matching, requirement-group checks, progression checks, and max-credit checks.
+- Ran `git diff --check`; it passed.
+
+Next pass candidates:
+- Convert the remaining generated science/specialized plans into fixed catalog-backed schedules: `AOSC`, `ASTR`, `BCHM`, `GEOL`, `NEUR`, `ARCH`, and `EDUC`.
+- Add a stale-course detector that compares curated and generated rows against PlanetTerp plus official UMD catalog pages before release.

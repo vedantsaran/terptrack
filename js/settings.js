@@ -46,13 +46,22 @@ let autoPlanReviewTimer = null;
 let autoPlanResolveRunning = false;
 const GENERATED_TEMPLATE_AUDIT = Object.freeze({
   checkedAt: 'July 7, 2026',
-  seed: 'pass206-curated-core-stem-all',
+  seed: 'pass207-curated-smith-all',
   source: 'PlanetTerp',
-  verifiedSchedules: 12,
+  verifiedSchedules: 7,
   failedSchedules: 0,
-  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass206-curated-core-stem-all',
+  command: 'node scripts/verify-random-schedules.js --all --keep-going --seed pass207-curated-smith-all',
 });
 const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
+  {
+    checkedAt: 'July 7, 2026',
+    seed: 'pass207-curated-smith-all',
+    source: 'PlanetTerp',
+    verifiedSchedules: 7,
+    generatedCount: 7,
+    failedSchedules: 0,
+    scope: 'All generated templates after moving Finance, Accounting, Information Systems, Marketing, Management, and Supply Chain Management to curated current-catalog Smith schedules.',
+  },
   {
     checkedAt: 'July 7, 2026',
     seed: 'pass206-curated-core-stem-all',
@@ -191,22 +200,22 @@ const GENERATED_TEMPLATE_AUDIT_HISTORY = Object.freeze([
 ]);
 const GENERATED_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 7, 2026',
-  seed: 'pass206-curated-core-stem-catalog',
+  seed: 'pass207-curated-smith-catalog',
   source: 'app live metadata + PlanetTerp',
-  uniqueCourses: 149,
-  generatedMajors: 12,
-  requirementRows: 233,
-  matchedCourses: 149,
+  uniqueCourses: 106,
+  generatedMajors: 7,
+  requirementRows: 133,
+  matchedCourses: 106,
   missingCourses: 0,
   creditMismatches: 0,
-  titleDrifts: 4,
-  officialTitleChecks: 4,
+  titleDrifts: 3,
+  officialTitleChecks: 3,
   officialTitleMismatches: 0,
   testudoTermTitleCandidates: 0,
   testudoTermTitleChecks: 0,
   testudoTermTitleMismatches: 0,
   testudoTerms: '202608',
-  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass206-curated-core-stem-catalog --testudo-terms=202608',
+  command: 'node scripts/verify-random-schedules.js --catalog-sweep --seed=pass207-curated-smith-catalog --testudo-terms=202608',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 1, 2026',
@@ -214,7 +223,7 @@ const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   status: 'passed',
   command: 'node scripts/run-release-checks.js',
   liveCommand: 'node scripts/run-release-checks.js --skip-syntax --skip-proxy --skip-generated --skip-rendered --skip-workflows --live --live-seed pass95-release-checklist-live',
-  liveMajors: ['GEOL', 'AOSC', 'ASTR', 'BCHM', 'NEUR', 'IS'],
+  liveMajors: ['GEOL', 'AOSC', 'ASTR', 'BCHM', 'NEUR', 'ARCH'],
   defaultChecks: [
     'JS syntax',
     '/api/umd proxy fixture',
