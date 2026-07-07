@@ -12788,6 +12788,64 @@ Next pass candidates:
 - Add a conservative scheduled release job that runs the strict curated live sweep on a sample daily and the full sweep before schedule-data releases.
 - Add per-major curated evidence drilldowns in Settings, such as a compact list of recently checked departments/courses for the selected fixed schedule.
 
+## Pass 218 - Diffable Curated Source Artifact
+
+Focus:
+- Made the strict live curated catalog sweep produce a durable, diffable JSON artifact with per-course official UMD catalog and PlanetTerp source rows.
+- Wired the release-check wrapper and Settings maintainer command to write that artifact through the same strict title and credit-source gates.
+- Committed the latest full artifact at `artifacts/curated-catalog-sweep/latest.json`.
+- Kept `README.md` untouched.
+
+Code changes:
+- Updated `scripts/verify-curated-catalog-sweep.js`.
+  - Added `--write-artifact`, `--artifact PATH`, and `--artifact-date DATE`.
+  - Added `terptrack-curated-catalog-sweep/v1` artifact generation with summary counts plus all `826` course rows.
+  - Each course row now records curated titles/credits, majors, row count, official catalog match/title/credits/url, PlanetTerp title/credits, warnings, failures, and acknowledged credit-lag rows.
+- Updated `scripts/run-release-checks.js`.
+  - Added `--live-curated-catalog-write-artifact`.
+  - Added `--live-curated-catalog-artifact PATH`.
+  - Added `--live-curated-catalog-artifact-date DATE`.
+  - Passes artifact options into the live curated catalog verifier.
+- Updated `js/settings.js`.
+  - Updated the curated maintainer command and release snapshot to `Pass 218`.
+  - Shows the artifact-writing strict live sweep command in Settings.
+- Updated `index.html`.
+  - Bumped `js/settings.js` to `v=53`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added regression coverage for artifact CLI parsing, release-wrapper artifact flags, default artifact path, artifact schema, and representative official/PlanetTerp row content.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Updated the Settings asset assertion to `settings.js?v=53`.
+  - Added rendered Settings assertions for the artifact-writing maintainer command and `Pass 218` snapshot.
+- Added `artifacts/curated-catalog-sweep/latest.json`.
+  - Contains `826` sorted course rows and the latest full strict sweep summary.
+
+Verification:
+- Ran `node --check scripts/verify-curated-catalog-sweep.js`.
+- Ran `node --check scripts/run-release-checks.js`.
+- Ran `node --check scripts/test-generated-plans.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node --check js/settings.js`.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+  - It verified artifact schema generation and release-wrapper artifact flag propagation.
+- Ran `node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass218-release-full`.
+  - It syntax-checked 46 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop/mobile plan verification, and rendered desktop/mobile dark-mode plus mobile workflow checks.
+  - It passed the full strict live curated catalog sweep with `826/826` courses, no title or credit-source warnings, and 13 acknowledged PlanetTerp credit-lag rows.
+  - It wrote `artifacts/curated-catalog-sweep/latest.json`.
+  - It reported `TerpTrack release checks passed`.
+- Inspected `artifacts/curated-catalog-sweep/latest.json` with Node.
+  - Confirmed schema `terptrack-curated-catalog-sweep/v1`.
+  - Confirmed `generatedAt: July 7, 2026`.
+  - Confirmed `826` course rows, `0` warning counts, `13` acknowledged credit lags, and `0` stale acknowledgements.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=5 --seed=pass218-random-live`.
+  - It confirmed no generated built-in majors remain; all built-ins are curated fixed schedules, so there were no random generated plans left to sample.
+
+Next pass candidates:
+- Add a conservative scheduled release job that runs the strict curated live sweep on a sample daily and the full artifact sweep before schedule-data releases.
+- Add per-major curated evidence drilldowns in Settings, such as a compact list of recently checked departments/courses for the selected fixed schedule.
+- Add a small artifact comparison helper that summarizes source drift between two curated catalog sweep JSON files.
+
 ## Pass 215 - Desktop Dark-Mode Surface Gate
 
 Focus:

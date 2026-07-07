@@ -14,6 +14,7 @@ const {
 const ROOT = path.resolve(__dirname, '..');
 const OFFICIAL_CATALOG_COURSE_BASE = 'https://academiccatalog.umd.edu/undergraduate/approved-courses';
 const PLANETTERP_COURSE_BASE = 'https://planetterp.com/api/v1/course';
+const DEFAULT_ARTIFACT_PATH = path.join('artifacts', 'curated-catalog-sweep', 'latest.json');
 const CURRENT_PREFIX_BY_LEGACY_PREFIX = Object.freeze({
   AASP: 'AAAS',
   WMST: 'WGSS',
@@ -115,6 +116,8 @@ function parseArgs(argv) {
     strictTitles: false,
     strictCreditSource: false,
     warningLimit: 40,
+    artifactPath: process.env.TERPTRACK_CURATED_CATALOG_ARTIFACT || '',
+    artifactDate: process.env.TERPTRACK_CURATED_CATALOG_ARTIFACT_DATE || '',
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -142,6 +145,16 @@ function parseArgs(argv) {
       opts.warningLimit = argv[++i] || opts.warningLimit;
     } else if (arg.startsWith('--warning-limit=')) {
       opts.warningLimit = arg.slice('--warning-limit='.length) || opts.warningLimit;
+    } else if (arg === '--write-artifact') {
+      opts.artifactPath = opts.artifactPath || DEFAULT_ARTIFACT_PATH;
+    } else if (arg === '--artifact') {
+      opts.artifactPath = argv[++i] || opts.artifactPath || DEFAULT_ARTIFACT_PATH;
+    } else if (arg.startsWith('--artifact=')) {
+      opts.artifactPath = arg.slice('--artifact='.length) || opts.artifactPath || DEFAULT_ARTIFACT_PATH;
+    } else if (arg === '--artifact-date') {
+      opts.artifactDate = argv[++i] || opts.artifactDate;
+    } else if (arg.startsWith('--artifact-date=')) {
+      opts.artifactDate = arg.slice('--artifact-date='.length) || opts.artifactDate;
     } else {
       fail(`Unknown argument: ${arg}`);
     }
@@ -155,6 +168,78 @@ function parseArgs(argv) {
     opts.warningLimit = Number.isFinite(opts.warningLimit) && opts.warningLimit >= 0 ? Math.floor(opts.warningLimit) : 40;
   }
   return opts;
+}
+
+function resolveArtifactPath(file) {
+  const target = String(file || DEFAULT_ARTIFACT_PATH).trim() || DEFAULT_ARTIFACT_PATH;
+  return path.isAbsolute(target) ? target : path.join(ROOT, target);
+}
+
+function artifactOfficialSource(official) {
+  return {
+    ok: !!official?.ok,
+    requestedCode: official?.requestedCode || '',
+    matchedCode: official?.matchedCode || '',
+    mode: official?.mode || '',
+    title: official?.title || '',
+    credits: official?.credits?.raw || '',
+    url: official?.url || '',
+    detail: official?.detail || '',
+  };
+}
+
+function artifactPlanetTerpSource(planet) {
+  return {
+    ok: !!planet?.ok,
+    code: planet?.code || '',
+    title: planet?.title || '',
+    credits: planet?.credits ?? null,
+    detail: planet?.detail || '',
+  };
+}
+
+function artifactCourseRow(row) {
+  return {
+    code: displayCode(row.entry.code),
+    normalizedCode: normalizeCode(row.entry.code),
+    majors: row.entry.majors.slice(),
+    rowCount: row.entry.rowCount,
+    curatedCredits: row.entry.credits.slice(),
+    curatedTitles: row.entry.titles.slice(),
+    official: artifactOfficialSource(row.official),
+    planetTerp: artifactPlanetTerpSource(row.planet),
+    failures: row.failures.slice(),
+    warnings: row.warnings.slice(),
+    creditWarnings: row.creditWarnings.slice(),
+    titleWarnings: row.titleWarnings.slice(),
+    acknowledgedCreditLags: row.acknowledgedCreditLags.map(lag => ({ ...lag })),
+  };
+}
+
+function buildSweepArtifact(opts, summary, rows) {
+  return {
+    schema: 'terptrack-curated-catalog-sweep/v1',
+    generatedAt: opts.artifactDate || new Date().toISOString(),
+    options: {
+      seed: opts.seed,
+      limit: opts.limit,
+      majors: opts.majors.slice(),
+      strictTitles: !!opts.strictTitles,
+      strictCreditSource: !!opts.strictCreditSource,
+      warningLimit: opts.warningLimit,
+    },
+    summary: { ...summary },
+    courses: rows
+      .map(artifactCourseRow)
+      .sort((a, b) => a.normalizedCode.localeCompare(b.normalizedCode)),
+  };
+}
+
+function writeSweepArtifact(file, artifact) {
+  const out = resolveArtifactPath(file);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, `${JSON.stringify(artifact, null, 2)}\n`);
+  return out;
 }
 
 function buildContext() {
@@ -559,6 +644,12 @@ async function verifyCuratedCatalogSweep(context, opts) {
     acknowledgedCreditLagCodes,
     staleAcknowledgedCreditLags: staleAcknowledgedCreditLags.map(displayCode),
   };
+  if (opts.artifactPath) {
+    const artifact = buildSweepArtifact(opts, summary, rows);
+    const absoluteArtifactPath = writeSweepArtifact(opts.artifactPath, artifact);
+    summary.artifactPath = path.relative(ROOT, absoluteArtifactPath);
+    summary.artifactCourseCount = artifact.courses.length;
+  }
   if (opts.json) {
     console.log(JSON.stringify(summary, null, 2));
   } else {
@@ -574,6 +665,9 @@ async function verifyCuratedCatalogSweep(context, opts) {
         .slice(0, 12)
         .map(lag => `${lag.code} PlanetTerp ${lag.planetCredits} vs official-compatible ${lag.curatedCredits}`);
       console.log(`Acknowledged PlanetTerp credit lag ${acknowledgedCreditLags.length}: ${sample.join('; ')}${acknowledgedCreditLags.length > 12 ? `; +${acknowledgedCreditLags.length - 12} more` : ''}.`);
+    }
+    if (summary.artifactPath) {
+      console.log(`Wrote curated catalog sweep artifact to ${summary.artifactPath}.`);
     }
   }
   return summary;
@@ -593,8 +687,10 @@ if (require.main === module) {
 } else {
   module.exports = {
     collectCuratedCourses,
+    buildSweepArtifact,
     KNOWN_PLANETTERP_CREDIT_LAG,
     parseArgs,
+    writeSweepArtifact,
     verifyCuratedCatalogSweep,
   };
 }

@@ -1654,7 +1654,8 @@ async function testCatalogYearTargeting(context) {
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
   assert(/--live-curated-catalog-strict-credit-source/.test(result.releaseHtml), 'catalog year: release checklist should expose strict curated sweep command');
-  assert(/Pass 216/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
+  assert(/Pass 218/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
+  assert(/--live-curated-catalog-write-artifact/.test(result.releaseHtml), 'catalog year: release checklist should expose curated artifact writer command');
   assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass208-curated-final-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
@@ -4126,6 +4127,8 @@ function testReleaseJsonReport() {
     '--live-curated-catalog-limit=17',
     '--live-curated-catalog-strict-titles',
     '--live-curated-catalog-strict-credit-source',
+    '--live-curated-catalog-artifact=artifacts/fixture-curated-sweep.json',
+    '--live-curated-catalog-artifact-date=July 7, 2026',
   ]);
   const curatedCatalogArgs = releaseRunner.buildLiveCuratedCatalogArgs(curatedCatalogOpts);
   const strictCuratedCatalogOpts = curatedCatalogSweep.parseArgs([
@@ -4133,8 +4136,55 @@ function testReleaseJsonReport() {
     'scripts/verify-curated-catalog-sweep.js',
     '--strict-titles',
     '--strict-credit-source',
+    '--artifact=artifacts/direct-curated-sweep.json',
+    '--artifact-date=July 7, 2026',
     '--warning-limit=all',
   ]);
+  const defaultArtifactOpts = curatedCatalogSweep.parseArgs([
+    'node',
+    'scripts/verify-curated-catalog-sweep.js',
+    '--write-artifact',
+  ]);
+  const fixtureArtifact = curatedCatalogSweep.buildSweepArtifact(strictCuratedCatalogOpts, {
+    seed: 'fixture-curated-sweep',
+    checkedCourses: 1,
+    totalCourses: 1,
+    curatedRows: 1,
+    warningCount: 0,
+    creditWarningCount: 0,
+    unexpectedCreditWarningCount: 0,
+    titleWarningCount: 0,
+    acknowledgedCreditLagCount: 0,
+    staleAcknowledgedCreditLagCount: 0,
+  }, [{
+    entry: {
+      code: 'CMSC131',
+      majors: ['CS'],
+      rowCount: 1,
+      credits: ['4'],
+      titles: ['Object-Oriented Programming I'],
+    },
+    official: {
+      ok: true,
+      requestedCode: 'CMSC131',
+      matchedCode: 'CMSC131',
+      mode: 'exact',
+      title: 'Object-Oriented Programming I',
+      credits: { raw: '4 Credits' },
+      url: 'https://academiccatalog.umd.edu/undergraduate/approved-courses/cmsc/',
+    },
+    planet: {
+      ok: true,
+      code: 'CMSC131',
+      title: 'Object-Oriented Programming I',
+      credits: 4,
+    },
+    failures: [],
+    warnings: [],
+    creditWarnings: [],
+    titleWarnings: [],
+    acknowledgedCreditLags: [],
+  }]);
   const cappedCuratedCatalogOpts = curatedCatalogSweep.parseArgs([
     'node',
     'scripts/verify-curated-catalog-sweep.js',
@@ -4151,14 +4201,23 @@ function testReleaseJsonReport() {
   assert(curatedCatalogOpts.liveCuratedCatalogLimit === 17, 'release report: curated catalog limit should normalize');
   assert(curatedCatalogOpts.liveCuratedCatalogStrictTitles === true, 'release report: curated catalog strict title flag should parse');
   assert(curatedCatalogOpts.liveCuratedCatalogStrictCreditSource === true, 'release report: curated catalog strict credit-source flag should parse');
+  assert(curatedCatalogOpts.liveCuratedCatalogArtifact === 'artifacts/fixture-curated-sweep.json', 'release report: curated catalog artifact path should parse');
+  assert(curatedCatalogOpts.liveCuratedCatalogArtifactDate === 'July 7, 2026', 'release report: curated catalog artifact date should parse');
   assert(curatedCatalogArgs.includes('scripts/verify-curated-catalog-sweep.js'), 'release report: curated catalog args should invoke curated sweep script');
   assert(curatedCatalogArgs.includes('--seed=fixture-curated-sweep') && curatedCatalogArgs.includes('--limit=17'), 'release report: curated catalog args should include seed and limit');
   assert(curatedCatalogArgs.includes('--strict-titles') && curatedCatalogArgs.includes('--strict-credit-source'), 'release report: curated catalog args should pass strict drift flags');
+  assert(curatedCatalogArgs.includes('--artifact=artifacts/fixture-curated-sweep.json') && curatedCatalogArgs.includes('--artifact-date=July 7, 2026'), 'release report: curated catalog args should pass artifact flags');
   assert(strictCuratedCatalogOpts.strictTitles === true, 'release report: curated sweep should parse strict title enforcement');
   assert(strictCuratedCatalogOpts.strictCreditSource === true, 'release report: curated sweep should parse strict credit-source enforcement');
+  assert(strictCuratedCatalogOpts.artifactPath === 'artifacts/direct-curated-sweep.json', 'release report: curated sweep should parse direct artifact path');
+  assert(strictCuratedCatalogOpts.artifactDate === 'July 7, 2026', 'release report: curated sweep should parse artifact date');
+  assert(defaultArtifactOpts.artifactPath === 'artifacts/curated-catalog-sweep/latest.json', 'release report: curated sweep should default artifact path');
   assert(strictCuratedCatalogOpts.warningLimit === Number.MAX_SAFE_INTEGER, 'release report: curated sweep should allow complete warning output');
   assert(cappedCuratedCatalogOpts.warningLimit === 7, 'release report: curated sweep should parse capped warning output');
   assert(curatedCatalogSweep.KNOWN_PLANETTERP_CREDIT_LAG.ECON305.curatedCredits === 4, 'release report: curated sweep should expose exact PlanetTerp credit lag acknowledgements');
+  assert(fixtureArtifact.schema === 'terptrack-curated-catalog-sweep/v1', 'release report: curated sweep artifact should carry schema');
+  assert(fixtureArtifact.generatedAt === 'July 7, 2026', 'release report: curated sweep artifact should carry stable generation label');
+  assert(fixtureArtifact.courses[0]?.official?.credits === '4 Credits' && fixtureArtifact.courses[0]?.planetTerp?.credits === 4, 'release report: curated sweep artifact should include official and PlanetTerp course sources');
   assertThrows(
     () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-limit=1', '--live-catalog-write-settings-snapshot']),
     /Snapshot refresh requires a full catalog sweep/,
@@ -4218,7 +4277,7 @@ function testReleaseJsonReport() {
     status: report.status,
     stages: Object.keys(stageStatus).join(','),
     catalogArgs: catalogArgs.filter(arg => /^--(?:testudo|write|snapshot)/.test(arg)).join(' '),
-    curatedCatalogArgs: curatedCatalogArgs.filter(arg => /^--(?:seed|limit|strict)/.test(arg)).join(' '),
+    curatedCatalogArgs: curatedCatalogArgs.filter(arg => /^--(?:seed|limit|strict|artifact)/.test(arg)).join(' '),
   };
 }
 

@@ -228,8 +228,8 @@ const GENERATED_CATALOG_SWEEP = Object.freeze({
 });
 const CURATED_SCHEDULE_CATALOG_SWEEP = Object.freeze({
   checkedAt: 'July 7, 2026',
-  pass: 'Pass 216',
-  seed: 'pass216-release-full',
+  pass: 'Pass 218',
+  seed: 'pass218-release-full',
   source: 'official UMD catalog + PlanetTerp',
   curatedMajors: 61,
   catalogSourceMajors: 61,
@@ -245,15 +245,15 @@ const CURATED_SCHEDULE_CATALOG_SWEEP = Object.freeze({
   unexpectedCreditWarnings: 0,
   acknowledgedCreditLags: 13,
   staleAcknowledgedCreditLags: 0,
-  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass216-release-full',
-  directCommand: 'node scripts/verify-curated-catalog-sweep.js --json --strict-titles --strict-credit-source --warning-limit=all --seed=pass216-strict-credit-source',
+  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass218-release-full',
+  directCommand: 'node scripts/verify-curated-catalog-sweep.js --json --strict-titles --strict-credit-source --warning-limit=all --write-artifact --artifact-date="July 7, 2026" --seed=pass218-strict-artifact',
 });
 const RELEASE_CHECK_SNAPSHOT = Object.freeze({
   checkedAt: 'July 7, 2026',
-  pass: 'Pass 216',
+  pass: 'Pass 218',
   status: 'passed',
-  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass216-release-full',
-  liveCommand: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-seed=pass216-release-full',
+  command: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass218-release-full',
+  liveCommand: 'node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass218-release-full',
   liveMajors: [],
   defaultChecks: [
     'JS syntax',

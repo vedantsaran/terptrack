@@ -38,6 +38,8 @@ function parseArgs(argv) {
     liveCuratedCatalogLimit: null,
     liveCuratedCatalogStrictTitles: false,
     liveCuratedCatalogStrictCreditSource: false,
+    liveCuratedCatalogArtifact: '',
+    liveCuratedCatalogArtifactDate: '',
     liveCloud: false,
     liveCloudRequireAuth: false,
     liveCloudWriteSmoke: false,
@@ -127,6 +129,21 @@ function parseArgs(argv) {
     } else if (arg === '--live-curated-catalog-strict-credit-source') {
       opts.liveCuratedCatalogSweep = true;
       opts.liveCuratedCatalogStrictCreditSource = true;
+    } else if (arg === '--live-curated-catalog-write-artifact') {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogArtifact = opts.liveCuratedCatalogArtifact || 'artifacts/curated-catalog-sweep/latest.json';
+    } else if (arg === '--live-curated-catalog-artifact') {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogArtifact = argv[++i] || opts.liveCuratedCatalogArtifact || 'artifacts/curated-catalog-sweep/latest.json';
+    } else if (arg.startsWith('--live-curated-catalog-artifact=')) {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogArtifact = arg.slice('--live-curated-catalog-artifact='.length) || opts.liveCuratedCatalogArtifact || 'artifacts/curated-catalog-sweep/latest.json';
+    } else if (arg === '--live-curated-catalog-artifact-date') {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogArtifactDate = argv[++i] || opts.liveCuratedCatalogArtifactDate;
+    } else if (arg.startsWith('--live-curated-catalog-artifact-date=')) {
+      opts.liveCuratedCatalogSweep = true;
+      opts.liveCuratedCatalogArtifactDate = arg.slice('--live-curated-catalog-artifact-date='.length) || opts.liveCuratedCatalogArtifactDate;
     } else if (arg === '--live-cloud' || arg === '--live-supabase') {
       opts.liveCloud = true;
     } else if (arg === '--live-cloud-require-auth' || arg === '--live-supabase-require-auth') {
@@ -212,6 +229,9 @@ function usage() {
     '  --live-curated-catalog-limit N  Limit curated catalog sweep to N seeded unique courses',
     '  --live-curated-catalog-strict-titles  Fail curated live sweep on title drift',
     '  --live-curated-catalog-strict-credit-source  Fail curated live sweep on unacknowledged or stale PlanetTerp credit lag',
+    '  --live-curated-catalog-write-artifact  Write diffable curated source evidence JSON to artifacts/curated-catalog-sweep/latest.json',
+    '  --live-curated-catalog-artifact PATH  Write diffable curated source evidence JSON to PATH',
+    '  --live-curated-catalog-artifact-date DATE  Stable generatedAt label for the curated source artifact',
     '  --live-cloud                   Verify configured Supabase project table access and RLS',
     '  --live-cloud-require-auth      Require Supabase test-user credentials for authenticated checks',
     '  --live-cloud-write-smoke       Upsert/delete Supabase verifier rows after authenticated checks',
@@ -282,6 +302,8 @@ function publicOptions(opts) {
     liveCuratedCatalogLimit: opts.liveCuratedCatalogLimit,
     liveCuratedCatalogStrictTitles: opts.liveCuratedCatalogStrictTitles,
     liveCuratedCatalogStrictCreditSource: opts.liveCuratedCatalogStrictCreditSource,
+    liveCuratedCatalogArtifact: opts.liveCuratedCatalogArtifact,
+    liveCuratedCatalogArtifactDate: opts.liveCuratedCatalogArtifactDate,
     liveCloud: opts.liveCloud,
     liveCloudRequireAuth: opts.liveCloudRequireAuth,
     liveCloudWriteSmoke: opts.liveCloudWriteSmoke,
@@ -308,6 +330,8 @@ function buildLiveCuratedCatalogArgs(opts) {
   if (opts.liveCuratedCatalogLimit) args.push(`--limit=${opts.liveCuratedCatalogLimit}`);
   if (opts.liveCuratedCatalogStrictTitles) args.push('--strict-titles');
   if (opts.liveCuratedCatalogStrictCreditSource) args.push('--strict-credit-source');
+  if (opts.liveCuratedCatalogArtifact) args.push(`--artifact=${opts.liveCuratedCatalogArtifact}`);
+  if (opts.liveCuratedCatalogArtifactDate) args.push(`--artifact-date=${opts.liveCuratedCatalogArtifactDate}`);
   return args;
 }
 
