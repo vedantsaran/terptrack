@@ -8,6 +8,7 @@ const path = require('path');
 const { createRequire } = require('module');
 
 const ROOT = path.resolve(__dirname, '..');
+const DESKTOP_VIEWPORT = { width: 1280, height: 720 };
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 const DARK_MODE_TABS = [
   { id: 'plan', label: 'Plan' },
@@ -326,11 +327,11 @@ async function activateDarkModeTab(page, tabId, opts) {
   await page.evaluate(() => window.scrollTo(0, 0));
 }
 
-async function assertDarkModeTabSweep(page, opts) {
+async function assertDarkModeTabSweep(page, opts, viewportLabel = 'mobile') {
   const scanned = [];
   for (const tab of DARK_MODE_TABS) {
     await activateDarkModeTab(page, tab.id, opts);
-    await assertDarkContrast(page, `dark ${tab.label} tab mobile`, 'body', { scroll: true });
+    await assertDarkContrast(page, `dark ${tab.label} tab ${viewportLabel}`, 'body', { scroll: true });
     scanned.push(tab.label);
   }
   return scanned;
@@ -340,7 +341,7 @@ async function openFreshApp(page, url, opts, suffix) {
   await page.goto(`${url}?workflow-verifier=${suffix}`, { waitUntil: 'domcontentloaded', timeout: opts.timeoutMs });
   await page.waitForFunction(() => typeof startOnboarding === 'function' && typeof renderBrowse === 'function', null, { timeout: opts.timeoutMs });
   const snapshot = await page.evaluate(snapshotScript());
-  assert(snapshot.styles.includes('styles.css?v=122'), 'workflow app did not load styles.css?v=122');
+  assert(snapshot.styles.includes('styles.css?v=123'), 'workflow app did not load styles.css?v=123');
   assert(snapshot.scripts.includes('js/schedule.js?v=73'), 'workflow app did not load js/schedule.js?v=73');
   assert(snapshot.scheduleViewText.includes('Solver breadth'), 'workflow app did not render the schedule solver breadth preference');
   assert(snapshot.scripts.includes('js/timeline.js?v=27'), 'workflow app did not load js/timeline.js?v=27');
@@ -388,8 +389,39 @@ async function verifyDarkModeContrastMobile(page, url, opts) {
     applyTheme();
     render();
   });
-  const scannedTabs = await assertDarkModeTabSweep(page, opts);
+  const scannedTabs = await assertDarkModeTabSweep(page, opts, 'mobile');
   console.log(`Dark mode [mobile]: onboarding, Settings, and ${scannedTabs.join(', ')} passed scroll-aware visible text contrast with no overflow.`);
+}
+
+async function verifyDarkModeContrastDesktop(page, url, opts) {
+  await openFreshApp(page, url, opts, 'dark-contrast-desktop');
+  await page.evaluate(() => {
+    state.theme = 'dark';
+    state.onboardingComplete = false;
+    saveState();
+    applyTheme();
+    startOnboarding();
+  });
+  await page.locator('#onboard-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
+  await assertDarkContrast(page, 'dark onboarding desktop', '#onboard-modal');
+  await page.locator('#ob-skip').click({ timeout: opts.timeoutMs });
+  await page.locator('#onboard-modal.open').waitFor({ state: 'hidden', timeout: opts.timeoutMs });
+  await assertDarkContrast(page, 'dark main desktop', 'body', { scroll: true });
+  await page.locator('#settings-btn').click({ timeout: opts.timeoutMs });
+  await page.locator('#settings-modal.open').waitFor({ state: 'visible', timeout: opts.timeoutMs });
+  await assertDarkContrast(page, 'dark settings desktop', '#settings-modal', { scroll: true });
+  const snapshot = await page.evaluate(snapshotScript());
+  assertNoOverflow('dark settings desktop', snapshot);
+  await page.evaluate(() => {
+    closeSettings();
+    state.theme = 'dark';
+    state.onboardingComplete = true;
+    saveState();
+    applyTheme();
+    render();
+  });
+  const scannedTabs = await assertDarkModeTabSweep(page, opts, 'desktop');
+  console.log(`Dark mode [desktop]: onboarding, Settings, and ${scannedTabs.join(', ')} passed scroll-aware visible text contrast with no overflow.`);
 }
 
 async function verifyOnboardingMobile(page, url, opts) {
@@ -1691,6 +1723,18 @@ async function main() {
   const consoleErrors = [];
   const pageErrors = [];
   try {
+    const desktopContext = await browser.newContext({
+      viewport: DESKTOP_VIEWPORT,
+      reducedMotion: 'reduce',
+    });
+    const desktopPage = await desktopContext.newPage();
+    desktopPage.on('console', msg => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    desktopPage.on('pageerror', error => pageErrors.push(error.message));
+    await verifyDarkModeContrastDesktop(desktopPage, url, opts);
+    await desktopContext.close().catch(() => {});
+
     const context = await browser.newContext({
       viewport: MOBILE_VIEWPORT,
       isMobile: true,
@@ -1712,7 +1756,7 @@ async function main() {
     await verifyAdvisorPacketMobile(page, url, opts);
     assert(!pageErrors.length, `Workflow page errors: ${pageErrors.slice(0, 5).join(' | ')}`);
     assert(!consoleErrors.length, `Workflow console errors: ${consoleErrors.slice(0, 5).join(' | ')}`);
-    console.log('Verified rendered mobile dark mode, onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.');
+    console.log('Verified rendered desktop/mobile dark mode, mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.');
     if (opts.keepOpen) await page.waitForTimeout(60_000);
   } finally {
     await browser.close().catch(() => {});

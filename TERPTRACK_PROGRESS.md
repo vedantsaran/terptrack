@@ -12694,3 +12694,44 @@ Next pass candidates:
 - Resolve or document the 13 PlanetTerp-credit lag warnings against official catalog credits so the live sweep output is completely explainable to maintainers.
 - Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page, live sweep status, and checked date for every curated schedule.
 - Add a strict-title full live curated sweep preset for pre-release data refreshes.
+
+## Pass 215 - Desktop Dark-Mode Surface Gate
+
+Focus:
+- Fixed a real dark-mode theming defect where placeholder-search cards and tags referenced an undefined `--card` token.
+- Added desktop dark-mode contrast coverage to the rendered workflow verifier so dark-mode regressions are checked beyond the existing mobile sweep.
+- Used the in-app browser against the local app to confirm the changed stylesheet loads and the dark `--card` token resolves.
+- Kept `README.md` untouched.
+
+Code changes:
+- Updated `styles.css`.
+  - Added `--card` to both light and dark theme token sets.
+  - This makes placeholder-search `ps-tag` and `ps-result` surfaces resolve to the intended themed card background instead of falling back to transparent/invalid CSS.
+- Updated `index.html`.
+  - Bumped the stylesheet cache tag to `styles.css?v=123`.
+- Updated `scripts/verify-rendered-workflows.js`.
+  - Added a desktop viewport dark-mode contrast pass covering onboarding, Settings, and every main tab.
+  - Kept the existing mobile dark-mode sweep and mobile workflow checks.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Updated the stylesheet cache-version assertion to `v=123`.
+
+Verification:
+- Ran `node --check scripts/verify-rendered-workflows.js`.
+- Ran `node --check scripts/verify-rendered-generated-plans.js`.
+- Ran `node scripts/verify-rendered-workflows.js --timeout-ms=120000`.
+  - It passed desktop dark-mode onboarding, Settings, and all main tabs with scroll-aware visible-text contrast and no overflow.
+  - It passed the existing mobile dark-mode sweep and mobile onboarding, Browse replacement, Recommendations section pick, Account setup, Schedule alternatives, and advisor packet workflows.
+- Used the in-app browser on the local app.
+  - Confirmed the loaded stylesheet was `styles.css?v=123`.
+  - Confirmed dark-mode `--card` resolves to `#26211A`, matching the dark paper surface.
+- Ran `node scripts/verify-random-schedules.js --count=6 --seed=pass215-random`.
+  - It confirmed no generated built-in majors remain; all built-in majors are curated fixed schedules.
+- Ran `node scripts/run-release-checks.js`.
+  - It syntax-checked 46 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, curated schedule verification, rendered desktop/mobile plan verification, and rendered desktop/mobile dark-mode plus mobile workflow checks.
+  - It reported `TerpTrack release checks passed`.
+
+Next pass candidates:
+- Resolve or document the 13 PlanetTerp-credit lag warnings against official catalog credits so the live sweep output is completely explainable to maintainers.
+- Add fixed-schedule source/evidence metadata per major so Settings can show the exact catalog page, live sweep status, and checked date for every curated schedule.
+- Add a strict-title full live curated sweep preset for pre-release data refreshes.
