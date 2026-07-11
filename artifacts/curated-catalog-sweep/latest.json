@@ -2,7 +2,7 @@
   "schema": "terptrack-curated-catalog-sweep/v1",
   "generatedAt": "July 7, 2026",
   "options": {
-    "seed": "pass222-release-full",
+    "seed": "pass223-release-full",
     "limit": null,
     "majors": [],
     "strictTitles": true,
@@ -10,7 +10,7 @@
     "warningLimit": 40
   },
   "summary": {
-    "seed": "pass222-release-full",
+    "seed": "pass223-release-full",
     "checkedCourses": 826,
     "totalCourses": 826,
     "curatedRows": 1461,

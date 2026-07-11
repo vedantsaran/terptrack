@@ -610,11 +610,6 @@ async function verifyCuratedCatalogSweep(context, opts) {
   const staleAcknowledgedCreditLags = isFullUnfilteredSweep
     ? expectedAcknowledgedCreditLagCodes.filter(code => !acknowledgedCreditLagCodeSet.has(code))
     : [];
-  assert(!missing.length, `Curated catalog sweep could not verify ${missing.length}/${entries.length} courses in either official catalog or PlanetTerp: ${missing.slice(0, 25).join('; ')}${missing.length > 25 ? `; +${missing.length - 25} more` : ''}`);
-  assert(!failures.length, `Curated catalog sweep found ${failures.length} credit mismatch${failures.length === 1 ? '' : 'es'}: ${failures.slice(0, 25).join('; ')}${failures.length > 25 ? `; +${failures.length - 25} more` : ''}`);
-  assert(!opts.strictTitles || !titleWarnings.length, `Curated catalog sweep found ${titleWarnings.length} title drift warning${titleWarnings.length === 1 ? '' : 's'}: ${titleWarnings.slice(0, 25).join('; ')}${titleWarnings.length > 25 ? `; +${titleWarnings.length - 25} more` : ''}`);
-  assert(!opts.strictCreditSource || !creditWarnings.length, `Curated catalog sweep found ${creditWarnings.length} unexpected credit-source warning${creditWarnings.length === 1 ? '' : 's'}: ${creditWarnings.slice(0, 25).join('; ')}${creditWarnings.length > 25 ? `; +${creditWarnings.length - 25} more` : ''}`);
-  assert(!opts.strictCreditSource || !staleAcknowledgedCreditLags.length, `Curated catalog sweep has ${staleAcknowledgedCreditLags.length} stale PlanetTerp credit-lag acknowledgement${staleAcknowledgedCreditLags.length === 1 ? '' : 's'} no longer observed in the full sweep: ${staleAcknowledgedCreditLags.map(displayCode).join('; ')}`);
   const officialMatches = rows.filter(row => row.official?.ok).length;
   const planetMatches = rows.filter(row => row.planet?.ok).length;
   const bothMatches = rows.filter(row => row.official?.ok && row.planet?.ok).length;
@@ -650,6 +645,11 @@ async function verifyCuratedCatalogSweep(context, opts) {
     summary.artifactPath = path.relative(ROOT, absoluteArtifactPath);
     summary.artifactCourseCount = artifact.courses.length;
   }
+  assert(!missing.length, `Curated catalog sweep could not verify ${missing.length}/${entries.length} courses in either official catalog or PlanetTerp: ${missing.slice(0, 25).join('; ')}${missing.length > 25 ? `; +${missing.length - 25} more` : ''}`);
+  assert(!failures.length, `Curated catalog sweep found ${failures.length} credit mismatch${failures.length === 1 ? '' : 'es'}: ${failures.slice(0, 25).join('; ')}${failures.length > 25 ? `; +${failures.length - 25} more` : ''}`);
+  assert(!opts.strictTitles || !titleWarnings.length, `Curated catalog sweep found ${titleWarnings.length} title drift warning${titleWarnings.length === 1 ? '' : 's'}: ${titleWarnings.slice(0, 25).join('; ')}${titleWarnings.length > 25 ? `; +${titleWarnings.length - 25} more` : ''}`);
+  assert(!opts.strictCreditSource || !creditWarnings.length, `Curated catalog sweep found ${creditWarnings.length} unexpected credit-source warning${creditWarnings.length === 1 ? '' : 's'}: ${creditWarnings.slice(0, 25).join('; ')}${creditWarnings.length > 25 ? `; +${creditWarnings.length - 25} more` : ''}`);
+  assert(!opts.strictCreditSource || !staleAcknowledgedCreditLags.length, `Curated catalog sweep has ${staleAcknowledgedCreditLags.length} stale PlanetTerp credit-lag acknowledgement${staleAcknowledgedCreditLags.length === 1 ? '' : 's'} no longer observed in the full sweep: ${staleAcknowledgedCreditLags.map(displayCode).join('; ')}`);
   if (opts.json) {
     console.log(JSON.stringify(summary, null, 2));
   } else {

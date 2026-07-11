@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const ARTIFACT_SCHEMA = 'terptrack-curated-catalog-sweep/v1';
 const DIFF_SCHEMA = 'terptrack-curated-catalog-artifact-diff/v1';
 const DEFAULT_LIMIT = 40;
+const SUMMARY_METADATA_FIELDS = new Set(['seed']);
 
 function fail(message) {
   throw new Error(message);
@@ -118,6 +119,7 @@ function summaryChanges(baseSummary = {}, headSummary = {}) {
     ...Object.keys(headSummary || {}),
   ])).sort();
   return keys
+    .filter(key => !SUMMARY_METADATA_FIELDS.has(key))
     .filter(key => !valuesEqual(baseSummary?.[key], headSummary?.[key]))
     .map(key => ({ field: key, before: baseSummary?.[key] ?? null, after: headSummary?.[key] ?? null }));
 }
@@ -210,6 +212,7 @@ function compareArtifacts(baseArtifact, headArtifact) {
 function parseArgs(argv) {
   const opts = {
     json: false,
+    markdown: false,
     failOnDrift: false,
     limit: DEFAULT_LIMIT,
     base: '',
@@ -220,6 +223,8 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--json') {
       opts.json = true;
+    } else if (arg === '--markdown') {
+      opts.markdown = true;
     } else if (arg === '--fail-on-drift') {
       opts.failOnDrift = true;
     } else if (arg === '--limit') {
@@ -235,6 +240,7 @@ function parseArgs(argv) {
     }
   }
   opts.limit = Number.isFinite(opts.limit) && opts.limit >= 0 ? Math.floor(opts.limit) : DEFAULT_LIMIT;
+  if (opts.json && opts.markdown) fail('--json and --markdown cannot be used together.');
   opts.base = positional[0] || '';
   opts.head = positional[1] || '';
   return opts;
@@ -246,6 +252,7 @@ function usage() {
     '',
     'Options:',
     '  --json              Emit machine-readable diff JSON',
+    '  --markdown          Emit a GitHub-ready drift summary',
     '  --fail-on-drift     Exit 1 when any source drift is found',
     '  --limit N           Limit human-readable examples per change category',
   ].join('\n');
@@ -285,6 +292,54 @@ function summarizeDiff(diff, limit = DEFAULT_LIMIT) {
   return lines.join('\n');
 }
 
+function markdownCodeList(rows, limit) {
+  if (!rows.length || limit === 0) return '_None_';
+  const sample = rows.slice(0, limit).map(row => `\`${row.code || row.normalizedCode}\``).join(', ');
+  return `${sample}${rows.length > limit ? `, plus ${rows.length - limit} more` : ''}`;
+}
+
+function summarizeDiffMarkdown(diff, limit = DEFAULT_LIMIT) {
+  const status = diff.changed ? 'Source drift detected' : 'No source drift detected';
+  const lines = [
+    '## Curated catalog source evidence',
+    '',
+    `**${status}.** Compared ${diff.base.courses} baseline courses with ${diff.head.courses} newly checked courses.`,
+    '',
+    '| Signal | Changes |',
+    '| --- | ---: |',
+    `| Summary fields | ${diff.counts.summaryChanges} |`,
+    `| Added courses | ${diff.counts.addedCourses} |`,
+    `| Removed courses | ${diff.counts.removedCourses} |`,
+    `| Curated rows | ${diff.counts.curatedChanges} |`,
+    `| Official UMD catalog | ${diff.counts.officialChanges} |`,
+    `| PlanetTerp | ${diff.counts.planetTerpChanges} |`,
+    `| Warnings | ${diff.counts.warningChanges} |`,
+    '',
+    `Baseline: \`${diff.base.seed || diff.base.path || 'unknown'}\``,
+    '',
+    `Latest: \`${diff.head.seed || diff.head.path || 'unknown'}\``,
+  ];
+  if (!diff.changed) return lines.join('\n');
+  lines.push(
+    '',
+    '### Changed courses',
+    '',
+    `- Added: ${markdownCodeList(diff.addedCourses, limit)}`,
+    `- Removed: ${markdownCodeList(diff.removedCourses, limit)}`,
+    `- Curated rows: ${markdownCodeList(diff.curatedChanges, limit)}`,
+    `- Official UMD catalog: ${markdownCodeList(diff.officialChanges, limit)}`,
+    `- PlanetTerp: ${markdownCodeList(diff.planetTerpChanges, limit)}`,
+    `- Warnings: ${markdownCodeList(diff.warningChanges, limit)}`,
+  );
+  if (diff.summaryChanges.length && limit !== 0) {
+    lines.push('', '### Summary fields');
+    diff.summaryChanges.slice(0, limit).forEach(change => {
+      lines.push(`- \`${change.field}\`: \`${JSON.stringify(change.before)}\` -> \`${JSON.stringify(change.after)}\``);
+    });
+  }
+  return lines.join('\n');
+}
+
 function main() {
   const opts = parseArgs(process.argv);
   if (opts.help) {
@@ -294,6 +349,7 @@ function main() {
   if (!opts.base || !opts.head) fail('BASE.json and HEAD.json are required.');
   const diff = compareArtifacts(readArtifact(opts.base), readArtifact(opts.head));
   if (opts.json) console.log(JSON.stringify(diff, null, 2));
+  else if (opts.markdown) console.log(summarizeDiffMarkdown(diff, opts.limit));
   else console.log(summarizeDiff(diff, opts.limit));
   if (opts.failOnDrift && diff.changed) process.exitCode = 1;
 }
@@ -312,5 +368,6 @@ if (require.main === module) {
     parseArgs,
     readArtifact,
     summarizeDiff,
+    summarizeDiffMarkdown,
   };
 }

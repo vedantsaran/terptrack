@@ -1656,9 +1656,10 @@ async function testCatalogYearTargeting(context) {
   assert(/0\/0 term-specific title suffixes/.test(result.releaseHtml) && /Testudo/.test(result.releaseHtml), 'catalog year: release checklist should show Testudo title suffix evidence');
   assert(/Maintainer commands/.test(result.releaseHtml) && /--live-catalog-write-settings-snapshot/.test(result.releaseHtml), 'catalog year: release checklist should expose maintainer snapshot command');
   assert(/--live-curated-catalog-strict-credit-source/.test(result.releaseHtml), 'catalog year: release checklist should expose strict curated sweep command');
-  assert(/Pass 222/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
+  assert(/Pass 223/.test(result.releaseHtml), 'catalog year: release checklist should show the latest strict release pass');
   assert(/--live-curated-catalog-write-artifact/.test(result.releaseHtml), 'catalog year: release checklist should expose curated artifact writer command');
   assert(/curated-source-evidence\.yml/.test(result.releaseHtml), 'catalog year: release checklist should expose hosted curated evidence workflow command');
+  assert(/simulate-curated-source-workflow\.js/.test(result.releaseHtml), 'catalog year: release checklist should expose the local hosted-workflow simulator');
   assert(result.releaseCommand.includes('--live-catalog-testudo-terms=202608') && result.releaseCommand.includes('--live-seed=pass208-curated-final-catalog'), 'catalog year: release snapshot command should use stored sweep terms and seed');
   assert(result.previewCatalogYear === '2024-2025', 'catalog year: auto-plan preview should preserve target year');
   assert(result.previewSource.targetYear === '2024-2025', 'catalog year: preview official source should carry target year');
@@ -4110,6 +4111,7 @@ function testReleaseJsonReport() {
   const releaseRunner = require(path.join(ROOT, 'scripts/run-release-checks.js'));
   const curatedCatalogSweep = require(path.join(ROOT, 'scripts/verify-curated-catalog-sweep.js'));
   const artifactComparer = require(path.join(ROOT, 'scripts/compare-curated-catalog-artifacts.js'));
+  const workflowSimulator = require(path.join(ROOT, 'scripts/simulate-curated-source-workflow.js'));
   const previousReleaseTestudoTerms = process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
   const previousReleaseSnapshotDate = process.env.TERPTRACK_RELEASE_SNAPSHOT_DATE;
   delete process.env.TERPTRACK_RELEASE_TESTUDO_TERMS;
@@ -4267,8 +4269,14 @@ function testReleaseJsonReport() {
     acknowledgedCreditLags: [],
   });
   const identicalArtifactDiff = artifactComparer.compareArtifacts(fixtureArtifact, JSON.parse(JSON.stringify(fixtureArtifact)));
+  const metadataOnlyArtifact = JSON.parse(JSON.stringify(fixtureArtifact));
+  metadataOnlyArtifact.generatedAt = 'July 9, 2026';
+  metadataOnlyArtifact.options.seed = 'fixture-curated-sweep-new-run';
+  metadataOnlyArtifact.summary.seed = 'fixture-curated-sweep-new-run';
+  const metadataOnlyArtifactDiff = artifactComparer.compareArtifacts(fixtureArtifact, metadataOnlyArtifact);
   const changedArtifactDiff = artifactComparer.compareArtifacts(fixtureArtifactPrevious, fixtureArtifactHead);
   const changedArtifactSummary = artifactComparer.summarizeDiff(changedArtifactDiff, 3);
+  const changedArtifactMarkdown = artifactComparer.summarizeDiffMarkdown(changedArtifactDiff, 3);
   const artifactCompareOpts = artifactComparer.parseArgs([
     'node',
     'scripts/compare-curated-catalog-artifacts.js',
@@ -4285,6 +4293,20 @@ function testReleaseJsonReport() {
   ]);
   const skippedOpts = releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js']);
   const sourceEvidenceWorkflow = read('.github/workflows/curated-source-evidence.yml');
+  const curatedCatalogSweepSource = read('scripts/verify-curated-catalog-sweep.js');
+  const workflowSimulationOpts = workflowSimulator.parseArgs([
+    'node',
+    'scripts/simulate-curated-source-workflow.js',
+    '--mode=all',
+    '--dry-run',
+    '--seed=fixture-workflow',
+    '--artifact-date=July 7, 2026',
+    '--sample-limit=17',
+  ]);
+  const workflowSimulationChecks = workflowSimulator.validateWorkflow(sourceEvidenceWorkflow);
+  const workflowComparatorSimulation = workflowSimulator.simulateComparator(fixtureArtifact);
+  const workflowSampleArgs = workflowSimulator.modeArgs('sample', workflowSimulationOpts, '/tmp/terptrack-workflow-fixture');
+  const workflowFullArgs = workflowSimulator.modeArgs('full', workflowSimulationOpts, '/tmp/terptrack-workflow-fixture');
   assert(catalogOpts.liveCatalogSweep === true, 'release report: Testudo term option should enable live catalog sweep');
   assert(catalogOpts.liveCatalogTestudoTerms.join(',') === '202608,202701', 'release report: should normalize catalog Testudo terms');
   assert(catalogArgs.includes('--testudo-terms=202608,202701'), 'release report: catalog sweep args should include Testudo terms');
@@ -4313,21 +4335,31 @@ function testReleaseJsonReport() {
   assert(fixtureArtifact.generatedAt === 'July 7, 2026', 'release report: curated sweep artifact should carry stable generation label');
   assert(fixtureArtifact.courses[0]?.official?.credits === '4 Credits' && fixtureArtifact.courses[0]?.planetTerp?.credits === 4, 'release report: curated sweep artifact should include official and PlanetTerp course sources');
   assert(identicalArtifactDiff.changed === false, 'release report: artifact comparer should report no drift for identical artifacts');
+  assert(metadataOnlyArtifactDiff.changed === false, 'release report: artifact comparer should ignore run date and seed metadata');
   assert(changedArtifactDiff.schema === artifactComparer.DIFF_SCHEMA, 'release report: artifact comparer should expose a versioned diff schema');
   assert(changedArtifactDiff.counts.summaryChanges >= 1, 'release report: artifact comparer should report summary drift');
   assert(changedArtifactDiff.counts.addedCourses === 1 && changedArtifactDiff.counts.removedCourses === 1, 'release report: artifact comparer should report added and removed courses');
   assert(changedArtifactDiff.counts.officialChanges === 1 && changedArtifactDiff.counts.planetTerpChanges === 1, 'release report: artifact comparer should report source drift');
   assert(changedArtifactDiff.counts.curatedChanges === 1 && changedArtifactDiff.counts.warningChanges === 1, 'release report: artifact comparer should report curated and warning drift');
   assert(/Official source changes: CMSC 131/.test(changedArtifactSummary) && /Added courses: MATH 140/.test(changedArtifactSummary), 'release report: artifact comparer should summarize drift with course codes');
+  assert(/## Curated catalog source evidence/.test(changedArtifactMarkdown) && /\| Official UMD catalog \| 1 \|/.test(changedArtifactMarkdown), 'release report: artifact comparer should emit a GitHub-ready Markdown drift summary');
   assert(artifactCompareOpts.json === true && artifactCompareOpts.failOnDrift === true && artifactCompareOpts.limit === 3, 'release report: artifact comparer should parse JSON/fail/limit flags');
   assert(sourceEvidenceWorkflow.includes('name: Curated Source Evidence'), 'release report: curated source workflow should be named');
   assert(sourceEvidenceWorkflow.includes('schedule:') && sourceEvidenceWorkflow.includes("cron: '17 10 * * *'"), 'release report: curated source workflow should run on a daily schedule');
   assert(sourceEvidenceWorkflow.includes('workflow_dispatch:'), 'release report: curated source workflow should support manual full runs');
-  assert(sourceEvidenceWorkflow.includes('actions/checkout@v5') && sourceEvidenceWorkflow.includes('actions/setup-node@v4') && sourceEvidenceWorkflow.includes('actions/upload-artifact@v4'), 'release report: curated source workflow should use supported official actions');
+  assert(sourceEvidenceWorkflow.includes('actions/checkout@v5') && sourceEvidenceWorkflow.includes('actions/setup-node@v4') && sourceEvidenceWorkflow.includes('actions/upload-artifact@v4') && sourceEvidenceWorkflow.includes('actions/github-script@v9'), 'release report: curated source workflow should use supported official actions');
   assert(sourceEvidenceWorkflow.includes('--live-curated-catalog-limit="${SAMPLE_LIMIT}"') && sourceEvidenceWorkflow.includes('--live-curated-catalog-artifact=artifacts/curated-catalog-sweep/sample.json'), 'release report: curated source workflow should write strict scheduled sample artifacts');
   assert(sourceEvidenceWorkflow.includes('--live-curated-catalog-strict-titles') && sourceEvidenceWorkflow.includes('--live-curated-catalog-strict-credit-source'), 'release report: curated source workflow should keep strict title and credit-source gates');
   assert(sourceEvidenceWorkflow.includes('--live-curated-catalog-write-artifact') && sourceEvidenceWorkflow.includes('compare-curated-catalog-artifacts.js'), 'release report: curated source workflow should run full artifact sweeps and compare drift');
   assert(sourceEvidenceWorkflow.includes('artifacts/curated-catalog-sweep/diff.json') && sourceEvidenceWorkflow.includes('curated-source-evidence-${{ github.run_id }}-${{ env.MODE }}'), 'release report: curated source workflow should upload machine-readable source evidence');
+  assert(sourceEvidenceWorkflow.includes('issues: write') && sourceEvidenceWorkflow.includes('steps.drift.outputs.changed') && sourceEvidenceWorkflow.includes('TerpTrack curated catalog source drift'), 'release report: curated source workflow should open or update one durable drift issue');
+  assert(sourceEvidenceWorkflow.includes('summary.md') && sourceEvidenceWorkflow.includes('GITHUB_STEP_SUMMARY'), 'release report: curated source workflow should publish and upload a Markdown drift summary');
+  assert(sourceEvidenceWorkflow.includes("if: always() && env.MODE == 'full'") && sourceEvidenceWorkflow.includes('rm -f artifacts/curated-catalog-sweep/latest.json'), 'release report: curated source workflow should compare failure artifacts without reusing a stale baseline copy');
+  assert(curatedCatalogSweepSource.indexOf('writeSweepArtifact(opts.artifactPath, artifact)') < curatedCatalogSweepSource.indexOf('assert(!opts.strictTitles'), 'release report: curated sweep should write failure evidence before enforcing strict drift gates');
+  assert(workflowSimulationChecks.length >= 10, 'release report: local workflow simulator should validate hosted sample/full controls');
+  assert(workflowComparatorSimulation.metadataIgnored && workflowComparatorSimulation.sourceDriftDetected, 'release report: local workflow simulator should distinguish run metadata from real source drift');
+  assert(workflowSampleArgs.includes('--live-curated-catalog-limit=17') && workflowSampleArgs.some(arg => /sample\.json$/.test(arg)), 'release report: local workflow simulator should model strict sample artifacts');
+  assert(workflowFullArgs.some(arg => /latest\.json$/.test(arg)) && !workflowFullArgs.includes('--live-curated-catalog-write-artifact'), 'release report: local workflow simulator should isolate full-run artifacts from the committed baseline');
   assertThrows(
     () => releaseRunner.parseArgs(['node', 'scripts/run-release-checks.js', '--live-catalog-limit=1', '--live-catalog-write-settings-snapshot']),
     /Snapshot refresh requires a full catalog sweep/,

@@ -13131,3 +13131,76 @@ Next pass candidates:
 - Add a workflow drift-notification path that can open a lightweight issue or append a summary artifact when the hosted full sweep sees source drift.
 - Add a local script that simulates the GitHub Actions workflow modes end to end without requiring `actionlint`.
 - Add a compact advisor-facing "what changed since last packet" source-evidence note when the selected major, catalog year, or strict sweep seed changes.
+
+## Pass 223 - Curated Source Drift Operations
+
+Focus:
+- Turned hosted catalog drift detection into an actionable maintainer workflow with a readable run summary, durable issue notification, and uploaded machine-readable evidence.
+- Fixed a comparator correctness bug that treated a normal sweep seed change as source drift, which would have made every hosted full run a false positive.
+- Added a local sample/full workflow simulator that can validate wiring offline or execute the real strict live commands into an isolated temporary directory without overwriting the committed baseline.
+- Verified the updated Settings maintainer surface in Chrome on desktop and mobile dark mode, then refreshed the strict full artifact with the Pass 223 seed.
+- Kept `README.md` untouched.
+
+Code changes:
+- Updated `scripts/compare-curated-catalog-artifacts.js`.
+  - Excluded run-only `summary.seed` metadata from source-drift classification while retaining base/head seed evidence.
+  - Added `--markdown` output with a GitHub-ready status, count table, changed-course samples, and summary-field details.
+  - Kept `--json` and `--fail-on-drift` behavior for automation, and rejects conflicting JSON/Markdown output flags.
+- Added `scripts/simulate-curated-source-workflow.js`.
+  - Validates the hosted workflow's daily schedule, sample/full gates, strict title/credit-source checks, JSON/Markdown evidence, issue permissions, issue action, and artifact upload wiring.
+  - Simulates metadata-only and real official-source changes to prove false positives are ignored and catalog changes are detected.
+  - Supports dry-run command review and live sample/full execution, with every generated artifact written outside the committed baseline unless an explicit artifact directory is supplied.
+- Updated `.github/workflows/curated-source-evidence.yml`.
+  - Added issue write permission and a stable drift step output.
+  - Writes `diff.json` and `summary.md`, appends the Markdown report to `GITHUB_STEP_SUMMARY`, and uploads both.
+  - Uses `actions/github-script@v9` to open one stable `TerpTrack curated catalog source drift` issue or append a new run comment to the existing issue only when real drift is detected.
+  - Runs comparison and issue steps with `always()` so strict sweep failures still produce notifications when a new artifact exists, and removes the checked-out `latest.json` before full mode so an early network failure cannot masquerade as a clean comparison.
+- Updated `scripts/verify-curated-catalog-sweep.js`.
+  - Writes the newly collected artifact before enforcing strict missing-course, credit, title, or acknowledgement gates so hosted failures retain the exact evidence that caused them while still failing the release command.
+- Updated `js/settings.js`.
+  - Updated curated source and release snapshots to `Pass 223` with seed `pass223-release-full`.
+  - Added the local sample/full simulator command and explained the hosted issue-notification behavior in Maintainer commands.
+- Updated `index.html`.
+  - Bumped `js/settings.js` to `v=58`.
+- Updated `scripts/test-generated-plans.js`.
+  - Added regression coverage for seed/date-only no-drift behavior, Markdown summaries, simulator mode commands, isolated full artifacts, issue wiring, and workflow validation.
+- Updated `scripts/verify-rendered-generated-plans.js`.
+  - Updated the Settings asset assertion to `settings.js?v=58`, the release snapshot to `Pass 223`, and rendered coverage for the local workflow simulator command.
+- Updated `artifacts/curated-catalog-sweep/latest.json`.
+  - Refreshed the strict full artifact with seed `pass223-release-full`.
+
+Verification:
+- Used Chrome to inspect the official `actions/github-script` release page before selecting `actions/github-script@v9`; GitHub marks `v9.0.0` as the latest release.
+- Ran JavaScript syntax checks for the comparator, simulator, generated-plan tests, and Settings code.
+- Ran `node scripts/simulate-curated-source-workflow.js --mode=all --dry-run --seed=pass223-workflow-dry --artifact-date="July 7, 2026"`.
+  - It validated both workflow command plans, notification wiring, and metadata/source-drift discrimination.
+- Ran `node scripts/test-generated-plans.js`.
+  - It passed all generated-plan regression fixtures and all 51 curated schedule fixtures.
+  - It proved differing generated dates and sweep seeds do not count as drift, while synthetic official-title changes do.
+  - It verified strict failure artifacts are written before drift gates and hosted compare/issue steps remain eligible after a failed full sweep.
+- Ran `node scripts/simulate-curated-source-workflow.js --mode=all --execute --sample-limit=20 --seed=pass223-workflow-live --artifact-date="July 7, 2026"`.
+  - Sample mode passed `20/826` strict live courses with no warnings.
+  - Full mode passed `826/826` strict live courses, wrote baseline/latest/diff/summary evidence to a temporary directory, and reported zero drift between `pass222-release-full` and `pass223-workflow-live-full` despite the expected seed change.
+  - The committed `artifacts/curated-catalog-sweep/latest.json` stayed untouched by the simulator.
+- Ran `node scripts/verify-rendered-generated-plans.js`.
+  - It passed all 14 rendered curated-plan runs across desktop and mobile with clean proxy-backed console output.
+- Served the app at `http://127.0.0.1:8765/` and inspected Settings in Chrome.
+  - Confirmed `settings.js?v=58`, `Pass 223`, the hosted issue explanation, and the local simulator command.
+  - Confirmed the expanded Maintainer commands had zero horizontal overflow on desktop and at a 390x844 mobile viewport.
+  - Confirmed the mobile dark Settings modal used readable light text on its dark surface with zero page, modal, details, or command overflow.
+- Ran `node scripts/run-release-checks.js --live-curated-catalog-sweep --live-curated-catalog-strict-titles --live-curated-catalog-strict-credit-source --live-curated-catalog-write-artifact --live-curated-catalog-artifact-date="July 7, 2026" --live-seed=pass223-release-full`.
+  - It syntax-checked 48 JavaScript files.
+  - It passed offline proxy fixtures, generated-plan fixtures, the curated schedule verifier, desktop/mobile rendered plan verification, and desktop/mobile dark-mode plus mobile workflow checks.
+  - It passed the full strict live curated catalog sweep with `826/826` courses, no title or unexpected credit-source warnings, 13 acknowledged PlanetTerp credit lags, and zero stale acknowledgements.
+  - It rewrote `artifacts/curated-catalog-sweep/latest.json` and reported `TerpTrack release checks passed`.
+- Ran `node scripts/compare-curated-catalog-artifacts.js artifacts/curated-catalog-sweep/latest.json artifacts/curated-catalog-sweep/latest.json`.
+  - It reported zero summary, course, curated, official, PlanetTerp, or warning drift.
+- Ran `node scripts/verify-random-schedules.js --keep-going --count=5 --seed=pass223-random-live`.
+  - It confirmed no generated built-in majors remain; all built-ins use curated fixed schedules.
+- Ran `git diff --check` and checked `README.md`.
+  - No whitespace errors were reported and `README.md` remained unchanged.
+
+Next pass candidates:
+- Provision and verify the production Vercel/Supabase project configuration so the current `5/6` release-readiness state can become fully ready, then run `scripts/verify-supabase-live.js` with a dedicated test account.
+- Add clean-run resolution behavior for an existing catalog-drift issue after maintainers refresh the committed baseline and a later full sweep returns to zero drift.
+- Add a compact advisor-facing source-evidence change note when the selected major, catalog year, or strict sweep seed differs from the prior exported packet.

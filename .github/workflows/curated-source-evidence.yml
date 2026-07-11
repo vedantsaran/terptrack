@@ -28,6 +28,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: curated-source-evidence-${{ github.ref }}
@@ -83,6 +84,9 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/curated-catalog-sweep
           cp artifacts/curated-catalog-sweep/latest.json artifacts/curated-catalog-sweep/baseline.json
+          if [ "${MODE}" = "full" ]; then
+            rm -f artifacts/curated-catalog-sweep/latest.json
+          fi
 
       - name: Run strict scheduled sample
         if: env.MODE == 'sample'
@@ -120,17 +124,88 @@ jobs:
             --live-seed="${SEED}-full"
 
       - name: Compare full artifact sweep
-        if: env.MODE == 'full'
+        id: drift
+        if: always() && env.MODE == 'full'
         shell: bash
         run: |
           set -euo pipefail
+          if [ ! -f artifacts/curated-catalog-sweep/latest.json ]; then
+            {
+              echo "## Curated catalog source evidence"
+              echo
+              echo "**The full sweep failed before producing a comparison artifact.** Review the workflow logs and uploaded baseline evidence."
+            } > artifacts/curated-catalog-sweep/summary.md
+            cat artifacts/curated-catalog-sweep/summary.md >> "$GITHUB_STEP_SUMMARY"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           node scripts/compare-curated-catalog-artifacts.js \
             artifacts/curated-catalog-sweep/baseline.json \
             artifacts/curated-catalog-sweep/latest.json \
             --json > artifacts/curated-catalog-sweep/diff.json
           node scripts/compare-curated-catalog-artifacts.js \
             artifacts/curated-catalog-sweep/baseline.json \
-            artifacts/curated-catalog-sweep/latest.json
+            artifacts/curated-catalog-sweep/latest.json \
+            --markdown > artifacts/curated-catalog-sweep/summary.md
+          cat artifacts/curated-catalog-sweep/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+          if node scripts/compare-curated-catalog-artifacts.js \
+            artifacts/curated-catalog-sweep/baseline.json \
+            artifacts/curated-catalog-sweep/latest.json \
+            --fail-on-drift \
+            --limit=20; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update source drift issue
+        if: always() && env.MODE == 'full' && steps.drift.outputs.changed == 'true'
+        uses: actions/github-script@v9
+        env:
+          DRIFT_ISSUE_TITLE: TerpTrack curated catalog source drift
+          DRIFT_SUMMARY_PATH: artifacts/curated-catalog-sweep/summary.md
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- terptrack-curated-source-drift -->';
+            const summary = fs.readFileSync(process.env.DRIFT_SUMMARY_PATH, 'utf8').trim();
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              marker,
+              summary,
+              '',
+              `Workflow run: ${runUrl}`,
+              `Commit: \`${context.sha}\``,
+              '',
+              'Review the uploaded baseline, latest, and diff artifacts before changing curated schedules.',
+            ].join('\n');
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = openIssues.find(issue =>
+              !issue.pull_request && (
+                issue.title === process.env.DRIFT_ISSUE_TITLE
+                || String(issue.body || '').includes(marker)
+              )
+            );
+            if (existing) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: existing.number,
+                body,
+              });
+              core.notice(`Updated drift issue #${existing.number}.`);
+            } else {
+              const { data: issue } = await github.rest.issues.create({
+                ...context.repo,
+                title: process.env.DRIFT_ISSUE_TITLE,
+                body,
+              });
+              core.notice(`Opened drift issue #${issue.number}.`);
+            }
 
       - name: Upload curated source artifacts
         if: always()
@@ -142,5 +217,6 @@ jobs:
             artifacts/curated-catalog-sweep/latest.json
             artifacts/curated-catalog-sweep/sample.json
             artifacts/curated-catalog-sweep/diff.json
+            artifacts/curated-catalog-sweep/summary.md
           if-no-files-found: warn
           retention-days: 30
